@@ -71,6 +71,14 @@ const RadarComercial = () => {
     });
   }, [data, selectedWeek, selectedSetor, selectedResponsavel, selectedResultado]);
 
+  // Calcula total de aposentadorias futuras (sem filtros)
+  const totalAposentadoriasFuturas = useMemo(() => {
+    return data.filter(r => 
+      r.produto?.toLowerCase().includes('aposentadoria') && 
+      r.produto?.toLowerCase().includes('futur')
+    ).length;
+  }, [data]);
+
   // Calcula métricas baseadas nos dados filtrados
   const metrics = useMemo(() => {
     const contratosFechados = filteredData.filter(
@@ -465,6 +473,25 @@ const RadarComercial = () => {
         </div>
       </div>
 
+      {/* Card de Aposentadorias Futuras */}
+      <div className="mb-8">
+        <Card className="bg-gradient-to-r from-amber-500/10 to-amber-600/5 border-amber-500/20">
+          <CardHeader className="flex flex-row items-center justify-between pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground">
+              Total de Aposentadorias Futuras
+            </CardTitle>
+            <Calendar className="h-4 w-4 text-amber-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-3xl font-bold text-amber-600">
+              {isLoading ? '--' : totalAposentadoriasFuturas}
+            </div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Clientes com aposentadoria futura em análise
+            </p>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Cards de métricas */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
