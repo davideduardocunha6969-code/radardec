@@ -515,14 +515,21 @@ export function TaskDashboard({
           variant={avgCompletionDays > 2 ? "warning" : avgCompletionDays === 2 ? "warning" : "success"}
           className="animate-slide-up stagger-6"
         />
-        <MetricCard
-          title="Taxa de Acerto Conformidade"
-          value={`${filteredTasks.length > 0 ? (((filteredTasks.length - filteredConformityErrors.length) / filteredTasks.length) * 100).toFixed(4) : 100}%`}
-          subtitle="Acertos / Total de tarefas"
-          icon={<Percent className="h-5 w-5 text-success" />}
-          variant="success"
-          className="animate-slide-up stagger-7"
-        />
+        {(() => {
+          const conformityAccuracyRate = filteredTasks.length > 0 
+            ? ((filteredTasks.length - filteredConformityErrors.length) / filteredTasks.length) * 100 
+            : 100;
+          return (
+            <MetricCard
+              title="Taxa de Acerto Conformidade"
+              value={`${conformityAccuracyRate.toFixed(4)}%`}
+              subtitle={conformityAccuracyRate < 98 ? "Fora da Meta" : conformityAccuracyRate === 98 ? "Atenção, Limite da Meta" : "Dentro da Meta"}
+              icon={<Percent className={`h-5 w-5 ${conformityAccuracyRate < 98 ? "text-destructive" : conformityAccuracyRate === 98 ? "text-warning" : "text-success"}`} />}
+              variant={conformityAccuracyRate < 98 ? "warning" : conformityAccuracyRate === 98 ? "warning" : "success"}
+              className="animate-slide-up stagger-7"
+            />
+          );
+        })()}
         <MetricCard
           title="Taxa de Acerto Prazo"
           value={`${filteredTasks.length > 0 ? (((filteredTasks.length - filteredDeadlineErrors.length) / filteredTasks.length) * 100).toFixed(4) : 100}%`}
