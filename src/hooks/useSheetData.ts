@@ -31,13 +31,21 @@ export interface ConformityError {
   rawRow: string[];
 }
 
+export interface DeadlineError {
+  date: Date | null;
+  controller: string;
+  rawRow: string[];
+}
+
 export interface SheetResponse {
   sheets: SheetData[];
   sectorMapping: SectorMapping[];
   conformityErrors: { date: string; recipient: string; rawRow: string[] }[];
+  deadlineErrors: { date: string; controller: string; rawRow: string[] }[];
   totalSheets: number;
   totalTasks: number;
   totalConformityErrors: number;
+  totalDeadlineErrors: number;
   lastUpdated: string;
 }
 
@@ -66,6 +74,7 @@ export function useSheetData() {
   const [sheets, setSheets] = useState<SheetData[]>([]);
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [conformityErrors, setConformityErrors] = useState<ConformityError[]>([]);
+  const [deadlineErrors, setDeadlineErrors] = useState<DeadlineError[]>([]);
   const [sectorMapping, setSectorMapping] = useState<SectorMapping[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -165,6 +174,7 @@ export function useSheetData() {
       
       const mappings = data.data.sectorMapping || [];
       const rawConformityErrors = data.data.conformityErrors || [];
+      const rawDeadlineErrors = data.data.deadlineErrors || [];
       
       // Processa erros de conformidade
       const processedConformityErrors: ConformityError[] = rawConformityErrors.map((err: { date: string; recipient: string; rawRow: string[] }) => ({
@@ -173,12 +183,21 @@ export function useSheetData() {
         rawRow: err.rawRow
       }));
       
+      // Processa erros de prazo
+      const processedDeadlineErrors: DeadlineError[] = rawDeadlineErrors.map((err: { date: string; controller: string; rawRow: string[] }) => ({
+        date: parseDate(err.date),
+        controller: err.controller || 'Não identificado',
+        rawRow: err.rawRow
+      }));
+      
       console.log('Processed conformity errors:', processedConformityErrors);
+      console.log('Processed deadline errors:', processedDeadlineErrors);
       
       setSheets(data.data.sheets);
       setSectorMapping(mappings);
       setTasks(processSheets(data.data.sheets, mappings));
       setConformityErrors(processedConformityErrors);
+      setDeadlineErrors(processedDeadlineErrors);
       setLastUpdated(new Date(data.data.lastUpdated));
       setError(null);
       
@@ -204,6 +223,7 @@ export function useSheetData() {
     sheets,
     tasks,
     conformityErrors,
+    deadlineErrors,
     sectorMapping,
     isLoading,
     error,
