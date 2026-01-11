@@ -198,10 +198,13 @@ const RadarComercial = () => {
       }
     });
     
+    const total = Object.values(counts).reduce((sum, val) => sum + val, 0);
+    
     return Object.entries(counts)
-      .map(([resultado, total]) => ({
+      .map(([resultado, count]) => ({
         resultado,
-        total,
+        total: count,
+        percentage: total > 0 ? ((count / total) * 100).toFixed(1) : '0',
       }))
       .sort((a, b) => b.total - a.total);
   }, [filteredData]);
@@ -686,13 +689,29 @@ const RadarComercial = () => {
                   <Bar 
                     dataKey="total" 
                     radius={[4, 4, 0, 0]}
-                    className="fill-primary"
                   >
+                    {resultadoTodosChartData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`}
+                        fill={entry.resultado.toLowerCase().includes('contrato fechado') 
+                          ? 'hsl(var(--success))' 
+                          : 'hsl(var(--primary))'
+                        }
+                      />
+                    ))}
                     <LabelList 
                       dataKey="total" 
                       position="top" 
                       className="fill-foreground"
                       fontSize={12}
+                    />
+                    <LabelList 
+                      dataKey="percentage" 
+                      position="center" 
+                      formatter={(value: string) => `${value}%`}
+                      className="fill-white"
+                      fontSize={11}
+                      fontWeight={600}
                     />
                   </Bar>
                 </BarChart>
