@@ -61,6 +61,7 @@ serve(async (req) => {
     // Coluna N (13) = TEMPO PARA FECHAMENTO
     // Coluna O (14) = RESULTADO
     // Coluna P (15) = CADÊNCIA
+    // Coluna Q (16) = ANO APOSENTADORIA FUTURA
     
     const commercialData = dataRows.map(row => ({
       responsavel: (row[0] || '').trim(),
@@ -79,6 +80,7 @@ serve(async (req) => {
       tempoFechamento: parseInt((row[13] || '0').trim()) || 0,
       resultado: (row[14] || '').trim(),
       cadencia: (row[15] || '').trim(),
+      anoAposentadoriaFutura: (row[16] || '').trim(),
       rawRow: row
     }));
     

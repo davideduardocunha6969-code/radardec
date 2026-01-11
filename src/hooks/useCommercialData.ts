@@ -19,6 +19,7 @@ export interface CommercialRecord {
   tempoFechamento: number;
   resultado: string;
   cadencia: string;
+  anoAposentadoriaFutura: string;
   rawRow: string[];
 }
 
