@@ -50,12 +50,14 @@ const RadarComercial = () => {
   const [selectedSetor, setSelectedSetor] = useState<string | null>(null);
   const [selectedResponsavel, setSelectedResponsavel] = useState<string | null>(null);
   const [selectedResultado, setSelectedResultado] = useState<string | null>(null);
-  const [radarAtendimentosOpen, setRadarAtendimentosOpen] = useState(true);
-  const [radarConversaoOpen, setRadarConversaoOpen] = useState(true);
-  const [radarNegociacoesOpen, setRadarNegociacoesOpen] = useState(true);
-  const [radarSDROpen, setRadarSDROpen] = useState(true);
+  const [openSection, setOpenSection] = useState<string | null>(null);
   const [aposentadoriasFuturasDialogOpen, setAposentadoriasFuturasDialogOpen] = useState(false);
   const [rankingPossuiDireito, setRankingPossuiDireito] = useState<string | null>(null);
+
+  // Handlers para abrir/fechar seções (comportamento accordion)
+  const handleSectionToggle = (section: string) => {
+    setOpenSection(prev => prev === section ? null : section);
+  };
 
   // Extrai opções únicas para os filtros
   const filterOptions = useMemo(() => {
@@ -653,8 +655,8 @@ const RadarComercial = () => {
 
       {/* Seção: Radar Atendimentos */}
       <Collapsible 
-        open={radarAtendimentosOpen} 
-        onOpenChange={setRadarAtendimentosOpen}
+        open={openSection === 'atendimentos'} 
+        onOpenChange={() => handleSectionToggle('atendimentos')}
         className="mb-8"
       >
         <CollapsibleTrigger className="w-full">
@@ -664,7 +666,7 @@ const RadarComercial = () => {
               <h2 className="text-xl font-bold text-foreground">Radar Atendimentos</h2>
             </div>
             <div className="flex items-center gap-4">
-              {radarAtendimentosOpen ? (
+              {openSection === 'atendimentos' ? (
                 <ChevronDown className="h-5 w-5 text-muted-foreground" />
               ) : (
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -1378,7 +1380,7 @@ const RadarComercial = () => {
           {/* Botão para recolher seção */}
           <div className="flex justify-center pt-4">
             <button
-              onClick={() => setRadarAtendimentosOpen(false)}
+              onClick={() => setOpenSection(null)}
               className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
             >
               <ChevronUp className="h-4 w-4" />
@@ -1390,8 +1392,8 @@ const RadarComercial = () => {
 
       {/* Seção: Radar de Origens */}
       <Collapsible 
-        open={radarConversaoOpen} 
-        onOpenChange={setRadarConversaoOpen}
+        open={openSection === 'origens'} 
+        onOpenChange={() => handleSectionToggle('origens')}
         className="mb-8"
       >
         <CollapsibleTrigger className="w-full">
@@ -1401,7 +1403,7 @@ const RadarComercial = () => {
               <h2 className="text-xl font-bold text-foreground">Radar de Origens</h2>
             </div>
             <div className="flex items-center gap-4">
-              {radarConversaoOpen ? (
+              {openSection === 'origens' ? (
                 <ChevronDown className="h-5 w-5 text-muted-foreground" />
               ) : (
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -1706,7 +1708,7 @@ const RadarComercial = () => {
           {/* Botão para recolher seção */}
           <div className="flex justify-center pt-4">
             <button
-              onClick={() => setRadarConversaoOpen(false)}
+              onClick={() => setOpenSection(null)}
               className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
             >
               <ChevronUp className="h-4 w-4" />
@@ -1718,8 +1720,8 @@ const RadarComercial = () => {
 
       {/* Seção: Radar de Negociações */}
       <Collapsible 
-        open={radarNegociacoesOpen} 
-        onOpenChange={setRadarNegociacoesOpen}
+        open={openSection === 'negociacoes'} 
+        onOpenChange={() => handleSectionToggle('negociacoes')}
         className="mb-8"
       >
         <CollapsibleTrigger className="w-full">
@@ -1729,7 +1731,7 @@ const RadarComercial = () => {
               <h2 className="text-xl font-bold text-foreground">Radar de Negociações</h2>
             </div>
             <div className="flex items-center gap-4">
-              {radarNegociacoesOpen ? (
+              {openSection === 'negociacoes' ? (
                 <ChevronDown className="h-5 w-5 text-muted-foreground" />
               ) : (
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -2249,7 +2251,7 @@ const RadarComercial = () => {
           {/* Botão para recolher seção */}
           <div className="flex justify-center pt-4">
             <button
-              onClick={() => setRadarNegociacoesOpen(false)}
+              onClick={() => setOpenSection(null)}
               className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
             >
               <ChevronUp className="h-4 w-4" />
@@ -2260,7 +2262,7 @@ const RadarComercial = () => {
       </Collapsible>
 
       {/* ==================== RADAR SDR ==================== */}
-      <Collapsible open={radarSDROpen} onOpenChange={setRadarSDROpen}>
+      <Collapsible open={openSection === 'sdr'} onOpenChange={() => handleSectionToggle('sdr')}>
         <CollapsibleTrigger className="w-full">
           <div className="flex items-center justify-between p-4 bg-gradient-to-r from-teal-600/20 to-cyan-600/20 rounded-lg border border-teal-500/30 hover:border-teal-500/50 transition-colors cursor-pointer">
             <div className="flex items-center gap-3">
@@ -2268,7 +2270,7 @@ const RadarComercial = () => {
               <h2 className="text-xl font-bold text-foreground">Radar SDR</h2>
             </div>
             <div className="flex items-center gap-4">
-              {radarSDROpen ? (
+              {openSection === 'sdr' ? (
                 <ChevronDown className="h-5 w-5 text-muted-foreground" />
               ) : (
                 <ChevronRight className="h-5 w-5 text-muted-foreground" />
@@ -2424,7 +2426,7 @@ const RadarComercial = () => {
           {/* Botão para recolher seção */}
           <div className="flex justify-center pt-4">
             <button
-              onClick={() => setRadarSDROpen(false)}
+              onClick={() => setOpenSection(null)}
               className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
             >
               <ChevronUp className="h-4 w-4" />
