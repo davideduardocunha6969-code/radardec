@@ -1692,45 +1692,149 @@ const RadarComercial = () => {
           <h2 className="text-lg font-semibold text-foreground">Radar de Negociações</h2>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-8">
-          {/* Cards de métricas de negociações */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+          {/* Cards de métricas de negociações por setor */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Card de Negociação por Setor */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Total em Negociação
-                </CardTitle>
-                <Target className="h-4 w-4 text-blue-500" />
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Target className="h-5 w-5 text-blue-500" />
+                    <CardTitle className="text-lg">Em Negociação</CardTitle>
+                  </div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {isLoading ? '--' : filteredData.filter(r => 
+                      r.resultado?.toLowerCase().includes('negociação') || 
+                      r.resultado?.toLowerCase().includes('negociacao')
+                    ).length}
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">Casos em negociação por setor</p>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-blue-600">
-                  {isLoading ? '--' : filteredData.filter(r => 
-                    r.resultado?.toLowerCase().includes('negociação') || 
-                    r.resultado?.toLowerCase().includes('negociacao')
-                  ).length}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Casos com resultado "Negociação"
-                </p>
+                {(() => {
+                  const negociacaoPorSetor: Record<string, number> = {};
+                  filteredData
+                    .filter(r => 
+                      r.resultado?.toLowerCase().includes('negociação') || 
+                      r.resultado?.toLowerCase().includes('negociacao')
+                    )
+                    .forEach(r => {
+                      const setor = r.setor || 'Sem setor';
+                      negociacaoPorSetor[setor] = (negociacaoPorSetor[setor] || 0) + 1;
+                    });
+                  
+                  const setoresOrdenados = Object.entries(negociacaoPorSetor)
+                    .sort((a, b) => b[1] - a[1]);
+                  
+                  if (setoresOrdenados.length === 0) {
+                    return (
+                      <div className="h-[100px] flex items-center justify-center bg-muted/30 rounded-lg">
+                        <p className="text-muted-foreground text-sm">Nenhum caso em negociação</p>
+                      </div>
+                    );
+                  }
+                  
+                  const maxValue = setoresOrdenados[0]?.[1] || 1;
+                  
+                  return (
+                    <div className="space-y-3">
+                      {setoresOrdenados.map(([setor, count]) => {
+                        const barWidth = (count / maxValue) * 100;
+                        return (
+                          <div key={setor} className="flex items-center gap-3">
+                            <div className="flex-shrink-0 w-32 text-sm font-medium truncate" title={setor}>
+                              {setor}
+                            </div>
+                            <div className="flex-1 relative h-6 bg-muted/30 rounded overflow-hidden">
+                              <div 
+                                className="absolute inset-y-0 left-0 bg-blue-500 rounded transition-all duration-300"
+                                style={{ width: `${barWidth}%` }}
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <span className={`text-xs font-semibold ${barWidth > 40 ? 'text-white' : 'text-foreground'}`}>
+                                  {count}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
 
+            {/* Card de Aguarda Documentação por Setor */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Aguarda Documentação
-                </CardTitle>
-                <Calendar className="h-4 w-4 text-orange-500" />
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <Calendar className="h-5 w-5 text-orange-500" />
+                    <CardTitle className="text-lg">Aguarda Documentação</CardTitle>
+                  </div>
+                  <div className="text-2xl font-bold text-orange-600">
+                    {isLoading ? '--' : filteredData.filter(r => 
+                      r.resultado?.toLowerCase().includes('aguarda documentação') || 
+                      r.resultado?.toLowerCase().includes('aguarda documentacao')
+                    ).length}
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">Casos aguardando documentação por setor</p>
               </CardHeader>
               <CardContent>
-                <div className="text-2xl font-bold text-orange-600">
-                  {isLoading ? '--' : filteredData.filter(r => 
-                    r.resultado?.toLowerCase().includes('aguarda documentação') || 
-                    r.resultado?.toLowerCase().includes('aguarda documentacao')
-                  ).length}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Casos aguardando documentação
-                </p>
+                {(() => {
+                  const aguardaDocPorSetor: Record<string, number> = {};
+                  filteredData
+                    .filter(r => 
+                      r.resultado?.toLowerCase().includes('aguarda documentação') || 
+                      r.resultado?.toLowerCase().includes('aguarda documentacao')
+                    )
+                    .forEach(r => {
+                      const setor = r.setor || 'Sem setor';
+                      aguardaDocPorSetor[setor] = (aguardaDocPorSetor[setor] || 0) + 1;
+                    });
+                  
+                  const setoresOrdenados = Object.entries(aguardaDocPorSetor)
+                    .sort((a, b) => b[1] - a[1]);
+                  
+                  if (setoresOrdenados.length === 0) {
+                    return (
+                      <div className="h-[100px] flex items-center justify-center bg-muted/30 rounded-lg">
+                        <p className="text-muted-foreground text-sm">Nenhum caso aguardando documentação</p>
+                      </div>
+                    );
+                  }
+                  
+                  const maxValue = setoresOrdenados[0]?.[1] || 1;
+                  
+                  return (
+                    <div className="space-y-3">
+                      {setoresOrdenados.map(([setor, count]) => {
+                        const barWidth = (count / maxValue) * 100;
+                        return (
+                          <div key={setor} className="flex items-center gap-3">
+                            <div className="flex-shrink-0 w-32 text-sm font-medium truncate" title={setor}>
+                              {setor}
+                            </div>
+                            <div className="flex-1 relative h-6 bg-muted/30 rounded overflow-hidden">
+                              <div 
+                                className="absolute inset-y-0 left-0 bg-orange-500 rounded transition-all duration-300"
+                                style={{ width: `${barWidth}%` }}
+                              />
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <span className={`text-xs font-semibold ${barWidth > 40 ? 'text-white' : 'text-foreground'}`}>
+                                  {count}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
               </CardContent>
             </Card>
           </div>
