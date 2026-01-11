@@ -21,6 +21,8 @@ import {
   Cell,
   LabelList,
   YAxis,
+  PieChart as RechartsPieChart,
+  Pie,
 } from "recharts";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
@@ -102,6 +104,58 @@ const RadarComercial = () => {
       }))
       .sort((a, b) => b.atendimentos - a.atendimentos);
   }, [filteredData]);
+
+  // Dados para o gráfico de pizza - Modalidade de Atendimento
+  const modalidadeChartData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    filteredData.forEach(record => {
+      if (record.modalidade) {
+        counts[record.modalidade] = (counts[record.modalidade] || 0) + 1;
+      }
+    });
+    
+    const total = Object.values(counts).reduce((sum, val) => sum + val, 0);
+    
+    return Object.entries(counts)
+      .map(([name, value]) => ({
+        name,
+        value,
+        percentage: total > 0 ? ((value / total) * 100).toFixed(1) : '0',
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [filteredData]);
+
+  // Dados para o gráfico de pizza - Possui Direito
+  const possuiDireitoChartData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    filteredData.forEach(record => {
+      if (record.possuiDireito) {
+        const label = record.possuiDireito === 'SIM' ? 'Possui Direito' : 
+                      record.possuiDireito === 'NÃO' ? 'Não Possui Direito' : record.possuiDireito;
+        counts[label] = (counts[label] || 0) + 1;
+      }
+    });
+    
+    const total = Object.values(counts).reduce((sum, val) => sum + val, 0);
+    
+    return Object.entries(counts)
+      .map(([name, value]) => ({
+        name,
+        value,
+        percentage: total > 0 ? ((value / total) * 100).toFixed(1) : '0',
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [filteredData]);
+
+  const PIE_COLORS = [
+    'hsl(var(--primary))',
+    'hsl(var(--accent))',
+    'hsl(var(--success))',
+    'hsl(var(--warning))',
+    'hsl(var(--destructive))',
+  ];
 
   const chartConfig = {
     atendimentos: {
@@ -304,6 +358,124 @@ const RadarComercial = () => {
         </CardContent>
       </Card>
 
+      {/* Gráficos de Pizza */}
+      <div className="grid gap-6 md:grid-cols-2 mb-8">
+        {/* Modalidade de Atendimento */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <PieChart className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Modalidade de Atendimento</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {modalidadeChartData.length > 0 ? (
+              <div className="h-[280px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsPieChart>
+                    <Pie
+                      data={modalidadeChartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={3}
+                      dataKey="value"
+                      label={({ name, percentage }) => `${percentage}%`}
+                      labelLine={false}
+                    >
+                      {modalidadeChartData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={PIE_COLORS[index % PIE_COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: number, name: string) => [`${value} atendimentos`, name]}
+                    />
+                  </RechartsPieChart>
+                </ResponsiveContainer>
+                {/* Legenda */}
+                <div className="flex flex-wrap justify-center gap-4 mt-2">
+                  {modalidadeChartData.map((entry, index) => (
+                    <div key={entry.name} className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
+                      />
+                      <span className="text-xs text-muted-foreground">{entry.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="h-[280px] flex items-center justify-center bg-muted/30 rounded-lg">
+                <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        {/* Possui Direito */}
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <PieChart className="h-5 w-5 text-accent" />
+              <CardTitle className="text-lg">Clientes com Direito</CardTitle>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {possuiDireitoChartData.length > 0 ? (
+              <div className="h-[280px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <RechartsPieChart>
+                    <Pie
+                      data={possuiDireitoChartData}
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={3}
+                      dataKey="value"
+                      label={({ name, percentage }) => `${percentage}%`}
+                      labelLine={false}
+                    >
+                      {possuiDireitoChartData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`} 
+                          fill={PIE_COLORS[index % PIE_COLORS.length]}
+                        />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: number, name: string) => [`${value} clientes`, name]}
+                    />
+                  </RechartsPieChart>
+                </ResponsiveContainer>
+                {/* Legenda */}
+                <div className="flex flex-wrap justify-center gap-4 mt-2">
+                  {possuiDireitoChartData.map((entry, index) => (
+                    <div key={entry.name} className="flex items-center gap-2">
+                      <div 
+                        className="w-3 h-3 rounded-full" 
+                        style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
+                      />
+                      <span className="text-xs text-muted-foreground">{entry.name}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            ) : (
+              <div className="h-[280px] flex items-center justify-center bg-muted/30 rounded-lg">
+                <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Resumo Financeiro */}
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
