@@ -2447,23 +2447,32 @@ const RadarComercial = () => {
                   <CardTitle className="text-lg">Ranking de Agendamentos por SDR</CardTitle>
                 </div>
                 <div className="text-2xl font-bold text-teal-600">
-                  {isLoading ? '--' : sdrData.length}
+                  {isLoading ? '--' : sdrData.filter(r => {
+                    const semana = parseInt(r.colD?.trim()) || 0;
+                    return semana > 0 && semana <= 53;
+                  }).length}
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">Total de agendamentos realizados por cada SDR</p>
             </CardHeader>
             <CardContent>
               {(() => {
+                // Filtra apenas registros com semana preenchida (coluna D)
+                const agendamentosValidos = sdrData.filter(record => {
+                  const semana = parseInt(record.colD?.trim()) || 0;
+                  return semana > 0 && semana <= 53;
+                });
+                
                 const sdrCounts: Record<string, number> = {};
                 
-                sdrData.forEach(record => {
-                  const sdrName = record.colE?.trim() || 'Não identificado';
+                agendamentosValidos.forEach(record => {
+                  const sdrName = record.colA?.trim() || 'Não identificado';
                   if (sdrName) {
                     sdrCounts[sdrName] = (sdrCounts[sdrName] || 0) + 1;
                   }
                 });
                 
-                const total = sdrData.length;
+                const total = agendamentosValidos.length;
                 const rankingData = Object.entries(sdrCounts)
                   .map(([sdr, count]) => ({
                     sdr,
