@@ -3771,10 +3771,21 @@ const RadarComercial = () => {
                 // Calcula total para exibição
                 const totalContatos = Object.values(contatosPorSemana).reduce((sum, v) => sum + v, 0);
                 
+                // Calcula semana atual do ano
+                const hoje = new Date();
+                const inicioAno = new Date(hoje.getFullYear(), 0, 1);
+                const diffDias = Math.floor((hoje.getTime() - inicioAno.getTime()) / (1000 * 60 * 60 * 24));
+                const semanaAtual = Math.ceil((diffDias + inicioAno.getDay() + 1) / 7);
+                
+                // Calcula média necessária para as semanas restantes
+                const semanasRestantes = Math.max(53 - semanaAtual, 1);
+                const contatosFaltantes = Math.max(629 - totalContatos, 0);
+                const mediaNecessaria = contatosFaltantes / semanasRestantes;
+                
                 return (
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-4">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="flex items-center gap-4 flex-wrap">
                         <div className="text-sm">
                           <span className="text-muted-foreground">Total de contatos: </span>
                           <span className="font-bold text-amber-600">{totalContatos}</span>
@@ -3787,6 +3798,16 @@ const RadarComercial = () => {
                           <span className="text-muted-foreground">Progresso: </span>
                           <span className={`font-bold ${totalContatos >= 629 ? 'text-green-600' : 'text-amber-600'}`}>
                             {((totalContatos / 629) * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="text-sm border-l pl-4 ml-2">
+                          <span className="text-muted-foreground">Semanas restantes: </span>
+                          <span className="font-bold text-foreground">{semanasRestantes}</span>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Média necessária: </span>
+                          <span className={`font-bold ${mediaNecessaria <= metaSemanal ? 'text-green-600' : mediaNecessaria <= metaSemanal * 1.5 ? 'text-yellow-600' : 'text-red-600'}`}>
+                            {mediaNecessaria.toFixed(1)}/semana
                           </span>
                         </div>
                       </div>
