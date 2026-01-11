@@ -1841,90 +1841,90 @@ const RadarComercial = () => {
 
           {/* Gráficos de Negociação e Aguarda Documentação por Responsável */}
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Gráfico de Negociação por Responsável */}
+            {/* Ranking de Negociação por Origem */}
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
-                  <Users className="h-5 w-5 text-blue-500" />
-                  <CardTitle className="text-lg">Negociação por Responsável</CardTitle>
+                  <TrendingUp className="h-5 w-5 text-blue-600" />
+                  <CardTitle className="text-lg">Ranking de Negociação por Origem</CardTitle>
                 </div>
-                <p className="text-sm text-muted-foreground">Casos em negociação por responsável</p>
+                <p className="text-sm text-muted-foreground">Casos em negociação ordenados por origem</p>
               </CardHeader>
               <CardContent>
                 {(() => {
-                  const negociacaoPorResponsavel: Record<string, number> = {};
                   const casosNegociacao = filteredData.filter(r => 
                     r.resultado?.toLowerCase().includes('negociação') || 
                     r.resultado?.toLowerCase().includes('negociacao')
                   );
                   
+                  const negociacaoPorOrigem: Record<string, number> = {};
                   casosNegociacao.forEach(r => {
-                    const responsavel = r.responsavel || 'Sem responsável';
-                    negociacaoPorResponsavel[responsavel] = (negociacaoPorResponsavel[responsavel] || 0) + 1;
+                    const origem = r.origemCliente || 'Sem origem';
+                    negociacaoPorOrigem[origem] = (negociacaoPorOrigem[origem] || 0) + 1;
                   });
                   
                   const total = casosNegociacao.length;
-                  const chartData = Object.entries(negociacaoPorResponsavel)
-                    .map(([responsavel, count]) => ({
-                      responsavel,
+                  const rankingData = Object.entries(negociacaoPorOrigem)
+                    .map(([origem, count]) => ({
+                      origem,
                       total: count,
                       percentage: total > 0 ? ((count / total) * 100).toFixed(1) : '0',
                     }))
-                    .sort((a, b) => b.total - a.total);
+                    .sort((a, b) => b.total - a.total)
+                    .map((item, index) => ({
+                      ...item,
+                      posicao: index + 1,
+                    }));
                   
-                  if (chartData.length === 0) {
+                  if (rankingData.length === 0) {
                     return (
-                      <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                      <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
                         <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
                       </div>
                     );
                   }
                   
+                  const maxTotal = rankingData[0]?.total || 1;
+                  
                   return (
-                    <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart 
-                          data={chartData} 
-                          margin={{ top: 30, right: 10, left: 10, bottom: 60 }}
-                        >
-                          <XAxis 
-                            dataKey="responsavel"
-                            tick={<CustomXAxisTick />}
-                            className="text-muted-foreground"
-                            axisLine={false}
-                            tickLine={false}
-                            interval={0}
-                            height={80}
-                          />
-                          <Tooltip 
-                            formatter={(value: number, name: string, props: any) => [
-                              `${value} casos (${props.payload.percentage}%)`,
-                              'Total'
-                            ]}
-                          />
-                          <Bar 
-                            dataKey="total" 
-                            radius={[4, 4, 0, 0]}
-                            fill="hsl(217, 91%, 60%)"
-                          >
-                            <LabelList 
-                              dataKey="total" 
-                              position="top" 
-                              className="fill-foreground"
-                              fontSize={12}
-                            />
-                            <LabelList 
-                              dataKey="percentage" 
-                              position="center" 
-                              formatter={(value: string) => `${value}%`}
-                              className="fill-white"
-                              fontSize={11}
-                              fontWeight={600}
-                            />
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </ChartContainer>
+                    <div className="space-y-3">
+                      {rankingData.map((item) => {
+                        const barWidth = maxTotal > 0 ? (item.total / maxTotal) * 100 : 0;
+                        
+                        return (
+                          <div key={item.origem} className="flex items-center gap-3">
+                            {/* Posição no ranking */}
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                              item.posicao === 1 ? 'bg-yellow-500 text-yellow-950' :
+                              item.posicao === 2 ? 'bg-gray-300 text-gray-700' :
+                              item.posicao === 3 ? 'bg-amber-600 text-amber-50' :
+                              'bg-muted text-muted-foreground'
+                            }`}>
+                              {item.posicao}º
+                            </div>
+                            
+                            {/* Nome da origem */}
+                            <div className="flex-shrink-0 w-28 text-sm font-medium truncate" title={item.origem}>
+                              {item.origem}
+                            </div>
+                            
+                            {/* Barra horizontal */}
+                            <div className="flex-1 relative h-8 bg-muted/30 rounded overflow-hidden">
+                              <div 
+                                className="absolute inset-y-0 left-0 bg-blue-600 rounded transition-all duration-300"
+                                style={{ width: `${barWidth}%` }}
+                              />
+                              {/* Total no centro da barra */}
+                              <div className="absolute inset-0 flex items-center justify-center">
+                                <span className={`text-sm font-semibold ${barWidth > 40 ? 'text-white' : 'text-foreground'}`}>
+                                  {item.total} ({item.percentage}%)
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   );
                 })()}
               </CardContent>
