@@ -1028,6 +1028,14 @@ const RadarComercial = () => {
           <h2 className="text-lg font-semibold text-foreground">Radar de Conversão</h2>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-8">
+          {/* Filtro de Semanas */}
+          <WeekFilter
+            weeks={weeks}
+            selectedWeek={selectedWeek}
+            onWeekChange={setSelectedWeek}
+            isLoading={isLoading}
+          />
+
           {/* Cards de métricas de conversão */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
             <Card>
