@@ -510,8 +510,9 @@ export function TaskDashboard({
         <MetricCard
           title="Média Cumprimento"
           value={`${avgCompletionDays.toFixed(1)} dias`}
-          subtitle="Dias úteis (tarefas concluídas)"
-          icon={<Clock className="h-5 w-5 text-primary" />}
+          subtitle={avgCompletionDays > 2 ? "Fora da Meta" : avgCompletionDays === 2 ? "Atenção, Limite da Meta" : "Dentro da Meta"}
+          icon={<Clock className={`h-5 w-5 ${avgCompletionDays > 2 ? "text-destructive" : avgCompletionDays === 2 ? "text-warning" : "text-success"}`} />}
+          variant={avgCompletionDays > 2 ? "warning" : avgCompletionDays === 2 ? "warning" : "success"}
           className="animate-slide-up stagger-6"
         />
         <MetricCard
