@@ -1355,7 +1355,7 @@ const RadarComercial = () => {
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Seção: Radar de Conversão */}
+      {/* Seção: Radar de Origens */}
       <Collapsible 
         open={radarConversaoOpen} 
         onOpenChange={setRadarConversaoOpen}
@@ -1367,7 +1367,7 @@ const RadarComercial = () => {
           ) : (
             <ChevronRight className="h-5 w-5 text-primary" />
           )}
-          <h2 className="text-lg font-semibold text-foreground">Radar de Conversão</h2>
+          <h2 className="text-lg font-semibold text-foreground">Radar de Origens</h2>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-8">
           {/* Filtro de Semanas */}
