@@ -61,6 +61,7 @@ const RadarComercial = () => {
   const [rankingWeekFilter, setRankingWeekFilter] = useState<number | null>(null);
   const [sdrRankingWeek, setSdrRankingWeek] = useState<number | null>(null);
   const [sdrEvolutionFilter, setSdrEvolutionFilter] = useState<string | null>(null);
+  const [selectedSdrsForChart, setSelectedSdrsForChart] = useState<string[]>([]);
 
   // Handlers para abrir/fechar seções (comportamento accordion)
   const handleSectionToggle = (section: string) => {
@@ -3300,11 +3301,64 @@ const RadarComercial = () => {
           {/* Gráfico de Linha - Evolução % de Clientes com Direito por SDR ao longo das Semanas */}
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-3">
-                <TrendingUp className="h-5 w-5 text-purple-500" />
-                <CardTitle className="text-lg">Evolução da Taxa de Qualificação por SDR</CardTitle>
+              <div className="flex flex-col gap-3">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="h-5 w-5 text-purple-500" />
+                  <CardTitle className="text-lg">Evolução da Taxa de Qualificação por SDR</CardTitle>
+                </div>
+                <p className="text-sm text-muted-foreground">Percentual de clientes com direito (Coluna J) por SDR ao longo das semanas (Coluna E)</p>
+                
+                {/* Filtro de SDRs */}
+                {(() => {
+                  // Calcula todos os SDRs disponíveis para o filtro
+                  const allAvailableSdrs = new Set<string>();
+                  data.filter(record => {
+                    if (selectedSetor && record.setor !== selectedSetor) return false;
+                    return true;
+                  }).forEach(record => {
+                    const sdr = record.sdr?.trim();
+                    if (sdr) allAvailableSdrs.add(sdr);
+                  });
+                  const sdrOptions = Array.from(allAvailableSdrs).sort();
+                  
+                  if (sdrOptions.length === 0) return null;
+                  
+                  return (
+                    <div className="flex flex-wrap gap-2 pt-2">
+                      <span className="text-sm text-muted-foreground self-center">Filtrar SDRs:</span>
+                      <button
+                        onClick={() => setSelectedSdrsForChart([])}
+                        className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                          selectedSdrsForChart.length === 0
+                            ? 'bg-primary text-primary-foreground'
+                            : 'bg-muted hover:bg-muted/80 text-muted-foreground'
+                        }`}
+                      >
+                        Todos
+                      </button>
+                      {sdrOptions.map(sdr => (
+                        <button
+                          key={sdr}
+                          onClick={() => {
+                            setSelectedSdrsForChart(prev => 
+                              prev.includes(sdr) 
+                                ? prev.filter(s => s !== sdr)
+                                : [...prev, sdr]
+                            );
+                          }}
+                          className={`px-3 py-1 text-xs rounded-full transition-colors ${
+                            selectedSdrsForChart.includes(sdr)
+                              ? 'bg-primary text-primary-foreground'
+                              : 'bg-muted hover:bg-muted/80 text-muted-foreground'
+                          }`}
+                        >
+                          {sdr}
+                        </button>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
-              <p className="text-sm text-muted-foreground">Percentual de clientes com direito (Coluna J) por SDR ao longo das semanas (Coluna E)</p>
             </CardHeader>
             <CardContent>
               {(() => {
@@ -3339,7 +3393,11 @@ const RadarComercial = () => {
                   }
                 });
                 
-                const sdrArray = Array.from(allSdrs).sort();
+                // Filtra SDRs com base na seleção do usuário
+                const allSdrsArray = Array.from(allSdrs).sort();
+                const sdrArray = selectedSdrsForChart.length > 0 
+                  ? allSdrsArray.filter(sdr => selectedSdrsForChart.includes(sdr))
+                  : allSdrsArray;
                 
                 if (sdrArray.length === 0) {
                   return (
