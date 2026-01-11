@@ -25,6 +25,7 @@ import { PendingTasksDialog } from "./PendingTasksDialog";
 import { ConformityErrorsDialog } from "./ConformityErrorsDialog";
 import { DeadlineErrorsDialog } from "./DeadlineErrorsDialog";
 import { AvgCompletionDialog } from "./AvgCompletionDialog";
+import { ConformityAccuracyDialog } from "./ConformityAccuracyDialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -490,6 +491,7 @@ export function TaskDashboard({
   const [conformityDialogOpen, setConformityDialogOpen] = useState(false);
   const [deadlineDialogOpen, setDeadlineDialogOpen] = useState(false);
   const [avgCompletionDialogOpen, setAvgCompletionDialogOpen] = useState(false);
+  const [conformityAccuracyDialogOpen, setConformityAccuracyDialogOpen] = useState(false);
 
   return (
     <div className="space-y-8">
@@ -569,10 +571,11 @@ export function TaskDashboard({
             <MetricCard
               title="Taxa de Acerto Conformidade"
               value={`${conformityAccuracyRate.toFixed(4)}%`}
-              subtitle={conformityAccuracyRate < 98 ? "Fora da Meta" : conformityAccuracyRate === 98 ? "Atenção, Limite da Meta" : "Dentro da Meta"}
+              subtitle={conformityAccuracyRate < 98 ? "Fora da Meta - Clique para detalhes" : conformityAccuracyRate === 98 ? "Atenção, Limite da Meta - Clique para detalhes" : "Dentro da Meta - Clique para detalhes"}
               icon={<Percent className={`h-5 w-5 ${conformityAccuracyRate < 98 ? "text-destructive" : conformityAccuracyRate === 98 ? "text-warning" : "text-success"}`} />}
               variant={conformityAccuracyRate < 98 ? "warning" : conformityAccuracyRate === 98 ? "warning" : "success"}
               className="animate-slide-up stagger-7"
+              onClick={() => setConformityAccuracyDialogOpen(true)}
             />
           );
         })()}
@@ -1427,6 +1430,13 @@ export function TaskDashboard({
         onOpenChange={setAvgCompletionDialogOpen}
         tasks={filteredTasks}
         holidays={holidays}
+      />
+
+      <ConformityAccuracyDialog
+        open={conformityAccuracyDialogOpen}
+        onOpenChange={setConformityAccuracyDialogOpen}
+        tasks={filteredTasks}
+        errors={filteredConformityErrors}
       />
     </div>
   );
