@@ -11,7 +11,7 @@ const SHEET_ID = '1zjLZCxj5FgwrzmUX2Jn3H7PUXBoTABQO_aRAXADyN5M';
 const SHEET_CONFIG = [
   { gid: 0, name: "DANIEL ARAÚJO" },
   { gid: 168471298, name: "ANA GIUSTI" },
-  { gid: 1165923131, name: "Laura Radaspiel" },
+  { gid: 1165923131, name: "LAURA RADASPIEL" },
 ];
 
 serve(async (req) => {
