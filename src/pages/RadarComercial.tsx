@@ -41,6 +41,8 @@ import {
   Pie,
   LineChart,
   Line,
+  ReferenceLine,
+  Legend,
 } from "recharts";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
@@ -219,7 +221,68 @@ const RadarComercial = () => {
     'hsl(47, 96%, 53%)',  // yellow
   ];
 
-  // Dados para o gráfico de atendimentos por responsável
+  // Lista única de SDRs para o gráfico de evolução
+  const sdrList = useMemo(() => {
+    const sdrs = new Set<string>();
+    sdrData.forEach(record => {
+      const semana = parseInt(record.colD?.trim()) || 0;
+      if (semana > 0 && semana <= 53) {
+        const sdrName = record.colA?.trim();
+        if (sdrName) {
+          sdrs.add(sdrName);
+        }
+      }
+    });
+    return Array.from(sdrs).sort();
+  }, [sdrData]);
+
+  // Dados para o gráfico de evolução de agendamentos por SDR por semana
+  const sdrEvolutionChartData = useMemo(() => {
+    // Estrutura: { semana: 1, sdr1: 5, sdr2: 3, ... }
+    const weekData: Record<number, Record<string, number>> = {};
+    
+    // Inicializa todas as 53 semanas
+    for (let i = 1; i <= 53; i++) {
+      weekData[i] = {};
+      sdrList.forEach(sdr => {
+        weekData[i][sdr] = 0;
+      });
+    }
+    
+    // Contabiliza agendamentos por SDR e semana
+    sdrData.forEach(record => {
+      const semana = parseInt(record.colD?.trim()) || 0;
+      const sdrName = record.colA?.trim();
+      if (semana > 0 && semana <= 53 && sdrName && sdrList.includes(sdrName)) {
+        weekData[semana][sdrName] = (weekData[semana][sdrName] || 0) + 1;
+      }
+    });
+    
+    // Transforma em array para o gráfico
+    return Array.from({ length: 53 }, (_, i) => {
+      const weekNum = i + 1;
+      return {
+        semana: `${weekNum}`,
+        weekNumber: weekNum,
+        ...weekData[weekNum],
+      };
+    });
+  }, [sdrData, sdrList]);
+
+  // Cores para cada SDR no gráfico de evolução
+  const sdrColors = [
+    'hsl(173, 80%, 40%)', // teal
+    'hsl(221, 83%, 53%)', // blue
+    'hsl(142, 76%, 36%)', // emerald
+    'hsl(262, 83%, 58%)', // violet
+    'hsl(24, 95%, 53%)',  // orange
+    'hsl(330, 81%, 60%)', // pink
+    'hsl(199, 89%, 48%)', // cyan
+    'hsl(47, 96%, 53%)',  // yellow
+    'hsl(280, 70%, 50%)', // purple
+    'hsl(340, 80%, 55%)', // rose
+  ];
+
   const responsavelChartData = useMemo(() => {
     const counts: Record<string, number> = {};
     
@@ -2562,6 +2625,73 @@ const RadarComercial = () => {
                   </div>
                 );
               })()}
+            </CardContent>
+          </Card>
+
+          {/* Gráfico de Evolução de Agendamentos por SDR */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <TrendingUp className="h-5 w-5 text-teal-500" />
+                <CardTitle className="text-lg">Evolução de Agendamentos por SDR</CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Quantidade de agendamentos por semana de cada SDR. 
+                <span className="text-destructive font-medium ml-1">Linha vermelha = Meta semanal (25 agendamentos)</span>
+              </p>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-[400px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={sdrEvolutionChartData} margin={{ top: 20, right: 30, left: 10, bottom: 0 }}>
+                    <XAxis 
+                      dataKey="semana" 
+                      tick={{ fontSize: 11 }}
+                      className="text-muted-foreground"
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 11 }}
+                      className="text-muted-foreground"
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Legend 
+                      wrapperStyle={{ paddingTop: '20px' }}
+                      formatter={(value) => <span className="text-sm">{value}</span>}
+                    />
+                    {/* Linha de meta (25 agendamentos) */}
+                    <ReferenceLine 
+                      y={25} 
+                      stroke="hsl(0, 84%, 60%)" 
+                      strokeWidth={2}
+                      strokeDasharray="5 5"
+                      label={{ 
+                        value: 'Meta: 25', 
+                        position: 'right',
+                        fill: 'hsl(0, 84%, 60%)',
+                        fontSize: 12,
+                        fontWeight: 'bold'
+                      }}
+                    />
+                    {/* Linhas para cada SDR */}
+                    {sdrList.map((sdr, index) => (
+                      <Line
+                        key={sdr}
+                        type="monotone"
+                        dataKey={sdr}
+                        name={sdr}
+                        stroke={sdrColors[index % sdrColors.length]}
+                        strokeWidth={2}
+                        dot={{ fill: sdrColors[index % sdrColors.length], strokeWidth: 0, r: 3 }}
+                        activeDot={{ r: 5, strokeWidth: 0 }}
+                      />
+                    ))}
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
             </CardContent>
           </Card>
 
