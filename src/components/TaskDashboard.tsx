@@ -2,14 +2,13 @@ import { useMemo } from "react";
 import {
   ClipboardList,
   Clock,
-  AlertTriangle,
   CheckCircle2,
   Users,
 } from "lucide-react";
 import { Bar, BarChart, XAxis, YAxis, CartesianGrid } from "recharts";
 import MetricCard from "./MetricCard";
 import { TaskData } from "@/hooks/useSheetData";
-import { calculateBusinessDays, calculateDelayBusinessDays } from "@/utils/businessDays";
+import { calculateBusinessDays } from "@/utils/businessDays";
 import {
   ChartContainer,
   ChartTooltip,
@@ -92,19 +91,6 @@ export function TaskDashboard({
     return totalDays / completedTasks.length;
   }, [filteredTasks, holidays]);
 
-  // Média de atraso das tarefas pendentes
-  const avgDelayDays = useMemo(() => {
-    const delayedTasks = pendingTasks.filter(task => task.dataDistribuicao);
-    
-    if (delayedTasks.length === 0) return 0;
-    
-    const totalDelay = delayedTasks.reduce((acc, task) => {
-      const delay = calculateDelayBusinessDays(task.dataDistribuicao!, holidays);
-      return acc + delay;
-    }, 0);
-    
-    return totalDelay / delayedTasks.length;
-  }, [pendingTasks, holidays]);
 
   const colaboradores = [...new Set(tasks.map(t => t.colaborador))];
 
@@ -147,14 +133,6 @@ export function TaskDashboard({
           value={`${avgCompletionDays.toFixed(1)} dias`}
           subtitle="Dias úteis (tarefas concluídas)"
           icon={<Clock className="h-5 w-5 text-primary" />}
-          className="animate-slide-up stagger-4"
-        />
-        <MetricCard
-          title="Média de Atraso"
-          value={`${avgDelayDays.toFixed(1)} dias`}
-          subtitle="Tarefas pendentes"
-          icon={<AlertTriangle className="h-5 w-5 text-destructive" />}
-          variant={avgDelayDays > 5 ? "warning" : "default"}
           className="animate-slide-up stagger-4"
         />
       </div>
