@@ -904,32 +904,6 @@ const RadarComercial = () => {
           </div>
         )}
           </div>
-
-          {/* Resumo Financeiro */}
-          <Card>
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <Calendar className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Resumo Financeiro</CardTitle>
-          </div>
-        </CardHeader>
-        <CardContent>
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="bg-muted/30 rounded-lg p-4">
-              <p className="text-sm text-muted-foreground mb-1">Honorários Iniciais</p>
-              <p className="text-2xl font-bold text-foreground">
-                {isLoading ? 'R$ --' : formatCurrency(metrics.honorariosIniciaisTotal)}
-              </p>
-            </div>
-            <div className="bg-muted/30 rounded-lg p-4">
-              <p className="text-sm text-muted-foreground mb-1">Honorários de Êxito Estimados</p>
-              <p className="text-2xl font-bold text-foreground">
-                {isLoading ? 'R$ --' : formatCurrency(metrics.honorariosExitoTotal)}
-              </p>
-            </div>
-          </div>
-        </CardContent>
-          </Card>
         </CollapsibleContent>
       </Collapsible>
     </div>
