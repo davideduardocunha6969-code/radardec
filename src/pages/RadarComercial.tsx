@@ -3413,12 +3413,6 @@ const RadarComercial = () => {
                           wrapperStyle={{ paddingLeft: '20px' }}
                           iconType="line"
                         />
-                        <ReferenceLine 
-                          y={50} 
-                          stroke="hsl(var(--muted-foreground))" 
-                          strokeDasharray="5 5"
-                          label={{ value: '50%', position: 'left', fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
-                        />
                         {sdrArray.map((sdr, index) => {
                           const color = SDR_COLORS[index % SDR_COLORS.length];
                           const dash = SDR_DASH[index % SDR_DASH.length];
