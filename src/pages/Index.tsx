@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useMemo, useState } from "react";
 import { RefreshCw, Loader2, FileSpreadsheet } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
@@ -7,21 +7,23 @@ import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { HolidayManager } from "@/components/HolidayManager";
 import { ColaboradorFilter } from "@/components/ColaboradorFilter";
 import { useSheetData } from "@/hooks/useSheetData";
-import { getDefaultBrazilianHolidays } from "@/utils/businessDays";
+import { useHolidays } from "@/hooks/useHolidays";
 
 const Index = () => {
   const { sheets, tasks, isLoading, error, lastUpdated, refetch } = useSheetData();
+  const { 
+    holidays, 
+    loading: holidaysLoading, 
+    addHoliday, 
+    addHolidayRange, 
+    removeHoliday, 
+    clearAllHolidays 
+  } = useHolidays();
   
   // Filtros
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
   const [selectedColaboradores, setSelectedColaboradores] = useState<string[]>([]);
-  
-  // Feriados - inicializa com feriados brasileiros do ano atual
-  const currentYear = new Date().getFullYear();
-  const [holidays, setHolidays] = useState<Date[]>(() => 
-    getDefaultBrazilianHolidays(currentYear)
-  );
 
   // Lista de colaboradores únicos
   const colaboradores = useMemo(() => {
@@ -83,7 +85,11 @@ const Index = () => {
             <div className="flex items-center gap-2">
               <HolidayManager
                 holidays={holidays}
-                onHolidaysChange={setHolidays}
+                loading={holidaysLoading}
+                onAddHoliday={addHoliday}
+                onAddHolidayRange={addHolidayRange}
+                onRemoveHoliday={removeHoliday}
+                onClearAll={clearAllHolidays}
               />
               <Button
                 variant="outline"
