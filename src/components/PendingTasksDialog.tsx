@@ -52,12 +52,12 @@ export function PendingTasksDialog({
   }, [tasks, holidays, today]);
 
   const copyToClipboard = () => {
-    const header = "Tarefa\tNº Processo\tColaborador\tData Envio\tDias";
+    const header = "Tarefa\tNº Processo\tController\tData Envio\tDias";
     const rows = tasksWithDays.map((task) => {
       const dataEnvio = task.dataDistribuicao
         ? format(task.dataDistribuicao, "dd/MM/yyyy", { locale: ptBR })
         : "-";
-      return `${task.tarefa}\t${task.numeroProcesso || "-"}\t${task.colaborador}\t${dataEnvio}\t${task.daysSinceDistribution}`;
+      return `${task.tarefa}\t${task.numeroProcesso || "-"}\t${task.controller}\t${dataEnvio}\t${task.daysSinceDistribution}`;
     });
     
     const text = [header, ...rows].join("\n");
@@ -111,7 +111,7 @@ export function PendingTasksDialog({
                 <TableRow>
                   <TableHead className="w-[35%]">Tarefa</TableHead>
                   <TableHead className="w-[15%]">Nº Processo</TableHead>
-                  <TableHead className="w-[18%]">Colaborador</TableHead>
+                  <TableHead className="w-[18%]">Controller</TableHead>
                   <TableHead className="w-[17%]">Data Envio</TableHead>
                   <TableHead className="w-[15%] text-right">Dias</TableHead>
                 </TableRow>
@@ -121,7 +121,7 @@ export function PendingTasksDialog({
                   <TableRow key={index}>
                     <TableCell className="font-medium">{task.tarefa}</TableCell>
                     <TableCell>{task.numeroProcesso || "-"}</TableCell>
-                    <TableCell>{task.colaborador}</TableCell>
+                    <TableCell>{task.controller}</TableCell>
                     <TableCell>
                       {task.dataDistribuicao
                         ? format(task.dataDistribuicao, "dd/MM/yyyy", { locale: ptBR })
