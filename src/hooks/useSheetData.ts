@@ -99,20 +99,23 @@ export function useSheetData() {
       // Coluna A (0) = Tarefa/Atividade
       // Coluna B (1) = Data de Distribuição
       // Coluna D (3) = Data de Cumprimento/Término
+      // Coluna K (10) = Controller
       // Coluna M (12) = Número do Processo
       // Coluna O (14) = Tipo de Ação
       const tarefaIdx = 0;       // Coluna A
       const dataDistIdx = 1;     // Coluna B - Data de distribuição
       const dataCumpIdx = 3;     // Coluna D - Data de cumprimento/término
+      const controllerIdx = 10;  // Coluna K - Controller
       const numProcessoIdx = 12; // Coluna M - Número do processo
       const tipoAcaoIdx = 14;    // Coluna O - Tipo de ação
       
       sheet.rows.forEach(row => {
         const tipoAcao = (row[tipoAcaoIdx] || '').trim();
         const setor = findSector(tipoAcao);
+        const controller = (row[controllerIdx] || '').trim();
         
         const task: TaskData = {
-          controller: sheet.name,
+          controller: controller || 'Não atribuído',
           tarefa: row[tarefaIdx] || '',
           numeroProcesso: row[numProcessoIdx] || '',
           tipoAcao: row[tipoAcaoIdx] || '',
