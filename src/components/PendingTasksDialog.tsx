@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Clock, User, Calendar, AlertCircle } from "lucide-react";
+import { Clock, AlertCircle, Copy, Check } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,9 +9,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import { TaskData } from "@/hooks/useSheetData";
 import { calculateBusinessDays } from "@/utils/businessDays";
+import { useToast } from "@/hooks/use-toast";
+import { useState } from "react";
 
 interface PendingTasksDialogProps {
   open: boolean;
@@ -27,6 +37,8 @@ export function PendingTasksDialog({
   holidays,
 }: PendingTasksDialogProps) {
   const today = new Date();
+  const { toast } = useToast();
+  const [copied, setCopied] = useState(false);
 
   const tasksWithDays = useMemo(() => {
     return tasks
@@ -39,20 +51,52 @@ export function PendingTasksDialog({
       .sort((a, b) => b.daysSinceDistribution - a.daysSinceDistribution);
   }, [tasks, holidays, today]);
 
-  const getDaysColor = (days: number) => {
-    if (days > 30) return "destructive";
-    if (days > 14) return "warning";
-    return "secondary";
+  const copyToClipboard = () => {
+    const header = "Tarefa\tColaborador\tData Envio\tDias";
+    const rows = tasksWithDays.map((task) => {
+      const dataEnvio = task.dataDistribuicao
+        ? format(task.dataDistribuicao, "dd/MM/yyyy", { locale: ptBR })
+        : "-";
+      return `${task.tarefa}\t${task.colaborador}\t${dataEnvio}\t${task.daysSinceDistribution}`;
+    });
+    
+    const text = [header, ...rows].join("\n");
+    
+    navigator.clipboard.writeText(text).then(() => {
+      setCopied(true);
+      toast({
+        title: "Copiado!",
+        description: "Dados copiados para a área de transferência",
+      });
+      setTimeout(() => setCopied(false), 2000);
+    });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] max-h-[80vh]">
+      <DialogContent className="sm:max-w-[900px] max-h-[80vh]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Clock className="h-5 w-5 text-warning" />
-            Tarefas Pendentes ({tasks.length})
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-warning" />
+              Tarefas Pendentes ({tasks.length})
+            </DialogTitle>
+            {tasks.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={copyToClipboard}
+                className="gap-2"
+              >
+                {copied ? (
+                  <Check className="h-4 w-4 text-success" />
+                ) : (
+                  <Copy className="h-4 w-4" />
+                )}
+                {copied ? "Copiado!" : "Copiar"}
+              </Button>
+            )}
+          </div>
         </DialogHeader>
 
         {tasks.length === 0 ? (
@@ -61,41 +105,43 @@ export function PendingTasksDialog({
             <p>Nenhuma tarefa pendente encontrada.</p>
           </div>
         ) : (
-          <ScrollArea className="h-[500px] pr-4">
-            <div className="space-y-3">
-              {tasksWithDays.map((task, index) => (
-                <div
-                  key={index}
-                  className="p-4 rounded-lg border bg-card hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1 space-y-2">
-                      <p className="font-medium leading-tight">{task.tarefa}</p>
-                      
-                      <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <User className="h-3.5 w-3.5" />
-                          <span>{task.colaborador}</span>
-                        </div>
-                        
-                        {task.dataDistribuicao && (
-                          <div className="flex items-center gap-1">
-                            <Calendar className="h-3.5 w-3.5" />
-                            <span>
-                              {format(task.dataDistribuicao, "dd/MM/yyyy", { locale: ptBR })}
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                    
-                    <Badge variant={getDaysColor(task.daysSinceDistribution) as any}>
-                      {task.daysSinceDistribution} {task.daysSinceDistribution === 1 ? "dia" : "dias"}
-                    </Badge>
-                  </div>
-                </div>
-              ))}
-            </div>
+          <ScrollArea className="h-[500px]">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-[45%]">Tarefa</TableHead>
+                  <TableHead className="w-[20%]">Colaborador</TableHead>
+                  <TableHead className="w-[20%]">Data Envio</TableHead>
+                  <TableHead className="w-[15%] text-right">Dias</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {tasksWithDays.map((task, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">{task.tarefa}</TableCell>
+                    <TableCell>{task.colaborador}</TableCell>
+                    <TableCell>
+                      {task.dataDistribuicao
+                        ? format(task.dataDistribuicao, "dd/MM/yyyy", { locale: ptBR })
+                        : "-"}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <span
+                        className={
+                          task.daysSinceDistribution > 30
+                            ? "text-destructive font-semibold"
+                            : task.daysSinceDistribution > 14
+                            ? "text-warning font-semibold"
+                            : ""
+                        }
+                      >
+                        {task.daysSinceDistribution}
+                      </span>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
           </ScrollArea>
         )}
       </DialogContent>
