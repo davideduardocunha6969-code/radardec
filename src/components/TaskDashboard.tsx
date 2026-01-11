@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
-import { format } from "date-fns";
+import { format, startOfWeek, startOfMonth, subDays, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { CalendarIcon } from "lucide-react";
 import {
   ClipboardList,
   Clock,
@@ -18,6 +19,18 @@ import {
 } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PendingTasksDialog } from "./PendingTasksDialog";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { Button } from "@/components/ui/button";
+import { Calendar } from "@/components/ui/calendar";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
+import { cn } from "@/lib/utils";
+
+type ChartViewMode = "daily" | "weekly" | "monthly";
+type ChartPeriod = "all" | "30d" | "90d" | "custom";
 
 interface TaskDashboardProps {
   tasks: TaskData[];
@@ -34,6 +47,11 @@ export function TaskDashboard({
   endDate,
   selectedColaboradores,
 }: TaskDashboardProps) {
+  const [chartViewMode, setChartViewMode] = useState<ChartViewMode>("daily");
+  const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("all");
+  const [customChartStart, setCustomChartStart] = useState<Date>();
+  const [customChartEnd, setCustomChartEnd] = useState<Date>();
+
   // Filtra tarefas por período e colaboradores
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {
@@ -94,26 +112,77 @@ export function TaskDashboard({
     return totalDays / completedTasks.length;
   }, [filteredTasks, holidays]);
 
+  // Filtra tarefas para o gráfico de linha baseado no período selecionado
+  const chartFilteredTasks = useMemo(() => {
+    const today = new Date();
+    
+    return filteredTasks.filter(task => {
+      if (!task.dataDistribuicao) return false;
+      
+      switch (chartPeriod) {
+        case "30d":
+          return task.dataDistribuicao >= subDays(today, 30);
+        case "90d":
+          return task.dataDistribuicao >= subDays(today, 90);
+        case "custom":
+          if (customChartStart && task.dataDistribuicao < customChartStart) return false;
+          if (customChartEnd && task.dataDistribuicao > customChartEnd) return false;
+          return true;
+        default:
+          return true;
+      }
+    });
+  }, [filteredTasks, chartPeriod, customChartStart, customChartEnd]);
+
   // Tarefas por data de distribuição (para gráfico de linha)
   const tasksByDate = useMemo(() => {
     const counts: Record<string, number> = {};
     
-    filteredTasks.forEach(task => {
+    chartFilteredTasks.forEach(task => {
       if (task.dataDistribuicao) {
-        const dateKey = format(task.dataDistribuicao, "yyyy-MM-dd");
+        let dateKey: string;
+        
+        switch (chartViewMode) {
+          case "weekly":
+            const weekStart = startOfWeek(task.dataDistribuicao, { locale: ptBR });
+            dateKey = format(weekStart, "yyyy-MM-dd");
+            break;
+          case "monthly":
+            const monthStart = startOfMonth(task.dataDistribuicao);
+            dateKey = format(monthStart, "yyyy-MM-dd");
+            break;
+          default:
+            dateKey = format(task.dataDistribuicao, "yyyy-MM-dd");
+        }
+        
         counts[dateKey] = (counts[dateKey] || 0) + 1;
       }
     });
     
     return Object.entries(counts)
-      .map(([date, quantidade]) => ({
-        date,
-        dateLabel: format(new Date(date + "T12:00:00"), "dd/MM", { locale: ptBR }),
-        fullDate: format(new Date(date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }),
-        quantidade,
-      }))
+      .map(([date, quantidade]) => {
+        const dateObj = new Date(date + "T12:00:00");
+        let dateLabel: string;
+        let fullDate: string;
+        
+        switch (chartViewMode) {
+          case "weekly":
+            dateLabel = `Sem ${format(dateObj, "dd/MM", { locale: ptBR })}`;
+            fullDate = `Semana de ${format(dateObj, "dd/MM/yyyy", { locale: ptBR })}`;
+            break;
+          case "monthly":
+            dateLabel = format(dateObj, "MMM/yy", { locale: ptBR });
+            fullDate = format(dateObj, "MMMM 'de' yyyy", { locale: ptBR });
+            break;
+          default:
+            dateLabel = format(dateObj, "dd/MM", { locale: ptBR });
+            fullDate = format(dateObj, "dd/MM/yyyy", { locale: ptBR });
+        }
+        
+        return { date, dateLabel, fullDate, quantidade };
+      })
       .sort((a, b) => a.date.localeCompare(b.date));
-  }, [filteredTasks]);
+  }, [chartFilteredTasks, chartViewMode]);
 
   const colaboradores = [...new Set(tasks.map(t => t.colaborador))];
 
@@ -247,7 +316,124 @@ export function TaskDashboard({
       {/* Gráfico de Linha: Distribuição de Tarefas por Data */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Distribuição de Tarefas por Data</CardTitle>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-lg">Distribuição de Tarefas por Data</CardTitle>
+            
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Seletor de visualização */}
+              <ToggleGroup
+                type="single"
+                value={chartViewMode}
+                onValueChange={(value) => value && setChartViewMode(value as ChartViewMode)}
+                className="bg-muted rounded-lg p-1"
+              >
+                <ToggleGroupItem value="daily" size="sm" className="text-xs px-3">
+                  Diário
+                </ToggleGroupItem>
+                <ToggleGroupItem value="weekly" size="sm" className="text-xs px-3">
+                  Semanal
+                </ToggleGroupItem>
+                <ToggleGroupItem value="monthly" size="sm" className="text-xs px-3">
+                  Mensal
+                </ToggleGroupItem>
+              </ToggleGroup>
+
+              {/* Seletor de período */}
+              <ToggleGroup
+                type="single"
+                value={chartPeriod}
+                onValueChange={(value) => value && setChartPeriod(value as ChartPeriod)}
+                className="bg-muted rounded-lg p-1"
+              >
+                <ToggleGroupItem value="all" size="sm" className="text-xs px-3">
+                  Tudo
+                </ToggleGroupItem>
+                <ToggleGroupItem value="30d" size="sm" className="text-xs px-3">
+                  30 dias
+                </ToggleGroupItem>
+                <ToggleGroupItem value="90d" size="sm" className="text-xs px-3">
+                  90 dias
+                </ToggleGroupItem>
+                <ToggleGroupItem value="custom" size="sm" className="text-xs px-3">
+                  Período
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          </div>
+
+          {/* Seletores de data customizada */}
+          {chartPeriod === "custom" && (
+            <div className="flex flex-wrap items-center gap-2 mt-4">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !customChartStart && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customChartStart
+                      ? format(customChartStart, "dd/MM/yyyy", { locale: ptBR })
+                      : "Data início"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customChartStart}
+                    onSelect={setCustomChartStart}
+                    locale={ptBR}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <span className="text-muted-foreground">até</span>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !customChartEnd && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customChartEnd
+                      ? format(customChartEnd, "dd/MM/yyyy", { locale: ptBR })
+                      : "Data fim"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customChartEnd}
+                    onSelect={setCustomChartEnd}
+                    locale={ptBR}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {(customChartStart || customChartEnd) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setCustomChartStart(undefined);
+                    setCustomChartEnd(undefined);
+                  }}
+                >
+                  Limpar
+                </Button>
+              )}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <ChartContainer
