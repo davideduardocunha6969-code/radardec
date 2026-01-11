@@ -851,60 +851,36 @@ const RadarComercial = () => {
         </CardContent>
       </Card>
 
-      {/* Gráfico de Tempo Médio de Atendimento por Setor */}
-      <Card className="mb-8">
-        <CardHeader>
-          <div className="flex items-center gap-3">
-            <Calendar className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Tempo Médio para Fechamento por Setor</CardTitle>
+      {/* Cards de Tempo Médio para Fechamento por Setor */}
+      <div className="mb-8">
+        <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+          <Calendar className="h-5 w-5 text-primary" />
+          Tempo Médio para Fechamento por Setor
+        </h2>
+        {tempoMedioSetorChartData.length > 0 ? (
+          <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
+            {tempoMedioSetorChartData.map((item) => (
+              <Card key={item.setor} className="bg-card">
+                <CardContent className="pt-4 pb-4">
+                  <p className="text-xs text-muted-foreground mb-1 truncate" title={item.setor}>
+                    {item.setor}
+                  </p>
+                  <p className="text-2xl font-bold text-foreground">
+                    {item.mediaDias} <span className="text-sm font-normal text-muted-foreground">dias</span>
+                  </p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {item.totalAtendimentos} atendimento{item.totalAtendimentos !== 1 ? 's' : ''}
+                  </p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
-        </CardHeader>
-        <CardContent>
-          {tempoMedioSetorChartData.length > 0 ? (
-            <ChartContainer config={chartConfig} className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart 
-                  data={tempoMedioSetorChartData} 
-                  margin={{ top: 20, right: 10, left: 10, bottom: 60 }}
-                >
-                  <XAxis 
-                    dataKey="setor"
-                    tick={<CustomXAxisTick />}
-                    className="text-muted-foreground"
-                    axisLine={false}
-                    tickLine={false}
-                    interval={0}
-                    height={80}
-                  />
-                  <Tooltip 
-                    formatter={(value: number, name: string, props: any) => [
-                      `${value} dias (${props.payload.totalAtendimentos} atendimentos)`,
-                      'Média'
-                    ]}
-                  />
-                  <Bar 
-                    dataKey="mediaDias" 
-                    radius={[4, 4, 0, 0]}
-                    className="fill-accent"
-                  >
-                    <LabelList 
-                      dataKey="mediaDias" 
-                      position="top" 
-                      formatter={(value: number) => `${value}d`}
-                      className="fill-foreground"
-                      fontSize={12}
-                    />
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          ) : (
-            <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
-              <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+        ) : (
+          <div className="h-[100px] flex items-center justify-center bg-muted/30 rounded-lg">
+            <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+          </div>
+        )}
+      </div>
 
       {/* Resumo Financeiro */}
       <Card>
