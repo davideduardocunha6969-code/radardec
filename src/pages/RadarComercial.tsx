@@ -358,57 +358,57 @@ const RadarComercial = () => {
         </CardContent>
       </Card>
 
-      {/* Gráficos de Pizza */}
+      {/* Gráficos */}
       <div className="grid gap-6 md:grid-cols-2 mb-8">
-        {/* Modalidade de Atendimento */}
+        {/* Modalidade de Atendimento - Barras Horizontais */}
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
-              <PieChart className="h-5 w-5 text-primary" />
+              <BarChart3 className="h-5 w-5 text-primary" />
               <CardTitle className="text-lg">Modalidade de Atendimento</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
             {modalidadeChartData.length > 0 ? (
-              <div className="h-[280px] w-full">
+              <ChartContainer config={chartConfig} className="h-[280px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <RechartsPieChart>
-                    <Pie
-                      data={modalidadeChartData}
-                      cx="50%"
-                      cy="50%"
-                      innerRadius={60}
-                      outerRadius={90}
-                      paddingAngle={3}
-                      dataKey="value"
-                      label={({ name, percentage }) => `${percentage}%`}
-                      labelLine={false}
-                    >
-                      {modalidadeChartData.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`} 
-                          fill={PIE_COLORS[index % PIE_COLORS.length]}
-                        />
-                      ))}
-                    </Pie>
-                    <Tooltip 
-                      formatter={(value: number, name: string) => [`${value} atendimentos`, name]}
+                  <BarChart 
+                    data={modalidadeChartData} 
+                    layout="vertical"
+                    margin={{ top: 10, right: 40, left: 10, bottom: 0 }}
+                  >
+                    <XAxis 
+                      type="number"
+                      hide
                     />
-                  </RechartsPieChart>
-                </ResponsiveContainer>
-                {/* Legenda */}
-                <div className="flex flex-wrap justify-center gap-4 mt-2">
-                  {modalidadeChartData.map((entry, index) => (
-                    <div key={entry.name} className="flex items-center gap-2">
-                      <div 
-                        className="w-3 h-3 rounded-full" 
-                        style={{ backgroundColor: PIE_COLORS[index % PIE_COLORS.length] }}
+                    <YAxis 
+                      type="category"
+                      dataKey="name"
+                      tick={{ fontSize: 11 }}
+                      className="text-muted-foreground"
+                      axisLine={false}
+                      tickLine={false}
+                      width={120}
+                    />
+                    <Tooltip 
+                      formatter={(value: number) => [`${value} atendimentos`, 'Total']}
+                    />
+                    <Bar 
+                      dataKey="value" 
+                      radius={[0, 4, 4, 0]}
+                      className="fill-primary"
+                    >
+                      <LabelList 
+                        dataKey="percentage" 
+                        position="right" 
+                        className="fill-foreground"
+                        fontSize={11}
+                        formatter={(value: string) => `${value}%`}
                       />
-                      <span className="text-xs text-muted-foreground">{entry.name}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
             ) : (
               <div className="h-[280px] flex items-center justify-center bg-muted/30 rounded-lg">
                 <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
