@@ -10,7 +10,7 @@ import { useSheetData } from "@/hooks/useSheetData";
 import { useHolidays } from "@/hooks/useHolidays";
 
 const Index = () => {
-  const { sheets, tasks, conformityErrors, isLoading, error, lastUpdated, refetch } = useSheetData();
+  const { sheets, tasks, conformityErrors, deadlineErrors, isLoading, error, lastUpdated, refetch } = useSheetData();
   const { 
     holidays, 
     loading: holidaysLoading, 
@@ -108,7 +108,7 @@ const Index = () => {
           <div className="flex items-center gap-2 text-sm text-muted-foreground">
             <FileSpreadsheet className="h-4 w-4" />
             <span>
-              {sheets.length} aba(s) carregada(s) • {tasks.length} tarefa(s) • {conformityErrors.length} erro(s) de conformidade
+              {sheets.length} aba(s) carregada(s) • {tasks.length} tarefa(s) • {conformityErrors.length} erro(s) de conformidade • {deadlineErrors.length} erro(s) de prazo
             </span>
           </div>
         </div>
@@ -117,6 +117,7 @@ const Index = () => {
         <TaskDashboard
           tasks={tasks}
           conformityErrors={conformityErrors}
+          deadlineErrors={deadlineErrors}
           holidays={holidays}
           startDate={startDate}
           endDate={endDate}

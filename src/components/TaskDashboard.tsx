@@ -9,10 +9,11 @@ import {
   Users,
   AlertTriangle,
   Percent,
+  Timer,
 } from "lucide-react";
 import { Bar, BarChart, Line, LineChart, XAxis, YAxis, CartesianGrid, Legend, LabelList } from "recharts";
 import MetricCard from "./MetricCard";
-import { TaskData, ConformityError } from "@/hooks/useSheetData";
+import { TaskData, ConformityError, DeadlineError } from "@/hooks/useSheetData";
 import { calculateBusinessDays } from "@/utils/businessDays";
 import {
   ChartContainer,
@@ -38,6 +39,7 @@ type ChartPeriod = "all" | "7d" | "30d" | "90d" | "custom";
 interface TaskDashboardProps {
   tasks: TaskData[];
   conformityErrors: ConformityError[];
+  deadlineErrors: DeadlineError[];
   holidays: Date[];
   startDate?: Date;
   endDate?: Date;
@@ -47,6 +49,7 @@ interface TaskDashboardProps {
 export function TaskDashboard({
   tasks,
   conformityErrors,
+  deadlineErrors,
   holidays,
   startDate,
   endDate,
@@ -100,6 +103,22 @@ export function TaskDashboard({
       return true;
     });
   }, [conformityErrors, startDate, endDate, selectedControllers]);
+
+  // Filtra erros de prazo por período e controller
+  const filteredDeadlineErrors = useMemo(() => {
+    return deadlineErrors.filter(error => {
+      if (selectedControllers.length > 0 && !selectedControllers.includes(error.controller)) {
+        return false;
+      }
+      
+      if (error.date) {
+        if (startDate && error.date < startDate) return false;
+        if (endDate && error.date > endDate) return false;
+      }
+      
+      return true;
+    });
+  }, [deadlineErrors, startDate, endDate, selectedControllers]);
 
   // Erros de conformidade por destinatário
   const conformityErrorsByRecipient = useMemo(() => {
@@ -486,6 +505,14 @@ export function TaskDashboard({
           icon={<Percent className="h-5 w-5 text-destructive" />}
           variant={filteredConformityErrors.length > 0 ? "warning" : "default"}
           className="animate-slide-up stagger-6"
+        />
+        <MetricCard
+          title="Erros de Prazo"
+          value={filteredDeadlineErrors.length}
+          subtitle="Erros na data do prazo"
+          icon={<Timer className="h-5 w-5 text-destructive" />}
+          variant={filteredDeadlineErrors.length > 0 ? "warning" : "default"}
+          className="animate-slide-up stagger-7"
         />
       </div>
 

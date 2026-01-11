@@ -16,6 +16,9 @@ const SECTOR_MAPPING_GID = 1319762905;
 // Aba de erros de conformidade (GID 1590941680)
 const CONFORMITY_ERRORS_GID = 1590941680;
 
+// Aba de erros de prazo (GID 1397357779)
+const DEADLINE_ERRORS_GID = 1397357779;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -112,6 +115,35 @@ serve(async (req) => {
       console.log('Error fetching conformity errors:', err);
     }
     
+    // Busca a aba de erros de prazo
+    let deadlineErrors: { date: string; controller: string; rawRow: string[] }[] = [];
+    try {
+      const deadlineUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${DEADLINE_ERRORS_GID}`;
+      console.log(`Fetching deadline errors (gid=${DEADLINE_ERRORS_GID})...`);
+      
+      const deadlineResponse = await fetch(deadlineUrl);
+      
+      if (deadlineResponse.ok) {
+        const csvText = await deadlineResponse.text();
+        const rows = parseCSV(csvText);
+        
+        // Pula o header
+        // Coluna B (1) = Data do erro
+        // Coluna K (10) = Controller responsável
+        deadlineErrors = rows.slice(1)
+          .filter(row => row.some(cell => cell.trim() !== ''))
+          .map(row => ({
+            date: row[1] || '',
+            controller: (row[10] || '').trim(),
+            rawRow: row
+          }));
+        
+        console.log(`Found ${deadlineErrors.length} deadline errors`);
+      }
+    } catch (err) {
+      console.log('Error fetching deadline errors:', err);
+    }
+    
     // Calcula estatísticas agregadas
     const totalTasks = mainSheet.rows.length;
     
@@ -122,9 +154,11 @@ serve(async (req) => {
           sheets: [mainSheet],
           sectorMapping,
           conformityErrors,
+          deadlineErrors,
           totalSheets: 1,
           totalTasks,
           totalConformityErrors: conformityErrors.length,
+          totalDeadlineErrors: deadlineErrors.length,
           lastUpdated: new Date().toISOString()
         }
       }),
