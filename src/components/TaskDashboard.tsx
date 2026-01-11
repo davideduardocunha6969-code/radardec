@@ -144,8 +144,14 @@ export function TaskDashboard({
       counts[controller] = (counts[controller] || 0) + 1;
     });
     
+    const totalErrors = filteredConformityErrors.length;
+    
     return Object.entries(counts)
-      .map(([name, total]) => ({ name, total }))
+      .map(([name, total]) => ({ 
+        name, 
+        total,
+        percent: totalErrors > 0 ? ((total / totalErrors) * 100).toFixed(1) + '%' : '0%'
+      }))
       .sort((a, b) => b.total - a.total);
   }, [filteredConformityErrors]);
 
@@ -158,8 +164,14 @@ export function TaskDashboard({
       counts[controller] = (counts[controller] || 0) + 1;
     });
     
+    const totalErrors = filteredDeadlineErrors.length;
+    
     return Object.entries(counts)
-      .map(([name, total]) => ({ name, total }))
+      .map(([name, total]) => ({ 
+        name, 
+        total,
+        percent: totalErrors > 0 ? ((total / totalErrors) * 100).toFixed(1) + '%' : '0%'
+      }))
       .sort((a, b) => b.total - a.total);
   }, [filteredDeadlineErrors]);
 
@@ -1313,9 +1325,9 @@ export function TaskDashboard({
                   fill="hsl(var(--destructive))"
                 >
                   <LabelList 
-                    dataKey="total" 
-                    position="top" 
-                    fill="hsl(var(--foreground))"
+                    dataKey="percent" 
+                    position="center" 
+                    fill="white"
                     fontSize={12}
                     fontWeight="bold"
                   />
@@ -1375,9 +1387,9 @@ export function TaskDashboard({
                   fill="hsl(var(--warning))"
                 >
                   <LabelList 
-                    dataKey="total" 
-                    position="top" 
-                    fill="hsl(var(--foreground))"
+                    dataKey="percent" 
+                    position="center" 
+                    fill="white"
                     fontSize={12}
                     fontWeight="bold"
                   />
