@@ -52,6 +52,13 @@ export interface SDRMessageRecord {
   [sdrName: string]: string | number; // Propriedades dinâmicas para cada SDR
 }
 
+export interface IndicacaoRecord {
+  clienteIndicador: string;
+  acaoGanha: string;
+  responsavel: string;
+  semana: string;
+}
+
 export interface CommercialDataResponse {
   records: CommercialRecord[];
   weeks: number[];
@@ -63,6 +70,7 @@ export interface CommercialDataResponse {
   sdrTotalRecords: number;
   sdrMessagesData: SDRMessageRecord[];
   sdrMessagesSdrNames: string[];
+  indicacoesData: IndicacaoRecord[];
   lastUpdated: string;
 }
 
@@ -74,6 +82,7 @@ export const useCommercialData = () => {
   const [sdrWeeks, setSdrWeeks] = useState<number[]>([]);
   const [sdrMessagesData, setSdrMessagesData] = useState<SDRMessageRecord[]>([]);
   const [sdrMessagesSdrNames, setSdrMessagesSdrNames] = useState<string[]>([]);
+  const [indicacoesData, setIndicacoesData] = useState<IndicacaoRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -103,6 +112,7 @@ export const useCommercialData = () => {
       console.log(`SDR Headers: ${commercialData.sdrHeaders?.join(', ') || 'none'}`);
       console.log(`Loaded ${commercialData.sdrMessagesData?.length || 0} SDR Messages records`);
       console.log(`SDR Messages Names: ${commercialData.sdrMessagesSdrNames?.join(', ') || 'none'}`);
+      console.log(`Loaded ${commercialData.indicacoesData?.length || 0} Indicações records`);
 
       setData(commercialData.records);
       setWeeks(commercialData.weeks);
@@ -111,6 +121,7 @@ export const useCommercialData = () => {
       setSdrMessagesData(commercialData.sdrMessagesData || []);
       setSdrMessagesSdrNames(commercialData.sdrMessagesSdrNames || []);
       setSdrWeeks(commercialData.sdrWeeks || []);
+      setIndicacoesData(commercialData.indicacoesData || []);
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -142,6 +153,7 @@ export const useCommercialData = () => {
     sdrWeeks,
     sdrMessagesData,
     sdrMessagesSdrNames,
+    indicacoesData,
     isLoading,
     error,
     refetch: fetchData,
