@@ -23,6 +23,8 @@ import {
   YAxis,
   PieChart as RechartsPieChart,
   Pie,
+  LineChart,
+  Line,
 } from "recharts";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
@@ -208,6 +210,42 @@ const RadarComercial = () => {
       }))
       .sort((a, b) => b.total - a.total);
   }, [filteredData]);
+
+  // Dados para o gráfico de linha de percentual de no-show por semana
+  const noShowWeeklyChartData = useMemo(() => {
+    const weekStats: Record<number, { total: number; noShow: number }> = {};
+    
+    // Inicializa todas as 53 semanas
+    for (let i = 1; i <= 53; i++) {
+      weekStats[i] = { total: 0, noShow: 0 };
+    }
+    
+    // Contabiliza atendimentos e no-shows por semana
+    data.forEach(record => {
+      if (record.semana > 0 && record.semana <= 53) {
+        weekStats[record.semana].total += 1;
+        if (record.resultado?.toLowerCase().includes('no-show') || 
+            record.resultado?.toLowerCase().includes('no show') ||
+            record.resultado?.toLowerCase().includes('noshow')) {
+          weekStats[record.semana].noShow += 1;
+        }
+      }
+    });
+    
+    return Array.from({ length: 53 }, (_, i) => {
+      const weekNum = i + 1;
+      const stats = weekStats[weekNum];
+      const percentage = stats.total > 0 
+        ? parseFloat(((stats.noShow / stats.total) * 100).toFixed(1))
+        : 0;
+      return {
+        semana: weekNum,
+        percentual: percentage,
+        noShows: stats.noShow,
+        total: stats.total,
+      };
+    });
+  }, [data]);
 
   const PIE_COLORS = [
     'hsl(var(--primary))',
@@ -722,6 +760,58 @@ const RadarComercial = () => {
               <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Gráfico de Linha - Percentual de No-Show por Semana */}
+      <Card className="mb-8">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <TrendingUp className="h-5 w-5 text-destructive" />
+            <CardTitle className="text-lg">Percentual de No-Show por Semana</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={chartConfig} className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart 
+                data={noShowWeeklyChartData} 
+                margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+              >
+                <XAxis 
+                  dataKey="semana"
+                  className="text-muted-foreground"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 10 }}
+                  interval={3}
+                />
+                <YAxis 
+                  className="text-muted-foreground"
+                  axisLine={false}
+                  tickLine={false}
+                  tick={{ fontSize: 10 }}
+                  tickFormatter={(value) => `${value}%`}
+                  domain={[0, 'auto']}
+                />
+                <Tooltip 
+                  formatter={(value: number, name: string, props: any) => [
+                    `${value}% (${props.payload.noShows}/${props.payload.total})`,
+                    'No-Show'
+                  ]}
+                  labelFormatter={(label) => `Semana ${label}`}
+                />
+                <Line 
+                  type="monotone"
+                  dataKey="percentual"
+                  stroke="hsl(var(--destructive))"
+                  strokeWidth={2}
+                  dot={{ fill: 'hsl(var(--destructive))', strokeWidth: 0, r: 3 }}
+                  activeDot={{ r: 5, fill: 'hsl(var(--destructive))' }}
+                />
+              </LineChart>
+            </ResponsiveContainer>
+          </ChartContainer>
         </CardContent>
       </Card>
 
