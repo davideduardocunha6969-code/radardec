@@ -1930,38 +1930,42 @@ const RadarComercial = () => {
               </CardContent>
             </Card>
 
-            {/* Gráfico de Aguarda Documentação por Responsável */}
+            {/* Aguarda Documentação por Responsável */}
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <Users className="h-5 w-5 text-orange-500" />
                   <CardTitle className="text-lg">Aguarda Documentação por Responsável</CardTitle>
                 </div>
-                <p className="text-sm text-muted-foreground">Casos aguardando documentação por responsável</p>
+                <p className="text-sm text-muted-foreground">Casos aguardando documentação ordenados por responsável</p>
               </CardHeader>
               <CardContent>
                 {(() => {
-                  const aguardaDocPorResponsavel: Record<string, number> = {};
                   const casosAguardaDoc = filteredData.filter(r => 
                     r.resultado?.toLowerCase().includes('aguarda documentação') || 
                     r.resultado?.toLowerCase().includes('aguarda documentacao')
                   );
                   
+                  const aguardaDocPorResponsavel: Record<string, number> = {};
                   casosAguardaDoc.forEach(r => {
                     const responsavel = r.responsavel || 'Sem responsável';
                     aguardaDocPorResponsavel[responsavel] = (aguardaDocPorResponsavel[responsavel] || 0) + 1;
                   });
                   
                   const total = casosAguardaDoc.length;
-                  const chartData = Object.entries(aguardaDocPorResponsavel)
+                  const rankingData = Object.entries(aguardaDocPorResponsavel)
                     .map(([responsavel, count]) => ({
                       responsavel,
                       total: count,
                       percentage: total > 0 ? ((count / total) * 100).toFixed(1) : '0',
                     }))
-                    .sort((a, b) => b.total - a.total);
+                    .sort((a, b) => b.total - a.total)
+                    .map((item, index) => ({
+                      ...item,
+                      posicao: index + 1,
+                    }));
                   
-                  if (chartData.length === 0) {
+                  if (rankingData.length === 0) {
                     return (
                       <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
                         <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
@@ -1969,51 +1973,49 @@ const RadarComercial = () => {
                     );
                   }
                   
+                  const maxTotal = Math.max(...rankingData.map(d => d.total));
+                  
                   return (
-                    <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <BarChart 
-                          data={chartData} 
-                          margin={{ top: 30, right: 10, left: 10, bottom: 60 }}
-                        >
-                          <XAxis 
-                            dataKey="responsavel"
-                            tick={<CustomXAxisTick />}
-                            className="text-muted-foreground"
-                            axisLine={false}
-                            tickLine={false}
-                            interval={0}
-                            height={80}
-                          />
-                          <Tooltip 
-                            formatter={(value: number, name: string, props: any) => [
-                              `${value} casos (${props.payload.percentage}%)`,
-                              'Total'
-                            ]}
-                          />
-                          <Bar 
-                            dataKey="total" 
-                            radius={[4, 4, 0, 0]}
-                            fill="hsl(24, 95%, 53%)"
-                          >
-                            <LabelList 
-                              dataKey="total" 
-                              position="top" 
-                              className="fill-foreground"
-                              fontSize={12}
-                            />
-                            <LabelList 
-                              dataKey="percentage" 
-                              position="center" 
-                              formatter={(value: string) => `${value}%`}
-                              className="fill-white"
-                              fontSize={11}
-                              fontWeight={600}
-                            />
-                          </Bar>
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </ChartContainer>
+                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                      {rankingData.map((item) => {
+                        const barWidth = maxTotal > 0 ? (item.total / maxTotal) * 100 : 0;
+                        
+                        return (
+                          <div key={item.responsavel} className="flex items-center gap-3">
+                            {/* Posição no ranking */}
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                              item.posicao === 1 ? 'bg-yellow-500 text-yellow-950' :
+                              item.posicao === 2 ? 'bg-gray-300 text-gray-700' :
+                              item.posicao === 3 ? 'bg-amber-600 text-amber-50' :
+                              'bg-muted text-muted-foreground'
+                            }`}>
+                              {item.posicao}º
+                            </div>
+                            
+                            {/* Nome do responsável */}
+                            <div className="flex-shrink-0 w-28 text-sm font-medium truncate" title={item.responsavel}>
+                              {item.responsavel}
+                            </div>
+                            
+                            {/* Barra horizontal */}
+                            <div className="flex-1 relative">
+                              <div className="h-6 bg-muted/50 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-orange-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${barWidth}%` }}
+                                />
+                              </div>
+                              {/* Valor e percentual */}
+                              <div className="absolute inset-0 flex items-center justify-end pr-3">
+                                <span className="text-xs font-semibold text-foreground">
+                                  {item.total} ({item.percentage}%)
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
                   );
                 })()}
               </CardContent>
