@@ -53,6 +53,7 @@ const RadarComercial = () => {
   const [radarAtendimentosOpen, setRadarAtendimentosOpen] = useState(true);
   const [radarConversaoOpen, setRadarConversaoOpen] = useState(true);
   const [radarNegociacoesOpen, setRadarNegociacoesOpen] = useState(true);
+  const [radarSDROpen, setRadarSDROpen] = useState(true);
   const [aposentadoriasFuturasDialogOpen, setAposentadoriasFuturasDialogOpen] = useState(false);
   const [rankingPossuiDireito, setRankingPossuiDireito] = useState<string | null>(null);
 
@@ -2204,6 +2205,301 @@ const RadarComercial = () => {
           <div className="flex justify-center pt-4">
             <button
               onClick={() => setRadarNegociacoesOpen(false)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+            >
+              <ChevronUp className="h-4 w-4" />
+              Recolher seção
+            </button>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* ==================== RADAR SDR ==================== */}
+      <Collapsible open={radarSDROpen} onOpenChange={setRadarSDROpen}>
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-teal-600/20 to-cyan-600/20 rounded-lg border border-teal-500/30 hover:border-teal-500/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <Target className="h-6 w-6 text-teal-500" />
+              <h2 className="text-xl font-bold text-foreground">Radar SDR</h2>
+            </div>
+            <div className="flex items-center gap-4">
+              {radarSDROpen ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </div>
+        </CollapsibleTrigger>
+        
+        <CollapsibleContent className="space-y-6 mt-6">
+          {/* Cards de Métricas SDR */}
+          <div className="grid gap-4 md:grid-cols-4">
+            {/* Total de Leads */}
+            <Card className="border-l-4 border-l-teal-500">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <Users className="h-4 w-4 text-teal-500" />
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Total de Leads
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-teal-600">
+                  {isLoading ? '--' : filteredData.length}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Leads no período selecionado
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Leads Qualificados */}
+            <Card className="border-l-4 border-l-cyan-500">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <Target className="h-4 w-4 text-cyan-500" />
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Leads Qualificados
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-cyan-600">
+                  {isLoading ? '--' : filteredData.filter(r => 
+                    r.possuiDireito?.toLowerCase() === 'sim'
+                  ).length}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Leads com direito confirmado
+                </p>
+              </CardContent>
+            </Card>
+
+            {/* Taxa de Qualificação */}
+            <Card className="border-l-4 border-l-emerald-500">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4 text-emerald-500" />
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Taxa de Qualificação
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const total = filteredData.length;
+                  const qualificados = filteredData.filter(r => 
+                    r.possuiDireito?.toLowerCase() === 'sim'
+                  ).length;
+                  const taxa = total > 0 ? ((qualificados / total) * 100).toFixed(1) : '0';
+                  return (
+                    <>
+                      <div className="text-3xl font-bold text-emerald-600">
+                        {isLoading ? '--' : `${taxa}%`}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {qualificados} de {total} leads
+                      </p>
+                    </>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            {/* Agendamentos Realizados */}
+            <Card className="border-l-4 border-l-blue-500">
+              <CardHeader className="pb-2">
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-blue-500" />
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Atendimentos Realizados
+                  </CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="text-3xl font-bold text-blue-600">
+                  {isLoading ? '--' : filteredData.filter(r => r.dataAtendimento).length}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Leads que foram atendidos
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Gráficos de Performance SDR */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Leads por Origem */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <BarChart3 className="h-5 w-5 text-teal-500" />
+                  <CardTitle className="text-lg">Leads por Origem</CardTitle>
+                </div>
+                <p className="text-sm text-muted-foreground">Distribuição de leads por canal de origem</p>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const leadsPorOrigem: Record<string, number> = {};
+                  filteredData.forEach(r => {
+                    const origem = r.origemCliente || 'Sem origem';
+                    leadsPorOrigem[origem] = (leadsPorOrigem[origem] || 0) + 1;
+                  });
+                  
+                  const total = filteredData.length;
+                  const rankingData = Object.entries(leadsPorOrigem)
+                    .map(([origem, count]) => ({
+                      origem,
+                      total: count,
+                      percentage: total > 0 ? ((count / total) * 100).toFixed(1) : '0',
+                    }))
+                    .sort((a, b) => b.total - a.total)
+                    .map((item, index) => ({
+                      ...item,
+                      posicao: index + 1,
+                    }));
+                  
+                  if (rankingData.length === 0) {
+                    return (
+                      <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                        <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                      </div>
+                    );
+                  }
+                  
+                  const maxTotal = Math.max(...rankingData.map(d => d.total));
+                  
+                  return (
+                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                      {rankingData.map((item) => {
+                        const barWidth = maxTotal > 0 ? (item.total / maxTotal) * 100 : 0;
+                        
+                        return (
+                          <div key={item.origem} className="flex items-center gap-3">
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                              item.posicao === 1 ? 'bg-yellow-500 text-yellow-950' :
+                              item.posicao === 2 ? 'bg-gray-300 text-gray-700' :
+                              item.posicao === 3 ? 'bg-amber-600 text-amber-50' :
+                              'bg-muted text-muted-foreground'
+                            }`}>
+                              {item.posicao}º
+                            </div>
+                            
+                            <div className="flex-shrink-0 w-28 text-sm font-medium truncate" title={item.origem}>
+                              {item.origem}
+                            </div>
+                            
+                            <div className="flex-1 relative">
+                              <div className="h-6 bg-muted/50 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-teal-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${barWidth}%` }}
+                                />
+                              </div>
+                              <div className="absolute inset-0 flex items-center justify-end pr-3">
+                                <span className="text-xs font-semibold text-foreground">
+                                  {item.total} ({item.percentage}%)
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            {/* Leads por Setor */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <PieChart className="h-5 w-5 text-cyan-500" />
+                  <CardTitle className="text-lg">Leads por Setor</CardTitle>
+                </div>
+                <p className="text-sm text-muted-foreground">Distribuição de leads por setor de atuação</p>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const leadsPorSetor: Record<string, number> = {};
+                  filteredData.forEach(r => {
+                    const setor = r.setor || 'Sem setor';
+                    leadsPorSetor[setor] = (leadsPorSetor[setor] || 0) + 1;
+                  });
+                  
+                  const total = filteredData.length;
+                  const rankingData = Object.entries(leadsPorSetor)
+                    .map(([setor, count]) => ({
+                      setor,
+                      total: count,
+                      percentage: total > 0 ? ((count / total) * 100).toFixed(1) : '0',
+                    }))
+                    .sort((a, b) => b.total - a.total)
+                    .map((item, index) => ({
+                      ...item,
+                      posicao: index + 1,
+                    }));
+                  
+                  if (rankingData.length === 0) {
+                    return (
+                      <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                        <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                      </div>
+                    );
+                  }
+                  
+                  const maxTotal = Math.max(...rankingData.map(d => d.total));
+                  
+                  return (
+                    <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                      {rankingData.map((item) => {
+                        const barWidth = maxTotal > 0 ? (item.total / maxTotal) * 100 : 0;
+                        
+                        return (
+                          <div key={item.setor} className="flex items-center gap-3">
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                              item.posicao === 1 ? 'bg-yellow-500 text-yellow-950' :
+                              item.posicao === 2 ? 'bg-gray-300 text-gray-700' :
+                              item.posicao === 3 ? 'bg-amber-600 text-amber-50' :
+                              'bg-muted text-muted-foreground'
+                            }`}>
+                              {item.posicao}º
+                            </div>
+                            
+                            <div className="flex-shrink-0 w-28 text-sm font-medium truncate" title={item.setor}>
+                              {item.setor}
+                            </div>
+                            
+                            <div className="flex-1 relative">
+                              <div className="h-6 bg-muted/50 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-cyan-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${barWidth}%` }}
+                                />
+                              </div>
+                              <div className="absolute inset-0 flex items-center justify-end pr-3">
+                                <span className="text-xs font-semibold text-foreground">
+                                  {item.total} ({item.percentage}%)
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Botão para recolher seção */}
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={() => setRadarSDROpen(false)}
               className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
             >
               <ChevronUp className="h-4 w-4" />
