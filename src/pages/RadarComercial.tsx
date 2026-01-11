@@ -136,7 +136,7 @@ const RadarComercial = () => {
     }));
   }, [data]);
 
-  // Dados para o gráfico de agendamentos SDR por semana (todas as 53 semanas)
+  // Dados para o gráfico de agendamentos SDR por semana (todas as 53 semanas) - Total geral
   const sdrWeeklyChartData = useMemo(() => {
     const weekCounts: Record<number, number> = {};
     
@@ -159,6 +159,64 @@ const RadarComercial = () => {
       agendamentos: weekCounts[i + 1] || 0,
     }));
   }, [sdrData]);
+
+  // Extrai todos os setores únicos do SDR (coluna C)
+  const sdrSetores = useMemo(() => {
+    const setores = new Set<string>();
+    sdrData.forEach(record => {
+      const setor = record.colC?.trim();
+      if (setor) {
+        setores.add(setor);
+      }
+    });
+    return Array.from(setores).sort();
+  }, [sdrData]);
+
+  // Dados para gráficos de agendamentos por semana para cada setor (dinâmico)
+  const sdrWeeklyBySetorChartData = useMemo(() => {
+    const result: Record<string, Array<{ semana: string; weekNumber: number; agendamentos: number }>> = {};
+    
+    // Para cada setor, cria um array com as 53 semanas
+    sdrSetores.forEach(setor => {
+      const weekCounts: Record<number, number> = {};
+      
+      // Inicializa todas as 53 semanas com 0
+      for (let i = 1; i <= 53; i++) {
+        weekCounts[i] = 0;
+      }
+      
+      // Contabiliza apenas os agendamentos deste setor
+      sdrData.forEach(record => {
+        const recordSetor = record.colC?.trim();
+        if (recordSetor === setor) {
+          const semana = parseInt(record.colD?.trim()) || 0;
+          if (semana > 0 && semana <= 53) {
+            weekCounts[semana] = (weekCounts[semana] || 0) + 1;
+          }
+        }
+      });
+      
+      result[setor] = Array.from({ length: 53 }, (_, i) => ({
+        semana: `${i + 1}`,
+        weekNumber: i + 1,
+        agendamentos: weekCounts[i + 1] || 0,
+      }));
+    });
+    
+    return result;
+  }, [sdrData, sdrSetores]);
+
+  // Cores para os gráficos por setor (cicla entre as cores)
+  const setorColors = [
+    'hsl(173, 80%, 40%)', // teal
+    'hsl(199, 89%, 48%)', // cyan
+    'hsl(142, 76%, 36%)', // emerald
+    'hsl(221, 83%, 53%)', // blue
+    'hsl(262, 83%, 58%)', // violet
+    'hsl(330, 81%, 60%)', // pink
+    'hsl(24, 95%, 53%)',  // orange
+    'hsl(47, 96%, 53%)',  // yellow
+  ];
 
   // Dados para o gráfico de atendimentos por responsável
   const responsavelChartData = useMemo(() => {
@@ -2281,19 +2339,19 @@ const RadarComercial = () => {
         
         <CollapsibleContent className="space-y-6 mt-6">
 
-          {/* Gráfico de Agendamentos por Semana - SDR */}
+          {/* Gráfico de Agendamentos Total por Semana - SDR (Linha) */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
-                <BarChart3 className="h-5 w-5 text-teal-500" />
-                <CardTitle className="text-lg">Agendamentos por Semana</CardTitle>
+                <TrendingUp className="h-5 w-5 text-teal-500" />
+                <CardTitle className="text-lg">Agendamentos por Semana - Total</CardTitle>
               </div>
-              <p className="text-sm text-muted-foreground">Total de agendamentos realizados pelo time de SDR por semana</p>
+              <p className="text-sm text-muted-foreground">Evolução semanal do total de agendamentos realizados pelo time de SDR</p>
             </CardHeader>
             <CardContent>
               <ChartContainer config={chartConfig} className="h-[300px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={sdrWeeklyChartData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+                  <LineChart data={sdrWeeklyChartData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
                     <XAxis 
                       dataKey="semana" 
                       tick={{ fontSize: 11 }}
@@ -2302,29 +2360,67 @@ const RadarComercial = () => {
                       tickLine={false}
                     />
                     <Tooltip content={<ChartTooltipContent />} />
-                    <Bar 
+                    <Line 
+                      type="monotone"
                       dataKey="agendamentos" 
-                      radius={[4, 4, 0, 0]}
-                    >
-                      <LabelList 
-                        dataKey="agendamentos" 
-                        position="top" 
-                        className="fill-foreground"
-                        fontSize={10}
-                        formatter={(value: number) => value > 0 ? value : ''}
-                      />
-                      {sdrWeeklyChartData.map((entry, index) => (
-                        <Cell 
-                          key={`cell-${index}`}
-                          fill="hsl(173, 80%, 40%)"
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
+                      stroke="hsl(173, 80%, 40%)"
+                      strokeWidth={2}
+                      dot={{ fill: "hsl(173, 80%, 40%)", strokeWidth: 0, r: 3 }}
+                      activeDot={{ r: 5, strokeWidth: 0 }}
+                    />
+                  </LineChart>
                 </ResponsiveContainer>
               </ChartContainer>
             </CardContent>
           </Card>
+
+          {/* Gráficos de Agendamentos por Semana - Por Setor (Dinâmico) */}
+          {sdrSetores.map((setor, index) => {
+            const chartData = sdrWeeklyBySetorChartData[setor];
+            const color = setorColors[index % setorColors.length];
+            const totalAgendamentos = chartData.reduce((sum, item) => sum + item.agendamentos, 0);
+            
+            return (
+              <Card key={setor}>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <BarChart3 className="h-5 w-5" style={{ color }} />
+                      <CardTitle className="text-lg">Agendamentos por Semana - {setor}</CardTitle>
+                    </div>
+                    <div className="text-2xl font-bold" style={{ color }}>
+                      {totalAgendamentos}
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground">Evolução semanal de agendamentos do setor {setor}</p>
+                </CardHeader>
+                <CardContent>
+                  <ChartContainer config={chartConfig} className="h-[250px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+                        <XAxis 
+                          dataKey="semana" 
+                          tick={{ fontSize: 11 }}
+                          className="text-muted-foreground"
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <Tooltip content={<ChartTooltipContent />} />
+                        <Line 
+                          type="monotone"
+                          dataKey="agendamentos" 
+                          stroke={color}
+                          strokeWidth={2}
+                          dot={{ fill: color, strokeWidth: 0, r: 3 }}
+                          activeDot={{ r: 5, strokeWidth: 0 }}
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                </CardContent>
+              </Card>
+            );
+          })}
 
           {/* Mensagem de configuração */}
           {sdrData.length === 0 && !isLoading && (
