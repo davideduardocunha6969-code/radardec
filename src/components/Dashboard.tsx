@@ -16,11 +16,11 @@ import {
 } from "recharts";
 import {
   TrendingUp,
-  Hash,
-  Layers,
-  Calendar,
-  FileText,
-  CheckCircle,
+  Scale,
+  Users,
+  MapPin,
+  AlertCircle,
+  CheckCircle2,
 } from "lucide-react";
 import MetricCard from "./MetricCard";
 import ChartCard from "./ChartCard";
@@ -41,233 +41,222 @@ interface DashboardProps {
 }
 
 const CHART_COLORS = [
-  "hsl(220, 70%, 50%)",
-  "hsl(172, 66%, 45%)",
-  "hsl(38, 92%, 50%)",
-  "hsl(280, 65%, 60%)",
-  "hsl(340, 75%, 55%)",
+  "hsl(220, 65%, 25%)",
+  "hsl(38, 70%, 50%)",
+  "hsl(160, 50%, 40%)",
+  "hsl(200, 60%, 45%)",
+  "hsl(0, 65%, 48%)",
 ];
 
 const Dashboard = ({ data }: DashboardProps) => {
-  const statistics = useMemo(() => {
-    const stats: Record<string, { min: number; max: number; avg: number; sum: number }> = {};
-
-    data.summary.numericColumns.forEach((col) => {
-      const values = data.rows
-        .map((row) => Number(row[col]))
-        .filter((v) => !isNaN(v));
-
-      if (values.length > 0) {
-        stats[col] = {
-          min: Math.min(...values),
-          max: Math.max(...values),
-          avg: values.reduce((a, b) => a + b, 0) / values.length,
-          sum: values.reduce((a, b) => a + b, 0),
-        };
-      }
-    });
-
-    return stats;
-  }, [data]);
-
-  const barChartData = useMemo(() => {
-    const firstNumericCol = data.summary.numericColumns[0];
-    const firstTextCol = data.summary.textColumns[0];
-
-    if (!firstNumericCol || !firstTextCol) return [];
-
-    return data.rows.slice(0, 10).map((row) => ({
-      name: String(row[firstTextCol]).slice(0, 15),
-      value: Number(row[firstNumericCol]) || 0,
-    }));
-  }, [data]);
-
-  const pieChartData = useMemo(() => {
-    const firstTextCol = data.summary.textColumns[0];
-    if (!firstTextCol) return [];
-
+  // Análise por Status
+  const statusData = useMemo(() => {
     const counts: Record<string, number> = {};
     data.rows.forEach((row) => {
-      const value = String(row[firstTextCol]);
-      counts[value] = (counts[value] || 0) + 1;
+      const status = String(row.Status || "Outros");
+      counts[status] = (counts[status] || 0) + 1;
     });
+    return Object.entries(counts).map(([name, value]) => ({ name, value }));
+  }, [data]);
 
+  // Análise por Responsável
+  const responsavelData = useMemo(() => {
+    const totals: Record<string, number> = {};
+    data.rows.forEach((row) => {
+      const resp = String(row.Responsável || "Outros");
+      totals[resp] = (totals[resp] || 0) + Number(row["Valor Causa"] || 0);
+    });
+    return Object.entries(totals)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [data]);
+
+  // Análise por Comarca
+  const comarcaData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    data.rows.forEach((row) => {
+      const comarca = String(row.Comarca || "Outros");
+      counts[comarca] = (counts[comarca] || 0) + 1;
+    });
     return Object.entries(counts)
-      .slice(0, 5)
-      .map(([name, value]) => ({ name: name.slice(0, 20), value }));
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 6);
   }, [data]);
 
-  const lineChartData = useMemo(() => {
-    if (data.summary.numericColumns.length < 2) return [];
-
-    return data.rows.slice(0, 15).map((row, index) => {
-      const point: Record<string, number | string> = { index: index + 1 };
-      data.summary.numericColumns.slice(0, 3).forEach((col) => {
-        point[col] = Number(row[col]) || 0;
-      });
-      return point;
-    });
+  // Honorários por processo
+  const honorariosData = useMemo(() => {
+    return data.rows
+      .map((row) => ({
+        cliente: String(row.Cliente || "").slice(0, 15),
+        honorarios: Number(row.Honorários || 0),
+        causa: Number(row["Valor Causa"] || 0),
+      }))
+      .sort((a, b) => b.honorarios - a.honorarios)
+      .slice(0, 8);
   }, [data]);
 
-  const firstNumericStats = Object.entries(statistics)[0];
+  // Métricas calculadas
+  const avgHonorarios = useMemo(() => {
+    const values = data.rows.map((r) => Number(r.Honorários || 0)).filter((v) => v > 0);
+    return values.length > 0 ? values.reduce((a, b) => a + b, 0) / values.length : 0;
+  }, [data]);
+
+  const maiorCausa = useMemo(() => {
+    return Math.max(...data.rows.map((r) => Number(r["Valor Causa"] || 0)));
+  }, [data]);
+
+  const taxaSucesso = useMemo(() => {
+    const favoraveis = data.rows.filter(
+      (r) => r.Status === "Sentença Favorável" || r.Status === "Encerrado"
+    ).length;
+    return data.rows.length > 0 ? (favoraveis / data.rows.length) * 100 : 0;
+  }, [data]);
 
   return (
     <div className="space-y-8">
-      {/* Metrics Grid */}
+      {/* Métricas Secundárias */}
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         <MetricCard
-          title="Total de Linhas"
-          value={data.summary.totalRows.toLocaleString()}
-          icon={<Layers className="h-5 w-5 text-primary" />}
+          title="Média de Honorários"
+          value={avgHonorarios.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+            maximumFractionDigits: 0,
+          })}
+          subtitle="Por processo"
+          icon={<TrendingUp className="h-5 w-5 text-primary" />}
           className="animate-slide-up stagger-1"
         />
         <MetricCard
-          title="Total de Colunas"
-          value={data.summary.totalColumns}
-          icon={<Hash className="h-5 w-5 text-primary" />}
+          title="Maior Causa"
+          value={maiorCausa.toLocaleString("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+            maximumFractionDigits: 0,
+          })}
+          subtitle="Valor da causa"
+          icon={<Scale className="h-5 w-5 text-primary" />}
           className="animate-slide-up stagger-2"
         />
         <MetricCard
-          title="Colunas Numéricas"
-          value={data.summary.numericColumns.length}
-          subtitle="Disponíveis para análise"
-          icon={<TrendingUp className="h-5 w-5 text-primary" />}
+          title="Taxa de Êxito"
+          value={`${taxaSucesso.toFixed(0)}%`}
+          subtitle="Casos encerrados/favoráveis"
+          icon={<CheckCircle2 className="h-5 w-5 text-success" />}
+          variant="success"
           className="animate-slide-up stagger-3"
         />
         <MetricCard
-          title="Colunas de Texto"
-          value={data.summary.textColumns.length}
-          subtitle="Categorias identificadas"
-          icon={<FileText className="h-5 w-5 text-primary" />}
+          title="Comarcas Ativas"
+          value={comarcaData.length}
+          subtitle="Distribuição geográfica"
+          icon={<MapPin className="h-5 w-5 text-primary" />}
           className="animate-slide-up stagger-4"
         />
       </div>
 
-      {/* Statistics Cards */}
-      {firstNumericStats && (
-        <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          <MetricCard
-            title={`Soma (${firstNumericStats[0]})`}
-            value={firstNumericStats[1].sum.toLocaleString("pt-BR", {
-              maximumFractionDigits: 2,
-            })}
-            variant="primary"
-            className="animate-slide-up"
-          />
-          <MetricCard
-            title={`Média (${firstNumericStats[0]})`}
-            value={firstNumericStats[1].avg.toLocaleString("pt-BR", {
-              maximumFractionDigits: 2,
-            })}
-            variant="accent"
-            className="animate-slide-up stagger-1"
-          />
-          <MetricCard
-            title={`Mínimo (${firstNumericStats[0]})`}
-            value={firstNumericStats[1].min.toLocaleString("pt-BR", {
-              maximumFractionDigits: 2,
-            })}
-            icon={<CheckCircle className="h-5 w-5" />}
-            className="animate-slide-up stagger-2"
-          />
-          <MetricCard
-            title={`Máximo (${firstNumericStats[0]})`}
-            value={firstNumericStats[1].max.toLocaleString("pt-BR", {
-              maximumFractionDigits: 2,
-            })}
-            icon={<Calendar className="h-5 w-5 text-primary" />}
-            className="animate-slide-up stagger-3"
-          />
-        </div>
-      )}
-
-      {/* Charts Grid */}
+      {/* Gráficos */}
       <div className="grid gap-6 lg:grid-cols-2">
-        {barChartData.length > 0 && (
-          <ChartCard
-            title="Distribuição por Categoria"
-            subtitle="Top 10 registros"
-            className="animate-slide-up"
-          >
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={barChartData} layout="vertical">
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" />
-                  <YAxis
-                    type="category"
-                    dataKey="name"
-                    width={100}
-                    stroke="hsl(var(--muted-foreground))"
-                  />
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                  <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </ChartCard>
-        )}
-
-        {pieChartData.length > 0 && (
-          <ChartCard
-            title="Proporção das Categorias"
-            subtitle="Distribuição percentual"
-            className="animate-slide-up stagger-1"
-          >
-            <div className="h-80">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieChartData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={3}
-                    dataKey="value"
-                    label={({ name, percent }) =>
-                      `${name} (${(percent * 100).toFixed(0)}%)`
-                    }
-                  >
-                    {pieChartData.map((_, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={CHART_COLORS[index % CHART_COLORS.length]}
-                      />
-                    ))}
-                  </Pie>
-                  <Tooltip
-                    contentStyle={{
-                      backgroundColor: "hsl(var(--card))",
-                      border: "1px solid hsl(var(--border))",
-                      borderRadius: "8px",
-                    }}
-                  />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-          </ChartCard>
-        )}
-      </div>
-
-      {/* Line Chart */}
-      {lineChartData.length > 0 && data.summary.numericColumns.length >= 2 && (
+        {/* Honorários por Cliente */}
         <ChartCard
-          title="Tendência de Valores"
-          subtitle="Comparação entre colunas numéricas"
+          title="Honorários por Cliente"
+          subtitle="Top 8 maiores contratos"
           className="animate-slide-up"
         >
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={lineChartData}>
+              <BarChart data={honorariosData} layout="vertical">
                 <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                <XAxis dataKey="index" stroke="hsl(var(--muted-foreground))" />
+                <XAxis
+                  type="number"
+                  stroke="hsl(var(--muted-foreground))"
+                  tickFormatter={(v) =>
+                    v.toLocaleString("pt-BR", {
+                      notation: "compact",
+                      compactDisplay: "short",
+                    })
+                  }
+                />
+                <YAxis
+                  type="category"
+                  dataKey="cliente"
+                  width={100}
+                  stroke="hsl(var(--muted-foreground))"
+                  tick={{ fontSize: 11 }}
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                  }}
+                  formatter={(value: number) =>
+                    value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                  }
+                />
+                <Bar dataKey="honorarios" name="Honorários" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+
+        {/* Status dos Processos */}
+        <ChartCard
+          title="Status dos Processos"
+          subtitle="Distribuição por fase processual"
+          className="animate-slide-up stagger-1"
+        >
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie
+                  data={statusData}
+                  cx="50%"
+                  cy="50%"
+                  innerRadius={55}
+                  outerRadius={95}
+                  paddingAngle={3}
+                  dataKey="value"
+                  label={({ name, percent }) =>
+                    `${name} (${(percent * 100).toFixed(0)}%)`
+                  }
+                  labelLine={{ stroke: "hsl(var(--muted-foreground))" }}
+                >
+                  {statusData.map((_, index) => (
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={CHART_COLORS[index % CHART_COLORS.length]}
+                    />
+                  ))}
+                </Pie>
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                  }}
+                />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+
+        {/* Distribuição por Comarca */}
+        <ChartCard
+          title="Distribuição por Comarca"
+          subtitle="Número de processos por localidade"
+          className="animate-slide-up"
+        >
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={comarcaData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis
+                  dataKey="name"
+                  stroke="hsl(var(--muted-foreground))"
+                  tick={{ fontSize: 11 }}
+                />
                 <YAxis stroke="hsl(var(--muted-foreground))" />
                 <Tooltip
                   contentStyle={{
@@ -276,27 +265,57 @@ const Dashboard = ({ data }: DashboardProps) => {
                     borderRadius: "8px",
                   }}
                 />
-                <Legend />
-                {data.summary.numericColumns.slice(0, 3).map((col, index) => (
-                  <Line
-                    key={col}
-                    type="monotone"
-                    dataKey={col}
-                    stroke={CHART_COLORS[index % CHART_COLORS.length]}
-                    strokeWidth={2}
-                    dot={{ fill: CHART_COLORS[index % CHART_COLORS.length] }}
-                  />
-                ))}
-              </LineChart>
+                <Bar dataKey="value" name="Processos" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+              </BarChart>
             </ResponsiveContainer>
           </div>
         </ChartCard>
-      )}
 
-      {/* Data Preview */}
+        {/* Carteira por Advogado */}
+        <ChartCard
+          title="Carteira por Advogado"
+          subtitle="Valor total das causas sob responsabilidade"
+          className="animate-slide-up stagger-1"
+        >
+          <div className="h-80">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={responsavelData}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                <XAxis
+                  dataKey="name"
+                  stroke="hsl(var(--muted-foreground))"
+                  tick={{ fontSize: 11 }}
+                />
+                <YAxis
+                  stroke="hsl(var(--muted-foreground))"
+                  tickFormatter={(v) =>
+                    v.toLocaleString("pt-BR", {
+                      notation: "compact",
+                      compactDisplay: "short",
+                    })
+                  }
+                />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: "hsl(var(--card))",
+                    border: "1px solid hsl(var(--border))",
+                    borderRadius: "8px",
+                  }}
+                  formatter={(value: number) =>
+                    value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })
+                  }
+                />
+                <Bar dataKey="value" name="Valor Total" fill="hsl(var(--success))" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </ChartCard>
+      </div>
+
+      {/* Tabela de Processos */}
       <ChartCard
-        title="Prévia dos Dados"
-        subtitle={`Exibindo as primeiras ${Math.min(5, data.rows.length)} linhas`}
+        title="Carteira de Processos"
+        subtitle="Visão detalhada de todos os processos ativos"
         className="animate-slide-up"
       >
         <div className="overflow-x-auto">
@@ -306,7 +325,7 @@ const Dashboard = ({ data }: DashboardProps) => {
                 {data.headers.map((header) => (
                   <th
                     key={header}
-                    className="px-4 py-3 text-left font-semibold text-foreground"
+                    className="px-4 py-3 text-left font-semibold text-foreground whitespace-nowrap"
                   >
                     {header}
                   </th>
@@ -314,7 +333,7 @@ const Dashboard = ({ data }: DashboardProps) => {
               </tr>
             </thead>
             <tbody>
-              {data.rows.slice(0, 5).map((row, index) => (
+              {data.rows.map((row, index) => (
                 <tr
                   key={index}
                   className="border-b border-border/50 transition-colors hover:bg-muted/50"
@@ -322,9 +341,30 @@ const Dashboard = ({ data }: DashboardProps) => {
                   {data.headers.map((header) => (
                     <td
                       key={header}
-                      className="px-4 py-3 text-muted-foreground"
+                      className="px-4 py-3 text-muted-foreground whitespace-nowrap"
                     >
-                      {String(row[header] ?? "-").slice(0, 50)}
+                      {header === "Valor Causa" || header === "Honorários"
+                        ? Number(row[header]).toLocaleString("pt-BR", {
+                            style: "currency",
+                            currency: "BRL",
+                          })
+                        : header === "Status"
+                        ? (
+                          <span
+                            className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${
+                              row[header] === "Sentença Favorável"
+                                ? "bg-success/10 text-success"
+                                : row[header] === "Encerrado"
+                                ? "bg-muted text-muted-foreground"
+                                : row[header] === "Recurso" || row[header] === "Perícia"
+                                ? "bg-warning/10 text-warning"
+                                : "bg-primary/10 text-primary"
+                            }`}
+                          >
+                            {String(row[header])}
+                          </span>
+                        )
+                        : String(row[header] ?? "-")}
                     </td>
                   ))}
                 </tr>
