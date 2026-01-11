@@ -264,6 +264,32 @@ const RadarComercial = () => {
       }))
       .sort((a, b) => b.total - a.total);
   }, [filteredData]);
+
+  // Dados para o gráfico de conversão por origem do cliente
+  const conversaoOrigemChartData = useMemo(() => {
+    const stats: Record<string, { total: number; contratos: number }> = {};
+    
+    filteredData.forEach(record => {
+      if (record.origemCliente) {
+        if (!stats[record.origemCliente]) {
+          stats[record.origemCliente] = { total: 0, contratos: 0 };
+        }
+        stats[record.origemCliente].total += 1;
+        if (record.resultado?.toLowerCase().includes('contrato fechado')) {
+          stats[record.origemCliente].contratos += 1;
+        }
+      }
+    });
+    
+    return Object.entries(stats)
+      .map(([origem, { total, contratos }]) => ({
+        origem,
+        contratos,
+        total,
+        taxaConversao: total > 0 ? ((contratos / total) * 100).toFixed(1) : '0',
+      }))
+      .sort((a, b) => b.contratos - a.contratos);
+  }, [filteredData]);
   const noShowWeeklyChartData = useMemo(() => {
     const weekStats: Record<number, { total: number; noShow: number }> = {};
     
@@ -1200,6 +1226,68 @@ const RadarComercial = () => {
                         />
                         <LabelList 
                           dataKey="percentage" 
+                          position="center" 
+                          formatter={(value: string) => `${value}%`}
+                          className="fill-white"
+                          fontSize={11}
+                          fontWeight={600}
+                        />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                  <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Gráfico de Conversão por Origem do Cliente */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <TrendingUp className="h-5 w-5 text-green-600" />
+                <CardTitle className="text-lg">Ranking de Conversão por Origem</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {conversaoOrigemChartData.length > 0 ? (
+                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart 
+                      data={conversaoOrigemChartData} 
+                      margin={{ top: 30, right: 10, left: 10, bottom: 60 }}
+                    >
+                      <XAxis 
+                        dataKey="origem"
+                        tick={<CustomXAxisTick />}
+                        className="text-muted-foreground"
+                        axisLine={false}
+                        tickLine={false}
+                        interval={0}
+                        height={80}
+                      />
+                      <Tooltip 
+                        formatter={(value: number, name: string, props: any) => [
+                          `${value} contratos (${props.payload.taxaConversao}% de conversão)`,
+                          'Contratos Fechados'
+                        ]}
+                      />
+                      <Bar 
+                        dataKey="contratos" 
+                        radius={[4, 4, 0, 0]}
+                        className="fill-green-600"
+                      >
+                        <LabelList 
+                          dataKey="contratos" 
+                          position="top" 
+                          className="fill-foreground"
+                          fontSize={12}
+                        />
+                        <LabelList 
+                          dataKey="taxaConversao" 
                           position="center" 
                           formatter={(value: string) => `${value}%`}
                           className="fill-white"
