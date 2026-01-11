@@ -7,12 +7,8 @@ const corsHeaders = {
 
 const SHEET_ID = '1zjLZCxj5FgwrzmUX2Jn3H7PUXBoTABQO_aRAXADyN5M';
 
-// Mapeamento de GIDs para nomes dos colaboradores
-const SHEET_CONFIG = [
-  { gid: 0, name: "DANIEL ARAÚJO" },
-  { gid: 168471298, name: "ANA GIUSTI" },
-  { gid: 1165923131, name: "LAURA RADASPIEL" },
-];
+// Aba principal com todas as tarefas (GID 0)
+const MAIN_SHEET_GID = 0;
 
 // Aba de mapeamento de tipos de ação -> setores
 const SECTOR_MAPPING_GID = 1319762905;
@@ -23,59 +19,40 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Fetching all sheets from Google Spreadsheet...');
+    console.log('Fetching main sheet from Google Spreadsheet...');
     
-    const allSheets: { name: string; headers: string[]; rows: string[][] }[] = [];
+    // Busca a aba principal (GID 0) com todas as tarefas
+    const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${MAIN_SHEET_GID}`;
+    console.log(`Fetching main sheet (gid=${MAIN_SHEET_GID})...`);
     
-    // Busca cada aba usando o mapeamento de GID -> nome
-    for (const config of SHEET_CONFIG) {
-      try {
-        const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${config.gid}`;
-        console.log(`Fetching "${config.name}" (gid=${config.gid})...`);
-        
-        const response = await fetch(csvUrl);
-        
-        if (!response.ok) {
-          console.log(`Sheet "${config.name}" (gid=${config.gid}) not found or inaccessible`);
-          continue;
-        }
-        
-        const csvText = await response.text();
-        
-        // Verifica se tem conteúdo válido
-        if (!csvText || csvText.trim().length < 10) {
-          console.log(`Sheet "${config.name}" is empty`);
-          continue;
-        }
-        
-        const rows = parseCSV(csvText);
-        
-        if (rows.length < 2) {
-          console.log(`Sheet "${config.name}" has no data rows`);
-          continue;
-        }
-        
-        const headers = rows[0];
-        const dataRows = rows.slice(1).filter(row => row.some(cell => cell.trim() !== ''));
-        
-        console.log(`Found sheet "${config.name}" with ${dataRows.length} rows`);
-        
-        allSheets.push({
-          name: config.name,
-          headers,
-          rows: dataRows
-        });
-        
-      } catch (err) {
-        console.log(`Error fetching "${config.name}":`, err);
-      }
+    const response = await fetch(csvUrl);
+    
+    if (!response.ok) {
+      throw new Error('Main sheet not found or inaccessible');
     }
     
-    if (allSheets.length === 0) {
-      throw new Error('No sheets found in the spreadsheet');
+    const csvText = await response.text();
+    
+    if (!csvText || csvText.trim().length < 10) {
+      throw new Error('Main sheet is empty');
     }
     
-    console.log(`Successfully fetched ${allSheets.length} sheets`);
+    const rows = parseCSV(csvText);
+    
+    if (rows.length < 2) {
+      throw new Error('Main sheet has no data rows');
+    }
+    
+    const headers = rows[0];
+    const dataRows = rows.slice(1).filter(row => row.some(cell => cell.trim() !== ''));
+    
+    console.log(`Found main sheet with ${dataRows.length} rows`);
+    
+    const mainSheet = {
+      name: "TAREFAS",
+      headers,
+      rows: dataRows
+    };
     
     // Busca a aba de mapeamento de setores
     let sectorMapping: { tipoAcao: string; setor: string }[] = [];
@@ -104,15 +81,15 @@ serve(async (req) => {
     }
     
     // Calcula estatísticas agregadas
-    const totalTasks = allSheets.reduce((acc, sheet) => acc + sheet.rows.length, 0);
+    const totalTasks = mainSheet.rows.length;
     
     return new Response(
       JSON.stringify({
         success: true,
         data: {
-          sheets: allSheets,
+          sheets: [mainSheet],
           sectorMapping,
-          totalSheets: allSheets.length,
+          totalSheets: 1,
           totalTasks,
           lastUpdated: new Date().toISOString()
         }
