@@ -481,7 +481,7 @@ export function TaskDashboard({
         />
         <MetricCard
           title="Taxa de Erros"
-          value={`${filteredTasks.length > 0 ? ((filteredConformityErrors.length / filteredTasks.length) * 100).toFixed(2) : 0}%`}
+          value={`${filteredTasks.length > 0 ? ((filteredConformityErrors.length / filteredTasks.length) * 100).toFixed(4) : 0}%`}
           subtitle="Erros / Total de tarefas"
           icon={<Percent className="h-5 w-5 text-destructive" />}
           variant={filteredConformityErrors.length > 0 ? "warning" : "default"}
