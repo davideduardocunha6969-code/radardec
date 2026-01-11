@@ -1,5 +1,6 @@
 import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
+import logoEscritorio from "@/assets/logo-escritorio.jpg";
 
 interface HeaderProps {
   lastUpdate?: Date;
@@ -11,18 +12,12 @@ const Header = ({ lastUpdate, isLive = false }: HeaderProps) => {
     <header className="border-b border-border bg-primary sticky top-0 z-50">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-4">
-          {/* Logo do escritório em texto */}
-          <div className="flex flex-col leading-tight">
-            <span className="text-xs font-medium text-primary-foreground tracking-[0.2em]">
-              DAVID EDUARDO
-            </span>
-            <span className="text-2xl font-bold text-accent tracking-wider font-display">
-              CUNHA
-            </span>
-            <span className="text-[10px] font-medium text-primary-foreground tracking-[0.3em]">
-              ADVOGADOS
-            </span>
-          </div>
+          {/* Logo do escritório */}
+          <img 
+            src={logoEscritorio} 
+            alt="David Eduardo Cunha Advogados"
+            className="h-12 w-auto"
+          />
           <div className="h-10 w-px bg-accent/30" />
           <div className="flex flex-col">
             <span className="text-sm font-semibold text-primary-foreground tracking-wide">
