@@ -56,29 +56,22 @@ export function useSheetData() {
     const allTasks: TaskData[] = [];
     
     sheetsData.forEach(sheet => {
-      const headers = sheet.headers.map(h => h.toLowerCase());
-      
-      // Encontra índices das colunas relevantes
-      const tarefaIdx = headers.findIndex(h => 
-        h.includes('tarefa') || h.includes('atividade') || h.includes('descrição') || h.includes('descricao')
-      );
-      const dataDistIdx = headers.findIndex(h => 
-        h.includes('distribuição') || h.includes('distribuicao') || h.includes('data dist') || h.includes('recebimento')
-      );
-      const dataCumpIdx = headers.findIndex(h => 
-        h.includes('cumprimento') || h.includes('conclusão') || h.includes('conclusao') || h.includes('entrega')
-      );
-      const statusIdx = headers.findIndex(h => 
-        h.includes('status') || h.includes('situação') || h.includes('situacao') || h.includes('pendente')
-      );
+      // Usando índices fixos conforme especificado:
+      // Coluna A (0) = Tarefa/Atividade
+      // Coluna B (1) = Data de Distribuição
+      // Coluna C (2) = (não usado)
+      // Coluna D (3) = Data de Cumprimento/Término
+      const tarefaIdx = 0;      // Coluna A
+      const dataDistIdx = 1;    // Coluna B - Data de distribuição
+      const dataCumpIdx = 3;    // Coluna D - Data de cumprimento/término
       
       sheet.rows.forEach(row => {
         const task: TaskData = {
           colaborador: sheet.name,
-          tarefa: tarefaIdx >= 0 ? row[tarefaIdx] || '' : row[0] || '',
-          dataDistribuicao: dataDistIdx >= 0 ? parseDate(row[dataDistIdx]) : null,
-          dataCumprimento: dataCumpIdx >= 0 ? parseDate(row[dataCumpIdx]) : null,
-          status: statusIdx >= 0 ? row[statusIdx] || '' : '',
+          tarefa: row[tarefaIdx] || '',
+          dataDistribuicao: parseDate(row[dataDistIdx]),
+          dataCumprimento: parseDate(row[dataCumpIdx]),
+          status: '', // Status será inferido pela presença ou não de dataCumprimento
           rawRow: row
         };
         
