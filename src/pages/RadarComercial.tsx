@@ -11,7 +11,9 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronUp,
-  Clock
+  Clock,
+  Trophy,
+  Award
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeekFilter } from "@/components/WeekFilter";
@@ -3063,6 +3065,193 @@ const RadarComercial = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Rankings de SDR - Conversões e Qualificação */}
+          <div className="grid gap-6 lg:grid-cols-2">
+            {/* Ranking de Conversões (Contratos Fechados) por SDR */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <Trophy className="h-5 w-5 text-green-500" />
+                  <CardTitle className="text-lg">Ranking de Conversões por SDR</CardTitle>
+                </div>
+                <p className="text-sm text-muted-foreground">Total de contratos fechados (Coluna O) por SDR</p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {(() => {
+                    // Conta contratos fechados por SDR
+                    const sdrConversoes: Record<string, number> = {};
+                    
+                    const filteredData = data.filter(record => {
+                      if (selectedWeek && record.semana !== selectedWeek) return false;
+                      if (selectedSetor && record.setor !== selectedSetor) return false;
+                      return true;
+                    });
+                    
+                    filteredData.forEach(record => {
+                      const sdr = record.sdr?.trim();
+                      const resultado = record.resultado?.trim()?.toLowerCase();
+                      
+                      if (sdr) {
+                        if (!sdrConversoes[sdr]) {
+                          sdrConversoes[sdr] = 0;
+                        }
+                        if (resultado === 'contrato fechado') {
+                          sdrConversoes[sdr]++;
+                        }
+                      }
+                    });
+                    
+                    // Transforma em array e ordena por conversões
+                    const ranking = Object.entries(sdrConversoes)
+                      .filter(([_, count]) => count > 0)
+                      .sort((a, b) => b[1] - a[1]);
+                    
+                    if (ranking.length === 0) {
+                      return (
+                        <div className="h-[100px] flex items-center justify-center bg-muted/30 rounded-lg">
+                          <p className="text-muted-foreground text-sm">Nenhuma conversão registrada</p>
+                        </div>
+                      );
+                    }
+                    
+                    const maxConversoes = ranking[0][1];
+                    
+                    return ranking.map(([sdr, count], index) => {
+                      const pct = (count / maxConversoes) * 100;
+                      const posicao = index + 1;
+                      
+                      let medalha = '';
+                      let medalhaColor = '';
+                      if (posicao === 1) { medalha = '🥇'; medalhaColor = 'text-yellow-500'; }
+                      else if (posicao === 2) { medalha = '🥈'; medalhaColor = 'text-gray-400'; }
+                      else if (posicao === 3) { medalha = '🥉'; medalhaColor = 'text-amber-600'; }
+                      
+                      return (
+                        <div key={sdr} className="flex items-center gap-3">
+                          <div className="w-8 text-center">
+                            {medalha ? (
+                              <span className="text-lg">{medalha}</span>
+                            ) : (
+                              <span className="text-sm text-muted-foreground font-medium">{posicao}º</span>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium truncate" title={sdr}>{sdr}</span>
+                              <span className="text-sm font-bold text-green-600">{count}</span>
+                            </div>
+                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-green-500 rounded-full transition-all"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Ranking de Qualificação (Com Direito) por SDR */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <Award className="h-5 w-5 text-blue-500" />
+                  <CardTitle className="text-lg">Ranking de Qualificação por SDR</CardTitle>
+                </div>
+                <p className="text-sm text-muted-foreground">Percentual de clientes com direito (Coluna J) por SDR</p>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {(() => {
+                    // Conta clientes com direito e total por SDR
+                    const sdrStats: Record<string, { comDireito: number; total: number }> = {};
+                    
+                    const filteredData = data.filter(record => {
+                      if (selectedWeek && record.semana !== selectedWeek) return false;
+                      if (selectedSetor && record.setor !== selectedSetor) return false;
+                      return true;
+                    });
+                    
+                    filteredData.forEach(record => {
+                      const sdr = record.sdr?.trim();
+                      const possuiDireito = record.possuiDireito?.trim()?.toLowerCase();
+                      
+                      if (sdr) {
+                        if (!sdrStats[sdr]) {
+                          sdrStats[sdr] = { comDireito: 0, total: 0 };
+                        }
+                        sdrStats[sdr].total++;
+                        if (possuiDireito === 'sim' || possuiDireito === 'com direito') {
+                          sdrStats[sdr].comDireito++;
+                        }
+                      }
+                    });
+                    
+                    // Transforma em array e calcula percentual
+                    const ranking = Object.entries(sdrStats)
+                      .filter(([_, stats]) => stats.total > 0)
+                      .map(([sdr, stats]) => ({
+                        sdr,
+                        pct: (stats.comDireito / stats.total) * 100,
+                        comDireito: stats.comDireito,
+                        total: stats.total
+                      }))
+                      .sort((a, b) => b.pct - a.pct);
+                    
+                    if (ranking.length === 0) {
+                      return (
+                        <div className="h-[100px] flex items-center justify-center bg-muted/30 rounded-lg">
+                          <p className="text-muted-foreground text-sm">Nenhum dado de qualificação disponível</p>
+                        </div>
+                      );
+                    }
+                    
+                    return ranking.map(({ sdr, pct, comDireito, total }, index) => {
+                      const posicao = index + 1;
+                      
+                      let medalha = '';
+                      if (posicao === 1) { medalha = '🥇'; }
+                      else if (posicao === 2) { medalha = '🥈'; }
+                      else if (posicao === 3) { medalha = '🥉'; }
+                      
+                      return (
+                        <div key={sdr} className="flex items-center gap-3">
+                          <div className="w-8 text-center">
+                            {medalha ? (
+                              <span className="text-lg">{medalha}</span>
+                            ) : (
+                              <span className="text-sm text-muted-foreground font-medium">{posicao}º</span>
+                            )}
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center justify-between mb-1">
+                              <span className="text-sm font-medium truncate" title={sdr}>{sdr}</span>
+                              <div className="flex items-center gap-2">
+                                <span className="text-xs text-muted-foreground">({comDireito}/{total})</span>
+                                <span className="text-sm font-bold text-blue-600">{pct.toFixed(1)}%</span>
+                              </div>
+                            </div>
+                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-blue-500 rounded-full transition-all"
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Mensagem de configuração */}
           {sdrData.length === 0 && !isLoading && (
