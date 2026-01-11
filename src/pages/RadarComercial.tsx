@@ -3518,7 +3518,7 @@ const RadarComercial = () => {
           )}
 
           {/* Gráficos de Mensagens Enviadas por SDR */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="flex flex-col gap-6">
             {/* Gráfico Mirelly */}
             <Card>
               <CardHeader className="pb-2">
