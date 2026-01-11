@@ -2433,7 +2433,7 @@ const RadarComercial = () => {
       </Collapsible>
 
       {/* ==================== RADAR SDR ==================== */}
-      <Collapsible open={openSection === 'sdr'} onOpenChange={() => handleSectionToggle('sdr')}>
+      <Collapsible open={openSection === 'sdr'} onOpenChange={() => handleSectionToggle('sdr')} className="mb-8">
         <CollapsibleTrigger className="w-full">
           <div className="flex items-center justify-between p-4 bg-gradient-to-r from-teal-600/20 to-cyan-600/20 rounded-lg border border-teal-500/30 hover:border-teal-500/50 transition-colors cursor-pointer">
             <div className="flex items-center gap-3">
