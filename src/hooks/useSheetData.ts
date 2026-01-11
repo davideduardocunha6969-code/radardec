@@ -161,6 +161,7 @@ export function useSheetData() {
       }
       
       console.log('Sheet data received:', data.data);
+      console.log('Conformity errors from API:', data.data.conformityErrors);
       
       const mappings = data.data.sectorMapping || [];
       const rawConformityErrors = data.data.conformityErrors || [];
@@ -171,6 +172,8 @@ export function useSheetData() {
         recipient: err.recipient || 'Não identificado',
         rawRow: err.rawRow
       }));
+      
+      console.log('Processed conformity errors:', processedConformityErrors);
       
       setSheets(data.data.sheets);
       setSectorMapping(mappings);
