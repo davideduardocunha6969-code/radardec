@@ -3616,34 +3616,27 @@ const RadarComercial = () => {
       </Collapsible>
 
       {/* ===================== SEÇÃO: RADAR INDICAÇÕES CLIENTES ANTIGOS ===================== */}
-      <Collapsible open={openSection === 'indicacoes'} onOpenChange={() => handleSectionToggle('indicacoes')}>
-        <CollapsibleTrigger asChild>
-          <button className="w-full group">
-            <div className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all duration-300 ${
-              openSection === 'indicacoes' 
-                ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-amber-500/50 shadow-lg' 
-                : 'bg-gradient-to-r from-amber-500/5 to-orange-500/5 border-amber-500/20 hover:border-amber-500/40 hover:shadow-md'
-            }`}>
-              <div className="flex items-center gap-4">
-                <div className={`p-3 rounded-lg ${openSection === 'indicacoes' ? 'bg-amber-500/30' : 'bg-amber-500/10'}`}>
-                  <Users className="h-6 w-6 text-amber-600" />
-                </div>
-                <div className="text-left">
-                  <h2 className="text-lg font-bold text-foreground">Radar Indicações Clientes Antigos</h2>
-                  <p className="text-sm text-muted-foreground">Acompanhamento de indicações de clientes existentes</p>
-                </div>
-              </div>
-              <div className={`p-2 rounded-full transition-transform duration-300 ${openSection === 'indicacoes' ? 'rotate-180' : ''}`}>
-                {openSection === 'indicacoes' ? (
-                  <ChevronDown className="h-5 w-5 text-amber-600" />
-                ) : (
-                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-amber-600" />
-                )}
-              </div>
+      <Collapsible 
+        open={openSection === 'indicacoes'} 
+        onOpenChange={() => handleSectionToggle('indicacoes')}
+        className="mb-8"
+      >
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-600/20 to-orange-600/20 rounded-lg border border-amber-500/30 hover:border-amber-500/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <Users className="h-6 w-6 text-amber-500" />
+              <h2 className="text-xl font-bold text-foreground">Radar Indicações Clientes Antigos</h2>
             </div>
-          </button>
+            <div className="flex items-center gap-4">
+              {openSection === 'indicacoes' ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </div>
         </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-6 pt-6">
+        <CollapsibleContent className="space-y-8 mt-6">
           
           {/* Conteúdo da seção - placeholder para futuros gráficos */}
           <Card>
