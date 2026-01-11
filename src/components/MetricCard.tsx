@@ -12,6 +12,7 @@ interface MetricCardProps {
   };
   variant?: "default" | "primary" | "accent" | "success" | "warning";
   className?: string;
+  onClick?: () => void;
 }
 
 const variantStyles = {
@@ -30,16 +31,23 @@ const MetricCard = ({
   trend,
   variant = "default",
   className,
+  onClick,
 }: MetricCardProps) => {
   const isColored = variant !== "default";
+  const isClickable = !!onClick;
 
   return (
     <div
+      onClick={onClick}
+      role={isClickable ? "button" : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onKeyDown={isClickable ? (e) => e.key === "Enter" && onClick() : undefined}
       className={cn(
         "relative overflow-hidden rounded-xl p-6 transition-all duration-300 hover:scale-[1.02]",
         variantStyles[variant],
         !isColored && "shadow-card hover:shadow-card-hover",
         isColored && "shadow-lg",
+        isClickable && "cursor-pointer",
         className
       )}
     >

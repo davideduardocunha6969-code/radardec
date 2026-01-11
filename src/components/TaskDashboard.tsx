@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import {
   ClipboardList,
   Clock,
@@ -15,6 +15,7 @@ import {
   ChartTooltipContent,
 } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { PendingTasksDialog } from "./PendingTasksDialog";
 
 interface TaskDashboardProps {
   tasks: TaskData[];
@@ -91,8 +92,9 @@ export function TaskDashboard({
     return totalDays / completedTasks.length;
   }, [filteredTasks, holidays]);
 
-
   const colaboradores = [...new Set(tasks.map(t => t.colaborador))];
+
+  const [pendingDialogOpen, setPendingDialogOpen] = useState(false);
 
   return (
     <div className="space-y-8">
@@ -108,10 +110,11 @@ export function TaskDashboard({
         <MetricCard
           title="Tarefas Pendentes"
           value={pendingTasks.length}
-          subtitle="Aguardando cumprimento"
+          subtitle="Clique para ver detalhes"
           icon={<Clock className="h-5 w-5 text-warning" />}
           variant={pendingTasks.length > 0 ? "warning" : "default"}
           className="animate-slide-up stagger-1"
+          onClick={() => setPendingDialogOpen(true)}
         />
         <MetricCard
           title="Tarefas Concluídas"
@@ -217,6 +220,13 @@ export function TaskDashboard({
           </CardContent>
         </Card>
       </div>
+
+      <PendingTasksDialog
+        open={pendingDialogOpen}
+        onOpenChange={setPendingDialogOpen}
+        tasks={pendingTasks}
+        holidays={holidays}
+      />
     </div>
   );
 }
