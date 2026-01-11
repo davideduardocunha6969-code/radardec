@@ -24,6 +24,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PendingTasksDialog } from "./PendingTasksDialog";
 import { ConformityErrorsDialog } from "./ConformityErrorsDialog";
 import { DeadlineErrorsDialog } from "./DeadlineErrorsDialog";
+import { AvgCompletionDialog } from "./AvgCompletionDialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -488,6 +489,7 @@ export function TaskDashboard({
   const [pendingDialogOpen, setPendingDialogOpen] = useState(false);
   const [conformityDialogOpen, setConformityDialogOpen] = useState(false);
   const [deadlineDialogOpen, setDeadlineDialogOpen] = useState(false);
+  const [avgCompletionDialogOpen, setAvgCompletionDialogOpen] = useState(false);
 
   return (
     <div className="space-y-8">
@@ -553,10 +555,11 @@ export function TaskDashboard({
         <MetricCard
           title="Média Cumprimento"
           value={`${avgCompletionDays.toFixed(1)} dias`}
-          subtitle={avgCompletionDays > 2 ? "Fora da Meta" : avgCompletionDays === 2 ? "Atenção, Limite da Meta" : "Dentro da Meta"}
+          subtitle={avgCompletionDays > 2 ? "Fora da Meta - Clique para detalhes" : avgCompletionDays === 2 ? "Atenção, Limite da Meta - Clique para detalhes" : "Dentro da Meta - Clique para detalhes"}
           icon={<Clock className={`h-5 w-5 ${avgCompletionDays > 2 ? "text-destructive" : avgCompletionDays === 2 ? "text-warning" : "text-success"}`} />}
           variant={avgCompletionDays > 2 ? "warning" : avgCompletionDays === 2 ? "warning" : "success"}
           className="animate-slide-up stagger-6"
+          onClick={() => setAvgCompletionDialogOpen(true)}
         />
         {(() => {
           const conformityAccuracyRate = filteredTasks.length > 0 
@@ -1417,6 +1420,13 @@ export function TaskDashboard({
         open={deadlineDialogOpen}
         onOpenChange={setDeadlineDialogOpen}
         errors={filteredDeadlineErrors}
+      />
+
+      <AvgCompletionDialog
+        open={avgCompletionDialogOpen}
+        onOpenChange={setAvgCompletionDialogOpen}
+        tasks={filteredTasks}
+        holidays={holidays}
       />
     </div>
   );
