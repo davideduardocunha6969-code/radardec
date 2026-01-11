@@ -6,9 +6,16 @@ import {
   CheckCircle2,
   Users,
 } from "lucide-react";
+import { Bar, BarChart, XAxis, YAxis, CartesianGrid } from "recharts";
 import MetricCard from "./MetricCard";
 import { TaskData } from "@/hooks/useSheetData";
 import { calculateBusinessDays, calculateDelayBusinessDays } from "@/utils/businessDays";
+import {
+  ChartContainer,
+  ChartTooltip,
+  ChartTooltipContent,
+} from "@/components/ui/chart";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface TaskDashboardProps {
   tasks: TaskData[];
@@ -152,12 +159,44 @@ export function TaskDashboard({
         />
       </div>
 
-      {/* Área para gráficos - vamos criar juntos */}
-      <div className="text-center py-12 border-2 border-dashed border-muted rounded-xl">
-        <p className="text-muted-foreground">
-          Área reservada para gráficos personalizados
-        </p>
-      </div>
+      {/* Gráfico: Tarefas por Colaborador */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Tarefas por Colaborador</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer
+            config={{
+              total: {
+                label: "Total de Tarefas",
+                color: "hsl(var(--primary))",
+              },
+            }}
+            className="h-[300px] w-full"
+          >
+            <BarChart data={tasksByColaborador} layout="horizontal">
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="name"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 12 }}
+                interval={0}
+                angle={-45}
+                textAnchor="end"
+                height={80}
+              />
+              <YAxis tickLine={false} axisLine={false} />
+              <ChartTooltip content={<ChartTooltipContent />} />
+              <Bar
+                dataKey="total"
+                fill="var(--color-total)"
+                radius={[4, 4, 0, 0]}
+              />
+            </BarChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
     </div>
   );
 }
