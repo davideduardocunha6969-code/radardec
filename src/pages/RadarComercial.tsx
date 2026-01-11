@@ -267,40 +267,28 @@ const RadarComercial = () => {
         </CardHeader>
         <CardContent>
           {responsavelChartData.length > 0 ? (
-            <ChartContainer config={chartConfig} className="h-[250px] w-full">
+            <ChartContainer config={chartConfig} className="h-[300px] w-full">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart 
                   data={responsavelChartData} 
-                  layout="vertical"
-                  margin={{ top: 10, right: 30, left: 80, bottom: 0 }}
+                  margin={{ top: 20, right: 10, left: 10, bottom: 0 }}
                 >
                   <XAxis 
-                    type="number"
-                    tick={{ fontSize: 12 }}
-                    className="text-muted-foreground"
-                    axisLine={false}
-                    tickLine={false}
-                    allowDecimals={false}
-                    hide
-                  />
-                  <YAxis 
-                    type="category"
                     dataKey="responsavel"
                     tick={{ fontSize: 12 }}
                     className="text-muted-foreground"
                     axisLine={false}
                     tickLine={false}
-                    width={80}
                   />
                   <Tooltip content={<ChartTooltipContent />} />
                   <Bar 
                     dataKey="atendimentos" 
-                    radius={[0, 4, 4, 0]}
+                    radius={[4, 4, 0, 0]}
                     className="fill-primary"
                   >
                     <LabelList 
                       dataKey="atendimentos" 
-                      position="right" 
+                      position="top" 
                       className="fill-foreground"
                       fontSize={12}
                     />
