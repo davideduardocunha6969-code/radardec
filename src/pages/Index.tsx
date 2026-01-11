@@ -5,7 +5,7 @@ import Header from "@/components/Header";
 import { TaskDashboard } from "@/components/TaskDashboard";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { HolidayManager } from "@/components/HolidayManager";
-import { ColaboradorFilter } from "@/components/ColaboradorFilter";
+import { ControllerFilter } from "@/components/ControllerFilter";
 import { useSheetData } from "@/hooks/useSheetData";
 import { useHolidays } from "@/hooks/useHolidays";
 
@@ -23,11 +23,11 @@ const Index = () => {
   // Filtros
   const [startDate, setStartDate] = useState<Date | undefined>();
   const [endDate, setEndDate] = useState<Date | undefined>();
-  const [selectedColaboradores, setSelectedColaboradores] = useState<string[]>([]);
+  const [selectedControllers, setSelectedControllers] = useState<string[]>([]);
 
-  // Lista de colaboradores únicos
-  const colaboradores = useMemo(() => {
-    return [...new Set(tasks.map(t => t.colaborador))].sort();
+  // Lista de controllers únicos
+  const controllers = useMemo(() => {
+    return [...new Set(tasks.map(t => t.controller))].sort();
   }, [tasks]);
 
   if (isLoading) {
@@ -75,10 +75,10 @@ const Index = () => {
                 onStartDateChange={setStartDate}
                 onEndDateChange={setEndDate}
               />
-              <ColaboradorFilter
-                colaboradores={colaboradores}
-                selectedColaboradores={selectedColaboradores}
-                onSelectionChange={setSelectedColaboradores}
+              <ControllerFilter
+                controllers={controllers}
+                selectedControllers={selectedControllers}
+                onSelectionChange={setSelectedControllers}
               />
             </div>
             
@@ -119,7 +119,7 @@ const Index = () => {
           holidays={holidays}
           startDate={startDate}
           endDate={endDate}
-          selectedColaboradores={selectedColaboradores}
+          selectedControllers={selectedControllers}
         />
       </main>
     </div>

@@ -17,29 +17,29 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useState } from "react";
 
-interface ColaboradorFilterProps {
-  colaboradores: string[];
-  selectedColaboradores: string[];
+interface ControllerFilterProps {
+  controllers: string[];
+  selectedControllers: string[];
   onSelectionChange: (selected: string[]) => void;
 }
 
-export function ColaboradorFilter({
-  colaboradores,
-  selectedColaboradores,
+export function ControllerFilter({
+  controllers,
+  selectedControllers,
   onSelectionChange,
-}: ColaboradorFilterProps) {
+}: ControllerFilterProps) {
   const [open, setOpen] = useState(false);
 
-  const toggleColaborador = (colaborador: string) => {
-    if (selectedColaboradores.includes(colaborador)) {
-      onSelectionChange(selectedColaboradores.filter(c => c !== colaborador));
+  const toggleController = (controller: string) => {
+    if (selectedControllers.includes(controller)) {
+      onSelectionChange(selectedControllers.filter(c => c !== controller));
     } else {
-      onSelectionChange([...selectedColaboradores, colaborador]);
+      onSelectionChange([...selectedControllers, controller]);
     }
   };
 
   const selectAll = () => {
-    onSelectionChange([...colaboradores]);
+    onSelectionChange([...controllers]);
   };
 
   const clearAll = () => {
@@ -57,17 +57,17 @@ export function ColaboradorFilter({
             aria-expanded={open}
             className="justify-between min-w-[200px]"
           >
-            {selectedColaboradores.length === 0
-              ? "Todos os colaboradores"
-              : `${selectedColaboradores.length} selecionado(s)`}
+            {selectedControllers.length === 0
+              ? "Todos os controllers"
+              : `${selectedControllers.length} selecionado(s)`}
             <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
           </Button>
         </PopoverTrigger>
         <PopoverContent className="w-[250px] p-0">
           <Command>
-            <CommandInput placeholder="Buscar colaborador..." />
+            <CommandInput placeholder="Buscar controller..." />
             <CommandList>
-              <CommandEmpty>Nenhum colaborador encontrado.</CommandEmpty>
+              <CommandEmpty>Nenhum controller encontrado.</CommandEmpty>
               <CommandGroup>
                 <div className="flex gap-2 p-2 border-b">
                   <Button variant="outline" size="sm" onClick={selectAll} className="flex-1">
@@ -77,19 +77,19 @@ export function ColaboradorFilter({
                     Limpar
                   </Button>
                 </div>
-                {colaboradores.map((colaborador) => (
+                {controllers.map((controller) => (
                   <CommandItem
-                    key={colaborador}
-                    value={colaborador}
-                    onSelect={() => toggleColaborador(colaborador)}
+                    key={controller}
+                    value={controller}
+                    onSelect={() => toggleController(controller)}
                   >
                     <Check
                       className={cn(
                         "mr-2 h-4 w-4",
-                        selectedColaboradores.includes(colaborador) ? "opacity-100" : "opacity-0"
+                        selectedControllers.includes(controller) ? "opacity-100" : "opacity-0"
                       )}
                     />
-                    {colaborador}
+                    {controller}
                   </CommandItem>
                 ))}
               </CommandGroup>
@@ -98,16 +98,16 @@ export function ColaboradorFilter({
         </PopoverContent>
       </Popover>
       
-      {selectedColaboradores.length > 0 && (
+      {selectedControllers.length > 0 && (
         <div className="flex flex-wrap gap-1">
-          {selectedColaboradores.slice(0, 3).map(col => (
+          {selectedControllers.slice(0, 3).map(col => (
             <Badge key={col} variant="secondary" className="text-xs">
               {col}
             </Badge>
           ))}
-          {selectedColaboradores.length > 3 && (
+          {selectedControllers.length > 3 && (
             <Badge variant="outline" className="text-xs">
-              +{selectedColaboradores.length - 3}
+              +{selectedControllers.length - 3}
             </Badge>
           )}
         </div>

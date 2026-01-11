@@ -14,7 +14,7 @@ export interface SectorMapping {
 }
 
 export interface TaskData {
-  colaborador: string;
+  controller: string;
   tarefa: string;
   numeroProcesso: string;
   tipoAcao: string;
@@ -112,7 +112,7 @@ export function useSheetData() {
         const setor = findSector(tipoAcao);
         
         const task: TaskData = {
-          colaborador: sheet.name,
+          controller: sheet.name,
           tarefa: row[tarefaIdx] || '',
           numeroProcesso: row[numProcessoIdx] || '',
           tipoAcao: row[tipoAcaoIdx] || '',

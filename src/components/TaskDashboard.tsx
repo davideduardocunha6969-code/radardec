@@ -37,7 +37,7 @@ interface TaskDashboardProps {
   holidays: Date[];
   startDate?: Date;
   endDate?: Date;
-  selectedColaboradores: string[];
+  selectedControllers: string[];
 }
 
 export function TaskDashboard({
@@ -45,7 +45,7 @@ export function TaskDashboard({
   holidays,
   startDate,
   endDate,
-  selectedColaboradores,
+  selectedControllers,
 }: TaskDashboardProps) {
   const [chartViewMode, setChartViewMode] = useState<ChartViewMode>("daily");
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("all");
@@ -64,10 +64,10 @@ export function TaskDashboard({
   const [customSectorStart, setCustomSectorStart] = useState<Date>();
   const [customSectorEnd, setCustomSectorEnd] = useState<Date>();
 
-  // Filtra tarefas por período e colaboradores
+  // Filtra tarefas por período e controllers
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {
-      if (selectedColaboradores.length > 0 && !selectedColaboradores.includes(task.colaborador)) {
+      if (selectedControllers.length > 0 && !selectedControllers.includes(task.controller)) {
         return false;
       }
       
@@ -78,24 +78,24 @@ export function TaskDashboard({
       
       return true;
     });
-  }, [tasks, startDate, endDate, selectedColaboradores]);
+  }, [tasks, startDate, endDate, selectedControllers]);
 
   // Tarefas pendentes (sem data de cumprimento)
   const pendingTasks = useMemo(() => {
     return filteredTasks.filter(task => !task.dataCumprimento);
   }, [filteredTasks]);
 
-  // Total de tarefas por colaborador
-  const tasksByColaborador = useMemo(() => {
+  // Total de tarefas por controller
+  const tasksByController = useMemo(() => {
     const counts: Record<string, { total: number; pendentes: number }> = {};
     
     filteredTasks.forEach(task => {
-      if (!counts[task.colaborador]) {
-        counts[task.colaborador] = { total: 0, pendentes: 0 };
+      if (!counts[task.controller]) {
+        counts[task.controller] = { total: 0, pendentes: 0 };
       }
-      counts[task.colaborador].total++;
+      counts[task.controller].total++;
       if (!task.dataCumprimento) {
-        counts[task.colaborador].pendentes++;
+        counts[task.controller].pendentes++;
       }
     });
     
@@ -220,7 +220,7 @@ export function TaskDashboard({
 
   // Tarefas por data e por controller (para segundo gráfico de linha)
   const tasksByDateAndController = useMemo(() => {
-    const controllersList = [...new Set(chart2FilteredTasks.map(t => t.colaborador))];
+    const controllersList = [...new Set(chart2FilteredTasks.map(t => t.controller))];
     const counts: Record<string, Record<string, number>> = {};
     
     chart2FilteredTasks.forEach(task => {
@@ -244,7 +244,7 @@ export function TaskDashboard({
           counts[dateKey] = {};
           controllersList.forEach(c => counts[dateKey][c] = 0);
         }
-        counts[dateKey][task.colaborador] = (counts[dateKey][task.colaborador] || 0) + 1;
+        counts[dateKey][task.controller] = (counts[dateKey][task.controller] || 0) + 1;
       }
     });
     
@@ -275,7 +275,7 @@ export function TaskDashboard({
 
   // Lista de controllers para o gráfico
   const controllersList = useMemo(() => {
-    return [...new Set(chart2FilteredTasks.map(t => t.colaborador))].sort();
+    return [...new Set(chart2FilteredTasks.map(t => t.controller))].sort();
   }, [chart2FilteredTasks]);
 
   // Controllers visíveis no gráfico (se vazio, mostra todos)
@@ -320,7 +320,7 @@ export function TaskDashboard({
     return colorMap;
   }, [controllersList]);
 
-  const colaboradores = [...new Set(tasks.map(t => t.colaborador))];
+  const controllers = [...new Set(tasks.map(t => t.controller))];
 
   // Filtra tarefas para o gráfico de setores baseado no período selecionado
   const sectorFilteredTasks = useMemo(() => {
@@ -416,8 +416,8 @@ export function TaskDashboard({
           className="animate-slide-up stagger-2"
         />
         <MetricCard
-          title="Colaboradores"
-          value={colaboradores.length}
+          title="Controllers"
+          value={controllers.length}
           subtitle="Ativos no sistema"
           icon={<Users className="h-5 w-5 text-primary" />}
           className="animate-slide-up stagger-3"
@@ -433,10 +433,10 @@ export function TaskDashboard({
 
       {/* Gráficos lado a lado */}
       <div className="grid gap-4 md:grid-cols-2">
-        {/* Gráfico: Tarefas por Colaborador */}
+        {/* Gráfico: Tarefas por Controller */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Tarefas por Colaborador</CardTitle>
+            <CardTitle className="text-lg">Tarefas por Controller</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer
@@ -448,7 +448,7 @@ export function TaskDashboard({
               }}
               className="h-[300px] w-full"
             >
-              <BarChart data={tasksByColaborador} layout="horizontal">
+              <BarChart data={tasksByController} layout="horizontal">
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="name"
@@ -472,10 +472,10 @@ export function TaskDashboard({
           </CardContent>
         </Card>
 
-        {/* Gráfico: Tarefas Pendentes por Colaborador */}
+        {/* Gráfico: Tarefas Pendentes por Controller */}
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Tarefas Pendentes por Colaborador</CardTitle>
+            <CardTitle className="text-lg">Tarefas Pendentes por Controller</CardTitle>
           </CardHeader>
           <CardContent>
             <ChartContainer
@@ -487,7 +487,7 @@ export function TaskDashboard({
               }}
               className="h-[300px] w-full"
             >
-              <BarChart data={tasksByColaborador} layout="horizontal">
+              <BarChart data={tasksByController} layout="horizontal">
                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                 <XAxis
                   dataKey="name"
