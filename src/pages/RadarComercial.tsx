@@ -265,7 +265,7 @@ const RadarComercial = () => {
       .sort((a, b) => b.total - a.total);
   }, [filteredData]);
 
-  // Dados para o gráfico de conversão por origem do cliente
+  // Dados para o gráfico de conversão por origem do cliente (ordenado por taxa de conversão)
   const conversaoOrigemChartData = useMemo(() => {
     const stats: Record<string, { total: number; contratos: number }> = {};
     
@@ -286,9 +286,14 @@ const RadarComercial = () => {
         origem,
         contratos,
         total,
-        taxaConversao: total > 0 ? ((contratos / total) * 100).toFixed(1) : '0',
+        taxaConversao: total > 0 ? ((contratos / total) * 100) : 0,
+        taxaConversaoFormatted: total > 0 ? ((contratos / total) * 100).toFixed(1) : '0',
       }))
-      .sort((a, b) => b.contratos - a.contratos);
+      .sort((a, b) => b.taxaConversao - a.taxaConversao)
+      .map((item, index) => ({
+        ...item,
+        posicao: index + 1,
+      }));
   }, [filteredData]);
   const noShowWeeklyChartData = useMemo(() => {
     const weekStats: Record<number, { total: number; noShow: number }> = {};
@@ -1244,62 +1249,64 @@ const RadarComercial = () => {
             </CardContent>
           </Card>
 
-          {/* Gráfico de Conversão por Origem do Cliente */}
+          {/* Card Ranking de Conversão por Origem com barras horizontais */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
                 <TrendingUp className="h-5 w-5 text-green-600" />
                 <CardTitle className="text-lg">Ranking de Conversão por Origem</CardTitle>
               </div>
+              <p className="text-sm text-muted-foreground">Ordenado por taxa de conversão</p>
             </CardHeader>
             <CardContent>
               {conversaoOrigemChartData.length > 0 ? (
-                <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart 
-                      data={conversaoOrigemChartData} 
-                      margin={{ top: 30, right: 10, left: 10, bottom: 60 }}
-                    >
-                      <XAxis 
-                        dataKey="origem"
-                        tick={<CustomXAxisTick />}
-                        className="text-muted-foreground"
-                        axisLine={false}
-                        tickLine={false}
-                        interval={0}
-                        height={80}
-                      />
-                      <Tooltip 
-                        formatter={(value: number, name: string, props: any) => [
-                          `${value} contratos (${props.payload.taxaConversao}% de conversão)`,
-                          'Contratos Fechados'
-                        ]}
-                      />
-                      <Bar 
-                        dataKey="contratos" 
-                        radius={[4, 4, 0, 0]}
-                        className="fill-green-600"
-                      >
-                        <LabelList 
-                          dataKey="contratos" 
-                          position="top" 
-                          className="fill-foreground"
-                          fontSize={12}
-                        />
-                        <LabelList 
-                          dataKey="taxaConversao" 
-                          position="center" 
-                          formatter={(value: string) => `${value}%`}
-                          className="fill-white"
-                          fontSize={11}
-                          fontWeight={600}
-                        />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
+                <div className="space-y-3">
+                  {conversaoOrigemChartData.map((item) => {
+                    const maxTaxa = conversaoOrigemChartData[0]?.taxaConversao || 1;
+                    const barWidth = maxTaxa > 0 ? (item.taxaConversao / maxTaxa) * 100 : 0;
+                    
+                    return (
+                      <div key={item.origem} className="flex items-center gap-3">
+                        {/* Posição no ranking */}
+                        <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                          item.posicao === 1 ? 'bg-yellow-500 text-yellow-950' :
+                          item.posicao === 2 ? 'bg-gray-300 text-gray-700' :
+                          item.posicao === 3 ? 'bg-amber-600 text-amber-50' :
+                          'bg-muted text-muted-foreground'
+                        }`}>
+                          {item.posicao}º
+                        </div>
+                        
+                        {/* Nome da origem */}
+                        <div className="flex-shrink-0 w-32 text-sm font-medium truncate" title={item.origem}>
+                          {item.origem}
+                        </div>
+                        
+                        {/* Barra horizontal */}
+                        <div className="flex-1 relative h-8 bg-muted/30 rounded overflow-hidden">
+                          <div 
+                            className="absolute inset-y-0 left-0 bg-green-600 rounded transition-all duration-300"
+                            style={{ width: `${barWidth}%` }}
+                          />
+                          {/* Taxa de conversão no centro da barra */}
+                          <div className="absolute inset-0 flex items-center justify-center">
+                            <span className={`text-sm font-semibold ${barWidth > 40 ? 'text-white' : 'text-foreground'}`}>
+                              {item.taxaConversaoFormatted}%
+                            </span>
+                          </div>
+                        </div>
+                        
+                        {/* Detalhes */}
+                        <div className="flex-shrink-0 text-right text-xs text-muted-foreground w-24">
+                          <div>{item.contratos} contratos</div>
+                          <div>de {item.total} atend.</div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               ) : (
-                <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
                   <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
                 </div>
               )}
