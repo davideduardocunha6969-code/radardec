@@ -160,7 +160,7 @@ export function TaskDashboard({
       </div>
 
       {/* Gráficos lado a lado */}
-      <div className="grid gap-6 lg:grid-cols-2">
+      <div className="grid gap-4 md:grid-cols-2">
         {/* Gráfico: Tarefas por Colaborador */}
         <Card>
           <CardHeader>
