@@ -8,7 +8,7 @@ import {
   CheckCircle2,
   Users,
 } from "lucide-react";
-import { Bar, BarChart, Line, LineChart, XAxis, YAxis, CartesianGrid, Legend } from "recharts";
+import { Bar, BarChart, Line, LineChart, XAxis, YAxis, CartesianGrid, Legend, LabelList } from "recharts";
 import MetricCard from "./MetricCard";
 import { TaskData } from "@/hooks/useSheetData";
 import { calculateBusinessDays } from "@/utils/businessDays";
@@ -346,7 +346,7 @@ export function TaskDashboard({
     });
   }, [filteredTasks, sectorPeriod, customSectorStart, customSectorEnd]);
 
-  // Tarefas por setor
+  // Tarefas por setor com percentual
   const tasksBySector = useMemo(() => {
     const counts: Record<string, number> = {};
     
@@ -355,8 +355,14 @@ export function TaskDashboard({
       counts[setor] = (counts[setor] || 0) + 1;
     });
     
+    const totalTasks = sectorFilteredTasks.length;
+    
     return Object.entries(counts)
-      .map(([name, total]) => ({ name, total }))
+      .map(([name, total]) => ({ 
+        name, 
+        total,
+        percent: totalTasks > 0 ? ((total / totalTasks) * 100).toFixed(1) + '%' : '0%'
+      }))
       .sort((a, b) => b.total - a.total);
   }, [sectorFilteredTasks]);
 
@@ -1055,7 +1061,15 @@ export function TaskDashboard({
                 dataKey="total"
                 radius={[4, 4, 0, 0]}
                 fill="hsl(220, 70%, 50%)"
-              />
+              >
+                <LabelList 
+                  dataKey="percent" 
+                  position="center" 
+                  fill="white"
+                  fontSize={12}
+                  fontWeight="bold"
+                />
+              </Bar>
             </BarChart>
           </ChartContainer>
         </CardContent>
