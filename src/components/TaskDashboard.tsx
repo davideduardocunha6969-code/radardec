@@ -159,44 +159,86 @@ export function TaskDashboard({
         />
       </div>
 
-      {/* Gráfico: Tarefas por Colaborador */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Tarefas por Colaborador</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ChartContainer
-            config={{
-              total: {
-                label: "Total de Tarefas",
-                color: "hsl(var(--primary))",
-              },
-            }}
-            className="h-[300px] w-full"
-          >
-            <BarChart data={tasksByColaborador} layout="horizontal">
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis
-                dataKey="name"
-                tickLine={false}
-                axisLine={false}
-                tick={{ fontSize: 12 }}
-                interval={0}
-                angle={-45}
-                textAnchor="end"
-                height={80}
-              />
-              <YAxis tickLine={false} axisLine={false} />
-              <ChartTooltip content={<ChartTooltipContent />} />
-              <Bar
-                dataKey="total"
-                fill="var(--color-total)"
-                radius={[4, 4, 0, 0]}
-              />
-            </BarChart>
-          </ChartContainer>
-        </CardContent>
-      </Card>
+      {/* Gráficos lado a lado */}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {/* Gráfico: Tarefas por Colaborador */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Tarefas por Colaborador</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{
+                total: {
+                  label: "Total de Tarefas",
+                  color: "hsl(var(--primary))",
+                },
+              }}
+              className="h-[300px] w-full"
+            >
+              <BarChart data={tasksByColaborador} layout="horizontal">
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 12 }}
+                  interval={0}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis tickLine={false} axisLine={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar
+                  dataKey="total"
+                  fill="var(--color-total)"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        {/* Gráfico: Tarefas Pendentes por Colaborador */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Tarefas Pendentes por Colaborador</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{
+                pendentes: {
+                  label: "Pendentes",
+                  color: "hsl(var(--warning))",
+                },
+              }}
+              className="h-[300px] w-full"
+            >
+              <BarChart data={tasksByColaborador} layout="horizontal">
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 12 }}
+                  interval={0}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis tickLine={false} axisLine={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar
+                  dataKey="pendentes"
+                  fill="var(--color-pendentes)"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
