@@ -2367,7 +2367,15 @@ const RadarComercial = () => {
                       strokeWidth={2}
                       dot={{ fill: "hsl(173, 80%, 40%)", strokeWidth: 0, r: 3 }}
                       activeDot={{ r: 5, strokeWidth: 0 }}
-                    />
+                    >
+                      <LabelList 
+                        dataKey="agendamentos" 
+                        position="top" 
+                        className="fill-foreground"
+                        fontSize={10}
+                        formatter={(value: number) => value > 0 ? value : ''}
+                      />
+                    </Line>
                   </LineChart>
                 </ResponsiveContainer>
               </ChartContainer>
@@ -2413,7 +2421,15 @@ const RadarComercial = () => {
                           strokeWidth={2}
                           dot={{ fill: color, strokeWidth: 0, r: 3 }}
                           activeDot={{ r: 5, strokeWidth: 0 }}
-                        />
+                        >
+                          <LabelList 
+                            dataKey="agendamentos" 
+                            position="top" 
+                            className="fill-foreground"
+                            fontSize={10}
+                            formatter={(value: number) => value > 0 ? value : ''}
+                          />
+                        </Line>
                       </LineChart>
                     </ResponsiveContainer>
                   </ChartContainer>
