@@ -7,8 +7,12 @@ const corsHeaders = {
 
 const SHEET_ID = '1zjLZCxj5FgwrzmUX2Jn3H7PUXBoTABQO_aRAXADyN5M';
 
-// GIDs das abas da planilha (cada aba = um colaborador)
-const SHEET_GIDS = [0, 168471298, 1165923131];
+// Mapeamento de GIDs para nomes dos colaboradores
+const SHEET_CONFIG = [
+  { gid: 0, name: "DANIEL ARAÚJO" },
+  { gid: 168471298, name: "ANA GIUSTI" },
+  { gid: 1165923131, name: "Laura Radaspiel" },
+];
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -20,16 +24,16 @@ serve(async (req) => {
     
     const allSheets: { name: string; headers: string[]; rows: string[][] }[] = [];
     
-    // Tenta buscar cada aba pelo GID
-    for (const gid of SHEET_GIDS) {
+    // Busca cada aba usando o mapeamento de GID -> nome
+    for (const config of SHEET_CONFIG) {
       try {
-        const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
-        console.log(`Fetching gid=${gid}...`);
+        const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${config.gid}`;
+        console.log(`Fetching "${config.name}" (gid=${config.gid})...`);
         
         const response = await fetch(csvUrl);
         
         if (!response.ok) {
-          console.log(`Sheet gid=${gid} not found or inaccessible`);
+          console.log(`Sheet "${config.name}" (gid=${config.gid}) not found or inaccessible`);
           continue;
         }
         
@@ -37,48 +41,30 @@ serve(async (req) => {
         
         // Verifica se tem conteúdo válido
         if (!csvText || csvText.trim().length < 10) {
-          console.log(`Sheet gid=${gid} is empty`);
+          console.log(`Sheet "${config.name}" is empty`);
           continue;
         }
         
         const rows = parseCSV(csvText);
         
         if (rows.length < 2) {
-          console.log(`Sheet gid=${gid} has no data rows`);
+          console.log(`Sheet "${config.name}" has no data rows`);
           continue;
         }
         
         const headers = rows[0];
         const dataRows = rows.slice(1).filter(row => row.some(cell => cell.trim() !== ''));
         
-        // Tenta identificar o nome do colaborador (primeira coluna ou nome da aba)
-        // Por convenção, usamos o primeiro valor único da primeira coluna como identificador
-        let sheetName = `Colaborador ${gid + 1}`;
-        
-        // Se houver uma coluna de colaborador/responsável, usa o primeiro valor
-        const colaboradorIndex = headers.findIndex(h => 
-          h.toLowerCase().includes('colaborador') || 
-          h.toLowerCase().includes('responsável') ||
-          h.toLowerCase().includes('responsavel')
-        );
-        
-        if (colaboradorIndex >= 0 && dataRows.length > 0) {
-          const firstColaborador = dataRows[0][colaboradorIndex];
-          if (firstColaborador && firstColaborador.trim()) {
-            sheetName = firstColaborador.trim();
-          }
-        }
-        
-        console.log(`Found sheet "${sheetName}" with ${dataRows.length} rows`);
+        console.log(`Found sheet "${config.name}" with ${dataRows.length} rows`);
         
         allSheets.push({
-          name: sheetName,
+          name: config.name,
           headers,
           rows: dataRows
         });
         
       } catch (err) {
-        console.log(`Error fetching gid=${gid}:`, err);
+        console.log(`Error fetching "${config.name}":`, err);
       }
     }
     
