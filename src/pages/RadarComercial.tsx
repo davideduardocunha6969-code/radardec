@@ -2438,6 +2438,100 @@ const RadarComercial = () => {
             );
           })}
 
+          {/* Card de Ranking de Agendamentos por SDR */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-teal-500" />
+                  <CardTitle className="text-lg">Ranking de Agendamentos por SDR</CardTitle>
+                </div>
+                <div className="text-2xl font-bold text-teal-600">
+                  {isLoading ? '--' : sdrData.length}
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">Total de agendamentos realizados por cada SDR</p>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const sdrCounts: Record<string, number> = {};
+                
+                sdrData.forEach(record => {
+                  const sdrName = record.colE?.trim() || 'Não identificado';
+                  if (sdrName) {
+                    sdrCounts[sdrName] = (sdrCounts[sdrName] || 0) + 1;
+                  }
+                });
+                
+                const total = sdrData.length;
+                const rankingData = Object.entries(sdrCounts)
+                  .map(([sdr, count]) => ({
+                    sdr,
+                    total: count,
+                    percentage: total > 0 ? ((count / total) * 100).toFixed(1) : '0',
+                  }))
+                  .sort((a, b) => b.total - a.total)
+                  .map((item, index) => ({
+                    ...item,
+                    posicao: index + 1,
+                  }));
+                
+                if (rankingData.length === 0) {
+                  return (
+                    <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                      <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                    </div>
+                  );
+                }
+                
+                const maxTotal = Math.max(...rankingData.map(d => d.total));
+                
+                return (
+                  <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2">
+                    {rankingData.map((item) => {
+                      const barWidth = maxTotal > 0 ? (item.total / maxTotal) * 100 : 0;
+                      
+                      return (
+                        <div key={item.sdr} className="flex items-center gap-3">
+                          {/* Posição no ranking */}
+                          <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                            item.posicao === 1 ? 'bg-yellow-500 text-yellow-950' :
+                            item.posicao === 2 ? 'bg-gray-300 text-gray-700' :
+                            item.posicao === 3 ? 'bg-amber-600 text-amber-50' :
+                            'bg-muted text-muted-foreground'
+                          }`}>
+                            {item.posicao}º
+                          </div>
+                          
+                          {/* Nome do SDR */}
+                          <div className="flex-shrink-0 w-32 text-sm font-medium truncate" title={item.sdr}>
+                            {item.sdr}
+                          </div>
+                          
+                          {/* Barra horizontal */}
+                          <div className="flex-1 relative">
+                            <div className="h-6 bg-muted/50 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-teal-500 rounded-full transition-all duration-500"
+                                style={{ width: `${barWidth}%` }}
+                              />
+                            </div>
+                            {/* Valor e percentual */}
+                            <div className="absolute inset-0 flex items-center justify-end pr-3">
+                              <span className="text-xs font-semibold text-foreground">
+                                {item.total} ({item.percentage}%)
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+
           {/* Mensagem de configuração */}
           {sdrData.length === 0 && !isLoading && (
             <Card className="bg-amber-500/10 border-amber-500/30">
