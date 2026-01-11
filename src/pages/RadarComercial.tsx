@@ -53,6 +53,7 @@ const RadarComercial = () => {
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [aposentadoriasFuturasDialogOpen, setAposentadoriasFuturasDialogOpen] = useState(false);
   const [rankingPossuiDireito, setRankingPossuiDireito] = useState<string | null>(null);
+  const [sdrRankingWeek, setSdrRankingWeek] = useState<number | null>(null);
 
   // Handlers para abrir/fechar seções (comportamento accordion)
   const handleSectionToggle = (section: string) => {
@@ -2446,21 +2447,44 @@ const RadarComercial = () => {
                   <Users className="h-5 w-5 text-teal-500" />
                   <CardTitle className="text-lg">Ranking de Agendamentos por SDR</CardTitle>
                 </div>
-                <div className="text-2xl font-bold text-teal-600">
-                  {isLoading ? '--' : sdrData.filter(r => {
-                    const semana = parseInt(r.colD?.trim()) || 0;
-                    return semana > 0 && semana <= 53;
-                  }).length}
+                <div className="flex items-center gap-3">
+                  {/* Filtro por Semana */}
+                  <Select
+                    value={sdrRankingWeek?.toString() || "all"}
+                    onValueChange={(value) => setSdrRankingWeek(value === "all" ? null : parseInt(value))}
+                  >
+                    <SelectTrigger className="w-[140px] h-8">
+                      <SelectValue placeholder="Semana" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todas</SelectItem>
+                      {Array.from({ length: 53 }, (_, i) => i + 1).map((week) => (
+                        <SelectItem key={week} value={week.toString()}>
+                          Semana {week}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="text-2xl font-bold text-teal-600">
+                    {isLoading ? '--' : sdrData.filter(r => {
+                      const semana = parseInt(r.colD?.trim()) || 0;
+                      if (semana <= 0 || semana > 53) return false;
+                      if (sdrRankingWeek && semana !== sdrRankingWeek) return false;
+                      return true;
+                    }).length}
+                  </div>
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">Total de agendamentos realizados por cada SDR</p>
             </CardHeader>
             <CardContent>
               {(() => {
-                // Filtra apenas registros com semana preenchida (coluna D)
+                // Filtra apenas registros com semana preenchida (coluna D) e pelo filtro de semana
                 const agendamentosValidos = sdrData.filter(record => {
                   const semana = parseInt(record.colD?.trim()) || 0;
-                  return semana > 0 && semana <= 53;
+                  if (semana <= 0 || semana > 53) return false;
+                  if (sdrRankingWeek && semana !== sdrRankingWeek) return false;
+                  return true;
                 });
                 
                 const sdrCounts: Record<string, number> = {};
