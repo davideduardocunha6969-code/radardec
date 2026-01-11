@@ -8,6 +8,7 @@ const corsHeaders = {
 // Planilha de dados comerciais
 const SHEET_ID = '1XJLkFSFVYT3lkugy4Dwyp68xsa0QTsMxP57yAhnWycA';
 const MAIN_GID = 0;
+const SDR_GID = 1631515229;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -17,29 +18,30 @@ serve(async (req) => {
   try {
     console.log('Fetching commercial data from Google Spreadsheet...');
     
-    const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${MAIN_GID}`;
+    // Fetch main commercial sheet
+    const mainCsvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${MAIN_GID}`;
     console.log(`Fetching commercial sheet (gid=${MAIN_GID})...`);
     
-    const response = await fetch(csvUrl);
+    const mainResponse = await fetch(mainCsvUrl);
     
-    if (!response.ok) {
+    if (!mainResponse.ok) {
       throw new Error('Commercial sheet not found or inaccessible');
     }
     
-    const csvText = await response.text();
+    const mainCsvText = await mainResponse.text();
     
-    if (!csvText || csvText.trim().length < 10) {
+    if (!mainCsvText || mainCsvText.trim().length < 10) {
       throw new Error('Commercial sheet is empty');
     }
     
-    const rows = parseCSV(csvText);
+    const mainRows = parseCSV(mainCsvText);
     
-    if (rows.length < 2) {
+    if (mainRows.length < 2) {
       throw new Error('Commercial sheet has no data rows');
     }
     
-    const headers = rows[0];
-    const dataRows = rows.slice(1).filter(row => row.some(cell => cell.trim() !== ''));
+    const headers = mainRows[0];
+    const dataRows = mainRows.slice(1).filter(row => row.some(cell => cell.trim() !== ''));
     
     console.log(`Found commercial sheet with ${dataRows.length} rows`);
     console.log('Headers:', headers);
@@ -95,6 +97,75 @@ serve(async (req) => {
     
     console.log(`Found ${uniqueWeeks.length} unique weeks:`, uniqueWeeks);
     
+    // Fetch SDR sheet (GID 1631515229)
+    let sdrData: any[] = [];
+    let sdrHeaders: string[] = [];
+    let sdrWeeks: number[] = [];
+    
+    try {
+      const sdrCsvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SDR_GID}`;
+      console.log(`Fetching SDR sheet (gid=${SDR_GID})...`);
+      
+      const sdrResponse = await fetch(sdrCsvUrl);
+      
+      if (sdrResponse.ok) {
+        const sdrCsvText = await sdrResponse.text();
+        
+        if (sdrCsvText && sdrCsvText.trim().length > 10) {
+          const sdrRows = parseCSV(sdrCsvText);
+          
+          if (sdrRows.length >= 2) {
+            sdrHeaders = sdrRows[0];
+            const sdrDataRows = sdrRows.slice(1).filter(row => row.some(cell => cell.trim() !== ''));
+            
+            console.log(`Found SDR sheet with ${sdrDataRows.length} rows`);
+            console.log('SDR Headers:', sdrHeaders);
+            
+            // Mapeia os dados SDR - ajustar conforme estrutura real da aba
+            // Por enquanto, assumimos estrutura similar ou mapeamos todas as colunas disponíveis
+            sdrData = sdrDataRows.map(row => ({
+              colA: (row[0] || '').trim(),
+              colB: (row[1] || '').trim(),
+              colC: (row[2] || '').trim(),
+              colD: (row[3] || '').trim(),
+              colE: (row[4] || '').trim(),
+              colF: (row[5] || '').trim(),
+              colG: (row[6] || '').trim(),
+              colH: (row[7] || '').trim(),
+              colI: (row[8] || '').trim(),
+              colJ: (row[9] || '').trim(),
+              colK: (row[10] || '').trim(),
+              colL: (row[11] || '').trim(),
+              colM: (row[12] || '').trim(),
+              colN: (row[13] || '').trim(),
+              colO: (row[14] || '').trim(),
+              colP: (row[15] || '').trim(),
+              colQ: (row[16] || '').trim(),
+              colR: (row[17] || '').trim(),
+              colS: (row[18] || '').trim(),
+              colT: (row[19] || '').trim(),
+              rawRow: row
+            }));
+            
+            // Extrai semanas do SDR se houver coluna de semana
+            const sdrWeeksSet = new Set<number>();
+            sdrData.forEach(d => {
+              const weekNum = parseInt(d.colE) || 0;
+              if (weekNum > 0) sdrWeeksSet.add(weekNum);
+            });
+            sdrWeeks = [...sdrWeeksSet].sort((a, b) => a - b);
+            
+            console.log(`SDR data loaded: ${sdrData.length} records, ${sdrWeeks.length} weeks`);
+          }
+        }
+      } else {
+        console.log('SDR sheet not accessible, continuing without it');
+      }
+    } catch (sdrError) {
+      console.error('Error fetching SDR sheet:', sdrError);
+      // Continue without SDR data
+    }
+    
     return new Response(
       JSON.stringify({
         success: true,
@@ -103,6 +174,10 @@ serve(async (req) => {
           weeks: uniqueWeeks,
           totalRecords: commercialData.length,
           headers,
+          sdrRecords: sdrData,
+          sdrHeaders,
+          sdrWeeks,
+          sdrTotalRecords: sdrData.length,
           lastUpdated: new Date().toISOString()
         }
       }),

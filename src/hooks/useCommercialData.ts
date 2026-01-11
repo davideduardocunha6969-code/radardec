@@ -23,17 +23,48 @@ export interface CommercialRecord {
   rawRow: string[];
 }
 
+export interface SDRRecord {
+  colA: string;
+  colB: string;
+  colC: string;
+  colD: string;
+  colE: string;
+  colF: string;
+  colG: string;
+  colH: string;
+  colI: string;
+  colJ: string;
+  colK: string;
+  colL: string;
+  colM: string;
+  colN: string;
+  colO: string;
+  colP: string;
+  colQ: string;
+  colR: string;
+  colS: string;
+  colT: string;
+  rawRow: string[];
+}
+
 export interface CommercialDataResponse {
   records: CommercialRecord[];
   weeks: number[];
   totalRecords: number;
   headers: string[];
+  sdrRecords: SDRRecord[];
+  sdrHeaders: string[];
+  sdrWeeks: number[];
+  sdrTotalRecords: number;
   lastUpdated: string;
 }
 
 export const useCommercialData = () => {
   const [data, setData] = useState<CommercialRecord[]>([]);
   const [weeks, setWeeks] = useState<number[]>([]);
+  const [sdrData, setSdrData] = useState<SDRRecord[]>([]);
+  const [sdrHeaders, setSdrHeaders] = useState<string[]>([]);
+  const [sdrWeeks, setSdrWeeks] = useState<number[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -59,9 +90,14 @@ export const useCommercialData = () => {
       
       console.log(`Loaded ${commercialData.records.length} commercial records`);
       console.log(`Available weeks: ${commercialData.weeks.join(', ')}`);
+      console.log(`Loaded ${commercialData.sdrRecords?.length || 0} SDR records`);
+      console.log(`SDR Headers: ${commercialData.sdrHeaders?.join(', ') || 'none'}`);
 
       setData(commercialData.records);
       setWeeks(commercialData.weeks);
+      setSdrData(commercialData.sdrRecords || []);
+      setSdrHeaders(commercialData.sdrHeaders || []);
+      setSdrWeeks(commercialData.sdrWeeks || []);
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -88,6 +124,9 @@ export const useCommercialData = () => {
   return {
     data,
     weeks,
+    sdrData,
+    sdrHeaders,
+    sdrWeeks,
     isLoading,
     error,
     refetch: fetchData,
