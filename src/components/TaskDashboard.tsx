@@ -105,6 +105,8 @@ export function TaskDashboard({
   }, [filteredTasks]);
 
   // Média de dias úteis para cumprimento
+  // Regra: mesmo dia = 0 dias, dia seguinte útil = 1 dia
+  // A contagem só inicia no dia seguinte ao envio
   const avgCompletionDays = useMemo(() => {
     const completedTasks = filteredTasks.filter(
       task => task.dataDistribuicao && task.dataCumprimento
@@ -113,12 +115,15 @@ export function TaskDashboard({
     if (completedTasks.length === 0) return 0;
     
     const totalDays = completedTasks.reduce((acc, task) => {
-      const days = calculateBusinessDays(
+      const businessDays = calculateBusinessDays(
         task.dataDistribuicao!,
         task.dataCumprimento!,
         holidays
       );
-      return acc + days;
+      // Subtrai 1 porque não conta o dia de distribuição
+      // Se cumprido no mesmo dia = 0, se no dia seguinte = 1, etc.
+      const adjustedDays = Math.max(0, businessDays - 1);
+      return acc + adjustedDays;
     }, 0);
     
     return totalDays / completedTasks.length;
