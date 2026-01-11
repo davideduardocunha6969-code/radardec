@@ -52,12 +52,12 @@ export function PendingTasksDialog({
   }, [tasks, holidays, today]);
 
   const copyToClipboard = () => {
-    const header = "Tarefa\tColaborador\tData Envio\tDias";
+    const header = "Tarefa\tNº Processo\tColaborador\tData Envio\tDias";
     const rows = tasksWithDays.map((task) => {
       const dataEnvio = task.dataDistribuicao
         ? format(task.dataDistribuicao, "dd/MM/yyyy", { locale: ptBR })
         : "-";
-      return `${task.tarefa}\t${task.colaborador}\t${dataEnvio}\t${task.daysSinceDistribution}`;
+      return `${task.tarefa}\t${task.numeroProcesso || "-"}\t${task.colaborador}\t${dataEnvio}\t${task.daysSinceDistribution}`;
     });
     
     const text = [header, ...rows].join("\n");
@@ -109,9 +109,10 @@ export function PendingTasksDialog({
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-[45%]">Tarefa</TableHead>
-                  <TableHead className="w-[20%]">Colaborador</TableHead>
-                  <TableHead className="w-[20%]">Data Envio</TableHead>
+                  <TableHead className="w-[35%]">Tarefa</TableHead>
+                  <TableHead className="w-[15%]">Nº Processo</TableHead>
+                  <TableHead className="w-[18%]">Colaborador</TableHead>
+                  <TableHead className="w-[17%]">Data Envio</TableHead>
                   <TableHead className="w-[15%] text-right">Dias</TableHead>
                 </TableRow>
               </TableHeader>
@@ -119,6 +120,7 @@ export function PendingTasksDialog({
                 {tasksWithDays.map((task, index) => (
                   <TableRow key={index}>
                     <TableCell className="font-medium">{task.tarefa}</TableCell>
+                    <TableCell>{task.numeroProcesso || "-"}</TableCell>
                     <TableCell>{task.colaborador}</TableCell>
                     <TableCell>
                       {task.dataDistribuicao

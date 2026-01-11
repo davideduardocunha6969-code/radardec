@@ -11,6 +11,7 @@ export interface SheetData {
 export interface TaskData {
   colaborador: string;
   tarefa: string;
+  numeroProcesso: string;
   dataDistribuicao: Date | null;
   dataCumprimento: Date | null;
   status: string;
@@ -59,16 +60,18 @@ export function useSheetData() {
       // Usando índices fixos conforme especificado:
       // Coluna A (0) = Tarefa/Atividade
       // Coluna B (1) = Data de Distribuição
-      // Coluna C (2) = (não usado)
+      // Coluna C (2) = Número do Processo
       // Coluna D (3) = Data de Cumprimento/Término
       const tarefaIdx = 0;      // Coluna A
       const dataDistIdx = 1;    // Coluna B - Data de distribuição
+      const numProcessoIdx = 2; // Coluna C - Número do processo
       const dataCumpIdx = 3;    // Coluna D - Data de cumprimento/término
       
       sheet.rows.forEach(row => {
         const task: TaskData = {
           colaborador: sheet.name,
           tarefa: row[tarefaIdx] || '',
+          numeroProcesso: row[numProcessoIdx] || '',
           dataDistribuicao: parseDate(row[dataDistIdx]),
           dataCumprimento: parseDate(row[dataCumpIdx]),
           status: '', // Status será inferido pela presença ou não de dataCumprimento
