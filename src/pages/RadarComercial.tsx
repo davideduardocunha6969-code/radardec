@@ -56,6 +56,7 @@ const RadarComercial = () => {
   const [aposentadoriasFuturasDialogOpen, setAposentadoriasFuturasDialogOpen] = useState(false);
   const [rankingPossuiDireito, setRankingPossuiDireito] = useState<string | null>(null);
   const [sdrRankingWeek, setSdrRankingWeek] = useState<number | null>(null);
+  const [sdrEvolutionFilter, setSdrEvolutionFilter] = useState<string | null>(null);
 
   // Handlers para abrir/fechar seções (comportamento accordion)
   const handleSectionToggle = (section: string) => {
@@ -2631,9 +2632,28 @@ const RadarComercial = () => {
           {/* Gráfico de Evolução de Agendamentos por SDR */}
           <Card>
             <CardHeader>
-              <div className="flex items-center gap-3">
-                <TrendingUp className="h-5 w-5 text-teal-500" />
-                <CardTitle className="text-lg">Evolução de Agendamentos por SDR</CardTitle>
+              <div className="flex items-center justify-between flex-wrap gap-4">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="h-5 w-5 text-teal-500" />
+                  <CardTitle className="text-lg">Evolução de Agendamentos por SDR</CardTitle>
+                </div>
+                {/* Filtro por SDR */}
+                <Select
+                  value={sdrEvolutionFilter || "all"}
+                  onValueChange={(value) => setSdrEvolutionFilter(value === "all" ? null : value)}
+                >
+                  <SelectTrigger className="w-[180px] h-8">
+                    <SelectValue placeholder="Todos os SDRs" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os SDRs</SelectItem>
+                    {sdrList.map((sdr) => (
+                      <SelectItem key={sdr} value={sdr}>
+                        {sdr}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <p className="text-sm text-muted-foreground">
                 Quantidade de agendamentos por semana de cada SDR. 
@@ -2643,7 +2663,10 @@ const RadarComercial = () => {
             <CardContent>
               <ChartContainer config={chartConfig} className="h-[400px] w-full">
                 <ResponsiveContainer width="100%" height="100%">
-                  <LineChart data={sdrEvolutionChartData} margin={{ top: 20, right: 30, left: 10, bottom: 0 }}>
+                  <LineChart 
+                    data={sdrEvolutionChartData} 
+                    margin={{ top: 20, right: 30, left: 10, bottom: 0 }}
+                  >
                     <XAxis 
                       dataKey="semana" 
                       tick={{ fontSize: 11 }}
@@ -2656,6 +2679,7 @@ const RadarComercial = () => {
                       className="text-muted-foreground"
                       axisLine={false}
                       tickLine={false}
+                      domain={[0, (dataMax: number) => Math.max(dataMax, 30)]}
                     />
                     <Tooltip content={<ChartTooltipContent />} />
                     <Legend 
@@ -2665,30 +2689,46 @@ const RadarComercial = () => {
                     {/* Linha de meta (25 agendamentos) */}
                     <ReferenceLine 
                       y={25} 
-                      stroke="hsl(0, 84%, 60%)" 
+                      stroke="#ef4444"
                       strokeWidth={2}
-                      strokeDasharray="5 5"
+                      strokeDasharray="8 4"
+                    />
+                    {/* Label da meta separado para garantir visibilidade */}
+                    <ReferenceLine 
+                      y={25} 
+                      stroke="transparent"
                       label={{ 
                         value: 'Meta: 25', 
-                        position: 'right',
-                        fill: 'hsl(0, 84%, 60%)',
+                        position: 'insideTopRight',
+                        fill: '#ef4444',
                         fontSize: 12,
-                        fontWeight: 'bold'
+                        fontWeight: 600
                       }}
                     />
-                    {/* Linhas para cada SDR */}
-                    {sdrList.map((sdr, index) => (
-                      <Line
-                        key={sdr}
-                        type="monotone"
-                        dataKey={sdr}
-                        name={sdr}
-                        stroke={sdrColors[index % sdrColors.length]}
-                        strokeWidth={2}
-                        dot={{ fill: sdrColors[index % sdrColors.length], strokeWidth: 0, r: 3 }}
-                        activeDot={{ r: 5, strokeWidth: 0 }}
-                      />
-                    ))}
+                    {/* Linhas para cada SDR (filtrado) */}
+                    {(sdrEvolutionFilter ? sdrList.filter(s => s === sdrEvolutionFilter) : sdrList).map((sdr, index) => {
+                      const originalIndex = sdrList.indexOf(sdr);
+                      return (
+                        <Line
+                          key={sdr}
+                          type="monotone"
+                          dataKey={sdr}
+                          name={sdr}
+                          stroke={sdrColors[originalIndex % sdrColors.length]}
+                          strokeWidth={2}
+                          dot={{ fill: sdrColors[originalIndex % sdrColors.length], strokeWidth: 0, r: 3 }}
+                          activeDot={{ r: 5, strokeWidth: 0 }}
+                        >
+                          <LabelList 
+                            dataKey={sdr} 
+                            position="top" 
+                            className="fill-foreground"
+                            fontSize={9}
+                            formatter={(value: number) => value > 0 ? value : ''}
+                          />
+                        </Line>
+                      );
+                    })}
                   </LineChart>
                 </ResponsiveContainer>
               </ChartContainer>
