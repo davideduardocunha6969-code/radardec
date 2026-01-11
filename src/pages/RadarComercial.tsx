@@ -2954,6 +2954,116 @@ const RadarComercial = () => {
             </CardContent>
           </Card>
 
+          {/* Card de Resultados por SDR (dados da aba principal - Coluna O e B) */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-5 w-5 text-indigo-500" />
+                <CardTitle className="text-lg">Resultados dos Atendimentos por SDR</CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">Distribuição de resultados (Coluna O) por SDR (Coluna B) da aba principal</p>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {(() => {
+                  // Agrupa os resultados por SDR usando os dados da aba principal
+                  const sdrResultados: Record<string, Record<string, number>> = {};
+                  const sdrTotais: Record<string, number> = {};
+                  
+                  // Aplica os mesmos filtros da seção principal
+                  const filteredData = data.filter(record => {
+                    if (selectedWeek && record.semana !== selectedWeek) return false;
+                    if (selectedSetor && record.setor !== selectedSetor) return false;
+                    return true;
+                  });
+                  
+                  filteredData.forEach(record => {
+                    const sdr = record.sdr?.trim();
+                    const resultado = record.resultado?.trim()?.toLowerCase();
+                    
+                    if (sdr && resultado) {
+                      if (!sdrResultados[sdr]) {
+                        sdrResultados[sdr] = {};
+                        sdrTotais[sdr] = 0;
+                      }
+                      
+                      sdrResultados[sdr][resultado] = (sdrResultados[sdr][resultado] || 0) + 1;
+                      sdrTotais[sdr]++;
+                    }
+                  });
+                  
+                  // Transforma em array e ordena por total de atendimentos
+                  const sdrArray = Object.entries(sdrResultados)
+                    .map(([sdr, resultados]) => ({
+                      sdr,
+                      resultados,
+                      total: sdrTotais[sdr]
+                    }))
+                    .sort((a, b) => b.total - a.total);
+                  
+                  if (sdrArray.length === 0) {
+                    return (
+                      <div className="h-[100px] flex items-center justify-center bg-muted/30 rounded-lg">
+                        <p className="text-muted-foreground text-sm">Nenhum dado de SDR disponível na aba principal</p>
+                      </div>
+                    );
+                  }
+                  
+                  // Define cores para cada tipo de resultado
+                  const getResultadoStyle = (resultado: string) => {
+                    const r = resultado.toLowerCase();
+                    if (r === 'contrato fechado') return { bg: 'bg-green-500', text: 'text-green-700' };
+                    if (r === 'negociação' || r === 'negociacao') return { bg: 'bg-blue-500', text: 'text-blue-700' };
+                    if (r === 'aguarda documentação' || r === 'aguarda documentacao') return { bg: 'bg-amber-500', text: 'text-amber-700' };
+                    if (r === 'sem direito') return { bg: 'bg-red-500', text: 'text-red-700' };
+                    if (r === 'não fechou' || r === 'nao fechou') return { bg: 'bg-gray-500', text: 'text-gray-700' };
+                    if (r === 'aposentadoria futura') return { bg: 'bg-purple-500', text: 'text-purple-700' };
+                    return { bg: 'bg-slate-500', text: 'text-slate-700' };
+                  };
+                  
+                  return sdrArray.map(({ sdr, resultados, total }) => {
+                    // Ordena resultados por quantidade
+                    const resultadosOrdenados = Object.entries(resultados)
+                      .sort((a, b) => b[1] - a[1]);
+                    
+                    return (
+                      <div key={sdr} className="p-4 border rounded-lg bg-muted/10">
+                        <div className="flex items-center justify-between mb-3">
+                          <h4 className="font-semibold text-base">{sdr}</h4>
+                          <span className="text-sm text-muted-foreground bg-muted px-2 py-1 rounded">
+                            Total: {total} atendimentos
+                          </span>
+                        </div>
+                        
+                        <div className="grid gap-2 md:grid-cols-2 lg:grid-cols-3">
+                          {resultadosOrdenados.map(([resultado, count]) => {
+                            const pct = ((count / total) * 100).toFixed(1);
+                            const style = getResultadoStyle(resultado);
+                            
+                            return (
+                              <div key={resultado} className="flex items-center gap-2 p-2 bg-background rounded border">
+                                <div className={`w-3 h-3 rounded-full ${style.bg}`}></div>
+                                <div className="flex-1 min-w-0">
+                                  <p className="text-xs font-medium truncate capitalize" title={resultado}>
+                                    {resultado}
+                                  </p>
+                                </div>
+                                <div className="text-right flex-shrink-0">
+                                  <span className="text-sm font-bold">{count}</span>
+                                  <span className="text-xs text-muted-foreground ml-1">({pct}%)</span>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  });
+                })()}
+              </div>
+            </CardContent>
+          </Card>
+
           {/* Mensagem de configuração */}
           {sdrData.length === 0 && !isLoading && (
             <Card className="bg-amber-500/10 border-amber-500/30">
