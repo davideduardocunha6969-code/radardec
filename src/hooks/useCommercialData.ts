@@ -47,6 +47,13 @@ export interface SDRRecord {
   rawRow: string[];
 }
 
+export interface SDRMessageRecord {
+  semana: string;
+  mirelly: number;
+  stefania: number;
+  shazelli: number;
+}
+
 export interface CommercialDataResponse {
   records: CommercialRecord[];
   weeks: number[];
@@ -56,6 +63,7 @@ export interface CommercialDataResponse {
   sdrHeaders: string[];
   sdrWeeks: number[];
   sdrTotalRecords: number;
+  sdrMessagesData: SDRMessageRecord[];
   lastUpdated: string;
 }
 
@@ -65,6 +73,7 @@ export const useCommercialData = () => {
   const [sdrData, setSdrData] = useState<SDRRecord[]>([]);
   const [sdrHeaders, setSdrHeaders] = useState<string[]>([]);
   const [sdrWeeks, setSdrWeeks] = useState<number[]>([]);
+  const [sdrMessagesData, setSdrMessagesData] = useState<SDRMessageRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -92,11 +101,13 @@ export const useCommercialData = () => {
       console.log(`Available weeks: ${commercialData.weeks.join(', ')}`);
       console.log(`Loaded ${commercialData.sdrRecords?.length || 0} SDR records`);
       console.log(`SDR Headers: ${commercialData.sdrHeaders?.join(', ') || 'none'}`);
+      console.log(`Loaded ${commercialData.sdrMessagesData?.length || 0} SDR Messages records`);
 
       setData(commercialData.records);
       setWeeks(commercialData.weeks);
       setSdrData(commercialData.sdrRecords || []);
       setSdrHeaders(commercialData.sdrHeaders || []);
+      setSdrMessagesData(commercialData.sdrMessagesData || []);
       setSdrWeeks(commercialData.sdrWeeks || []);
       
     } catch (err) {
@@ -127,6 +138,7 @@ export const useCommercialData = () => {
     sdrData,
     sdrHeaders,
     sdrWeeks,
+    sdrMessagesData,
     isLoading,
     error,
     refetch: fetchData,
