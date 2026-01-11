@@ -20,6 +20,7 @@ import {
   ResponsiveContainer,
   Cell,
   LabelList,
+  YAxis,
 } from "recharts";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
@@ -83,6 +84,24 @@ const RadarComercial = () => {
       atendimentos: weekCounts[i + 1] || 0,
     }));
   }, [data]);
+
+  // Dados para o gráfico de atendimentos por responsável
+  const responsavelChartData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    filteredData.forEach(record => {
+      if (record.responsavel) {
+        counts[record.responsavel] = (counts[record.responsavel] || 0) + 1;
+      }
+    });
+    
+    return Object.entries(counts)
+      .map(([responsavel, total]) => ({
+        responsavel,
+        atendimentos: total,
+      }))
+      .sort((a, b) => b.atendimentos - a.atendimentos);
+  }, [filteredData]);
 
   const chartConfig = {
     atendimentos: {
@@ -238,7 +257,65 @@ const RadarComercial = () => {
         </CardContent>
       </Card>
 
-      {/* Honorários Iniciais */}
+      {/* Gráfico de Atendimentos por Responsável */}
+      <Card className="mb-8">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <Users className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Atendimentos por Responsável</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {responsavelChartData.length > 0 ? (
+            <ChartContainer config={chartConfig} className="h-[250px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={responsavelChartData} 
+                  layout="vertical"
+                  margin={{ top: 10, right: 30, left: 80, bottom: 0 }}
+                >
+                  <XAxis 
+                    type="number"
+                    tick={{ fontSize: 12 }}
+                    className="text-muted-foreground"
+                    axisLine={false}
+                    tickLine={false}
+                    allowDecimals={false}
+                    hide
+                  />
+                  <YAxis 
+                    type="category"
+                    dataKey="responsavel"
+                    tick={{ fontSize: 12 }}
+                    className="text-muted-foreground"
+                    axisLine={false}
+                    tickLine={false}
+                    width={80}
+                  />
+                  <Tooltip content={<ChartTooltipContent />} />
+                  <Bar 
+                    dataKey="atendimentos" 
+                    radius={[0, 4, 4, 0]}
+                    className="fill-primary"
+                  >
+                    <LabelList 
+                      dataKey="atendimentos" 
+                      position="right" 
+                      className="fill-foreground"
+                      fontSize={12}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          ) : (
+            <div className="h-[250px] flex items-center justify-center bg-muted/30 rounded-lg">
+              <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
