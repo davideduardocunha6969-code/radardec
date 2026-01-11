@@ -9,6 +9,7 @@ const corsHeaders = {
 const SHEET_ID = '1XJLkFSFVYT3lkugy4Dwyp68xsa0QTsMxP57yAhnWycA';
 const MAIN_GID = 0;
 const SDR_GID = 1631515229;
+const SDR_MESSAGES_GID = 686842485;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -166,6 +167,48 @@ serve(async (req) => {
       // Continue without SDR data
     }
     
+    // Fetch SDR Messages sheet (GID 686842485)
+    // Coluna A = Semana, Coluna B = Mirelly, Coluna C = Stefania, Coluna D = Shazelli
+    let sdrMessagesData: any[] = [];
+    
+    try {
+      const sdrMsgCsvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SDR_MESSAGES_GID}`;
+      console.log(`Fetching SDR Messages sheet (gid=${SDR_MESSAGES_GID})...`);
+      
+      const sdrMsgResponse = await fetch(sdrMsgCsvUrl);
+      
+      if (sdrMsgResponse.ok) {
+        const sdrMsgCsvText = await sdrMsgResponse.text();
+        
+        if (sdrMsgCsvText && sdrMsgCsvText.trim().length > 10) {
+          const sdrMsgRows = parseCSV(sdrMsgCsvText);
+          
+          if (sdrMsgRows.length >= 2) {
+            const sdrMsgHeaders = sdrMsgRows[0];
+            const sdrMsgDataRows = sdrMsgRows.slice(1).filter(row => row.some(cell => cell.trim() !== ''));
+            
+            console.log(`Found SDR Messages sheet with ${sdrMsgDataRows.length} rows`);
+            console.log('SDR Messages Headers:', sdrMsgHeaders);
+            
+            // Mapeia os dados de mensagens por SDR
+            sdrMessagesData = sdrMsgDataRows.map(row => ({
+              semana: (row[0] || '').trim(),
+              mirelly: parseInt((row[1] || '0').replace(/[^\d]/g, '')) || 0,
+              stefania: parseInt((row[2] || '0').replace(/[^\d]/g, '')) || 0,
+              shazelli: parseInt((row[3] || '0').replace(/[^\d]/g, '')) || 0,
+            })).filter(d => d.semana !== '');
+            
+            console.log(`SDR Messages data loaded: ${sdrMessagesData.length} records`);
+          }
+        }
+      } else {
+        console.log('SDR Messages sheet not accessible, continuing without it');
+      }
+    } catch (sdrMsgError) {
+      console.error('Error fetching SDR Messages sheet:', sdrMsgError);
+      // Continue without SDR Messages data
+    }
+    
     return new Response(
       JSON.stringify({
         success: true,
@@ -178,6 +221,7 @@ serve(async (req) => {
           sdrHeaders,
           sdrWeeks,
           sdrTotalRecords: sdrData.length,
+          sdrMessagesData,
           lastUpdated: new Date().toISOString()
         }
       }),
