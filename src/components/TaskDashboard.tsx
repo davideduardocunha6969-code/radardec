@@ -23,6 +23,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PendingTasksDialog } from "./PendingTasksDialog";
 import { ConformityErrorsDialog } from "./ConformityErrorsDialog";
+import { DeadlineErrorsDialog } from "./DeadlineErrorsDialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -446,6 +447,7 @@ export function TaskDashboard({
 
   const [pendingDialogOpen, setPendingDialogOpen] = useState(false);
   const [conformityDialogOpen, setConformityDialogOpen] = useState(false);
+  const [deadlineDialogOpen, setDeadlineDialogOpen] = useState(false);
 
   return (
     <div className="space-y-8">
@@ -498,10 +500,11 @@ export function TaskDashboard({
         <MetricCard
           title="Erros de Prazo"
           value={filteredDeadlineErrors.length}
-          subtitle="Erros na data do prazo"
+          subtitle="Clique para ver detalhes"
           icon={<Timer className="h-5 w-5 text-destructive" />}
           variant={filteredDeadlineErrors.length > 0 ? "warning" : "default"}
           className="animate-slide-up stagger-5"
+          onClick={() => setDeadlineDialogOpen(true)}
         />
       </div>
 
@@ -1241,6 +1244,12 @@ export function TaskDashboard({
         open={conformityDialogOpen}
         onOpenChange={setConformityDialogOpen}
         errors={filteredConformityErrors}
+      />
+
+      <DeadlineErrorsDialog
+        open={deadlineDialogOpen}
+        onOpenChange={setDeadlineDialogOpen}
+        errors={filteredDeadlineErrors}
       />
     </div>
   );
