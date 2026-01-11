@@ -34,6 +34,7 @@ export interface ConformityError {
 export interface DeadlineError {
   date: Date | null;
   controller: string;
+  processNumber: string;
   rawRow: string[];
 }
 
@@ -41,7 +42,7 @@ export interface SheetResponse {
   sheets: SheetData[];
   sectorMapping: SectorMapping[];
   conformityErrors: { date: string; recipient: string; rawRow: string[] }[];
-  deadlineErrors: { date: string; controller: string; rawRow: string[] }[];
+  deadlineErrors: { date: string; controller: string; processNumber: string; rawRow: string[] }[];
   totalSheets: number;
   totalTasks: number;
   totalConformityErrors: number;
@@ -184,9 +185,10 @@ export function useSheetData() {
       }));
       
       // Processa erros de prazo
-      const processedDeadlineErrors: DeadlineError[] = rawDeadlineErrors.map((err: { date: string; controller: string; rawRow: string[] }) => ({
+      const processedDeadlineErrors: DeadlineError[] = rawDeadlineErrors.map((err: { date: string; controller: string; processNumber: string; rawRow: string[] }) => ({
         date: parseDate(err.date),
         controller: err.controller || 'Não identificado',
+        processNumber: err.processNumber || '',
         rawRow: err.rawRow
       }));
       

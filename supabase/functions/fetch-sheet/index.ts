@@ -116,7 +116,7 @@ serve(async (req) => {
     }
     
     // Busca a aba de erros de prazo
-    let deadlineErrors: { date: string; controller: string; rawRow: string[] }[] = [];
+    let deadlineErrors: { date: string; controller: string; processNumber: string; rawRow: string[] }[] = [];
     try {
       const deadlineUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${DEADLINE_ERRORS_GID}`;
       console.log(`Fetching deadline errors (gid=${DEADLINE_ERRORS_GID})...`);
@@ -130,11 +130,13 @@ serve(async (req) => {
         // Pula o header
         // Coluna B (1) = Data do erro
         // Coluna K (10) = Controller responsável
+        // Coluna M (12) = Número do processo
         deadlineErrors = rows.slice(1)
           .filter(row => row.some(cell => cell.trim() !== ''))
           .map(row => ({
             date: row[1] || '',
             controller: (row[10] || '').trim(),
+            processNumber: (row[12] || '').trim(),
             rawRow: row
           }));
         
