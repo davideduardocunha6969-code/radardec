@@ -31,7 +31,7 @@ export function AppSidebar() {
 
   return (
     <Sidebar collapsible="icon" className="border-r border-primary/20 bg-primary">
-      <SidebarHeader className="border-b border-primary-foreground/20 p-4">
+      <SidebarHeader className="border-b border-primary-foreground/20 p-4 bg-primary">
         <div className="flex items-center gap-3">
           <img 
             src={logoEscritorio} 
