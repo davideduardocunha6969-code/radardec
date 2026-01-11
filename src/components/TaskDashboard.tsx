@@ -57,6 +57,7 @@ export function TaskDashboard({
   const [chart2Period, setChart2Period] = useState<ChartPeriod>("all");
   const [customChart2Start, setCustomChart2Start] = useState<Date>();
   const [customChart2End, setCustomChart2End] = useState<Date>();
+  const [visibleControllers, setVisibleControllers] = useState<string[]>([]);
 
   // Filtra tarefas por período e colaboradores
   const filteredTasks = useMemo(() => {
@@ -271,6 +272,31 @@ export function TaskDashboard({
   const controllersList = useMemo(() => {
     return [...new Set(chart2FilteredTasks.map(t => t.colaborador))].sort();
   }, [chart2FilteredTasks]);
+
+  // Controllers visíveis no gráfico (se vazio, mostra todos)
+  const activeControllers = useMemo(() => {
+    if (visibleControllers.length === 0) return controllersList;
+    return visibleControllers.filter(c => controllersList.includes(c));
+  }, [visibleControllers, controllersList]);
+
+  const toggleController = (controller: string) => {
+    setVisibleControllers(prev => {
+      if (prev.length === 0) {
+        // Se estava mostrando todos, agora mostra só os outros (exclui o clicado)
+        return controllersList.filter(c => c !== controller);
+      }
+      if (prev.includes(controller)) {
+        const newList = prev.filter(c => c !== controller);
+        // Se ficou vazio, volta a mostrar todos
+        return newList.length === 0 ? [] : newList;
+      }
+      return [...prev, controller];
+    });
+  };
+
+  const showAllControllers = () => {
+    setVisibleControllers([]);
+  };
 
   // Cores para cada controller
   const controllerColors = useMemo(() => {
@@ -713,6 +739,43 @@ export function TaskDashboard({
               )}
             </div>
           )}
+
+          {/* Seletor de controllers visíveis */}
+          <div className="flex flex-wrap items-center gap-2 mt-4">
+            <span className="text-sm text-muted-foreground mr-2">Mostrar:</span>
+            {controllersList.map((controller) => {
+              const isActive = activeControllers.includes(controller);
+              return (
+                <Button
+                  key={controller}
+                  variant={isActive ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => toggleController(controller)}
+                  className="gap-2"
+                  style={{
+                    backgroundColor: isActive ? controllerColors[controller] : undefined,
+                    borderColor: controllerColors[controller],
+                    color: isActive ? "white" : controllerColors[controller],
+                  }}
+                >
+                  <div
+                    className="w-2 h-2 rounded-full"
+                    style={{ backgroundColor: isActive ? "white" : controllerColors[controller] }}
+                  />
+                  {controller}
+                </Button>
+              );
+            })}
+            {visibleControllers.length > 0 && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={showAllControllers}
+              >
+                Mostrar todos
+              </Button>
+            )}
+          </div>
         </CardHeader>
         <CardContent>
           <ChartContainer
@@ -763,7 +826,7 @@ export function TaskDashboard({
                 }}
               />
               <Legend />
-              {controllersList.map((controller) => (
+              {activeControllers.map((controller) => (
                 <Line
                   key={controller}
                   type="monotone"
