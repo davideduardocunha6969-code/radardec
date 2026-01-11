@@ -1,11 +1,13 @@
 import { useMemo, useState } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   ClipboardList,
   Clock,
   CheckCircle2,
   Users,
 } from "lucide-react";
-import { Bar, BarChart, XAxis, YAxis, CartesianGrid } from "recharts";
+import { Bar, BarChart, Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
 import MetricCard from "./MetricCard";
 import { TaskData } from "@/hooks/useSheetData";
 import { calculateBusinessDays } from "@/utils/businessDays";
@@ -91,6 +93,27 @@ export function TaskDashboard({
     
     return totalDays / completedTasks.length;
   }, [filteredTasks, holidays]);
+
+  // Tarefas por data de distribuição (para gráfico de linha)
+  const tasksByDate = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    filteredTasks.forEach(task => {
+      if (task.dataDistribuicao) {
+        const dateKey = format(task.dataDistribuicao, "yyyy-MM-dd");
+        counts[dateKey] = (counts[dateKey] || 0) + 1;
+      }
+    });
+    
+    return Object.entries(counts)
+      .map(([date, quantidade]) => ({
+        date,
+        dateLabel: format(new Date(date + "T12:00:00"), "dd/MM", { locale: ptBR }),
+        fullDate: format(new Date(date + "T12:00:00"), "dd/MM/yyyy", { locale: ptBR }),
+        quantidade,
+      }))
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [filteredTasks]);
 
   const colaboradores = [...new Set(tasks.map(t => t.colaborador))];
 
@@ -220,6 +243,63 @@ export function TaskDashboard({
           </CardContent>
         </Card>
       </div>
+
+      {/* Gráfico de Linha: Distribuição de Tarefas por Data */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Distribuição de Tarefas por Data</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer
+            config={{
+              quantidade: {
+                label: "Tarefas Distribuídas",
+                color: "hsl(var(--primary))",
+              },
+            }}
+            className="h-[350px] w-full"
+          >
+            <LineChart data={tasksByDate}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="dateLabel"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 11 }}
+                interval="preserveStartEnd"
+                angle={-45}
+                textAnchor="end"
+                height={60}
+              />
+              <YAxis tickLine={false} axisLine={false} allowDecimals={false} />
+              <ChartTooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="rounded-lg border bg-background p-2 shadow-sm">
+                        <div className="font-medium">{data.fullDate}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {data.quantidade} {data.quantidade === 1 ? "tarefa" : "tarefas"}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Line
+                type="monotone"
+                dataKey="quantidade"
+                stroke="var(--color-quantidade)"
+                strokeWidth={2}
+                dot={{ fill: "var(--color-quantidade)", strokeWidth: 2, r: 4 }}
+                activeDot={{ r: 6 }}
+              />
+            </LineChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
 
       <PendingTasksDialog
         open={pendingDialogOpen}
