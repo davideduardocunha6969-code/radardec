@@ -2356,6 +2356,82 @@ const RadarComercial = () => {
             </Card>
           </div>
 
+          {/* Gráfico de Agendamentos por Semana - SDR */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-5 w-5 text-teal-500" />
+                <CardTitle className="text-lg">Agendamentos por Semana</CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">Total de agendamentos realizados pelo time de SDR por semana</p>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                // Agrupa agendamentos por semana (coluna D)
+                const agendamentosPorSemana: Record<string, number> = {};
+                sdrData.forEach(r => {
+                  const semana = r.colD?.trim();
+                  if (semana) {
+                    agendamentosPorSemana[semana] = (agendamentosPorSemana[semana] || 0) + 1;
+                  }
+                });
+                
+                // Converte para array e ordena por número da semana
+                const chartData = Object.entries(agendamentosPorSemana)
+                  .map(([semana, total]) => ({
+                    semana: `Sem ${semana}`,
+                    weekNumber: parseInt(semana) || 0,
+                    agendamentos: total,
+                  }))
+                  .sort((a, b) => a.weekNumber - b.weekNumber);
+                
+                if (chartData.length === 0) {
+                  return (
+                    <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                      <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                    </div>
+                  );
+                }
+                
+                return (
+                  <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={chartData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+                        <XAxis 
+                          dataKey="semana" 
+                          tick={{ fontSize: 11 }}
+                          className="text-muted-foreground"
+                          axisLine={false}
+                          tickLine={false}
+                        />
+                        <Tooltip content={<ChartTooltipContent />} />
+                        <Bar 
+                          dataKey="agendamentos" 
+                          radius={[4, 4, 0, 0]}
+                          fill="hsl(var(--chart-1))"
+                        >
+                          <LabelList 
+                            dataKey="agendamentos" 
+                            position="top" 
+                            className="fill-foreground"
+                            fontSize={10}
+                            formatter={(value: number) => value > 0 ? value : ''}
+                          />
+                          {chartData.map((entry, index) => (
+                            <Cell 
+                              key={`cell-${index}`}
+                              fill="hsl(173, 80%, 40%)"
+                            />
+                          ))}
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                );
+              })()}
+            </CardContent>
+          </Card>
+
           {/* Mensagem de configuração */}
           {sdrData.length === 0 && !isLoading && (
             <Card className="bg-amber-500/10 border-amber-500/30">
