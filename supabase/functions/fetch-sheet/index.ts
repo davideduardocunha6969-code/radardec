@@ -7,9 +7,8 @@ const corsHeaders = {
 
 const SHEET_ID = '1zjLZCxj5FgwrzmUX2Jn3H7PUXBoTABQO_aRAXADyN5M';
 
-// Lista de GIDs conhecidos das abas (precisamos descobrir os GIDs reais)
-// Por padrão, a primeira aba tem gid=0
-const KNOWN_GIDS = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
+// GIDs das abas da planilha (cada aba = um colaborador)
+const SHEET_GIDS = [0, 168471298, 1165923131];
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -22,7 +21,7 @@ serve(async (req) => {
     const allSheets: { name: string; headers: string[]; rows: string[][] }[] = [];
     
     // Tenta buscar cada aba pelo GID
-    for (const gid of KNOWN_GIDS) {
+    for (const gid of SHEET_GIDS) {
       try {
         const csvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
         console.log(`Fetching gid=${gid}...`);
