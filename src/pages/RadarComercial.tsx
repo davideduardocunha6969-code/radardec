@@ -50,6 +50,7 @@ const RadarComercial = () => {
   const [selectedResponsavel, setSelectedResponsavel] = useState<string | null>(null);
   const [selectedResultado, setSelectedResultado] = useState<string | null>(null);
   const [radarAtendimentosOpen, setRadarAtendimentosOpen] = useState(true);
+  const [radarConversaoOpen, setRadarConversaoOpen] = useState(true);
 
   // Extrai opções únicas para os filtros
   const filterOptions = useMemo(() => {
@@ -1003,6 +1004,135 @@ const RadarComercial = () => {
           <div className="flex justify-center pt-4">
             <button
               onClick={() => setRadarAtendimentosOpen(false)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+            >
+              <ChevronUp className="h-4 w-4" />
+              Recolher seção
+            </button>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Seção: Radar de Conversão */}
+      <Collapsible 
+        open={radarConversaoOpen} 
+        onOpenChange={setRadarConversaoOpen}
+        className="mb-8"
+      >
+        <CollapsibleTrigger className="flex items-center gap-3 w-full p-4 bg-card rounded-lg border hover:bg-muted/50 transition-colors mb-4">
+          {radarConversaoOpen ? (
+            <ChevronDown className="h-5 w-5 text-primary" />
+          ) : (
+            <ChevronRight className="h-5 w-5 text-primary" />
+          )}
+          <h2 className="text-lg font-semibold text-foreground">Radar de Conversão</h2>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-8">
+          {/* Cards de métricas de conversão */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+            <Card>
+              <CardContent className="pt-4 pb-4">
+                <p className="text-xs text-muted-foreground mb-1">Atendimentos Qualificados</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {isLoading ? '--' : filteredData.filter(r => r.possuiDireito === 'SIM').length}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Clientes com direito
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-4 pb-4">
+                <p className="text-xs text-muted-foreground mb-1">Contratos Fechados</p>
+                <p className="text-2xl font-bold text-success">
+                  {isLoading ? '--' : filteredData.filter(r => r.resultado?.toLowerCase().includes('contrato fechado')).length}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Total de fechamentos
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-4 pb-4">
+                <p className="text-xs text-muted-foreground mb-1">Taxa de Conversão Geral</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {isLoading ? '--%' : `${metrics.taxaConversao}%`}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Contratos / Atendimentos
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-4 pb-4">
+                <p className="text-xs text-muted-foreground mb-1">Taxa de Conversão Qualificados</p>
+                <p className="text-2xl font-bold text-foreground">
+                  {isLoading ? '--%' : (() => {
+                    const qualificados = filteredData.filter(r => r.possuiDireito === 'SIM').length;
+                    const fechados = filteredData.filter(r => r.possuiDireito === 'SIM' && r.resultado?.toLowerCase().includes('contrato fechado')).length;
+                    return qualificados > 0 ? `${((fechados / qualificados) * 100).toFixed(1)}%` : '0%';
+                  })()}
+                </p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Apenas clientes com direito
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Gráfico de Funil de Conversão */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <TrendingUp className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Funil de Conversão</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {(() => {
+                  const totalAtendimentos = filteredData.length;
+                  const qualificados = filteredData.filter(r => r.possuiDireito === 'SIM').length;
+                  const contratosFechados = filteredData.filter(r => r.resultado?.toLowerCase().includes('contrato fechado')).length;
+                  
+                  const funnelData = [
+                    { label: 'Total de Atendimentos', value: totalAtendimentos, percentage: 100 },
+                    { label: 'Atendimentos Qualificados', value: qualificados, percentage: totalAtendimentos > 0 ? (qualificados / totalAtendimentos) * 100 : 0 },
+                    { label: 'Contratos Fechados', value: contratosFechados, percentage: totalAtendimentos > 0 ? (contratosFechados / totalAtendimentos) * 100 : 0 },
+                  ];
+
+                  return funnelData.map((item, index) => (
+                    <div key={item.label} className="relative">
+                      <div className="flex justify-between items-center mb-1">
+                        <span className="text-sm font-medium text-foreground">{item.label}</span>
+                        <span className="text-sm text-muted-foreground">
+                          {item.value} ({item.percentage.toFixed(1)}%)
+                        </span>
+                      </div>
+                      <div className="h-8 bg-muted/30 rounded-lg overflow-hidden">
+                        <div 
+                          className={`h-full rounded-lg transition-all ${
+                            index === 0 ? 'bg-primary' : 
+                            index === 1 ? 'bg-accent' : 
+                            'bg-success'
+                          }`}
+                          style={{ width: `${item.percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  ));
+                })()}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Botão para recolher seção */}
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={() => setRadarConversaoOpen(false)}
               className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
             >
               <ChevronUp className="h-4 w-4" />
