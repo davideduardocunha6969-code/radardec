@@ -11,13 +11,19 @@ const Header = ({ lastUpdate, isLive = false }: HeaderProps) => {
     <header className="border-b border-border bg-primary sticky top-0 z-50">
       <div className="container mx-auto flex h-16 items-center justify-between px-4">
         <div className="flex items-center gap-4">
-          {/* Logo do escritório */}
-          <img 
-            src="https://davideduardocunha.com.br/wp-content/uploads/2025/01/Logo-fundo-Transparente.png" 
-            alt="David Eduardo Cunha Advogados"
-            className="h-10 w-auto brightness-0 invert"
-          />
-          <div className="h-8 w-px bg-accent/30" />
+          {/* Logo do escritório em texto */}
+          <div className="flex flex-col leading-tight">
+            <span className="text-xs font-medium text-primary-foreground tracking-[0.2em]">
+              DAVID EDUARDO
+            </span>
+            <span className="text-2xl font-bold text-accent tracking-wider font-display">
+              CUNHA
+            </span>
+            <span className="text-[10px] font-medium text-primary-foreground tracking-[0.3em]">
+              ADVOGADOS
+            </span>
+          </div>
+          <div className="h-10 w-px bg-accent/30" />
           <div className="flex flex-col">
             <span className="text-sm font-semibold text-primary-foreground tracking-wide">
               RADAR CONTROLADORIA
