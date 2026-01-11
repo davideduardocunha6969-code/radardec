@@ -191,70 +191,50 @@ const RadarComercial = () => {
       </div>
 
       {/* Gráfico de Atendimentos por Semana */}
-      <div className="grid gap-6 md:grid-cols-2 mb-8">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Atendimentos por Semana</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer config={chartConfig} className="h-[300px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={weeklyChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
-                  <XAxis 
-                    dataKey="semana" 
-                    tick={{ fontSize: 12 }}
-                    className="text-muted-foreground"
-                  />
-                  <YAxis 
-                    tick={{ fontSize: 12 }}
-                    className="text-muted-foreground"
-                    allowDecimals={false}
-                  />
-                  <Tooltip content={<ChartTooltipContent />} />
-                  <Bar 
-                    dataKey="atendimentos" 
-                    radius={[4, 4, 0, 0]}
-                    className="fill-primary"
-                  >
-                    {weeklyChartData.map((entry, index) => (
-                      <Cell 
-                        key={`cell-${index}`}
-                        className={
-                          selectedWeek === entry.weekNumber 
-                            ? "fill-accent" 
-                            : "fill-primary"
-                        }
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </ChartContainer>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <div className="flex items-center gap-3">
-              <PieChart className="h-5 w-5 text-accent" />
-              <CardTitle className="text-lg">Origem dos Leads</CardTitle>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
-              <div className="text-center text-muted-foreground">
-                <PieChart className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Gráfico em desenvolvimento</p>
-                <p className="text-xs mt-1">Conecte sua fonte de dados comerciais</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className="mb-8">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <BarChart3 className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Atendimentos por Semana</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer config={chartConfig} className="h-[300px] w-full">
+            <ResponsiveContainer width="100%" height="100%">
+              <BarChart data={weeklyChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                <XAxis 
+                  dataKey="semana" 
+                  tick={{ fontSize: 12 }}
+                  className="text-muted-foreground"
+                />
+                <YAxis 
+                  tick={{ fontSize: 12 }}
+                  className="text-muted-foreground"
+                  allowDecimals={false}
+                />
+                <Tooltip content={<ChartTooltipContent />} />
+                <Bar 
+                  dataKey="atendimentos" 
+                  radius={[4, 4, 0, 0]}
+                  className="fill-primary"
+                >
+                  {weeklyChartData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`}
+                      className={
+                        selectedWeek === entry.weekNumber 
+                          ? "fill-accent" 
+                          : "fill-primary"
+                      }
+                    />
+                  ))}
+                </Bar>
+              </BarChart>
+            </ResponsiveContainer>
+          </ChartContainer>
+        </CardContent>
+      </Card>
 
       {/* Honorários Iniciais */}
       <Card>
