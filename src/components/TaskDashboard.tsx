@@ -8,6 +8,7 @@ import {
   CheckCircle2,
   Users,
   AlertTriangle,
+  Percent,
 } from "lucide-react";
 import { Bar, BarChart, Line, LineChart, XAxis, YAxis, CartesianGrid, Legend, LabelList } from "recharts";
 import MetricCard from "./MetricCard";
@@ -477,6 +478,14 @@ export function TaskDashboard({
           variant={filteredConformityErrors.length > 0 ? "warning" : "default"}
           className="animate-slide-up stagger-5"
           onClick={() => setConformityDialogOpen(true)}
+        />
+        <MetricCard
+          title="Taxa de Erros"
+          value={`${filteredTasks.length > 0 ? ((filteredConformityErrors.length / filteredTasks.length) * 100).toFixed(2) : 0}%`}
+          subtitle="Erros / Total de tarefas"
+          icon={<Percent className="h-5 w-5 text-destructive" />}
+          variant={filteredConformityErrors.length > 0 ? "warning" : "default"}
+          className="animate-slide-up stagger-6"
         />
       </div>
 
