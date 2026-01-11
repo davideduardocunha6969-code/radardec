@@ -1192,143 +1192,6 @@ const RadarComercial = () => {
         </Card>
           </div>
 
-          {/* Cards de Tempo Médio de Atendimento por Setor */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <Clock className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Tempo Médio de Atendimento por Setor</CardTitle>
-              </div>
-              <p className="text-sm text-muted-foreground">Dias entre atendimento e fechamento</p>
-            </CardHeader>
-            <CardContent>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-                {(() => {
-                  // Calcula o tempo médio em dias para cada setor
-                  const setorStats: Record<string, { totalDias: number; count: number }> = {};
-                  
-                  filteredData.forEach(record => {
-                    if (record.setor && record.dataAtendimento && record.dataFechamento) {
-                      // Parse das datas
-                      const parseDate = (dateStr: string): Date | null => {
-                        if (!dateStr) return null;
-                        // Tenta formato dd/mm/yyyy
-                        const parts = dateStr.split('/');
-                        if (parts.length === 3) {
-                          const day = parseInt(parts[0], 10);
-                          const month = parseInt(parts[1], 10) - 1;
-                          const year = parseInt(parts[2], 10);
-                          const date = new Date(year, month, day);
-                          if (!isNaN(date.getTime())) return date;
-                        }
-                        // Tenta ISO format
-                        const isoDate = new Date(dateStr);
-                        if (!isNaN(isoDate.getTime())) return isoDate;
-                        return null;
-                      };
-                      
-                      const dataAtend = parseDate(record.dataAtendimento);
-                      const dataFech = parseDate(record.dataFechamento);
-                      
-                      if (dataAtend && dataFech && dataFech >= dataAtend) {
-                        const diffTime = dataFech.getTime() - dataAtend.getTime();
-                        const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-                        
-                        if (!setorStats[record.setor]) {
-                          setorStats[record.setor] = { totalDias: 0, count: 0 };
-                        }
-                        setorStats[record.setor].totalDias += diffDays;
-                        setorStats[record.setor].count++;
-                      }
-                    }
-                  });
-                  
-                  // Transforma em array e ordena por média
-                  const setorMediaData = Object.entries(setorStats)
-                    .map(([setor, { totalDias, count }]) => ({
-                      setor,
-                      mediaDias: count > 0 ? parseFloat((totalDias / count).toFixed(1)) : 0,
-                      totalCasos: count,
-                    }))
-                    .sort((a, b) => a.mediaDias - b.mediaDias);
-                  
-                  if (setorMediaData.length === 0) {
-                    return (
-                      <div className="col-span-full h-[100px] flex items-center justify-center bg-muted/30 rounded-lg">
-                        <p className="text-muted-foreground text-sm">Nenhum dado de fechamento disponível</p>
-                      </div>
-                    );
-                  }
-                  
-                  // Calcula a média geral para referência de cores
-                  const mediaGeral = setorMediaData.reduce((sum, s) => sum + s.mediaDias * s.totalCasos, 0) / 
-                                     setorMediaData.reduce((sum, s) => sum + s.totalCasos, 0);
-                  
-                  return setorMediaData.map((stat) => {
-                    // Define cores baseadas na comparação com a média geral
-                    // Verde: abaixo da média (mais rápido)
-                    // Amarelo: próximo da média (+/- 20%)
-                    // Vermelho: acima da média (mais lento)
-                    const limiteInferior = mediaGeral * 0.8;
-                    const limiteSuperior = mediaGeral * 1.2;
-                    
-                    let bgColor = '';
-                    let borderColor = '';
-                    let textColor = '';
-                    let statusText = '';
-                    let statusIcon = '';
-                    
-                    if (stat.mediaDias <= limiteInferior) {
-                      bgColor = 'bg-green-500/10';
-                      borderColor = 'border-l-green-500';
-                      textColor = 'text-green-600';
-                      statusText = 'Rápido';
-                      statusIcon = '✓';
-                    } else if (stat.mediaDias >= limiteSuperior) {
-                      bgColor = 'bg-red-500/10';
-                      borderColor = 'border-l-red-500';
-                      textColor = 'text-red-600';
-                      statusText = 'Lento';
-                      statusIcon = '✗';
-                    } else {
-                      bgColor = 'bg-yellow-500/10';
-                      borderColor = 'border-l-yellow-500';
-                      textColor = 'text-yellow-600';
-                      statusText = 'Normal';
-                      statusIcon = '●';
-                    }
-                    
-                    return (
-                      <Card key={stat.setor} className={`${bgColor} border-l-4 ${borderColor}`}>
-                        <CardHeader className="pb-2">
-                          <div className="flex items-center justify-between">
-                            <CardTitle className="text-sm font-medium truncate" title={stat.setor}>
-                              {stat.setor}
-                            </CardTitle>
-                            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${bgColor} ${textColor}`}>
-                              {statusIcon} {statusText}
-                            </span>
-                          </div>
-                        </CardHeader>
-                        <CardContent>
-                          <div className={`text-3xl font-bold ${textColor}`}>
-                            {stat.mediaDias}
-                          </div>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            dias em média
-                          </p>
-                          <div className="text-xs text-muted-foreground mt-2 pt-2 border-t">
-                            <span>Total de casos: {stat.totalCasos}</span>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  });
-                })()}
-              </div>
-            </CardContent>
-          </Card>
-
           {/* Gráfico de Resultado de Todos os Atendimentos */}
           <Card>
         <CardHeader>
@@ -2963,6 +2826,126 @@ const RadarComercial = () => {
               });
             })()}
           </div>
+
+          {/* Cards de Tempo Médio de Atendimento por Setor (Coluna G) */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Clock className="h-5 w-5 text-teal-500" />
+                <CardTitle className="text-lg">Tempo Médio de Atendimento por Setor</CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">Média de dias para atendimento (Coluna G) agrupado por setor</p>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {(() => {
+                  // Calcula o tempo médio da coluna G para cada setor (coluna C)
+                  const setorStats: Record<string, { totalDias: number; count: number }> = {};
+                  
+                  sdrData.forEach(record => {
+                    const setor = record.colC?.trim();
+                    const tempoStr = record.colG?.trim();
+                    
+                    if (setor && tempoStr) {
+                      // Tenta parsear o valor como número
+                      const tempo = parseFloat(tempoStr.replace(',', '.'));
+                      
+                      if (!isNaN(tempo) && tempo >= 0) {
+                        if (!setorStats[setor]) {
+                          setorStats[setor] = { totalDias: 0, count: 0 };
+                        }
+                        setorStats[setor].totalDias += tempo;
+                        setorStats[setor].count++;
+                      }
+                    }
+                  });
+                  
+                  // Transforma em array e ordena por média
+                  const setorMediaData = Object.entries(setorStats)
+                    .map(([setor, { totalDias, count }]) => ({
+                      setor,
+                      mediaDias: count > 0 ? parseFloat((totalDias / count).toFixed(1)) : 0,
+                      totalCasos: count,
+                    }))
+                    .sort((a, b) => a.mediaDias - b.mediaDias);
+                  
+                  if (setorMediaData.length === 0) {
+                    return (
+                      <div className="col-span-full h-[100px] flex items-center justify-center bg-muted/30 rounded-lg">
+                        <p className="text-muted-foreground text-sm">Nenhum dado de tempo disponível</p>
+                      </div>
+                    );
+                  }
+                  
+                  // Calcula a média geral para referência de cores
+                  const totalGeral = setorMediaData.reduce((sum, s) => sum + s.mediaDias * s.totalCasos, 0);
+                  const countGeral = setorMediaData.reduce((sum, s) => sum + s.totalCasos, 0);
+                  const mediaGeral = countGeral > 0 ? totalGeral / countGeral : 0;
+                  
+                  return setorMediaData.map((stat) => {
+                    // Define cores baseadas na comparação com a média geral
+                    // Verde: abaixo da média (mais rápido)
+                    // Amarelo: próximo da média (+/- 20%)
+                    // Vermelho: acima da média (mais lento)
+                    const limiteInferior = mediaGeral * 0.8;
+                    const limiteSuperior = mediaGeral * 1.2;
+                    
+                    let bgColor = '';
+                    let borderColor = '';
+                    let textColor = '';
+                    let statusText = '';
+                    let statusIcon = '';
+                    
+                    if (stat.mediaDias <= limiteInferior) {
+                      bgColor = 'bg-green-500/10';
+                      borderColor = 'border-l-green-500';
+                      textColor = 'text-green-600';
+                      statusText = 'Rápido';
+                      statusIcon = '✓';
+                    } else if (stat.mediaDias >= limiteSuperior) {
+                      bgColor = 'bg-red-500/10';
+                      borderColor = 'border-l-red-500';
+                      textColor = 'text-red-600';
+                      statusText = 'Lento';
+                      statusIcon = '✗';
+                    } else {
+                      bgColor = 'bg-yellow-500/10';
+                      borderColor = 'border-l-yellow-500';
+                      textColor = 'text-yellow-600';
+                      statusText = 'Normal';
+                      statusIcon = '●';
+                    }
+                    
+                    return (
+                      <Card key={stat.setor} className={`${bgColor} border-l-4 ${borderColor}`}>
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center justify-between">
+                            <CardTitle className="text-sm font-medium truncate" title={stat.setor}>
+                              {stat.setor}
+                            </CardTitle>
+                            <span className={`text-xs font-semibold px-2 py-1 rounded-full ${bgColor} ${textColor}`}>
+                              {statusIcon} {statusText}
+                            </span>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className={`text-3xl font-bold ${textColor}`}>
+                            {stat.mediaDias}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            dias em média
+                          </p>
+                          <div className="text-xs text-muted-foreground mt-2 pt-2 border-t">
+                            <span>Total de casos: {stat.totalCasos}</span>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  });
+                })()}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Mensagem de configuração */}
           {sdrData.length === 0 && !isLoading && (
