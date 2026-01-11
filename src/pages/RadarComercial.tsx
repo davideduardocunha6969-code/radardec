@@ -134,6 +134,30 @@ const RadarComercial = () => {
     }));
   }, [data]);
 
+  // Dados para o gráfico de agendamentos SDR por semana (todas as 53 semanas)
+  const sdrWeeklyChartData = useMemo(() => {
+    const weekCounts: Record<number, number> = {};
+    
+    // Inicializa todas as 53 semanas com 0
+    for (let i = 1; i <= 53; i++) {
+      weekCounts[i] = 0;
+    }
+    
+    // Contabiliza os agendamentos por semana (coluna D)
+    sdrData.forEach(record => {
+      const semana = parseInt(record.colD?.trim()) || 0;
+      if (semana > 0 && semana <= 53) {
+        weekCounts[semana] = (weekCounts[semana] || 0) + 1;
+      }
+    });
+    
+    return Array.from({ length: 53 }, (_, i) => ({
+      semana: `${i + 1}`,
+      weekNumber: i + 1,
+      agendamentos: weekCounts[i + 1] || 0,
+    }));
+  }, [sdrData]);
+
   // Dados para o gráfico de atendimentos por responsável
   const responsavelChartData = useMemo(() => {
     const counts: Record<string, number> = {};
@@ -2366,69 +2390,38 @@ const RadarComercial = () => {
               <p className="text-sm text-muted-foreground">Total de agendamentos realizados pelo time de SDR por semana</p>
             </CardHeader>
             <CardContent>
-              {(() => {
-                // Agrupa agendamentos por semana (coluna D)
-                const agendamentosPorSemana: Record<string, number> = {};
-                sdrData.forEach(r => {
-                  const semana = r.colD?.trim();
-                  if (semana) {
-                    agendamentosPorSemana[semana] = (agendamentosPorSemana[semana] || 0) + 1;
-                  }
-                });
-                
-                // Converte para array e ordena por número da semana
-                const chartData = Object.entries(agendamentosPorSemana)
-                  .map(([semana, total]) => ({
-                    semana: `Sem ${semana}`,
-                    weekNumber: parseInt(semana) || 0,
-                    agendamentos: total,
-                  }))
-                  .sort((a, b) => a.weekNumber - b.weekNumber);
-                
-                if (chartData.length === 0) {
-                  return (
-                    <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
-                      <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
-                    </div>
-                  );
-                }
-                
-                return (
-                  <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={chartData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
-                        <XAxis 
-                          dataKey="semana" 
-                          tick={{ fontSize: 11 }}
-                          className="text-muted-foreground"
-                          axisLine={false}
-                          tickLine={false}
+              <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={sdrWeeklyChartData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+                    <XAxis 
+                      dataKey="semana" 
+                      tick={{ fontSize: 11 }}
+                      className="text-muted-foreground"
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Bar 
+                      dataKey="agendamentos" 
+                      radius={[4, 4, 0, 0]}
+                    >
+                      <LabelList 
+                        dataKey="agendamentos" 
+                        position="top" 
+                        className="fill-foreground"
+                        fontSize={10}
+                        formatter={(value: number) => value > 0 ? value : ''}
+                      />
+                      {sdrWeeklyChartData.map((entry, index) => (
+                        <Cell 
+                          key={`cell-${index}`}
+                          fill="hsl(173, 80%, 40%)"
                         />
-                        <Tooltip content={<ChartTooltipContent />} />
-                        <Bar 
-                          dataKey="agendamentos" 
-                          radius={[4, 4, 0, 0]}
-                          fill="hsl(var(--chart-1))"
-                        >
-                          <LabelList 
-                            dataKey="agendamentos" 
-                            position="top" 
-                            className="fill-foreground"
-                            fontSize={10}
-                            formatter={(value: number) => value > 0 ? value : ''}
-                          />
-                          {chartData.map((entry, index) => (
-                            <Cell 
-                              key={`cell-${index}`}
-                              fill="hsl(173, 80%, 40%)"
-                            />
-                          ))}
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
-                );
-              })()}
+                      ))}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
             </CardContent>
           </Card>
 
