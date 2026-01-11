@@ -408,6 +408,70 @@ const RadarComercial = () => {
       .sort((a, b) => b.mediaDias - a.mediaDias);
   }, [filteredData]);
 
+  // Dados para ranking de conversão por responsável (contratos fechados absolutos)
+  const rankingConversaoResponsavelAbsolutoData = useMemo(() => {
+    const stats: Record<string, { total: number; contratos: number }> = {};
+    
+    filteredData.forEach(record => {
+      if (record.responsavel) {
+        if (!stats[record.responsavel]) {
+          stats[record.responsavel] = { total: 0, contratos: 0 };
+        }
+        stats[record.responsavel].total += 1;
+        if (record.resultado?.toLowerCase().includes('contrato fechado')) {
+          stats[record.responsavel].contratos += 1;
+        }
+      }
+    });
+    
+    return Object.entries(stats)
+      .filter(([_, { contratos }]) => contratos > 0) // Apenas responsáveis com contratos
+      .map(([responsavel, { total, contratos }]) => ({
+        responsavel,
+        contratos,
+        total,
+        taxaConversao: total > 0 ? ((contratos / total) * 100) : 0,
+        taxaConversaoFormatted: total > 0 ? ((contratos / total) * 100).toFixed(1) : '0',
+      }))
+      .sort((a, b) => b.contratos - a.contratos) // Ordenado por contratos absolutos
+      .map((item, index) => ({
+        ...item,
+        posicao: index + 1,
+      }));
+  }, [filteredData]);
+
+  // Dados para ranking de conversão por responsável (taxa % de conversão)
+  const rankingConversaoResponsavelPercentualData = useMemo(() => {
+    const stats: Record<string, { total: number; contratos: number }> = {};
+    
+    filteredData.forEach(record => {
+      if (record.responsavel) {
+        if (!stats[record.responsavel]) {
+          stats[record.responsavel] = { total: 0, contratos: 0 };
+        }
+        stats[record.responsavel].total += 1;
+        if (record.resultado?.toLowerCase().includes('contrato fechado')) {
+          stats[record.responsavel].contratos += 1;
+        }
+      }
+    });
+    
+    return Object.entries(stats)
+      .filter(([_, { total }]) => total > 0) // Apenas responsáveis com atendimentos
+      .map(([responsavel, { total, contratos }]) => ({
+        responsavel,
+        contratos,
+        total,
+        taxaConversao: total > 0 ? ((contratos / total) * 100) : 0,
+        taxaConversaoFormatted: total > 0 ? ((contratos / total) * 100).toFixed(1) : '0',
+      }))
+      .sort((a, b) => b.taxaConversao - a.taxaConversao) // Ordenado por taxa de conversão
+      .map((item, index) => ({
+        ...item,
+        posicao: index + 1,
+      }));
+  }, [filteredData]);
+
   const PIE_COLORS = [
     'hsl(var(--primary))',
     'hsl(var(--accent))',
@@ -1108,6 +1172,137 @@ const RadarComercial = () => {
             <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
           </div>
         )}
+          </div>
+
+          {/* Ranking de Conversão por Responsável */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Ranking por Contratos Fechados (Absoluto) */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="h-5 w-5 text-green-600" />
+                  <CardTitle className="text-lg">Ranking de Contratos por Responsável</CardTitle>
+                </div>
+                <p className="text-sm text-muted-foreground">Ordenado por quantidade de contratos fechados</p>
+              </CardHeader>
+              <CardContent>
+                {rankingConversaoResponsavelAbsolutoData.length > 0 ? (
+                  <div className="space-y-3">
+                    {rankingConversaoResponsavelAbsolutoData.map((item) => {
+                      const maxContratos = rankingConversaoResponsavelAbsolutoData[0]?.contratos || 1;
+                      const barWidth = maxContratos > 0 ? (item.contratos / maxContratos) * 100 : 0;
+                      
+                      return (
+                        <div key={item.responsavel} className="flex items-center gap-3">
+                          {/* Posição no ranking */}
+                          <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                            item.posicao === 1 ? 'bg-yellow-500 text-yellow-950' :
+                            item.posicao === 2 ? 'bg-gray-300 text-gray-700' :
+                            item.posicao === 3 ? 'bg-amber-600 text-amber-50' :
+                            'bg-muted text-muted-foreground'
+                          }`}>
+                            {item.posicao}º
+                          </div>
+                          
+                          {/* Nome do responsável */}
+                          <div className="flex-shrink-0 w-28 text-sm font-medium truncate" title={item.responsavel}>
+                            {item.responsavel}
+                          </div>
+                          
+                          {/* Barra horizontal */}
+                          <div className="flex-1 relative h-8 bg-muted/30 rounded overflow-hidden">
+                            <div 
+                              className="absolute inset-y-0 left-0 bg-green-600 rounded transition-all duration-300"
+                              style={{ width: `${barWidth}%` }}
+                            />
+                            {/* Quantidade de contratos no centro da barra */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className={`text-sm font-semibold ${barWidth > 40 ? 'text-white' : 'text-foreground'}`}>
+                                {item.contratos}
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* Detalhes */}
+                          <div className="flex-shrink-0 text-right text-xs text-muted-foreground w-20">
+                            <div>{item.total} atend.</div>
+                            <div>({item.taxaConversaoFormatted}%)</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
+                    <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Ranking por Taxa de Conversão (Percentual) */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <Target className="h-5 w-5 text-blue-600" />
+                  <CardTitle className="text-lg">Ranking de Conversão por Responsável</CardTitle>
+                </div>
+                <p className="text-sm text-muted-foreground">Ordenado por taxa de conversão (%)</p>
+              </CardHeader>
+              <CardContent>
+                {rankingConversaoResponsavelPercentualData.length > 0 ? (
+                  <div className="space-y-3">
+                    {rankingConversaoResponsavelPercentualData.map((item) => {
+                      const maxTaxa = rankingConversaoResponsavelPercentualData[0]?.taxaConversao || 1;
+                      const barWidth = maxTaxa > 0 ? (item.taxaConversao / maxTaxa) * 100 : 0;
+                      
+                      return (
+                        <div key={item.responsavel} className="flex items-center gap-3">
+                          {/* Posição no ranking */}
+                          <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                            item.posicao === 1 ? 'bg-yellow-500 text-yellow-950' :
+                            item.posicao === 2 ? 'bg-gray-300 text-gray-700' :
+                            item.posicao === 3 ? 'bg-amber-600 text-amber-50' :
+                            'bg-muted text-muted-foreground'
+                          }`}>
+                            {item.posicao}º
+                          </div>
+                          
+                          {/* Nome do responsável */}
+                          <div className="flex-shrink-0 w-28 text-sm font-medium truncate" title={item.responsavel}>
+                            {item.responsavel}
+                          </div>
+                          
+                          {/* Barra horizontal */}
+                          <div className="flex-1 relative h-8 bg-muted/30 rounded overflow-hidden">
+                            <div 
+                              className="absolute inset-y-0 left-0 bg-blue-600 rounded transition-all duration-300"
+                              style={{ width: `${barWidth}%` }}
+                            />
+                            {/* Taxa de conversão no centro da barra */}
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className={`text-sm font-semibold ${barWidth > 40 ? 'text-white' : 'text-foreground'}`}>
+                                {item.taxaConversaoFormatted}%
+                              </span>
+                            </div>
+                          </div>
+                          
+                          {/* Detalhes */}
+                          <div className="flex-shrink-0 text-right text-xs text-muted-foreground w-20">
+                            <div>{item.contratos} contratos</div>
+                            <div>de {item.total} atend.</div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
+                    <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
           {/* Botão para recolher seção */}
