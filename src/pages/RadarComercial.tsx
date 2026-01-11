@@ -3366,34 +3366,42 @@ const RadarComercial = () => {
                   chartData.push(weekData);
                 }
                 
-                // Cores distintas para cada SDR
+                // Cores distintas e bem contrastantes para cada SDR
                 const SDR_COLORS = [
-                  'hsl(270, 70%, 60%)', // Roxo
-                  'hsl(200, 70%, 50%)', // Azul
-                  'hsl(150, 70%, 45%)', // Verde
-                  'hsl(30, 80%, 55%)',  // Laranja
-                  'hsl(340, 70%, 55%)', // Rosa
-                  'hsl(180, 60%, 45%)', // Ciano
-                  'hsl(60, 70%, 45%)',  // Amarelo
-                  'hsl(300, 60%, 50%)', // Magenta
+                  '#8b5cf6', // Roxo vibrante
+                  '#3b82f6', // Azul
+                  '#10b981', // Verde esmeralda
+                  '#f59e0b', // Laranja/Âmbar
+                  '#ef4444', // Vermelho
+                  '#06b6d4', // Ciano
+                  '#ec4899', // Rosa
+                  '#84cc16', // Lima
+                  '#6366f1', // Índigo
+                  '#14b8a6', // Teal
                 ];
                 
                 return (
-                  <div className="h-[400px]">
+                  <div className="h-[450px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
+                      <LineChart data={chartData} margin={{ top: 20, right: 120, left: 20, bottom: 20 }}>
                         <XAxis 
                           dataKey="semana" 
-                          tick={{ fontSize: 10 }}
-                          interval={0}
+                          tick={{ fontSize: 9 }}
+                          interval={1}
+                          label={{ value: 'Semana (Coluna E)', position: 'insideBottom', offset: -5, fontSize: 11 }}
                         />
                         <YAxis 
                           domain={[0, 100]}
                           tickFormatter={(value) => `${value}%`}
                           tick={{ fontSize: 11 }}
+                          label={{ value: '% Com Direito', angle: -90, position: 'insideLeft', fontSize: 11 }}
                         />
                         <Tooltip 
-                          formatter={(value: number | null) => value !== null ? [`${value}%`, ''] : ['Sem dados', '']}
+                          formatter={(value: number | null, name: string) => [
+                            value !== null ? `${value}%` : 'Sem dados', 
+                            name
+                          ]}
+                          labelFormatter={(label) => `Semana ${label}`}
                           contentStyle={{
                             backgroundColor: 'hsl(var(--card))',
                             border: '1px solid hsl(var(--border))',
@@ -3401,13 +3409,17 @@ const RadarComercial = () => {
                           }}
                         />
                         <Legend 
-                          wrapperStyle={{ paddingTop: '10px' }}
+                          layout="vertical"
+                          align="right"
+                          verticalAlign="middle"
+                          wrapperStyle={{ paddingLeft: '20px' }}
                           iconType="line"
                         />
                         <ReferenceLine 
                           y={50} 
                           stroke="hsl(var(--muted-foreground))" 
-                          strokeDasharray="3 3"
+                          strokeDasharray="5 5"
+                          label={{ value: '50%', position: 'left', fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                         />
                         {sdrArray.map((sdr, index) => (
                           <Line 
@@ -3416,10 +3428,10 @@ const RadarComercial = () => {
                             dataKey={sdr}
                             name={sdr}
                             stroke={SDR_COLORS[index % SDR_COLORS.length]}
-                            strokeWidth={2}
-                            dot={{ fill: SDR_COLORS[index % SDR_COLORS.length], strokeWidth: 1, r: 3 }}
-                            activeDot={{ r: 6 }}
-                            connectNulls={false}
+                            strokeWidth={3}
+                            dot={{ fill: SDR_COLORS[index % SDR_COLORS.length], strokeWidth: 2, r: 4 }}
+                            activeDot={{ r: 7, strokeWidth: 2 }}
+                            connectNulls={true}
                           />
                         ))}
                       </LineChart>
