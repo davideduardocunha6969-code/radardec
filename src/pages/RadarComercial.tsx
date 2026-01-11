@@ -3615,6 +3615,69 @@ const RadarComercial = () => {
         </CollapsibleContent>
       </Collapsible>
 
+      {/* ===================== SEÇÃO: RADAR INDICAÇÕES CLIENTES ANTIGOS ===================== */}
+      <Collapsible open={openSection === 'indicacoes'} onOpenChange={() => handleSectionToggle('indicacoes')}>
+        <CollapsibleTrigger asChild>
+          <button className="w-full group">
+            <div className={`flex items-center justify-between p-4 rounded-xl border-2 transition-all duration-300 ${
+              openSection === 'indicacoes' 
+                ? 'bg-gradient-to-r from-amber-500/20 to-orange-500/20 border-amber-500/50 shadow-lg' 
+                : 'bg-gradient-to-r from-amber-500/5 to-orange-500/5 border-amber-500/20 hover:border-amber-500/40 hover:shadow-md'
+            }`}>
+              <div className="flex items-center gap-4">
+                <div className={`p-3 rounded-lg ${openSection === 'indicacoes' ? 'bg-amber-500/30' : 'bg-amber-500/10'}`}>
+                  <Users className="h-6 w-6 text-amber-600" />
+                </div>
+                <div className="text-left">
+                  <h2 className="text-lg font-bold text-foreground">Radar Indicações Clientes Antigos</h2>
+                  <p className="text-sm text-muted-foreground">Acompanhamento de indicações de clientes existentes</p>
+                </div>
+              </div>
+              <div className={`p-2 rounded-full transition-transform duration-300 ${openSection === 'indicacoes' ? 'rotate-180' : ''}`}>
+                {openSection === 'indicacoes' ? (
+                  <ChevronDown className="h-5 w-5 text-amber-600" />
+                ) : (
+                  <ChevronRight className="h-5 w-5 text-muted-foreground group-hover:text-amber-600" />
+                )}
+              </div>
+            </div>
+          </button>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-6 pt-6">
+          
+          {/* Conteúdo da seção - placeholder para futuros gráficos */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Users className="h-5 w-5 text-amber-500" />
+                <CardTitle className="text-lg">Indicações de Clientes Antigos</CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">Dados e métricas de indicações serão exibidos aqui</p>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
+                <div className="text-center">
+                  <Users className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+                  <p className="text-muted-foreground font-medium">Seção em construção</p>
+                  <p className="text-sm text-muted-foreground/70">Configure a aba de indicações na planilha para visualizar os dados</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Botão para recolher seção */}
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={() => setOpenSection(null)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+            >
+              <ChevronUp className="h-4 w-4" />
+              Recolher seção
+            </button>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
       {/* Modal de Aposentadorias Futuras */}
       <AposentadoriasFuturasDialog
         open={aposentadoriasFuturasDialogOpen}
