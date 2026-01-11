@@ -21,11 +21,8 @@ export const WeekFilter = ({
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(false);
 
-  // Gera todas as 53 semanas
-  const allWeeks = Array.from({ length: 53 }, (_, i) => i + 1);
-  
-  // Semanas que têm dados
-  const weeksWithData = new Set(weeks);
+  // Usa apenas as semanas que têm dados
+  const availableWeeks = weeks;
 
   const checkScrollability = () => {
     const container = scrollContainerRef.current;
@@ -104,32 +101,28 @@ export const WeekFilter = ({
           style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
           <div className="flex gap-1 min-w-max py-1">
-            {allWeeks.map((week) => {
-              const hasData = weeksWithData.has(week);
+            {availableWeeks.map((week) => {
               const isSelected = selectedWeek === week;
               
               return (
                 <button
                   key={week}
-                  onClick={() => hasData && handleWeekClick(week)}
-                  disabled={!hasData || isLoading}
+                  onClick={() => handleWeekClick(week)}
+                  disabled={isLoading}
                   className={cn(
                     "relative flex flex-col items-center justify-center min-w-[40px] h-12 rounded-md transition-all duration-200",
                     "text-xs font-medium",
-                    hasData && !isSelected && "bg-muted hover:bg-accent hover:text-accent-foreground cursor-pointer",
-                    hasData && isSelected && "bg-primary text-primary-foreground shadow-md scale-105",
-                    !hasData && "bg-muted/30 text-muted-foreground/40 cursor-not-allowed",
+                    !isSelected && "bg-muted hover:bg-accent hover:text-accent-foreground cursor-pointer",
+                    isSelected && "bg-primary text-primary-foreground shadow-md scale-105",
                     isLoading && "animate-pulse"
                   )}
                 >
                   <span className="text-[10px] text-inherit opacity-70">SEM</span>
                   <span className="text-sm font-semibold">{week}</span>
-                  {hasData && (
-                    <div className={cn(
-                      "absolute bottom-1 w-1.5 h-1.5 rounded-full",
-                      isSelected ? "bg-primary-foreground" : "bg-primary"
-                    )} />
-                  )}
+                  <div className={cn(
+                    "absolute bottom-1 w-1.5 h-1.5 rounded-full",
+                    isSelected ? "bg-primary-foreground" : "bg-primary"
+                  )} />
                 </button>
               );
             })}
@@ -153,14 +146,7 @@ export const WeekFilter = ({
 
       {/* Legenda */}
       <div className="flex items-center gap-4 mt-3 text-xs text-muted-foreground">
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-primary" />
-          <span>Com dados</span>
-        </div>
-        <div className="flex items-center gap-1.5">
-          <div className="w-2 h-2 rounded-full bg-muted/50" />
-          <span>Sem dados</span>
-        </div>
+        <span>{availableWeeks.length} semanas com dados</span>
       </div>
     </div>
   );
