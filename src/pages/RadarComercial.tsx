@@ -2877,18 +2877,13 @@ const RadarComercial = () => {
                     );
                   }
                   
-                  // Calcula a média geral para referência de cores
-                  const totalGeral = setorMediaData.reduce((sum, s) => sum + s.mediaDias * s.totalCasos, 0);
-                  const countGeral = setorMediaData.reduce((sum, s) => sum + s.totalCasos, 0);
-                  const mediaGeral = countGeral > 0 ? totalGeral / countGeral : 0;
-                  
                   return setorMediaData.map((stat) => {
-                    // Define cores baseadas na comparação com a média geral
-                    // Verde: abaixo da média (mais rápido)
-                    // Amarelo: próximo da média (+/- 20%)
-                    // Vermelho: acima da média (mais lento)
-                    const limiteInferior = mediaGeral * 0.8;
-                    const limiteSuperior = mediaGeral * 1.2;
+                    // Define cores baseadas em critérios fixos de tempo
+                    // <= 1 dia: Super Rápido (verde escuro)
+                    // 2 dias: Rápido (verde)
+                    // 3 dias: Normal (amarelo)
+                    // 4 dias: Demorado (laranja)
+                    // >= 5 dias: Muito Demorado (vermelho)
                     
                     let bgColor = '';
                     let borderColor = '';
@@ -2896,24 +2891,36 @@ const RadarComercial = () => {
                     let statusText = '';
                     let statusIcon = '';
                     
-                    if (stat.mediaDias <= limiteInferior) {
+                    if (stat.mediaDias <= 1) {
+                      bgColor = 'bg-emerald-500/10';
+                      borderColor = 'border-l-emerald-500';
+                      textColor = 'text-emerald-600';
+                      statusText = 'Super Rápido';
+                      statusIcon = '⚡';
+                    } else if (stat.mediaDias <= 2) {
                       bgColor = 'bg-green-500/10';
                       borderColor = 'border-l-green-500';
                       textColor = 'text-green-600';
                       statusText = 'Rápido';
                       statusIcon = '✓';
-                    } else if (stat.mediaDias >= limiteSuperior) {
-                      bgColor = 'bg-red-500/10';
-                      borderColor = 'border-l-red-500';
-                      textColor = 'text-red-600';
-                      statusText = 'Lento';
-                      statusIcon = '✗';
-                    } else {
+                    } else if (stat.mediaDias <= 3) {
                       bgColor = 'bg-yellow-500/10';
                       borderColor = 'border-l-yellow-500';
                       textColor = 'text-yellow-600';
                       statusText = 'Normal';
                       statusIcon = '●';
+                    } else if (stat.mediaDias <= 4) {
+                      bgColor = 'bg-orange-500/10';
+                      borderColor = 'border-l-orange-500';
+                      textColor = 'text-orange-600';
+                      statusText = 'Demorado';
+                      statusIcon = '⏳';
+                    } else {
+                      bgColor = 'bg-red-500/10';
+                      borderColor = 'border-l-red-500';
+                      textColor = 'text-red-600';
+                      statusText = 'Muito Demorado';
+                      statusIcon = '✗';
                     }
                     
                     return (
