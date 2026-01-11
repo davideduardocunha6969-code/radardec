@@ -188,6 +188,24 @@ const RadarComercial = () => {
       .sort((a, b) => b.total - a.total);
   }, [filteredData]);
 
+  // Dados para o gráfico de resultado de TODOS os atendimentos
+  const resultadoTodosChartData = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    filteredData.forEach(record => {
+      if (record.resultado) {
+        counts[record.resultado] = (counts[record.resultado] || 0) + 1;
+      }
+    });
+    
+    return Object.entries(counts)
+      .map(([resultado, total]) => ({
+        resultado,
+        total,
+      }))
+      .sort((a, b) => b.total - a.total);
+  }, [filteredData]);
+
   const PIE_COLORS = [
     'hsl(var(--primary))',
     'hsl(var(--accent))',
@@ -636,6 +654,57 @@ const RadarComercial = () => {
           </CardContent>
         </Card>
       </div>
+
+      {/* Gráfico de Resultado de Todos os Atendimentos */}
+      <Card className="mb-8">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <BarChart3 className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Resultado de Todos os Atendimentos</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {resultadoTodosChartData.length > 0 ? (
+            <ChartContainer config={chartConfig} className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={resultadoTodosChartData} 
+                  margin={{ top: 20, right: 10, left: 10, bottom: 60 }}
+                >
+                  <XAxis 
+                    dataKey="resultado"
+                    tick={<CustomXAxisTick />}
+                    className="text-muted-foreground"
+                    axisLine={false}
+                    tickLine={false}
+                    interval={0}
+                    height={80}
+                  />
+                  <Tooltip 
+                    formatter={(value: number) => [`${value} atendimentos`, 'Total']}
+                  />
+                  <Bar 
+                    dataKey="total" 
+                    radius={[4, 4, 0, 0]}
+                    className="fill-primary"
+                  >
+                    <LabelList 
+                      dataKey="total" 
+                      position="top" 
+                      className="fill-foreground"
+                      fontSize={12}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+              <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Resumo Financeiro */}
       <Card>
