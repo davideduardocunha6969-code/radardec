@@ -449,8 +449,8 @@ export function TaskDashboard({
 
   return (
     <div className="space-y-8">
-      {/* Métricas Gerais */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+      {/* Métricas Gerais - Linha 1 */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           title="Total de Tarefas"
           value={filteredTasks.length}
@@ -459,35 +459,32 @@ export function TaskDashboard({
           className="animate-slide-up"
         />
         <MetricCard
-          title="Tarefas Pendentes"
-          value={pendingTasks.length}
-          subtitle="Clique para ver detalhes"
-          icon={<Clock className="h-5 w-5 text-warning" />}
-          variant={pendingTasks.length > 0 ? "warning" : "default"}
-          className="animate-slide-up stagger-1"
-          onClick={() => setPendingDialogOpen(true)}
-        />
-        <MetricCard
           title="Tarefas Concluídas"
           value={filteredTasks.length - pendingTasks.length}
           subtitle="Finalizadas"
           icon={<CheckCircle2 className="h-5 w-5 text-success" />}
           variant="success"
-          className="animate-slide-up stagger-2"
+          className="animate-slide-up stagger-1"
         />
         <MetricCard
           title="Controllers"
           value={controllers.length}
           subtitle="Ativos no sistema"
           icon={<Users className="h-5 w-5 text-primary" />}
-          className="animate-slide-up stagger-3"
+          className="animate-slide-up stagger-2"
         />
+      </div>
+
+      {/* Métricas Gerais - Linha 2 */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
-          title="Média Cumprimento"
-          value={`${avgCompletionDays.toFixed(1)} dias`}
-          subtitle="Dias úteis (tarefas concluídas)"
-          icon={<Clock className="h-5 w-5 text-primary" />}
-          className="animate-slide-up stagger-4"
+          title="Tarefas Pendentes"
+          value={pendingTasks.length}
+          subtitle="Clique para ver detalhes"
+          icon={<Clock className="h-5 w-5 text-warning" />}
+          variant={pendingTasks.length > 0 ? "warning" : "default"}
+          className="animate-slide-up stagger-3"
+          onClick={() => setPendingDialogOpen(true)}
         />
         <MetricCard
           title="Erros de Conformidade"
@@ -495,16 +492,8 @@ export function TaskDashboard({
           subtitle="Clique para ver detalhes"
           icon={<AlertTriangle className="h-5 w-5 text-destructive" />}
           variant={filteredConformityErrors.length > 0 ? "warning" : "default"}
-          className="animate-slide-up stagger-5"
+          className="animate-slide-up stagger-4"
           onClick={() => setConformityDialogOpen(true)}
-        />
-        <MetricCard
-          title="Taxa de Erros"
-          value={`${filteredTasks.length > 0 ? ((filteredConformityErrors.length / filteredTasks.length) * 100).toFixed(4) : 0}%`}
-          subtitle="Erros / Total de tarefas"
-          icon={<Percent className="h-5 w-5 text-destructive" />}
-          variant={filteredConformityErrors.length > 0 ? "warning" : "default"}
-          className="animate-slide-up stagger-6"
         />
         <MetricCard
           title="Erros de Prazo"
@@ -512,7 +501,7 @@ export function TaskDashboard({
           subtitle="Erros na data do prazo"
           icon={<Timer className="h-5 w-5 text-destructive" />}
           variant={filteredDeadlineErrors.length > 0 ? "warning" : "default"}
-          className="animate-slide-up stagger-7"
+          className="animate-slide-up stagger-5"
         />
       </div>
 
