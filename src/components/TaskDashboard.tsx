@@ -317,6 +317,39 @@ export function TaskDashboard({
 
   const colaboradores = [...new Set(tasks.map(t => t.colaborador))];
 
+  // Tarefas por setor
+  const tasksBySector = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    filteredTasks.forEach(task => {
+      const setor = task.setor || 'Não classificado';
+      counts[setor] = (counts[setor] || 0) + 1;
+    });
+    
+    return Object.entries(counts)
+      .map(([name, total]) => ({ name, total }))
+      .sort((a, b) => b.total - a.total);
+  }, [filteredTasks]);
+
+  // Cores para setores
+  const sectorColors = useMemo(() => {
+    const colors = [
+      "hsl(220, 70%, 50%)",   // azul
+      "hsl(160, 60%, 45%)",   // verde água
+      "hsl(280, 65%, 55%)",   // roxo
+      "hsl(35, 90%, 55%)",    // laranja
+      "hsl(340, 75%, 55%)",   // rosa
+      "hsl(180, 60%, 45%)",   // ciano
+      "hsl(60, 70%, 45%)",    // amarelo
+      "hsl(200, 70%, 50%)",   // azul claro
+    ];
+    const colorMap: Record<string, string> = {};
+    tasksBySector.forEach((item, idx) => {
+      colorMap[item.name] = colors[idx % colors.length];
+    });
+    return colorMap;
+  }, [tasksBySector]);
+
   const [pendingDialogOpen, setPendingDialogOpen] = useState(false);
 
   return (
@@ -839,6 +872,60 @@ export function TaskDashboard({
                 />
               ))}
             </LineChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+
+      {/* Gráfico de Colunas: Tarefas por Setor */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-lg">Tarefas por Setor</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ChartContainer
+            config={{
+              total: {
+                label: "Total de Tarefas",
+                color: "hsl(220, 70%, 50%)",
+              },
+            }}
+            className="h-[350px] w-full"
+          >
+            <BarChart data={tasksBySector} layout="horizontal">
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="name"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 11 }}
+                interval={0}
+                angle={-45}
+                textAnchor="end"
+                height={100}
+              />
+              <YAxis tickLine={false} axisLine={false} allowDecimals={false} />
+              <ChartTooltip
+                content={({ active, payload }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="rounded-lg border bg-background p-2 shadow-sm">
+                        <div className="font-medium">{data.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {data.total} {data.total === 1 ? "tarefa" : "tarefas"}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Bar
+                dataKey="total"
+                radius={[4, 4, 0, 0]}
+                fill="hsl(220, 70%, 50%)"
+              />
+            </BarChart>
           </ChartContainer>
         </CardContent>
       </Card>

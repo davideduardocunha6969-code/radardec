@@ -14,6 +14,9 @@ const SHEET_CONFIG = [
   { gid: 1165923131, name: "LAURA RADASPIEL" },
 ];
 
+// Aba de mapeamento de tipos de ação -> setores
+const SECTOR_MAPPING_GID = 1319762905;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -74,6 +77,32 @@ serve(async (req) => {
     
     console.log(`Successfully fetched ${allSheets.length} sheets`);
     
+    // Busca a aba de mapeamento de setores
+    let sectorMapping: { tipoAcao: string; setor: string }[] = [];
+    try {
+      const sectorUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SECTOR_MAPPING_GID}`;
+      console.log(`Fetching sector mapping (gid=${SECTOR_MAPPING_GID})...`);
+      
+      const sectorResponse = await fetch(sectorUrl);
+      
+      if (sectorResponse.ok) {
+        const csvText = await sectorResponse.text();
+        const rows = parseCSV(csvText);
+        
+        // Pula o header e mapeia coluna A -> B
+        sectorMapping = rows.slice(1)
+          .filter(row => row[0] && row[1])
+          .map(row => ({
+            tipoAcao: row[0].trim().toUpperCase(),
+            setor: row[1].trim()
+          }));
+        
+        console.log(`Found ${sectorMapping.length} sector mappings`);
+      }
+    } catch (err) {
+      console.log('Error fetching sector mapping:', err);
+    }
+    
     // Calcula estatísticas agregadas
     const totalTasks = allSheets.reduce((acc, sheet) => acc + sheet.rows.length, 0);
     
@@ -82,6 +111,7 @@ serve(async (req) => {
         success: true,
         data: {
           sheets: allSheets,
+          sectorMapping,
           totalSheets: allSheets.length,
           totalTasks,
           lastUpdated: new Date().toISOString()

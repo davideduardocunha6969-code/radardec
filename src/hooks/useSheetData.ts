@@ -8,10 +8,17 @@ export interface SheetData {
   rows: string[][];
 }
 
+export interface SectorMapping {
+  tipoAcao: string;
+  setor: string;
+}
+
 export interface TaskData {
   colaborador: string;
   tarefa: string;
   numeroProcesso: string;
+  tipoAcao: string;
+  setor: string;
   dataDistribuicao: Date | null;
   dataCumprimento: Date | null;
   status: string;
@@ -20,6 +27,7 @@ export interface TaskData {
 
 export interface SheetResponse {
   sheets: SheetData[];
+  sectorMapping: SectorMapping[];
   totalSheets: number;
   totalTasks: number;
   lastUpdated: string;
@@ -49,12 +57,19 @@ function parseDate(dateStr: string): Date | null {
 export function useSheetData() {
   const [sheets, setSheets] = useState<SheetData[]>([]);
   const [tasks, setTasks] = useState<TaskData[]>([]);
+  const [sectorMapping, setSectorMapping] = useState<SectorMapping[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
-  const processSheets = useCallback((sheetsData: SheetData[]): TaskData[] => {
+  const processSheets = useCallback((sheetsData: SheetData[], mappings: SectorMapping[]): TaskData[] => {
     const allTasks: TaskData[] = [];
+    
+    // Cria um mapa para busca rápida de setor por tipo de ação
+    const sectorMap = new Map<string, string>();
+    mappings.forEach(m => {
+      sectorMap.set(m.tipoAcao.toUpperCase(), m.setor);
+    });
     
     sheetsData.forEach(sheet => {
       // Usando índices fixos conforme especificado:
@@ -62,16 +77,23 @@ export function useSheetData() {
       // Coluna B (1) = Data de Distribuição
       // Coluna D (3) = Data de Cumprimento/Término
       // Coluna M (12) = Número do Processo
+      // Coluna O (14) = Tipo de Ação
       const tarefaIdx = 0;       // Coluna A
       const dataDistIdx = 1;     // Coluna B - Data de distribuição
       const dataCumpIdx = 3;     // Coluna D - Data de cumprimento/término
       const numProcessoIdx = 12; // Coluna M - Número do processo
+      const tipoAcaoIdx = 14;    // Coluna O - Tipo de ação
       
       sheet.rows.forEach(row => {
+        const tipoAcao = (row[tipoAcaoIdx] || '').trim().toUpperCase();
+        const setor = sectorMap.get(tipoAcao) || 'Não classificado';
+        
         const task: TaskData = {
           colaborador: sheet.name,
           tarefa: row[tarefaIdx] || '',
           numeroProcesso: row[numProcessoIdx] || '',
+          tipoAcao: row[tipoAcaoIdx] || '',
+          setor,
           dataDistribuicao: parseDate(row[dataDistIdx]),
           dataCumprimento: parseDate(row[dataCumpIdx]),
           status: '', // Status será inferido pela presença ou não de dataCumprimento
@@ -105,8 +127,10 @@ export function useSheetData() {
       
       console.log('Sheet data received:', data.data);
       
+      const mappings = data.data.sectorMapping || [];
       setSheets(data.data.sheets);
-      setTasks(processSheets(data.data.sheets));
+      setSectorMapping(mappings);
+      setTasks(processSheets(data.data.sheets, mappings));
       setLastUpdated(new Date(data.data.lastUpdated));
       setError(null);
       
@@ -131,6 +155,7 @@ export function useSheetData() {
   return {
     sheets,
     tasks,
+    sectorMapping,
     isLoading,
     error,
     lastUpdated,
