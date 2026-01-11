@@ -68,8 +68,31 @@ export function useSheetData() {
     // Cria um mapa para busca rápida de setor por tipo de ação
     const sectorMap = new Map<string, string>();
     mappings.forEach(m => {
-      sectorMap.set(m.tipoAcao.toUpperCase(), m.setor);
+      // Normaliza removendo espaços extras e convertendo para uppercase
+      const normalizedKey = m.tipoAcao.toUpperCase().trim().replace(/\s+/g, ' ');
+      sectorMap.set(normalizedKey, m.setor);
     });
+    
+    // Função para encontrar o setor correspondente
+    const findSector = (tipoAcao: string): string => {
+      if (!tipoAcao) return 'Não classificado';
+      
+      const normalized = tipoAcao.toUpperCase().trim().replace(/\s+/g, ' ');
+      
+      // Busca exata primeiro
+      if (sectorMap.has(normalized)) {
+        return sectorMap.get(normalized)!;
+      }
+      
+      // Busca parcial - verifica se algum mapeamento está contido no tipo de ação
+      for (const [key, value] of sectorMap.entries()) {
+        if (normalized.includes(key) || key.includes(normalized)) {
+          return value;
+        }
+      }
+      
+      return 'Não classificado';
+    };
     
     sheetsData.forEach(sheet => {
       // Usando índices fixos conforme especificado:
@@ -85,8 +108,8 @@ export function useSheetData() {
       const tipoAcaoIdx = 14;    // Coluna O - Tipo de ação
       
       sheet.rows.forEach(row => {
-        const tipoAcao = (row[tipoAcaoIdx] || '').trim().toUpperCase();
-        const setor = sectorMap.get(tipoAcao) || 'Não classificado';
+        const tipoAcao = (row[tipoAcaoIdx] || '').trim();
+        const setor = findSector(tipoAcao);
         
         const task: TaskData = {
           colaborador: sheet.name,
