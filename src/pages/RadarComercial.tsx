@@ -52,6 +52,7 @@ const RadarComercial = () => {
   const [selectedResultado, setSelectedResultado] = useState<string | null>(null);
   const [radarAtendimentosOpen, setRadarAtendimentosOpen] = useState(true);
   const [radarConversaoOpen, setRadarConversaoOpen] = useState(true);
+  const [radarNegociacoesOpen, setRadarNegociacoesOpen] = useState(true);
   const [aposentadoriasFuturasDialogOpen, setAposentadoriasFuturasDialogOpen] = useState(false);
   const [rankingPossuiDireito, setRankingPossuiDireito] = useState<string | null>(null);
 
@@ -1667,6 +1668,50 @@ const RadarComercial = () => {
           <div className="flex justify-center pt-4">
             <button
               onClick={() => setRadarConversaoOpen(false)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+            >
+              <ChevronUp className="h-4 w-4" />
+              Recolher seção
+            </button>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Seção: Radar de Negociações */}
+      <Collapsible 
+        open={radarNegociacoesOpen} 
+        onOpenChange={setRadarNegociacoesOpen}
+        className="mb-8"
+      >
+        <CollapsibleTrigger className="flex items-center gap-3 w-full p-4 bg-card rounded-lg border hover:bg-muted/50 transition-colors mb-4">
+          {radarNegociacoesOpen ? (
+            <ChevronDown className="h-5 w-5 text-primary" />
+          ) : (
+            <ChevronRight className="h-5 w-5 text-primary" />
+          )}
+          <h2 className="text-lg font-semibold text-foreground">Radar de Negociações</h2>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-8">
+          {/* Placeholder para conteúdo futuro */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Métricas de Negociações</CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">Acompanhamento de negociações em andamento</p>
+            </CardHeader>
+            <CardContent>
+              <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
+                <p className="text-muted-foreground text-sm">Conteúdo em desenvolvimento</p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Botão para recolher seção */}
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={() => setRadarNegociacoesOpen(false)}
               className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
             >
               <ChevronUp className="h-4 w-4" />
