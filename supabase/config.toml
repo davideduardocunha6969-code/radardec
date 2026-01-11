@@ -2,3 +2,6 @@ project_id = "srftwtothqwmmgfnptwp"
 
 [functions.fetch-sheet]
 verify_jwt = false
+
+[functions.fetch-commercial]
+verify_jwt = false
