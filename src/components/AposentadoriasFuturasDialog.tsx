@@ -12,8 +12,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Button } from "@/components/ui/button";
 import { CommercialRecord } from "@/hooks/useCommercialData";
-import { Calendar, User, Users } from "lucide-react";
+import { Calendar, User, Users, Copy, Check } from "lucide-react";
+import { useState } from "react";
+import { toast } from "sonner";
 
 interface AposentadoriasFuturasDialogProps {
   open: boolean;
@@ -26,6 +29,8 @@ export const AposentadoriasFuturasDialog = ({
   onOpenChange,
   data,
 }: AposentadoriasFuturasDialogProps) => {
+  const [copied, setCopied] = useState(false);
+
   // Filtra apenas aposentadorias futuras
   const aposentadoriasFuturas = data.filter(r => 
     r.resultado?.toLowerCase().includes('aposentadoria futura')
@@ -47,14 +52,61 @@ export const AposentadoriasFuturasDialog = ({
     return a.localeCompare(b);
   });
 
+  const handleCopyToClipboard = () => {
+    // Ordena os dados
+    const dadosOrdenados = [...aposentadoriasFuturas].sort((a, b) => {
+      const anoA = a.anoAposentadoriaFutura || 'zzzz';
+      const anoB = b.anoAposentadoriaFutura || 'zzzz';
+      return anoA.localeCompare(anoB);
+    });
+
+    // Cria o conteúdo em formato TSV (Tab-Separated Values)
+    const header = "Responsável\tCliente\tAno Aposentadoria";
+    const rows = dadosOrdenados.map(record => 
+      `${record.responsavel || '-'}\t${record.cliente || '-'}\t${record.anoAposentadoriaFutura || 'Não informado'}`
+    );
+    
+    const tsvContent = [header, ...rows].join('\n');
+    
+    navigator.clipboard.writeText(tsvContent).then(() => {
+      setCopied(true);
+      toast.success("Dados copiados! Cole em uma planilha (Excel, Google Sheets)");
+      setTimeout(() => setCopied(false), 2000);
+    }).catch(() => {
+      toast.error("Erro ao copiar dados");
+    });
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-4xl max-h-[80vh] overflow-hidden flex flex-col">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Calendar className="h-5 w-5 text-amber-500" />
-            Aposentadorias Futuras
-          </DialogTitle>
+          <div className="flex items-center justify-between">
+            <DialogTitle className="flex items-center gap-2">
+              <Calendar className="h-5 w-5 text-amber-500" />
+              Aposentadorias Futuras
+            </DialogTitle>
+            {aposentadoriasFuturas.length > 0 && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleCopyToClipboard}
+                className="flex items-center gap-2"
+              >
+                {copied ? (
+                  <>
+                    <Check className="h-4 w-4 text-green-600" />
+                    Copiado!
+                  </>
+                ) : (
+                  <>
+                    <Copy className="h-4 w-4" />
+                    Copiar para planilha
+                  </>
+                )}
+              </Button>
+            )}
+          </div>
         </DialogHeader>
         
         <div className="flex-1 overflow-auto">
