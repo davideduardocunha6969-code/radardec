@@ -7,11 +7,18 @@ import {
   PieChart,
   Calendar,
   ArrowUpRight,
-  Loader2
+  Loader2,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeekFilter } from "@/components/WeekFilter";
 import { useCommercialData } from "@/hooks/useCommercialData";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   BarChart,
   Bar,
@@ -31,6 +38,7 @@ import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 const RadarComercial = () => {
   const { data, weeks, isLoading, error } = useCommercialData();
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+  const [radarAtendimentosOpen, setRadarAtendimentosOpen] = useState(true);
 
   // Filtra os dados pela semana selecionada
   const filteredData = useMemo(() => {
@@ -416,8 +424,23 @@ const RadarComercial = () => {
         </Card>
       </div>
 
-      {/* Gráfico de Atendimentos por Semana */}
-      <Card className="mb-8">
+      {/* Seção: Radar Atendimentos */}
+      <Collapsible 
+        open={radarAtendimentosOpen} 
+        onOpenChange={setRadarAtendimentosOpen}
+        className="mb-8"
+      >
+        <CollapsibleTrigger className="flex items-center gap-3 w-full p-4 bg-card rounded-lg border hover:bg-muted/50 transition-colors mb-4">
+          {radarAtendimentosOpen ? (
+            <ChevronDown className="h-5 w-5 text-primary" />
+          ) : (
+            <ChevronRight className="h-5 w-5 text-primary" />
+          )}
+          <h2 className="text-lg font-semibold text-foreground">Radar Atendimentos</h2>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-8">
+          {/* Gráfico de Atendimentos por Semana */}
+          <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
             <BarChart3 className="h-5 w-5 text-primary" />
@@ -463,10 +486,10 @@ const RadarComercial = () => {
             </ResponsiveContainer>
           </ChartContainer>
         </CardContent>
-      </Card>
+          </Card>
 
-      {/* Gráfico de Atendimentos por Responsável */}
-      <Card className="mb-8">
+          {/* Gráfico de Atendimentos por Responsável */}
+          <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
             <Users className="h-5 w-5 text-primary" />
@@ -510,10 +533,10 @@ const RadarComercial = () => {
             </div>
           )}
         </CardContent>
-      </Card>
+          </Card>
 
-      {/* Gráficos */}
-      <div className="grid gap-6 md:grid-cols-2 mb-8">
+          {/* Gráficos */}
+          <div className="grid gap-6 md:grid-cols-2">
         {/* Modalidade de Atendimento - Barras Horizontais */}
         <Card>
           <CardHeader>
@@ -627,10 +650,10 @@ const RadarComercial = () => {
             )}
           </CardContent>
         </Card>
-      </div>
+          </div>
 
-      {/* Gráficos de Resultado dos Atendimentos Qualificados e Atendimentos por Setor */}
-      <div className="grid gap-6 md:grid-cols-2 mb-8">
+          {/* Gráficos de Resultado dos Atendimentos Qualificados e Atendimentos por Setor */}
+          <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
@@ -730,10 +753,10 @@ const RadarComercial = () => {
             )}
           </CardContent>
         </Card>
-      </div>
+          </div>
 
-      {/* Gráfico de Resultado de Todos os Atendimentos */}
-      <Card className="mb-8">
+          {/* Gráfico de Resultado de Todos os Atendimentos */}
+          <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
             <BarChart3 className="h-5 w-5 text-primary" />
@@ -797,10 +820,10 @@ const RadarComercial = () => {
             </div>
           )}
         </CardContent>
-      </Card>
+          </Card>
 
-      {/* Gráfico de Linha - Percentual de No-Show por Semana */}
-      <Card className="mb-8">
+          {/* Gráfico de Linha - Percentual de No-Show por Semana */}
+          <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
             <TrendingUp className="h-5 w-5 text-destructive" />
@@ -849,10 +872,10 @@ const RadarComercial = () => {
             </ResponsiveContainer>
           </ChartContainer>
         </CardContent>
-      </Card>
+          </Card>
 
-      {/* Cards de Tempo Médio para Fechamento por Setor */}
-      <div className="mb-8">
+          {/* Cards de Tempo Médio para Fechamento por Setor */}
+          <div>
         <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
           <Calendar className="h-5 w-5 text-primary" />
           Tempo Médio para Fechamento por Setor
@@ -880,10 +903,10 @@ const RadarComercial = () => {
             <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
           </div>
         )}
-      </div>
+          </div>
 
-      {/* Resumo Financeiro */}
-      <Card>
+          {/* Resumo Financeiro */}
+          <Card>
         <CardHeader>
           <div className="flex items-center gap-3">
             <Calendar className="h-5 w-5 text-primary" />
@@ -906,7 +929,9 @@ const RadarComercial = () => {
             </div>
           </div>
         </CardContent>
-      </Card>
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 };
