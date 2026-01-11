@@ -60,12 +60,12 @@ export function useSheetData() {
       // Usando índices fixos conforme especificado:
       // Coluna A (0) = Tarefa/Atividade
       // Coluna B (1) = Data de Distribuição
-      // Coluna C (2) = Número do Processo
       // Coluna D (3) = Data de Cumprimento/Término
-      const tarefaIdx = 0;      // Coluna A
-      const dataDistIdx = 1;    // Coluna B - Data de distribuição
-      const numProcessoIdx = 2; // Coluna C - Número do processo
-      const dataCumpIdx = 3;    // Coluna D - Data de cumprimento/término
+      // Coluna M (12) = Número do Processo
+      const tarefaIdx = 0;       // Coluna A
+      const dataDistIdx = 1;     // Coluna B - Data de distribuição
+      const dataCumpIdx = 3;     // Coluna D - Data de cumprimento/término
+      const numProcessoIdx = 12; // Coluna M - Número do processo
       
       sheet.rows.forEach(row => {
         const task: TaskData = {
