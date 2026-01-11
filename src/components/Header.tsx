@@ -1,6 +1,6 @@
 import { RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
-import logoEscritorio from "@/assets/logo-escritorio.jpg";
+import logoEscritorio from "@/assets/logo-escritorio.webp";
 
 interface HeaderProps {
   lastUpdate?: Date;
