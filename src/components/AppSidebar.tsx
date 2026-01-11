@@ -30,8 +30,8 @@ export function AppSidebar() {
   const isActive = (path: string) => currentPath === path;
 
   return (
-    <Sidebar collapsible="icon" className="border-r border-border">
-      <SidebarHeader className="border-b border-border p-4">
+    <Sidebar collapsible="icon" className="border-r border-primary/20 bg-primary">
+      <SidebarHeader className="border-b border-primary-foreground/20 p-4">
         <div className="flex items-center gap-3">
           <img 
             src={logoEscritorio} 
@@ -40,10 +40,10 @@ export function AppSidebar() {
           />
           {!collapsed && (
             <div className="flex flex-col">
-              <span className="text-xs font-semibold text-sidebar-foreground tracking-wide">
+              <span className="text-xs font-semibold text-primary-foreground tracking-wide">
                 DEC ADVOGADOS
               </span>
-              <span className="text-[10px] text-muted-foreground">
+              <span className="text-[10px] text-accent">
                 Sistema de Gestão
               </span>
             </div>
@@ -51,9 +51,9 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
 
-      <SidebarContent>
+      <SidebarContent className="bg-primary">
         <SidebarGroup>
-          <SidebarGroupLabel>Menu Principal</SidebarGroupLabel>
+          <SidebarGroupLabel className="text-primary-foreground/70">Menu Principal</SidebarGroupLabel>
           <SidebarGroupContent>
             <SidebarMenu>
               {menuItems.map((item) => (
@@ -66,8 +66,8 @@ export function AppSidebar() {
                     <NavLink 
                       to={item.url} 
                       end 
-                      className="flex items-center gap-3"
-                      activeClassName="bg-sidebar-accent text-sidebar-accent-foreground"
+                      className="flex items-center gap-3 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
+                      activeClassName="bg-accent text-primary font-medium"
                     >
                       <item.icon className="h-4 w-4" />
                       <span>{item.title}</span>
