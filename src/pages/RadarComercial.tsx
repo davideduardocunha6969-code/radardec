@@ -17,10 +17,10 @@ import {
   Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   Cell,
+  LabelList,
 } from "recharts";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
@@ -201,17 +201,20 @@ const RadarComercial = () => {
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+              <BarChart data={weeklyChartData} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
                 <XAxis 
                   dataKey="semana" 
-                  tick={{ fontSize: 12 }}
+                  tick={{ fontSize: 11 }}
                   className="text-muted-foreground"
+                  axisLine={false}
+                  tickLine={false}
                 />
                 <YAxis 
                   tick={{ fontSize: 12 }}
                   className="text-muted-foreground"
                   allowDecimals={false}
+                  axisLine={false}
+                  tickLine={false}
                 />
                 <Tooltip content={<ChartTooltipContent />} />
                 <Bar 
@@ -219,6 +222,13 @@ const RadarComercial = () => {
                   radius={[4, 4, 0, 0]}
                   className="fill-primary"
                 >
+                  <LabelList 
+                    dataKey="atendimentos" 
+                    position="top" 
+                    className="fill-foreground"
+                    fontSize={10}
+                    formatter={(value: number) => value > 0 ? value : ''}
+                  />
                   {weeklyChartData.map((entry, index) => (
                     <Cell 
                       key={`cell-${index}`}
