@@ -135,6 +135,34 @@ export function TaskDashboard({
       .sort((a, b) => b.total - a.total);
   }, [filteredConformityErrors]);
 
+  // Erros de conformidade por controller (para gráfico)
+  const conformityErrorsByController = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    filteredConformityErrors.forEach(error => {
+      const controller = error.recipient || 'Não identificado';
+      counts[controller] = (counts[controller] || 0) + 1;
+    });
+    
+    return Object.entries(counts)
+      .map(([name, total]) => ({ name, total }))
+      .sort((a, b) => b.total - a.total);
+  }, [filteredConformityErrors]);
+
+  // Erros de prazo por controller (para gráfico)
+  const deadlineErrorsByController = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    filteredDeadlineErrors.forEach(error => {
+      const controller = error.controller || 'Não identificado';
+      counts[controller] = (counts[controller] || 0) + 1;
+    });
+    
+    return Object.entries(counts)
+      .map(([name, total]) => ({ name, total }))
+      .sort((a, b) => b.total - a.total);
+  }, [filteredDeadlineErrors]);
+
   // Tarefas pendentes (sem data de cumprimento)
   const pendingTasks = useMemo(() => {
     return filteredTasks.filter(task => !task.dataCumprimento);
@@ -1232,6 +1260,133 @@ export function TaskDashboard({
           </ChartContainer>
         </CardContent>
       </Card>
+
+      {/* Gráficos de Erros por Controller */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* Gráfico: Erros de Conformidade por Controller */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Erros de Conformidade por Controller</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{
+                total: {
+                  label: "Total de Erros",
+                  color: "hsl(var(--destructive))",
+                },
+              }}
+              className="h-[300px] w-full"
+            >
+              <BarChart data={conformityErrorsByController} layout="horizontal">
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11 }}
+                  interval={0}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis tickLine={false} axisLine={false} allowDecimals={false} />
+                <ChartTooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="rounded-lg border bg-background p-2 shadow-sm">
+                          <div className="font-medium">{data.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {data.total} {data.total === 1 ? "erro" : "erros"}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar
+                  dataKey="total"
+                  radius={[4, 4, 0, 0]}
+                  fill="hsl(var(--destructive))"
+                >
+                  <LabelList 
+                    dataKey="total" 
+                    position="top" 
+                    fill="hsl(var(--foreground))"
+                    fontSize={12}
+                    fontWeight="bold"
+                  />
+                </Bar>
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        {/* Gráfico: Erros de Prazo por Controller */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Erros de Prazo por Controller</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{
+                total: {
+                  label: "Total de Erros",
+                  color: "hsl(var(--warning))",
+                },
+              }}
+              className="h-[300px] w-full"
+            >
+              <BarChart data={deadlineErrorsByController} layout="horizontal">
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 11 }}
+                  interval={0}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis tickLine={false} axisLine={false} allowDecimals={false} />
+                <ChartTooltip
+                  content={({ active, payload }) => {
+                    if (active && payload && payload.length) {
+                      const data = payload[0].payload;
+                      return (
+                        <div className="rounded-lg border bg-background p-2 shadow-sm">
+                          <div className="font-medium">{data.name}</div>
+                          <div className="text-sm text-muted-foreground">
+                            {data.total} {data.total === 1 ? "erro" : "erros"}
+                          </div>
+                        </div>
+                      );
+                    }
+                    return null;
+                  }}
+                />
+                <Bar
+                  dataKey="total"
+                  radius={[4, 4, 0, 0]}
+                  fill="hsl(var(--warning))"
+                >
+                  <LabelList 
+                    dataKey="total" 
+                    position="top" 
+                    fill="hsl(var(--foreground))"
+                    fontSize={12}
+                    fontWeight="bold"
+                  />
+                </Bar>
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+      </div>
 
       <PendingTasksDialog
         open={pendingDialogOpen}
