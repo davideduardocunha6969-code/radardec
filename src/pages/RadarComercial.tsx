@@ -71,11 +71,10 @@ const RadarComercial = () => {
     });
   }, [data, selectedWeek, selectedSetor, selectedResponsavel, selectedResultado]);
 
-  // Calcula total de aposentadorias futuras (sem filtros)
+  // Calcula total de aposentadorias futuras (baseado no resultado - coluna O)
   const totalAposentadoriasFuturas = useMemo(() => {
     return data.filter(r => 
-      r.produto?.toLowerCase().includes('aposentadoria') && 
-      r.produto?.toLowerCase().includes('futur')
+      r.resultado?.toLowerCase().includes('aposentadoria futura')
     ).length;
   }, [data]);
 
@@ -473,28 +472,24 @@ const RadarComercial = () => {
         </div>
       </div>
 
-      {/* Card de Aposentadorias Futuras */}
-      <div className="mb-8">
-        <Card className="bg-gradient-to-r from-amber-500/10 to-amber-600/5 border-amber-500/20">
+      {/* Cards de métricas */}
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+        <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total de Aposentadorias Futuras
+              Aposentadorias Futuras
             </CardTitle>
             <Calendar className="h-4 w-4 text-amber-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold text-amber-600">
+            <div className="text-2xl font-bold text-amber-600">
               {isLoading ? '--' : totalAposentadoriasFuturas}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Clientes com aposentadoria futura em análise
+              Total geral
             </p>
           </CardContent>
         </Card>
-      </div>
-
-      {/* Cards de métricas */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
