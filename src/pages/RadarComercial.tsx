@@ -247,6 +247,42 @@ const RadarComercial = () => {
     });
   }, [data]);
 
+  // Dados para o gráfico de tempo médio de atendimento por setor
+  const tempoMedioSetorChartData = useMemo(() => {
+    const setorStats: Record<string, { totalDias: number; count: number }> = {};
+    
+    filteredData.forEach(record => {
+      if (record.setor && record.dataAtendimento && record.dataFechamento) {
+        // Parse das datas
+        const dataAtendimento = new Date(record.dataAtendimento);
+        const dataFechamento = new Date(record.dataFechamento);
+        
+        // Verifica se as datas são válidas
+        if (!isNaN(dataAtendimento.getTime()) && !isNaN(dataFechamento.getTime())) {
+          const diffTime = dataFechamento.getTime() - dataAtendimento.getTime();
+          const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+          
+          // Apenas considera diferenças positivas ou zero
+          if (diffDays >= 0) {
+            if (!setorStats[record.setor]) {
+              setorStats[record.setor] = { totalDias: 0, count: 0 };
+            }
+            setorStats[record.setor].totalDias += diffDays;
+            setorStats[record.setor].count += 1;
+          }
+        }
+      }
+    });
+    
+    return Object.entries(setorStats)
+      .map(([setor, stats]) => ({
+        setor,
+        mediaDias: stats.count > 0 ? parseFloat((stats.totalDias / stats.count).toFixed(1)) : 0,
+        totalAtendimentos: stats.count,
+      }))
+      .sort((a, b) => b.mediaDias - a.mediaDias);
+  }, [filteredData]);
+
   const PIE_COLORS = [
     'hsl(var(--primary))',
     'hsl(var(--accent))',
@@ -812,6 +848,61 @@ const RadarComercial = () => {
               </LineChart>
             </ResponsiveContainer>
           </ChartContainer>
+        </CardContent>
+      </Card>
+
+      {/* Gráfico de Tempo Médio de Atendimento por Setor */}
+      <Card className="mb-8">
+        <CardHeader>
+          <div className="flex items-center gap-3">
+            <Calendar className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Tempo Médio para Fechamento por Setor</CardTitle>
+          </div>
+        </CardHeader>
+        <CardContent>
+          {tempoMedioSetorChartData.length > 0 ? (
+            <ChartContainer config={chartConfig} className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart 
+                  data={tempoMedioSetorChartData} 
+                  margin={{ top: 20, right: 10, left: 10, bottom: 60 }}
+                >
+                  <XAxis 
+                    dataKey="setor"
+                    tick={<CustomXAxisTick />}
+                    className="text-muted-foreground"
+                    axisLine={false}
+                    tickLine={false}
+                    interval={0}
+                    height={80}
+                  />
+                  <Tooltip 
+                    formatter={(value: number, name: string, props: any) => [
+                      `${value} dias (${props.payload.totalAtendimentos} atendimentos)`,
+                      'Média'
+                    ]}
+                  />
+                  <Bar 
+                    dataKey="mediaDias" 
+                    radius={[4, 4, 0, 0]}
+                    className="fill-accent"
+                  >
+                    <LabelList 
+                      dataKey="mediaDias" 
+                      position="top" 
+                      formatter={(value: number) => `${value}d`}
+                      className="fill-foreground"
+                      fontSize={12}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          ) : (
+            <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+              <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+            </div>
+          )}
         </CardContent>
       </Card>
 
