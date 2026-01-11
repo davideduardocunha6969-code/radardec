@@ -59,6 +59,11 @@ export function TaskDashboard({
   const [customChart2End, setCustomChart2End] = useState<Date>();
   const [visibleControllers, setVisibleControllers] = useState<string[]>([]);
 
+  // States para o gráfico de setores
+  const [sectorPeriod, setSectorPeriod] = useState<ChartPeriod>("all");
+  const [customSectorStart, setCustomSectorStart] = useState<Date>();
+  const [customSectorEnd, setCustomSectorEnd] = useState<Date>();
+
   // Filtra tarefas por período e colaboradores
   const filteredTasks = useMemo(() => {
     return tasks.filter(task => {
@@ -317,11 +322,33 @@ export function TaskDashboard({
 
   const colaboradores = [...new Set(tasks.map(t => t.colaborador))];
 
+  // Filtra tarefas para o gráfico de setores baseado no período selecionado
+  const sectorFilteredTasks = useMemo(() => {
+    const today = new Date();
+    
+    return filteredTasks.filter(task => {
+      if (!task.dataDistribuicao) return false;
+      
+      switch (sectorPeriod) {
+        case "30d":
+          return task.dataDistribuicao >= subDays(today, 30);
+        case "90d":
+          return task.dataDistribuicao >= subDays(today, 90);
+        case "custom":
+          if (customSectorStart && task.dataDistribuicao < customSectorStart) return false;
+          if (customSectorEnd && task.dataDistribuicao > customSectorEnd) return false;
+          return true;
+        default:
+          return true;
+      }
+    });
+  }, [filteredTasks, sectorPeriod, customSectorStart, customSectorEnd]);
+
   // Tarefas por setor
   const tasksBySector = useMemo(() => {
     const counts: Record<string, number> = {};
     
-    filteredTasks.forEach(task => {
+    sectorFilteredTasks.forEach(task => {
       const setor = task.setor || 'Não classificado';
       counts[setor] = (counts[setor] || 0) + 1;
     });
@@ -329,7 +356,7 @@ export function TaskDashboard({
     return Object.entries(counts)
       .map(([name, total]) => ({ name, total }))
       .sort((a, b) => b.total - a.total);
-  }, [filteredTasks]);
+  }, [sectorFilteredTasks]);
 
   // Cores para setores
   const sectorColors = useMemo(() => {
@@ -879,7 +906,106 @@ export function TaskDashboard({
       {/* Gráfico de Colunas: Tarefas por Setor */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-lg">Tarefas por Setor</CardTitle>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-lg">Tarefas por Setor</CardTitle>
+            
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Seletor de período */}
+              <ToggleGroup
+                type="single"
+                value={sectorPeriod}
+                onValueChange={(value) => value && setSectorPeriod(value as ChartPeriod)}
+                className="bg-muted rounded-lg p-1"
+              >
+                <ToggleGroupItem value="all" size="sm" className="text-xs px-3">
+                  Tudo
+                </ToggleGroupItem>
+                <ToggleGroupItem value="30d" size="sm" className="text-xs px-3">
+                  30 dias
+                </ToggleGroupItem>
+                <ToggleGroupItem value="90d" size="sm" className="text-xs px-3">
+                  90 dias
+                </ToggleGroupItem>
+                <ToggleGroupItem value="custom" size="sm" className="text-xs px-3">
+                  Período
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          </div>
+
+          {/* Seletores de data customizada */}
+          {sectorPeriod === "custom" && (
+            <div className="flex flex-wrap items-center gap-2 mt-4">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !customSectorStart && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customSectorStart
+                      ? format(customSectorStart, "dd/MM/yyyy", { locale: ptBR })
+                      : "Data início"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customSectorStart}
+                    onSelect={setCustomSectorStart}
+                    locale={ptBR}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <span className="text-muted-foreground">até</span>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !customSectorEnd && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customSectorEnd
+                      ? format(customSectorEnd, "dd/MM/yyyy", { locale: ptBR })
+                      : "Data fim"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customSectorEnd}
+                    onSelect={setCustomSectorEnd}
+                    locale={ptBR}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {(customSectorStart || customSectorEnd) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setCustomSectorStart(undefined);
+                    setCustomSectorEnd(undefined);
+                  }}
+                >
+                  Limpar
+                </Button>
+              )}
+            </div>
+          )}
         </CardHeader>
         <CardContent>
           <ChartContainer
