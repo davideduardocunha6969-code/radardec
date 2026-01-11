@@ -2,18 +2,27 @@ import { useState, useMemo } from "react";
 import { 
   TrendingUp, 
   Users, 
-  DollarSign,
   Target,
   BarChart3,
   PieChart,
   Calendar,
   ArrowUpRight,
-  ArrowDownRight,
   Loader2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeekFilter } from "@/components/WeekFilter";
 import { useCommercialData } from "@/hooks/useCommercialData";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  Cell,
+} from "recharts";
+import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
 const RadarComercial = () => {
   const { data, weeks, isLoading, error } = useCommercialData();
@@ -52,6 +61,32 @@ const RadarComercial = () => {
       honorariosIniciaisTotal,
     };
   }, [filteredData]);
+
+  // Dados para o gráfico de atendimentos por semana
+  const weeklyChartData = useMemo(() => {
+    const weekCounts: Record<number, number> = {};
+    
+    data.forEach(record => {
+      if (record.semana > 0) {
+        weekCounts[record.semana] = (weekCounts[record.semana] || 0) + 1;
+      }
+    });
+    
+    return Object.entries(weekCounts)
+      .map(([week, count]) => ({
+        semana: `Sem ${week}`,
+        weekNumber: parseInt(week),
+        atendimentos: count,
+      }))
+      .sort((a, b) => a.weekNumber - b.weekNumber);
+  }, [data]);
+
+  const chartConfig = {
+    atendimentos: {
+      label: "Atendimentos",
+      color: "hsl(var(--primary))",
+    },
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -151,26 +186,50 @@ const RadarComercial = () => {
         </Card>
       </div>
 
-      {/* Área de gráficos placeholder */}
+      {/* Gráfico de Atendimentos por Semana */}
       <div className="grid gap-6 md:grid-cols-2 mb-8">
         <Card>
           <CardHeader>
             <div className="flex items-center gap-3">
               <BarChart3 className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Captação por Período</CardTitle>
+              <CardTitle className="text-lg">Atendimentos por Semana</CardTitle>
             </div>
           </CardHeader>
           <CardContent>
-            <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
-              <div className="text-center text-muted-foreground">
-                <BarChart3 className="h-12 w-12 mx-auto mb-2 opacity-50" />
-                <p className="text-sm">Gráfico em desenvolvimento</p>
-                <p className="text-xs mt-1">
-                  {filteredData.length} registros 
-                  {selectedWeek ? ` na semana ${selectedWeek}` : ' no total'}
-                </p>
-              </div>
-            </div>
+            <ChartContainer config={chartConfig} className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={weeklyChartData} margin={{ top: 10, right: 10, left: -10, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+                  <XAxis 
+                    dataKey="semana" 
+                    tick={{ fontSize: 12 }}
+                    className="text-muted-foreground"
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 12 }}
+                    className="text-muted-foreground"
+                    allowDecimals={false}
+                  />
+                  <Tooltip content={<ChartTooltipContent />} />
+                  <Bar 
+                    dataKey="atendimentos" 
+                    radius={[4, 4, 0, 0]}
+                    className="fill-primary"
+                  >
+                    {weeklyChartData.map((entry, index) => (
+                      <Cell 
+                        key={`cell-${index}`}
+                        className={
+                          selectedWeek === entry.weekNumber 
+                            ? "fill-accent" 
+                            : "fill-primary"
+                        }
+                      />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
           </CardContent>
         </Card>
 
