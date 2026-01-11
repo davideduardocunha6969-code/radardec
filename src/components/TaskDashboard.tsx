@@ -505,6 +505,25 @@ export function TaskDashboard({
         />
       </div>
 
+      {/* Métricas Gerais - Linha 3 */}
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+        <MetricCard
+          title="Média Cumprimento"
+          value={`${avgCompletionDays.toFixed(1)} dias`}
+          subtitle="Dias úteis (tarefas concluídas)"
+          icon={<Clock className="h-5 w-5 text-primary" />}
+          className="animate-slide-up stagger-6"
+        />
+        <MetricCard
+          title="Taxa de Erros"
+          value={`${filteredTasks.length > 0 ? ((filteredConformityErrors.length / filteredTasks.length) * 100).toFixed(4) : 0}%`}
+          subtitle="Erros / Total de tarefas"
+          icon={<Percent className="h-5 w-5 text-destructive" />}
+          variant={filteredConformityErrors.length > 0 ? "warning" : "default"}
+          className="animate-slide-up stagger-7"
+        />
+      </div>
+
       {/* Gráficos lado a lado */}
       <div className="grid gap-4 md:grid-cols-2">
         {/* Gráfico: Tarefas por Controller */}
