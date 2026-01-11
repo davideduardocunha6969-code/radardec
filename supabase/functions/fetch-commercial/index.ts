@@ -10,6 +10,7 @@ const SHEET_ID = '1XJLkFSFVYT3lkugy4Dwyp68xsa0QTsMxP57yAhnWycA';
 const MAIN_GID = 0;
 const SDR_GID = 1631515229;
 const SDR_MESSAGES_GID = 686842485;
+const INDICACOES_GID = 290508236;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -222,6 +223,48 @@ serve(async (req) => {
       // Continue without SDR Messages data
     }
     
+    // Fetch Indicações sheet (GID 290508236)
+    // Coluna A = Cliente que indicou, Coluna B = Ação ganha, Coluna C = Responsável, Coluna D = Semana
+    let indicacoesData: any[] = [];
+    
+    try {
+      const indicacoesCsvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${INDICACOES_GID}`;
+      console.log(`Fetching Indicações sheet (gid=${INDICACOES_GID})...`);
+      
+      const indicacoesResponse = await fetch(indicacoesCsvUrl);
+      
+      if (indicacoesResponse.ok) {
+        const indicacoesCsvText = await indicacoesResponse.text();
+        
+        if (indicacoesCsvText && indicacoesCsvText.trim().length > 10) {
+          const indicacoesRows = parseCSV(indicacoesCsvText);
+          
+          if (indicacoesRows.length >= 2) {
+            const indicacoesHeaders = indicacoesRows[0];
+            const indicacoesDataRows = indicacoesRows.slice(1).filter(row => row.some(cell => cell.trim() !== ''));
+            
+            console.log(`Found Indicações sheet with ${indicacoesDataRows.length} rows`);
+            console.log('Indicações Headers:', indicacoesHeaders);
+            
+            // Mapeia os dados de indicações
+            indicacoesData = indicacoesDataRows.map(row => ({
+              clienteIndicador: (row[0] || '').trim(),
+              acaoGanha: (row[1] || '').trim(),
+              responsavel: (row[2] || '').trim(),
+              semana: (row[3] || '').trim(),
+            })).filter(d => d.clienteIndicador !== '' || d.responsavel !== '');
+            
+            console.log(`Indicações data loaded: ${indicacoesData.length} records`);
+          }
+        }
+      } else {
+        console.log('Indicações sheet not accessible, continuing without it');
+      }
+    } catch (indicacoesError) {
+      console.error('Error fetching Indicações sheet:', indicacoesError);
+      // Continue without Indicações data
+    }
+    
     return new Response(
       JSON.stringify({
         success: true,
@@ -236,6 +279,7 @@ serve(async (req) => {
           sdrTotalRecords: sdrData.length,
           sdrMessagesData,
           sdrMessagesSdrNames,
+          indicacoesData,
           lastUpdated: new Date().toISOString()
         }
       }),

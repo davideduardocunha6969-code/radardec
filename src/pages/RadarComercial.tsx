@@ -50,7 +50,7 @@ import {
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
 const RadarComercial = () => {
-  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, isLoading, error } = useCommercialData();
+  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, indicacoesData, isLoading, error } = useCommercialData();
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedSetor, setSelectedSetor] = useState<string | null>(null);
   const [selectedResponsavel, setSelectedResponsavel] = useState<string | null>(null);
@@ -3638,23 +3638,96 @@ const RadarComercial = () => {
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-8 mt-6">
           
-          {/* Conteúdo da seção - placeholder para futuros gráficos */}
+          {/* Ranking de Responsáveis por Contatos de Indicação */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
-                <Users className="h-5 w-5 text-amber-500" />
-                <CardTitle className="text-lg">Indicações de Clientes Antigos</CardTitle>
+                <Trophy className="h-5 w-5 text-amber-500" />
+                <CardTitle className="text-lg">Ranking de Contatos para Indicação</CardTitle>
               </div>
-              <p className="text-sm text-muted-foreground">Dados e métricas de indicações serão exibidos aqui</p>
+              <p className="text-sm text-muted-foreground">Responsáveis por contatar clientes antigos pedindo indicações (Coluna C)</p>
             </CardHeader>
             <CardContent>
-              <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
-                <div className="text-center">
-                  <Users className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-                  <p className="text-muted-foreground font-medium">Seção em construção</p>
-                  <p className="text-sm text-muted-foreground/70">Configure a aba de indicações na planilha para visualizar os dados</p>
-                </div>
-              </div>
+              {(() => {
+                // Agrupa por responsável e conta quantos contatos cada um fez
+                const responsavelCounts: Record<string, number> = {};
+                
+                indicacoesData.forEach(record => {
+                  const responsavel = record.responsavel?.trim();
+                  if (responsavel) {
+                    responsavelCounts[responsavel] = (responsavelCounts[responsavel] || 0) + 1;
+                  }
+                });
+                
+                // Transforma em array e ordena por quantidade
+                const rankingData = Object.entries(responsavelCounts)
+                  .map(([responsavel, total]) => ({ responsavel, total }))
+                  .sort((a, b) => b.total - a.total)
+                  .map((item, index) => ({ ...item, posicao: index + 1 }));
+                
+                if (rankingData.length === 0) {
+                  return (
+                    <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
+                      <div className="text-center">
+                        <Users className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+                        <p className="text-muted-foreground font-medium">Nenhum dado disponível</p>
+                        <p className="text-sm text-muted-foreground/70">Verifique se a aba de indicações (GID 290508236) contém dados</p>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                const maxTotal = rankingData[0]?.total || 1;
+                
+                return (
+                  <div className="space-y-3 max-h-[500px] overflow-y-auto pr-2">
+                    {rankingData.map((item) => {
+                      const barWidth = maxTotal > 0 ? (item.total / maxTotal) * 100 : 0;
+                      
+                      // Medalhas para os 3 primeiros
+                      let medalha = '';
+                      if (item.posicao === 1) { medalha = '🥇'; }
+                      else if (item.posicao === 2) { medalha = '🥈'; }
+                      else if (item.posicao === 3) { medalha = '🥉'; }
+                      
+                      return (
+                        <div key={item.responsavel} className="flex items-center gap-3">
+                          {/* Posição no ranking */}
+                          <div className={`flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold ${
+                            item.posicao === 1 ? 'bg-yellow-500 text-yellow-950' :
+                            item.posicao === 2 ? 'bg-gray-300 text-gray-700' :
+                            item.posicao === 3 ? 'bg-amber-600 text-amber-50' :
+                            'bg-muted text-muted-foreground'
+                          }`}>
+                            {medalha || `${item.posicao}º`}
+                          </div>
+                          
+                          {/* Nome do responsável */}
+                          <div className="flex-shrink-0 w-40 text-sm font-medium truncate" title={item.responsavel}>
+                            {item.responsavel}
+                          </div>
+                          
+                          {/* Barra horizontal */}
+                          <div className="flex-1 relative">
+                            <div className="h-8 bg-muted/50 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                                style={{ width: `${barWidth}%` }}
+                              />
+                            </div>
+                            {/* Valor */}
+                            <div className="absolute inset-0 flex items-center justify-end pr-3">
+                              <span className="text-sm font-semibold text-foreground">
+                                {item.total} {item.total === 1 ? 'contato' : 'contatos'}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
 
