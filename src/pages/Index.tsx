@@ -1,108 +1,32 @@
-import { useState, useEffect, useCallback } from "react";
-import { toast } from "sonner";
+import { useState, useMemo } from "react";
+import { RefreshCw, Loader2, FileSpreadsheet } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import Header from "@/components/Header";
-import Dashboard from "@/components/Dashboard";
-import { Scale, FileText, Users, TrendingUp, Clock, Loader2 } from "lucide-react";
-import { supabase } from "@/integrations/supabase/client";
-
-interface SheetData {
-  headers: string[];
-  rows: Record<string, string | number>[];
-  summary: {
-    totalRows: number;
-    [key: string]: number;
-  };
-}
+import { TaskDashboard } from "@/components/TaskDashboard";
+import { DateRangeFilter } from "@/components/DateRangeFilter";
+import { HolidayManager } from "@/components/HolidayManager";
+import { ColaboradorFilter } from "@/components/ColaboradorFilter";
+import { useSheetData } from "@/hooks/useSheetData";
+import { getDefaultBrazilianHolidays } from "@/utils/businessDays";
 
 const Index = () => {
-  const [sheetData, setSheetData] = useState<SheetData | null>(null);
-  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
-  const [isLive, setIsLive] = useState(true);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { sheets, tasks, isLoading, error, lastUpdated, refetch } = useSheetData();
+  
+  // Filtros
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
+  const [selectedColaboradores, setSelectedColaboradores] = useState<string[]>([]);
+  
+  // Feriados - inicializa com feriados brasileiros do ano atual
+  const currentYear = new Date().getFullYear();
+  const [holidays, setHolidays] = useState<Date[]>(() => 
+    getDefaultBrazilianHolidays(currentYear)
+  );
 
-  const fetchSheetData = useCallback(async () => {
-    try {
-      console.log('Fetching sheet data...');
-      
-      const { data, error } = await supabase.functions.invoke('fetch-sheet');
-      
-      if (error) {
-        console.error('Error invoking function:', error);
-        throw new Error(error.message);
-      }
-      
-      if (!data.success) {
-        throw new Error(data.error || 'Erro ao buscar dados');
-      }
-      
-      console.log('Sheet data received:', data.data);
-      
-      // Converte as linhas para o formato esperado
-      const headers = data.data.headers;
-      const rows = data.data.rows.map((row: string[]) => {
-        const rowObj: Record<string, string | number> = {};
-        headers.forEach((header: string, index: number) => {
-          rowObj[header] = row[index] || '';
-        });
-        return rowObj;
-      });
-      
-      setSheetData({
-        headers,
-        rows,
-        summary: data.data.summary
-      });
-      
-      setLastUpdate(new Date(data.data.lastUpdated));
-      setError(null);
-      
-    } catch (err) {
-      console.error('Error fetching sheet:', err);
-      setError(err instanceof Error ? err.message : 'Erro desconhecido');
-      toast.error('Erro ao carregar dados da planilha');
-    } finally {
-      setIsLoading(false);
-    }
-  }, []);
-
-  // Busca dados iniciais e atualiza periodicamente
-  useEffect(() => {
-    fetchSheetData();
-    
-    // Atualiza a cada 5 minutos
-    const interval = setInterval(() => {
-      fetchSheetData();
-    }, 300000);
-
-    return () => clearInterval(interval);
-  }, [fetchSheetData]);
-
-  // Calcula estatísticas resumidas
-  const totalCausas = sheetData?.rows.reduce((acc, row) => {
-    const value = parseFloat(
-      String(row["Valor da Causa"] || row["Valor Causa"] || 0)
-        .replace(/[R$\s]/g, '')
-        .replace(/\./g, '')
-        .replace(',', '.')
-    );
-    return acc + (isNaN(value) ? 0 : value);
-  }, 0) || 0;
-
-  const totalHonorarios = sheetData?.rows.reduce((acc, row) => {
-    const value = parseFloat(
-      String(row["Honorários"] || row["Honorario"] || 0)
-        .replace(/[R$\s]/g, '')
-        .replace(/\./g, '')
-        .replace(',', '.')
-    );
-    return acc + (isNaN(value) ? 0 : value);
-  }, 0) || 0;
-
-  const processosAtivos = sheetData?.rows.filter(row => {
-    const status = String(row.Status || row.status || '').toLowerCase();
-    return !status.includes('encerrado') && !status.includes('arquivado') && !status.includes('baixado');
-  }).length || 0;
+  // Lista de colaboradores únicos
+  const colaboradores = useMemo(() => {
+    return [...new Set(tasks.map(t => t.colaborador))].sort();
+  }, [tasks]);
 
   if (isLoading) {
     return (
@@ -110,22 +34,25 @@ const Index = () => {
         <div className="text-center">
           <Loader2 className="h-12 w-12 animate-spin text-primary mx-auto mb-4" />
           <p className="text-muted-foreground">Carregando dados da planilha...</p>
+          <p className="text-xs text-muted-foreground mt-2">
+            Buscando todas as abas da planilha...
+          </p>
         </div>
       </div>
     );
   }
 
-  if (error && !sheetData) {
+  if (error && tasks.length === 0) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-destructive mb-4">Erro ao carregar dados: {error}</p>
-          <button 
-            onClick={fetchSheetData}
-            className="px-4 py-2 bg-primary text-primary-foreground rounded-lg"
-          >
+        <div className="text-center max-w-md mx-auto p-8">
+          <FileSpreadsheet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+          <h2 className="text-xl font-semibold mb-2">Erro ao carregar dados</h2>
+          <p className="text-muted-foreground mb-4">{error}</p>
+          <Button onClick={refetch} className="gap-2">
+            <RefreshCw className="h-4 w-4" />
             Tentar novamente
-          </button>
+          </Button>
         </div>
       </div>
     );
@@ -133,77 +60,61 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Header lastUpdate={lastUpdate} isLive={isLive} />
+      <Header lastUpdate={lastUpdated} isLive={true} />
 
       <main className="container mx-auto px-4 py-8">
-        {/* Hero Stats */}
-        <div className="mb-8 animate-fade-in">
-          <div className="rounded-2xl gradient-hero p-8 text-primary-foreground shadow-elevated">
-            <div className="mb-6">
-              <h1 className="text-2xl font-bold mb-1">Painel de Controladoria</h1>
-              <p className="text-primary-foreground/80 text-sm">
-                Visão consolidada do escritório
-              </p>
+        {/* Filtros e Ações */}
+        <div className="mb-8 space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div className="flex flex-wrap items-center gap-4">
+              <DateRangeFilter
+                startDate={startDate}
+                endDate={endDate}
+                onStartDateChange={setStartDate}
+                onEndDateChange={setEndDate}
+              />
+              <ColaboradorFilter
+                colaboradores={colaboradores}
+                selectedColaboradores={selectedColaboradores}
+                onSelectionChange={setSelectedColaboradores}
+              />
             </div>
-
-            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              <div className="flex items-center gap-4">
-                <div className="rounded-xl bg-primary-foreground/20 p-3">
-                  <Scale className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-sm opacity-80">Valor Total em Causas</p>
-                  <p className="text-2xl font-bold">
-                    {totalCausas.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="rounded-xl bg-primary-foreground/20 p-3">
-                  <TrendingUp className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-sm opacity-80">Honorários Projetados</p>
-                  <p className="text-2xl font-bold">
-                    {totalHonorarios.toLocaleString("pt-BR", { style: "currency", currency: "BRL" })}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="rounded-xl bg-primary-foreground/20 p-3">
-                  <FileText className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-sm opacity-80">Processos Ativos</p>
-                  <p className="text-2xl font-bold">{processosAtivos}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-4">
-                <div className="rounded-xl bg-primary-foreground/20 p-3">
-                  <Users className="h-6 w-6" />
-                </div>
-                <div>
-                  <p className="text-sm opacity-80">Total de Processos</p>
-                  <p className="text-2xl font-bold">{sheetData?.rows.length || 0}</p>
-                </div>
-              </div>
+            
+            <div className="flex items-center gap-2">
+              <HolidayManager
+                holidays={holidays}
+                onHolidaysChange={setHolidays}
+              />
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={refetch}
+                disabled={isLoading}
+                className="gap-2"
+              >
+                <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
+                Atualizar
+              </Button>
             </div>
+          </div>
+          
+          {/* Info das abas carregadas */}
+          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+            <FileSpreadsheet className="h-4 w-4" />
+            <span>
+              {sheets.length} aba(s) carregada(s) • {tasks.length} tarefa(s) encontrada(s)
+            </span>
           </div>
         </div>
 
         {/* Dashboard */}
-        {sheetData && <Dashboard data={sheetData} />}
-
-        {/* Footer Info */}
-        <div className="mt-8 text-center">
-          <p className="text-xs text-muted-foreground flex items-center justify-center gap-2">
-            <Clock className="h-3 w-3" />
-            Dados sincronizados automaticamente com Google Sheets
-          </p>
-        </div>
+        <TaskDashboard
+          tasks={tasks}
+          holidays={holidays}
+          startDate={startDate}
+          endDate={endDate}
+          selectedColaboradores={selectedColaboradores}
+        />
       </main>
     </div>
   );
