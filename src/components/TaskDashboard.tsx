@@ -679,44 +679,6 @@ export function TaskDashboard({
           </CardContent>
         </Card>
 
-        {/* Gráfico: Erros de Conformidade por Destinatário */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-lg">Erros de Conformidade por Destinatário</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ChartContainer
-              config={{
-                total: {
-                  label: "Erros",
-                  color: "hsl(var(--destructive))",
-                },
-              }}
-              className="h-[300px] w-full"
-            >
-              <BarChart data={conformityErrorsByRecipient} layout="horizontal">
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-                <XAxis
-                  dataKey="name"
-                  tickLine={false}
-                  axisLine={false}
-                  tick={{ fontSize: 12 }}
-                  interval={0}
-                  angle={-45}
-                  textAnchor="end"
-                  height={80}
-                />
-                <YAxis tickLine={false} axisLine={false} />
-                <ChartTooltip content={<ChartTooltipContent />} />
-                <Bar
-                  dataKey="total"
-                  fill="var(--color-total)"
-                  radius={[4, 4, 0, 0]}
-                />
-              </BarChart>
-            </ChartContainer>
-          </CardContent>
-        </Card>
       </div>
 
       {/* Gráfico de Linha: Distribuição de Tarefas por Data */}
