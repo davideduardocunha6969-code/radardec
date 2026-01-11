@@ -145,7 +145,7 @@ export function TaskDashboard({
         <MetricCard
           title="Média Cumprimento"
           value={`${avgCompletionDays.toFixed(1)} dias`}
-          subtitle="Dias úteis"
+          subtitle="Dias úteis (tarefas concluídas)"
           icon={<Clock className="h-5 w-5 text-primary" />}
           className="animate-slide-up stagger-4"
         />
