@@ -84,6 +84,12 @@ serve(async (req) => {
       rawRow: row
     }));
     
+    // Log de exemplo para debug do ano de aposentadoria
+    const exemploComAno = commercialData.find(d => d.anoAposentadoriaFutura);
+    if (exemploComAno) {
+      console.log('Exemplo com ano aposentadoria:', exemploComAno.cliente, '-', exemploComAno.anoAposentadoriaFutura);
+    }
+    
     // Extrai as semanas únicas disponíveis
     const uniqueWeeks = [...new Set(commercialData.map(d => d.semana).filter(w => w > 0))].sort((a, b) => a - b);
     
