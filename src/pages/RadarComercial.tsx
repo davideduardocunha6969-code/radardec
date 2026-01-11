@@ -3304,15 +3304,15 @@ const RadarComercial = () => {
                 <TrendingUp className="h-5 w-5 text-purple-500" />
                 <CardTitle className="text-lg">Evolução da Taxa de Qualificação por SDR</CardTitle>
               </div>
-              <p className="text-sm text-muted-foreground">Percentual de clientes com direito (Coluna J) por SDR ao longo das semanas - Dados da aba principal</p>
+              <p className="text-sm text-muted-foreground">Percentual de clientes com direito (Coluna J) por SDR ao longo das semanas (Coluna E)</p>
             </CardHeader>
             <CardContent>
               {(() => {
-                // Agrupa dados por semana e SDR
+                // Agrupa dados por semana (Coluna E) e SDR (Coluna B)
                 const weekSdrStats: Record<number, Record<string, { comDireito: number; total: number }>> = {};
                 const allSdrs = new Set<string>();
                 
-                // Filtra apenas por setor (não filtra por semana para mostrar evolução)
+                // Usa todos os dados da aba principal (não filtra por semana para mostrar evolução completa)
                 const filteredDataForChart = data.filter(record => {
                   if (selectedSetor && record.setor !== selectedSetor) return false;
                   return true;
@@ -3320,10 +3320,10 @@ const RadarComercial = () => {
                 
                 filteredDataForChart.forEach(record => {
                   const sdr = record.sdr?.trim();
-                  const semana = record.semana;
+                  const semana = record.semana; // Coluna E
                   const possuiDireito = record.possuiDireito?.trim()?.toLowerCase();
                   
-                  if (sdr && semana) {
+                  if (sdr && semana && semana >= 1 && semana <= 53) {
                     allSdrs.add(sdr);
                     
                     if (!weekSdrStats[semana]) {
@@ -3339,11 +3339,9 @@ const RadarComercial = () => {
                   }
                 });
                 
-                // Transforma em array para o gráfico (semanas 1-53)
-                const chartData = [];
-                const semanasComDados = Object.keys(weekSdrStats).map(Number).sort((a, b) => a - b);
+                const sdrArray = Array.from(allSdrs).sort();
                 
-                if (semanasComDados.length === 0) {
+                if (sdrArray.length === 0) {
                   return (
                     <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
                       <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
@@ -3351,14 +3349,12 @@ const RadarComercial = () => {
                   );
                 }
                 
-                // Pega o intervalo de semanas com dados
-                const minSemana = Math.min(...semanasComDados);
-                const maxSemana = Math.max(...semanasComDados);
-                
-                for (let semana = minSemana; semana <= maxSemana; semana++) {
-                  const weekData: Record<string, any> = { semana: `S${semana}` };
+                // Cria array com TODAS as semanas de 1 a 53
+                const chartData = [];
+                for (let semana = 1; semana <= 53; semana++) {
+                  const weekData: Record<string, any> = { semana };
                   
-                  allSdrs.forEach(sdr => {
+                  sdrArray.forEach(sdr => {
                     const stats = weekSdrStats[semana]?.[sdr];
                     if (stats && stats.total > 0) {
                       weekData[sdr] = parseFloat(((stats.comDireito / stats.total) * 100).toFixed(1));
@@ -3381,8 +3377,6 @@ const RadarComercial = () => {
                   'hsl(60, 70%, 45%)',  // Amarelo
                   'hsl(300, 60%, 50%)', // Magenta
                 ];
-                
-                const sdrArray = Array.from(allSdrs).sort();
                 
                 return (
                   <div className="h-[400px]">
