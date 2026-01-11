@@ -53,6 +53,7 @@ const RadarComercial = () => {
   const [radarAtendimentosOpen, setRadarAtendimentosOpen] = useState(true);
   const [radarConversaoOpen, setRadarConversaoOpen] = useState(true);
   const [aposentadoriasFuturasDialogOpen, setAposentadoriasFuturasDialogOpen] = useState(false);
+  const [rankingPossuiDireito, setRankingPossuiDireito] = useState<string | null>(null);
 
   // Extrai opções únicas para os filtros
   const filterOptions = useMemo(() => {
@@ -408,11 +409,19 @@ const RadarComercial = () => {
       .sort((a, b) => b.mediaDias - a.mediaDias);
   }, [filteredData]);
 
+  // Dados filtrados para os rankings de responsável (com filtro de possui direito)
+  const rankingFilteredData = useMemo(() => {
+    return filteredData.filter(record => {
+      if (rankingPossuiDireito && record.possuiDireito !== rankingPossuiDireito) return false;
+      return true;
+    });
+  }, [filteredData, rankingPossuiDireito]);
+
   // Dados para ranking de conversão por responsável (contratos fechados absolutos)
   const rankingConversaoResponsavelAbsolutoData = useMemo(() => {
     const stats: Record<string, { total: number; contratos: number }> = {};
     
-    filteredData.forEach(record => {
+    rankingFilteredData.forEach(record => {
       if (record.responsavel) {
         if (!stats[record.responsavel]) {
           stats[record.responsavel] = { total: 0, contratos: 0 };
@@ -438,13 +447,13 @@ const RadarComercial = () => {
         ...item,
         posicao: index + 1,
       }));
-  }, [filteredData]);
+  }, [rankingFilteredData]);
 
   // Dados para ranking de conversão por responsável (taxa % de conversão)
   const rankingConversaoResponsavelPercentualData = useMemo(() => {
     const stats: Record<string, { total: number; contratos: number }> = {};
     
-    filteredData.forEach(record => {
+    rankingFilteredData.forEach(record => {
       if (record.responsavel) {
         if (!stats[record.responsavel]) {
           stats[record.responsavel] = { total: 0, contratos: 0 };
@@ -470,7 +479,7 @@ const RadarComercial = () => {
         ...item,
         posicao: index + 1,
       }));
-  }, [filteredData]);
+  }, [rankingFilteredData]);
 
   const PIE_COLORS = [
     'hsl(var(--primary))',
@@ -1175,7 +1184,34 @@ const RadarComercial = () => {
           </div>
 
           {/* Ranking de Conversão por Responsável */}
-          <div className="grid gap-6 md:grid-cols-2">
+          <div className="space-y-4">
+            {/* Filtro de Possui Direito */}
+            <div className="flex items-center gap-4 p-4 bg-card rounded-lg border">
+              <span className="text-sm font-medium text-muted-foreground">Filtrar por:</span>
+              <Select
+                value={rankingPossuiDireito || "all"}
+                onValueChange={(value) => setRankingPossuiDireito(value === "all" ? null : value)}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <SelectValue placeholder="Possui Direito" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os atendimentos</SelectItem>
+                  <SelectItem value="SIM">Possui Direito</SelectItem>
+                  <SelectItem value="NÃO">Não Possui Direito</SelectItem>
+                </SelectContent>
+              </Select>
+              {rankingPossuiDireito && (
+                <button
+                  onClick={() => setRankingPossuiDireito(null)}
+                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+                >
+                  Limpar filtro
+                </button>
+              )}
+            </div>
+
+            <div className="grid gap-6 md:grid-cols-2">
             {/* Ranking por Contratos Fechados (Absoluto) */}
             <Card>
               <CardHeader>
@@ -1303,6 +1339,7 @@ const RadarComercial = () => {
                 )}
               </CardContent>
             </Card>
+            </div>
           </div>
 
           {/* Botão para recolher seção */}
