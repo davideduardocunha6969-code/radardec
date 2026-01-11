@@ -2278,27 +2278,6 @@ const RadarComercial = () => {
         </CollapsibleTrigger>
         
         <CollapsibleContent className="space-y-6 mt-6">
-          {/* Debug: Mostra headers da aba SDR */}
-          {sdrHeaders.length > 0 && (
-            <Card className="bg-muted/30 border-dashed">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm text-muted-foreground">Colunas disponíveis na aba SDR (GID 1631515229)</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="flex flex-wrap gap-2">
-                  {sdrHeaders.map((header, index) => (
-                    <span key={index} className="px-2 py-1 bg-teal-500/20 text-teal-700 rounded text-xs font-mono">
-                      {String.fromCharCode(65 + index)}: {header || '(vazio)'}
-                    </span>
-                  ))}
-                </div>
-                <p className="text-xs text-muted-foreground mt-2">
-                  Total de registros SDR: {sdrData.length}
-                </p>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Cards de Métricas SDR */}
           <div className="grid gap-4 md:grid-cols-4">
             {/* Total de Leads SDR */}
