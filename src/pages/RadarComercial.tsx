@@ -1416,7 +1416,7 @@ const RadarComercial = () => {
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <Trophy className="h-5 w-5 text-yellow-500" />
-                  <CardTitle className="text-lg">Ranking de Contratos por Responsável</CardTitle>
+                  <CardTitle className="text-lg">Ranking de Contratos Fechados</CardTitle>
                 </div>
                 <p className="text-sm text-muted-foreground">Ordenado por quantidade de contratos fechados</p>
               </CardHeader>
