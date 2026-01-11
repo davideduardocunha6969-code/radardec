@@ -38,16 +38,6 @@ export function AppSidebar() {
             alt="David Eduardo Cunha Advogados"
             className={collapsed ? "h-8 w-auto" : "h-10 w-auto"}
           />
-          {!collapsed && (
-            <div className="flex flex-col">
-              <span className="text-xs font-semibold text-primary-foreground tracking-wide">
-                DEC ADVOGADOS
-              </span>
-              <span className="text-[10px] text-accent">
-                Sistema de Gestão
-              </span>
-            </div>
-          )}
         </div>
       </SidebarHeader>
 
