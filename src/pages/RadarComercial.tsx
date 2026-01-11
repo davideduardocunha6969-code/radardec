@@ -3297,6 +3297,118 @@ const RadarComercial = () => {
             </Card>
           </div>
 
+          {/* Gráfico de Linha - % de Clientes com Direito por SDR */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <TrendingUp className="h-5 w-5 text-purple-500" />
+                <CardTitle className="text-lg">Taxa de Qualificação por SDR</CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">Percentual de clientes com direito (Coluna J) por SDR - Dados da aba principal</p>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                // Calcula % de clientes com direito por SDR
+                const sdrStats: Record<string, { comDireito: number; total: number }> = {};
+                
+                const filteredDataForChart = data.filter(record => {
+                  if (selectedWeek && record.semana !== selectedWeek) return false;
+                  if (selectedSetor && record.setor !== selectedSetor) return false;
+                  return true;
+                });
+                
+                filteredDataForChart.forEach(record => {
+                  const sdr = record.sdr?.trim();
+                  const possuiDireito = record.possuiDireito?.trim()?.toLowerCase();
+                  
+                  if (sdr) {
+                    if (!sdrStats[sdr]) {
+                      sdrStats[sdr] = { comDireito: 0, total: 0 };
+                    }
+                    sdrStats[sdr].total++;
+                    if (possuiDireito === 'sim' || possuiDireito === 'com direito') {
+                      sdrStats[sdr].comDireito++;
+                    }
+                  }
+                });
+                
+                // Transforma em array para o gráfico
+                const chartData = Object.entries(sdrStats)
+                  .filter(([_, stats]) => stats.total > 0)
+                  .map(([sdr, stats]) => ({
+                    sdr,
+                    percentual: parseFloat(((stats.comDireito / stats.total) * 100).toFixed(1)),
+                    comDireito: stats.comDireito,
+                    total: stats.total
+                  }))
+                  .sort((a, b) => b.percentual - a.percentual);
+                
+                if (chartData.length === 0) {
+                  return (
+                    <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                      <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                    </div>
+                  );
+                }
+                
+                return (
+                  <div className="h-[350px]">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                        <XAxis 
+                          dataKey="sdr" 
+                          tick={{ fontSize: 11 }}
+                          angle={-45}
+                          textAnchor="end"
+                          height={80}
+                          interval={0}
+                        />
+                        <YAxis 
+                          domain={[0, 100]}
+                          tickFormatter={(value) => `${value}%`}
+                          tick={{ fontSize: 11 }}
+                        />
+                        <Tooltip 
+                          formatter={(value: number, name: string, props: any) => [
+                            `${value}% (${props.payload.comDireito}/${props.payload.total})`,
+                            'Com Direito'
+                          ]}
+                          labelFormatter={(label) => `SDR: ${label}`}
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                          }}
+                        />
+                        <ReferenceLine 
+                          y={50} 
+                          stroke="hsl(var(--muted-foreground))" 
+                          strokeDasharray="3 3"
+                          label={{ value: '50%', position: 'right', fontSize: 10 }}
+                        />
+                        <Line 
+                          type="monotone" 
+                          dataKey="percentual" 
+                          stroke="hsl(270, 70%, 60%)"
+                          strokeWidth={3}
+                          dot={{ fill: 'hsl(270, 70%, 60%)', strokeWidth: 2, r: 5 }}
+                          activeDot={{ r: 8, fill: 'hsl(270, 70%, 50%)' }}
+                        />
+                        <LabelList 
+                          dataKey="percentual" 
+                          position="top" 
+                          formatter={(value: number) => `${value}%`}
+                          fontSize={10}
+                          fill="hsl(var(--foreground))"
+                        />
+                      </LineChart>
+                    </ResponsiveContainer>
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+
           {/* Mensagem de configuração */}
           {sdrData.length === 0 && !isLoading && (
             <Card className="bg-amber-500/10 border-amber-500/30">
