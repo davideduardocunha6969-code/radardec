@@ -15,6 +15,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeekFilter } from "@/components/WeekFilter";
 import { useCommercialData } from "@/hooks/useCommercialData";
+import { AposentadoriasFuturasDialog } from "@/components/AposentadoriasFuturasDialog";
 import {
   Collapsible,
   CollapsibleContent,
@@ -51,6 +52,7 @@ const RadarComercial = () => {
   const [selectedResultado, setSelectedResultado] = useState<string | null>(null);
   const [radarAtendimentosOpen, setRadarAtendimentosOpen] = useState(true);
   const [radarConversaoOpen, setRadarConversaoOpen] = useState(true);
+  const [aposentadoriasFuturasDialogOpen, setAposentadoriasFuturasDialogOpen] = useState(false);
 
   // Extrai opções únicas para os filtros
   const filterOptions = useMemo(() => {
@@ -474,7 +476,10 @@ const RadarComercial = () => {
 
       {/* Cards de métricas */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <Card>
+        <Card 
+          className="cursor-pointer hover:bg-muted/50 transition-colors"
+          onClick={() => setAposentadoriasFuturasDialogOpen(true)}
+        >
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Aposentadorias Futuras
@@ -486,7 +491,7 @@ const RadarComercial = () => {
               {isLoading ? '--' : totalAposentadoriasFuturas}
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Total geral
+              Total geral • Clique para detalhes
             </p>
           </CardContent>
         </Card>
@@ -1438,6 +1443,13 @@ const RadarComercial = () => {
           </div>
         </CollapsibleContent>
       </Collapsible>
+
+      {/* Modal de Aposentadorias Futuras */}
+      <AposentadoriasFuturasDialog
+        open={aposentadoriasFuturasDialogOpen}
+        onOpenChange={setAposentadoriasFuturasDialogOpen}
+        data={data}
+      />
     </div>
   );
 };
