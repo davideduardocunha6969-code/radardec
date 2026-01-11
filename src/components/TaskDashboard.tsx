@@ -523,11 +523,11 @@ export function TaskDashboard({
           className="animate-slide-up stagger-7"
         />
         <MetricCard
-          title="Taxa de Erros Prazo"
-          value={`${filteredTasks.length > 0 ? ((filteredDeadlineErrors.length / filteredTasks.length) * 100).toFixed(4) : 0}%`}
-          subtitle="Erros prazo / Total de tarefas"
-          icon={<Percent className="h-5 w-5 text-destructive" />}
-          variant={filteredDeadlineErrors.length > 0 ? "warning" : "default"}
+          title="Taxa de Acerto Prazo"
+          value={`${filteredTasks.length > 0 ? (((filteredTasks.length - filteredDeadlineErrors.length) / filteredTasks.length) * 100).toFixed(4) : 100}%`}
+          subtitle="Acertos / Total de tarefas"
+          icon={<Percent className="h-5 w-5 text-success" />}
+          variant="success"
           className="animate-slide-up stagger-8"
         />
       </div>
