@@ -30,7 +30,7 @@ import {
 import { cn } from "@/lib/utils";
 
 type ChartViewMode = "daily" | "weekly" | "monthly";
-type ChartPeriod = "all" | "30d" | "90d" | "custom";
+type ChartPeriod = "all" | "7d" | "30d" | "90d" | "custom";
 
 interface TaskDashboardProps {
   tasks: TaskData[];
@@ -330,6 +330,8 @@ export function TaskDashboard({
       if (!task.dataDistribuicao) return false;
       
       switch (sectorPeriod) {
+        case "7d":
+          return task.dataDistribuicao >= subDays(today, 7);
         case "30d":
           return task.dataDistribuicao >= subDays(today, 30);
         case "90d":
@@ -919,6 +921,9 @@ export function TaskDashboard({
               >
                 <ToggleGroupItem value="all" size="sm" className="text-xs px-3">
                   Tudo
+                </ToggleGroupItem>
+                <ToggleGroupItem value="7d" size="sm" className="text-xs px-3">
+                  7 dias
                 </ToggleGroupItem>
                 <ToggleGroupItem value="30d" size="sm" className="text-xs px-3">
                   30 dias
