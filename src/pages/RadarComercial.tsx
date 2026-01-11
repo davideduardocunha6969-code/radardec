@@ -2109,6 +2109,95 @@ const RadarComercial = () => {
             </CardContent>
           </Card>
 
+          {/* Card de Cadência Aguarda Documentação */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <ArrowUpRight className="h-5 w-5 text-orange-500" />
+                  <CardTitle className="text-lg">Cadência Aguarda Documentação</CardTitle>
+                </div>
+                <div className="text-2xl font-bold text-orange-600">
+                  {isLoading ? '--' : filteredData.filter(r => 
+                    r.resultado?.toLowerCase().includes('aguarda documentação') || 
+                    r.resultado?.toLowerCase().includes('aguarda documentacao')
+                  ).length}
+                </div>
+              </div>
+              <p className="text-sm text-muted-foreground">Etapas de follow-up dos casos aguardando documentação</p>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const casosAguardaDoc = filteredData.filter(r => 
+                  r.resultado?.toLowerCase().includes('aguarda documentação') || 
+                  r.resultado?.toLowerCase().includes('aguarda documentacao')
+                );
+                
+                const cadenciaCounts: Record<string, number> = {};
+                casosAguardaDoc.forEach(r => {
+                  const cadencia = r.cadencia?.trim() || 'Sem follow-up';
+                  cadenciaCounts[cadencia] = (cadenciaCounts[cadencia] || 0) + 1;
+                });
+                
+                const total = casosAguardaDoc.length;
+                const cadenciasOrdenadas = Object.entries(cadenciaCounts)
+                  .map(([cadencia, count]) => ({
+                    cadencia,
+                    count,
+                    percentage: total > 0 ? ((count / total) * 100).toFixed(1) : '0',
+                  }))
+                  .sort((a, b) => {
+                    // Coloca "Sem follow-up" por último
+                    if (a.cadencia === 'Sem follow-up') return 1;
+                    if (b.cadencia === 'Sem follow-up') return -1;
+                    return b.count - a.count;
+                  });
+                
+                if (cadenciasOrdenadas.length === 0) {
+                  return (
+                    <div className="h-[150px] flex items-center justify-center bg-muted/30 rounded-lg">
+                      <p className="text-muted-foreground text-sm">Nenhum caso aguardando documentação</p>
+                    </div>
+                  );
+                }
+                
+                const maxValue = Math.max(...cadenciasOrdenadas.map(c => c.count));
+                
+                return (
+                  <div className="space-y-3">
+                    {cadenciasOrdenadas.map(({ cadencia, count, percentage }) => {
+                      const barWidth = maxValue > 0 ? (count / maxValue) * 100 : 0;
+                      const isSemFollowUp = cadencia === 'Sem follow-up';
+                      
+                      return (
+                        <div key={cadencia} className="flex items-center gap-3">
+                          <div className="flex-shrink-0 w-36 text-sm font-medium truncate" title={cadencia}>
+                            <span className={isSemFollowUp ? 'text-destructive' : ''}>
+                              {cadencia}
+                            </span>
+                          </div>
+                          <div className="flex-1 relative h-8 bg-muted/30 rounded overflow-hidden">
+                            <div 
+                              className={`absolute inset-y-0 left-0 rounded transition-all duration-300 ${
+                                isSemFollowUp ? 'bg-destructive' : 'bg-orange-500'
+                              }`}
+                              style={{ width: `${barWidth}%` }}
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <span className={`text-sm font-semibold ${barWidth > 40 ? 'text-white' : 'text-foreground'}`}>
+                                {count} ({percentage}%)
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+
           {/* Botão para recolher seção */}
           <div className="flex justify-center pt-4">
             <button
