@@ -21,6 +21,13 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   BarChart,
   Bar,
   XAxis,
@@ -39,13 +46,29 @@ import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 const RadarComercial = () => {
   const { data, weeks, isLoading, error } = useCommercialData();
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
+  const [selectedSetor, setSelectedSetor] = useState<string | null>(null);
+  const [selectedResponsavel, setSelectedResponsavel] = useState<string | null>(null);
+  const [selectedResultado, setSelectedResultado] = useState<string | null>(null);
   const [radarAtendimentosOpen, setRadarAtendimentosOpen] = useState(true);
 
-  // Filtra os dados pela semana selecionada
+  // Extrai opções únicas para os filtros
+  const filterOptions = useMemo(() => {
+    const setores = [...new Set(data.map(r => r.setor).filter(Boolean))].sort();
+    const responsaveis = [...new Set(data.map(r => r.responsavel).filter(Boolean))].sort();
+    const resultados = [...new Set(data.map(r => r.resultado).filter(Boolean))].sort();
+    return { setores, responsaveis, resultados };
+  }, [data]);
+
+  // Filtra os dados pelos filtros selecionados
   const filteredData = useMemo(() => {
-    if (!selectedWeek) return data;
-    return data.filter(record => record.semana === selectedWeek);
-  }, [data, selectedWeek]);
+    return data.filter(record => {
+      if (selectedWeek && record.semana !== selectedWeek) return false;
+      if (selectedSetor && record.setor !== selectedSetor) return false;
+      if (selectedResponsavel && record.responsavel !== selectedResponsavel) return false;
+      if (selectedResultado && record.resultado !== selectedResultado) return false;
+      return true;
+    });
+  }, [data, selectedWeek, selectedSetor, selectedResponsavel, selectedResultado]);
 
   // Calcula métricas baseadas nos dados filtrados
   const metrics = useMemo(() => {
@@ -433,13 +456,82 @@ const RadarComercial = () => {
           <h2 className="text-lg font-semibold text-foreground">Radar Atendimentos</h2>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-8">
-          {/* Filtro de Semanas */}
-          <WeekFilter
-            weeks={weeks}
-            selectedWeek={selectedWeek}
-            onWeekChange={setSelectedWeek}
-            isLoading={isLoading}
-          />
+          {/* Filtros */}
+          <div className="space-y-4">
+            {/* Filtro de Semanas */}
+            <WeekFilter
+              weeks={weeks}
+              selectedWeek={selectedWeek}
+              onWeekChange={setSelectedWeek}
+              isLoading={isLoading}
+            />
+
+            {/* Filtros adicionais */}
+            <div className="flex flex-wrap gap-4">
+              {/* Filtro por Setor */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Setor</label>
+                <Select
+                  value={selectedSetor || "all"}
+                  onValueChange={(value) => setSelectedSetor(value === "all" ? null : value)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Todos os setores" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os setores</SelectItem>
+                    {filterOptions.setores.map((setor) => (
+                      <SelectItem key={setor} value={setor}>
+                        {setor}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtro por Responsável */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Responsável</label>
+                <Select
+                  value={selectedResponsavel || "all"}
+                  onValueChange={(value) => setSelectedResponsavel(value === "all" ? null : value)}
+                >
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Todos" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos</SelectItem>
+                    {filterOptions.responsaveis.map((responsavel) => (
+                      <SelectItem key={responsavel} value={responsavel}>
+                        {responsavel}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Filtro por Resultado */}
+              <div className="flex flex-col gap-1.5">
+                <label className="text-xs font-medium text-muted-foreground">Resultado</label>
+                <Select
+                  value={selectedResultado || "all"}
+                  onValueChange={(value) => setSelectedResultado(value === "all" ? null : value)}
+                >
+                  <SelectTrigger className="w-[200px]">
+                    <SelectValue placeholder="Todos os resultados" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Todos os resultados</SelectItem>
+                    {filterOptions.resultados.map((resultado) => (
+                      <SelectItem key={resultado} value={resultado}>
+                        {resultado}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </div>
 
           {/* Gráfico de Atendimentos por Semana */}
           <Card>
