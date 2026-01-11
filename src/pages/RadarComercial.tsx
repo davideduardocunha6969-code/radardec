@@ -2735,6 +2735,97 @@ const RadarComercial = () => {
             </CardContent>
           </Card>
 
+          {/* Cards de Média de Agendamentos por SDR */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {(() => {
+              // Calcula a média de agendamentos por semana para cada SDR
+              const sdrStats = sdrList.map(sdr => {
+                // Conta semanas com pelo menos 1 agendamento para este SDR
+                const semanasComAgendamento = new Set<number>();
+                let totalAgendamentos = 0;
+                
+                sdrData.forEach(record => {
+                  const semana = parseInt(record.colD?.trim()) || 0;
+                  const sdrName = record.colA?.trim();
+                  if (semana > 0 && semana <= 53 && sdrName === sdr) {
+                    semanasComAgendamento.add(semana);
+                    totalAgendamentos++;
+                  }
+                });
+                
+                // Calcula a média considerando apenas semanas com dados
+                const semanasAtivas = semanasComAgendamento.size;
+                const media = semanasAtivas > 0 ? totalAgendamentos / semanasAtivas : 0;
+                
+                return {
+                  sdr,
+                  media: parseFloat(media.toFixed(1)),
+                  totalAgendamentos,
+                  semanasAtivas,
+                };
+              });
+              
+              return sdrStats.map((stat, index) => {
+                const isAboveMeta = stat.media > 25;
+                const isExactMeta = stat.media === 25;
+                const isBelowMeta = stat.media < 25;
+                
+                let bgColor = '';
+                let borderColor = '';
+                let textColor = '';
+                let statusText = '';
+                let statusIcon = '';
+                
+                if (isAboveMeta) {
+                  bgColor = 'bg-green-500/10';
+                  borderColor = 'border-l-green-500';
+                  textColor = 'text-green-600';
+                  statusText = 'Acima da Meta';
+                  statusIcon = '✓';
+                } else if (isExactMeta) {
+                  bgColor = 'bg-yellow-500/10';
+                  borderColor = 'border-l-yellow-500';
+                  textColor = 'text-yellow-600';
+                  statusText = 'Dentro da Meta';
+                  statusIcon = '●';
+                } else {
+                  bgColor = 'bg-red-500/10';
+                  borderColor = 'border-l-red-500';
+                  textColor = 'text-red-600';
+                  statusText = 'Fora da Meta';
+                  statusIcon = '✗';
+                }
+                
+                return (
+                  <Card key={stat.sdr} className={`${bgColor} border-l-4 ${borderColor}`}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center justify-between">
+                        <CardTitle className="text-sm font-medium truncate" title={stat.sdr}>
+                          {stat.sdr}
+                        </CardTitle>
+                        <span className={`text-xs font-semibold px-2 py-1 rounded-full ${bgColor} ${textColor}`}>
+                          {statusIcon} {statusText}
+                        </span>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className={`text-3xl font-bold ${textColor}`}>
+                        {stat.media}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Média semanal de agendamentos
+                      </p>
+                      <div className="flex justify-between text-xs text-muted-foreground mt-2 pt-2 border-t">
+                        <span>Total: {stat.totalAgendamentos}</span>
+                        <span>Semanas ativas: {stat.semanasAtivas}</span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              });
+            })()}
+          </div>
+
           {/* Mensagem de configuração */}
           {sdrData.length === 0 && !isLoading && (
             <Card className="bg-amber-500/10 border-amber-500/30">
