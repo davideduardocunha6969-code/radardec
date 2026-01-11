@@ -62,23 +62,27 @@ const RadarComercial = () => {
     };
   }, [filteredData]);
 
-  // Dados para o gráfico de atendimentos por semana
+  // Dados para o gráfico de atendimentos por semana (todas as 53 semanas)
   const weeklyChartData = useMemo(() => {
     const weekCounts: Record<number, number> = {};
     
+    // Inicializa todas as 53 semanas com 0
+    for (let i = 1; i <= 53; i++) {
+      weekCounts[i] = 0;
+    }
+    
+    // Contabiliza os atendimentos por semana
     data.forEach(record => {
-      if (record.semana > 0) {
+      if (record.semana > 0 && record.semana <= 53) {
         weekCounts[record.semana] = (weekCounts[record.semana] || 0) + 1;
       }
     });
     
-    return Object.entries(weekCounts)
-      .map(([week, count]) => ({
-        semana: `Sem ${week}`,
-        weekNumber: parseInt(week),
-        atendimentos: count,
-      }))
-      .sort((a, b) => a.weekNumber - b.weekNumber);
+    return Array.from({ length: 53 }, (_, i) => ({
+      semana: `${i + 1}`,
+      weekNumber: i + 1,
+      atendimentos: weekCounts[i + 1] || 0,
+    }));
   }, [data]);
 
   const chartConfig = {
