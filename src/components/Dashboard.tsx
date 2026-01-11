@@ -30,9 +30,7 @@ interface SheetData {
   rows: Record<string, string | number>[];
   summary: {
     totalRows: number;
-    totalColumns: number;
-    numericColumns: string[];
-    textColumns: string[];
+    [key: string]: number;
   };
 }
 
