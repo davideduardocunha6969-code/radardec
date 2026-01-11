@@ -20,6 +20,7 @@ import {
 } from "@/components/ui/chart";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { PendingTasksDialog } from "./PendingTasksDialog";
+import { ConformityErrorsDialog } from "./ConformityErrorsDialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { Button } from "@/components/ui/button";
 import { Calendar } from "@/components/ui/calendar";
@@ -424,6 +425,7 @@ export function TaskDashboard({
   }, [tasksBySector]);
 
   const [pendingDialogOpen, setPendingDialogOpen] = useState(false);
+  const [conformityDialogOpen, setConformityDialogOpen] = useState(false);
 
   return (
     <div className="space-y-8">
@@ -470,10 +472,11 @@ export function TaskDashboard({
         <MetricCard
           title="Erros de Conformidade"
           value={filteredConformityErrors.length}
-          subtitle="Identificados no período"
+          subtitle="Clique para ver detalhes"
           icon={<AlertTriangle className="h-5 w-5 text-destructive" />}
           variant={filteredConformityErrors.length > 0 ? "warning" : "default"}
           className="animate-slide-up stagger-5"
+          onClick={() => setConformityDialogOpen(true)}
         />
       </div>
 
@@ -1165,6 +1168,12 @@ export function TaskDashboard({
         onOpenChange={setPendingDialogOpen}
         tasks={pendingTasks}
         holidays={holidays}
+      />
+
+      <ConformityErrorsDialog
+        open={conformityDialogOpen}
+        onOpenChange={setConformityDialogOpen}
+        errors={filteredConformityErrors}
       />
     </div>
   );
