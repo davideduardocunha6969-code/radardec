@@ -15,7 +15,7 @@ const Header = ({ lastUpdate, isLive = false }: HeaderProps) => {
           <img 
             src="https://davideduardocunha.com.br/wp-content/uploads/2025/01/Logo-fundo-Transparente.png" 
             alt="David Eduardo Cunha Advogados"
-            className="h-10 w-auto"
+            className="h-10 w-auto brightness-0 invert"
           />
           <div className="h-8 w-px bg-accent/30" />
           <div className="flex flex-col">
