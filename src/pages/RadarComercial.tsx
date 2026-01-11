@@ -3366,19 +3366,17 @@ const RadarComercial = () => {
                   chartData.push(weekData);
                 }
                 
-                // Cores distintas e bem contrastantes para cada SDR
+                // Paleta (tokens) para garantir cores distintas por SDR
                 const SDR_COLORS = [
-                  '#8b5cf6', // Roxo vibrante
-                  '#3b82f6', // Azul
-                  '#10b981', // Verde esmeralda
-                  '#f59e0b', // Laranja/Âmbar
-                  '#ef4444', // Vermelho
-                  '#06b6d4', // Ciano
-                  '#ec4899', // Rosa
-                  '#84cc16', // Lima
-                  '#6366f1', // Índigo
-                  '#14b8a6', // Teal
+                  'hsl(var(--chart-1))',
+                  'hsl(var(--chart-2))',
+                  'hsl(var(--chart-3))',
+                  'hsl(var(--chart-4))',
+                  'hsl(var(--chart-5))',
                 ];
+
+                // Padrões de traço (fallback quando exceder a paleta)
+                const SDR_DASH = ['0', '6 3', '3 3', '10 4', '2 2'];
                 
                 return (
                   <div className="h-[450px]">
@@ -3421,19 +3419,27 @@ const RadarComercial = () => {
                           strokeDasharray="5 5"
                           label={{ value: '50%', position: 'left', fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
                         />
-                        {sdrArray.map((sdr, index) => (
-                          <Line 
-                            key={sdr}
-                            type="monotone" 
-                            dataKey={sdr}
-                            name={sdr}
-                            stroke={SDR_COLORS[index % SDR_COLORS.length]}
-                            strokeWidth={3}
-                            dot={{ fill: SDR_COLORS[index % SDR_COLORS.length], strokeWidth: 2, r: 4 }}
-                            activeDot={{ r: 7, strokeWidth: 2 }}
-                            connectNulls={true}
-                          />
-                        ))}
+                        {sdrArray.map((sdr, index) => {
+                          const color = SDR_COLORS[index % SDR_COLORS.length];
+                          const dash = SDR_DASH[index % SDR_DASH.length];
+
+                          return (
+                            <Line
+                              key={sdr}
+                              type="monotone"
+                              dataKey={sdr}
+                              name={sdr}
+                              stroke={color}
+                              strokeDasharray={dash === '0' ? undefined : dash}
+                              strokeWidth={3}
+                              style={{ stroke: color }}
+                              dot={{ fill: color, stroke: color, strokeWidth: 2, r: 4 }}
+                              activeDot={{ r: 7, stroke: color, fill: color, strokeWidth: 2 }}
+                              connectNulls={true}
+                              isAnimationActive={false}
+                            />
+                          );
+                        })}
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
