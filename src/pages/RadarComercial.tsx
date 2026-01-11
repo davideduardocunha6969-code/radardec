@@ -58,6 +58,7 @@ const RadarComercial = () => {
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [aposentadoriasFuturasDialogOpen, setAposentadoriasFuturasDialogOpen] = useState(false);
   const [rankingPossuiDireito, setRankingPossuiDireito] = useState<string | null>(null);
+  const [rankingWeekFilter, setRankingWeekFilter] = useState<number | null>(null);
   const [sdrRankingWeek, setSdrRankingWeek] = useState<number | null>(null);
   const [sdrEvolutionFilter, setSdrEvolutionFilter] = useState<string | null>(null);
 
@@ -563,13 +564,28 @@ const RadarComercial = () => {
       .sort((a, b) => b.mediaDias - a.mediaDias);
   }, [filteredData]);
 
-  // Dados filtrados para os rankings de responsável (com filtro de possui direito)
+  // Dados filtrados para os rankings de responsável (com filtro de possui direito e semana de fechamento)
   const rankingFilteredData = useMemo(() => {
     return filteredData.filter(record => {
       if (rankingPossuiDireito && record.possuiDireito !== rankingPossuiDireito) return false;
+      // Filtra pela semana do fechamento (baseado na data de fechamento)
+      if (rankingWeekFilter) {
+        // A semana já está calculada no record.semana, mas precisamos verificar se tem fechamento
+        const dataFechamento = record.dataFechamento;
+        if (!dataFechamento) return false;
+        // Calcula a semana do fechamento
+        const dateParts = dataFechamento.split('/');
+        if (dateParts.length === 3) {
+          const fechamentoDate = new Date(parseInt(dateParts[2]), parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
+          const startOfYear = new Date(fechamentoDate.getFullYear(), 0, 1);
+          const days = Math.floor((fechamentoDate.getTime() - startOfYear.getTime()) / (24 * 60 * 60 * 1000));
+          const weekNumber = Math.ceil((days + startOfYear.getDay() + 1) / 7);
+          if (weekNumber !== rankingWeekFilter) return false;
+        }
+      }
       return true;
     });
-  }, [filteredData, rankingPossuiDireito]);
+  }, [filteredData, rankingPossuiDireito, rankingWeekFilter]);
 
   // Dados para ranking de conversão por responsável (contratos fechados absolutos)
   const rankingConversaoResponsavelAbsolutoData = useMemo(() => {
@@ -1346,8 +1362,8 @@ const RadarComercial = () => {
 
           {/* Ranking de Conversão por Responsável */}
           <div className="space-y-4">
-            {/* Filtro de Possui Direito */}
-            <div className="flex items-center gap-4 p-4 bg-card rounded-lg border">
+            {/* Filtros de Possui Direito e Semana de Fechamento */}
+            <div className="flex flex-wrap items-center gap-4 p-4 bg-card rounded-lg border">
               <span className="text-sm font-medium text-muted-foreground">Filtrar por:</span>
               <Select
                 value={rankingPossuiDireito || "all"}
@@ -1362,12 +1378,34 @@ const RadarComercial = () => {
                   <SelectItem value="NÃO">Não Possui Direito</SelectItem>
                 </SelectContent>
               </Select>
-              {rankingPossuiDireito && (
+              
+              <Select
+                value={rankingWeekFilter?.toString() || "all"}
+                onValueChange={(value) => setRankingWeekFilter(value === "all" ? null : parseInt(value))}
+              >
+                <SelectTrigger className="w-[200px]">
+                  <Calendar className="h-4 w-4 mr-2" />
+                  <SelectValue placeholder="Semana do Fechamento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas as semanas</SelectItem>
+                  {weeks.map((week) => (
+                    <SelectItem key={week} value={week.toString()}>
+                      Semana {week}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              
+              {(rankingPossuiDireito || rankingWeekFilter) && (
                 <button
-                  onClick={() => setRankingPossuiDireito(null)}
+                  onClick={() => {
+                    setRankingPossuiDireito(null);
+                    setRankingWeekFilter(null);
+                  }}
                   className="text-xs text-muted-foreground hover:text-foreground transition-colors"
                 >
-                  Limpar filtro
+                  Limpar filtros
                 </button>
               )}
             </div>
@@ -1377,7 +1415,7 @@ const RadarComercial = () => {
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
-                  <TrendingUp className="h-5 w-5 text-green-600" />
+                  <Trophy className="h-5 w-5 text-yellow-500" />
                   <CardTitle className="text-lg">Ranking de Contratos por Responsável</CardTitle>
                 </div>
                 <p className="text-sm text-muted-foreground">Ordenado por quantidade de contratos fechados</p>
@@ -1391,14 +1429,17 @@ const RadarComercial = () => {
                       
                       return (
                         <div key={item.responsavel} className="flex items-center gap-3">
-                          {/* Posição no ranking */}
-                          <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                            item.posicao === 1 ? 'bg-yellow-500 text-yellow-950' :
-                            item.posicao === 2 ? 'bg-gray-300 text-gray-700' :
-                            item.posicao === 3 ? 'bg-amber-600 text-amber-50' :
-                            'bg-muted text-muted-foreground'
-                          }`}>
-                            {item.posicao}º
+                          {/* Posição no ranking com medalhas para top 3 */}
+                          <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                            {item.posicao === 1 ? (
+                              <span className="text-2xl">🥇</span>
+                            ) : item.posicao === 2 ? (
+                              <span className="text-2xl">🥈</span>
+                            ) : item.posicao === 3 ? (
+                              <span className="text-2xl">🥉</span>
+                            ) : (
+                              <span className="text-sm font-bold text-muted-foreground">{item.posicao}º</span>
+                            )}
                           </div>
                           
                           {/* Nome do responsável */}
@@ -1441,7 +1482,7 @@ const RadarComercial = () => {
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
-                  <Target className="h-5 w-5 text-blue-600" />
+                  <Trophy className="h-5 w-5 text-blue-500" />
                   <CardTitle className="text-lg">Ranking de Conversão por Responsável</CardTitle>
                 </div>
                 <p className="text-sm text-muted-foreground">Ordenado por taxa de conversão (%)</p>
@@ -1455,14 +1496,17 @@ const RadarComercial = () => {
                       
                       return (
                         <div key={item.responsavel} className="flex items-center gap-3">
-                          {/* Posição no ranking */}
-                          <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                            item.posicao === 1 ? 'bg-yellow-500 text-yellow-950' :
-                            item.posicao === 2 ? 'bg-gray-300 text-gray-700' :
-                            item.posicao === 3 ? 'bg-amber-600 text-amber-50' :
-                            'bg-muted text-muted-foreground'
-                          }`}>
-                            {item.posicao}º
+                          {/* Posição no ranking com medalhas para top 3 */}
+                          <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                            {item.posicao === 1 ? (
+                              <span className="text-2xl">🥇</span>
+                            ) : item.posicao === 2 ? (
+                              <span className="text-2xl">🥈</span>
+                            ) : item.posicao === 3 ? (
+                              <span className="text-2xl">🥉</span>
+                            ) : (
+                              <span className="text-sm font-bold text-muted-foreground">{item.posicao}º</span>
+                            )}
                           </div>
                           
                           {/* Nome do responsável */}
