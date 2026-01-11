@@ -358,13 +358,6 @@ const RadarComercial = () => {
         </div>
       </div>
 
-      {/* Filtro de Semanas */}
-      <WeekFilter
-        weeks={weeks}
-        selectedWeek={selectedWeek}
-        onWeekChange={setSelectedWeek}
-        isLoading={isLoading}
-      />
 
       {/* Cards de métricas */}
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3 mb-8">
@@ -440,6 +433,14 @@ const RadarComercial = () => {
           <h2 className="text-lg font-semibold text-foreground">Radar Atendimentos</h2>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-8">
+          {/* Filtro de Semanas */}
+          <WeekFilter
+            weeks={weeks}
+            selectedWeek={selectedWeek}
+            onWeekChange={setSelectedWeek}
+            isLoading={isLoading}
+          />
+
           {/* Gráfico de Atendimentos por Semana */}
           <Card>
         <CardHeader>
