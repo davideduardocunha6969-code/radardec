@@ -1692,21 +1692,48 @@ const RadarComercial = () => {
           <h2 className="text-lg font-semibold text-foreground">Radar de Negociações</h2>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-8">
-          {/* Placeholder para conteúdo futuro */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <BarChart3 className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Métricas de Negociações</CardTitle>
-              </div>
-              <p className="text-sm text-muted-foreground">Acompanhamento de negociações em andamento</p>
-            </CardHeader>
-            <CardContent>
-              <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
-                <p className="text-muted-foreground text-sm">Conteúdo em desenvolvimento</p>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Cards de métricas de negociações */}
+          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-2">
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total em Negociação
+                </CardTitle>
+                <Target className="h-4 w-4 text-blue-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-blue-600">
+                  {isLoading ? '--' : filteredData.filter(r => 
+                    r.resultado?.toLowerCase().includes('negociação') || 
+                    r.resultado?.toLowerCase().includes('negociacao')
+                  ).length}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Casos com resultado "Negociação"
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Aguarda Documentação
+                </CardTitle>
+                <Calendar className="h-4 w-4 text-orange-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-orange-600">
+                  {isLoading ? '--' : filteredData.filter(r => 
+                    r.resultado?.toLowerCase().includes('aguarda documentação') || 
+                    r.resultado?.toLowerCase().includes('aguarda documentacao')
+                  ).length}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Casos aguardando documentação
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Botão para recolher seção */}
           <div className="flex justify-center pt-4">
