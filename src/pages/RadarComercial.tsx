@@ -3731,6 +3731,125 @@ const RadarComercial = () => {
             </CardContent>
           </Card>
 
+          {/* Gráfico de Evolução Semanal de Contatos */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-5 w-5 text-amber-500" />
+                <CardTitle className="text-lg">Evolução Semanal de Contatos</CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Quantidade de clientes contatados por semana. 
+                <span className="text-destructive font-medium ml-1">Linha vermelha = Meta semanal (~11.87 contatos para alcançar 629 no ano)</span>
+              </p>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                // Calcula a meta semanal: 629 contatos / 53 semanas
+                const metaSemanal = 629 / 53; // ≈ 11.87
+                
+                // Agrupa contatos por semana (Coluna D)
+                const contatosPorSemana: Record<number, number> = {};
+                
+                indicacoesData.forEach(record => {
+                  const semanaStr = record.semana?.trim();
+                  const semana = parseInt(semanaStr) || 0;
+                  if (semana >= 1 && semana <= 53) {
+                    contatosPorSemana[semana] = (contatosPorSemana[semana] || 0) + 1;
+                  }
+                });
+                
+                // Cria array com TODAS as semanas de 1 a 53
+                const chartData = [];
+                for (let semana = 1; semana <= 53; semana++) {
+                  chartData.push({
+                    semana,
+                    contatos: contatosPorSemana[semana] || 0,
+                  });
+                }
+                
+                // Calcula total para exibição
+                const totalContatos = Object.values(contatosPorSemana).reduce((sum, v) => sum + v, 0);
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-4">
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Total de contatos: </span>
+                          <span className="font-bold text-amber-600">{totalContatos}</span>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Meta anual: </span>
+                          <span className="font-bold text-foreground">629</span>
+                        </div>
+                        <div className="text-sm">
+                          <span className="text-muted-foreground">Progresso: </span>
+                          <span className={`font-bold ${totalContatos >= 629 ? 'text-green-600' : 'text-amber-600'}`}>
+                            {((totalContatos / 629) * 100).toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <ChartContainer config={chartConfig} className="h-[350px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData} margin={{ top: 30, right: 10, left: 10, bottom: 20 }}>
+                          <XAxis 
+                            dataKey="semana" 
+                            tick={{ fontSize: 9 }}
+                            interval={0}
+                            angle={-45}
+                            textAnchor="end"
+                            height={50}
+                            className="text-muted-foreground"
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <Tooltip 
+                            content={<ChartTooltipContent />}
+                            formatter={(value: number) => [`${value} contatos`, 'Contatos']}
+                            labelFormatter={(label) => `Semana ${label}`}
+                          />
+                          {/* Linha de meta (629/53 ≈ 11.87) */}
+                          <ReferenceLine 
+                            y={metaSemanal} 
+                            stroke="#ef4444"
+                            strokeWidth={2}
+                            strokeDasharray="8 4"
+                          />
+                          <ReferenceLine 
+                            y={metaSemanal} 
+                            stroke="transparent"
+                            label={{ 
+                              value: `Meta: ${metaSemanal.toFixed(1)}`, 
+                              position: 'insideTopRight',
+                              fill: '#ef4444',
+                              fontSize: 11,
+                              fontWeight: 600
+                            }}
+                          />
+                          <Bar 
+                            dataKey="contatos" 
+                            fill="hsl(var(--chart-3))"
+                            radius={[4, 4, 0, 0]}
+                          >
+                            <LabelList 
+                              dataKey="contatos" 
+                              position="top" 
+                              className="fill-foreground"
+                              fontSize={9}
+                              formatter={(value: number) => value > 0 ? value : ''}
+                            />
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+
           {/* Botão para recolher seção */}
           <div className="flex justify-center pt-4">
             <button
