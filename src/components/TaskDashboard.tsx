@@ -7,10 +7,11 @@ import {
   Clock,
   CheckCircle2,
   Users,
+  AlertTriangle,
 } from "lucide-react";
 import { Bar, BarChart, Line, LineChart, XAxis, YAxis, CartesianGrid, Legend, LabelList } from "recharts";
 import MetricCard from "./MetricCard";
-import { TaskData } from "@/hooks/useSheetData";
+import { TaskData, ConformityError } from "@/hooks/useSheetData";
 import { calculateBusinessDays } from "@/utils/businessDays";
 import {
   ChartContainer,
@@ -34,6 +35,7 @@ type ChartPeriod = "all" | "7d" | "30d" | "90d" | "custom";
 
 interface TaskDashboardProps {
   tasks: TaskData[];
+  conformityErrors: ConformityError[];
   holidays: Date[];
   startDate?: Date;
   endDate?: Date;
@@ -42,6 +44,7 @@ interface TaskDashboardProps {
 
 export function TaskDashboard({
   tasks,
+  conformityErrors,
   holidays,
   startDate,
   endDate,
@@ -79,6 +82,36 @@ export function TaskDashboard({
       return true;
     });
   }, [tasks, startDate, endDate, selectedControllers]);
+
+  // Filtra erros de conformidade por período e destinatário
+  const filteredConformityErrors = useMemo(() => {
+    return conformityErrors.filter(error => {
+      if (selectedControllers.length > 0 && !selectedControllers.includes(error.recipient)) {
+        return false;
+      }
+      
+      if (error.date) {
+        if (startDate && error.date < startDate) return false;
+        if (endDate && error.date > endDate) return false;
+      }
+      
+      return true;
+    });
+  }, [conformityErrors, startDate, endDate, selectedControllers]);
+
+  // Erros de conformidade por destinatário
+  const conformityErrorsByRecipient = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    filteredConformityErrors.forEach(error => {
+      const recipient = error.recipient || 'Não identificado';
+      counts[recipient] = (counts[recipient] || 0) + 1;
+    });
+    
+    return Object.entries(counts)
+      .map(([name, total]) => ({ name, total }))
+      .sort((a, b) => b.total - a.total);
+  }, [filteredConformityErrors]);
 
   // Tarefas pendentes (sem data de cumprimento)
   const pendingTasks = useMemo(() => {
@@ -434,6 +467,14 @@ export function TaskDashboard({
           icon={<Clock className="h-5 w-5 text-primary" />}
           className="animate-slide-up stagger-4"
         />
+        <MetricCard
+          title="Erros de Conformidade"
+          value={filteredConformityErrors.length}
+          subtitle="Identificados no período"
+          icon={<AlertTriangle className="h-5 w-5 text-destructive" />}
+          variant={filteredConformityErrors.length > 0 ? "warning" : "default"}
+          className="animate-slide-up stagger-5"
+        />
       </div>
 
       {/* Gráficos lado a lado */}
@@ -509,6 +550,45 @@ export function TaskDashboard({
                 <Bar
                   dataKey="pendentes"
                   fill="var(--color-pendentes)"
+                  radius={[4, 4, 0, 0]}
+                />
+              </BarChart>
+            </ChartContainer>
+          </CardContent>
+        </Card>
+
+        {/* Gráfico: Erros de Conformidade por Destinatário */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Erros de Conformidade por Destinatário</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ChartContainer
+              config={{
+                total: {
+                  label: "Erros",
+                  color: "hsl(var(--destructive))",
+                },
+              }}
+              className="h-[300px] w-full"
+            >
+              <BarChart data={conformityErrorsByRecipient} layout="horizontal">
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                <XAxis
+                  dataKey="name"
+                  tickLine={false}
+                  axisLine={false}
+                  tick={{ fontSize: 12 }}
+                  interval={0}
+                  angle={-45}
+                  textAnchor="end"
+                  height={80}
+                />
+                <YAxis tickLine={false} axisLine={false} />
+                <ChartTooltip content={<ChartTooltipContent />} />
+                <Bar
+                  dataKey="total"
+                  fill="var(--color-total)"
                   radius={[4, 4, 0, 0]}
                 />
               </BarChart>

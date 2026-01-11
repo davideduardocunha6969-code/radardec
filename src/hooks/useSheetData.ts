@@ -25,11 +25,19 @@ export interface TaskData {
   rawRow: string[];
 }
 
+export interface ConformityError {
+  date: Date | null;
+  recipient: string;
+  rawRow: string[];
+}
+
 export interface SheetResponse {
   sheets: SheetData[];
   sectorMapping: SectorMapping[];
+  conformityErrors: { date: string; recipient: string; rawRow: string[] }[];
   totalSheets: number;
   totalTasks: number;
+  totalConformityErrors: number;
   lastUpdated: string;
 }
 
@@ -57,6 +65,7 @@ function parseDate(dateStr: string): Date | null {
 export function useSheetData() {
   const [sheets, setSheets] = useState<SheetData[]>([]);
   const [tasks, setTasks] = useState<TaskData[]>([]);
+  const [conformityErrors, setConformityErrors] = useState<ConformityError[]>([]);
   const [sectorMapping, setSectorMapping] = useState<SectorMapping[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -154,9 +163,19 @@ export function useSheetData() {
       console.log('Sheet data received:', data.data);
       
       const mappings = data.data.sectorMapping || [];
+      const rawConformityErrors = data.data.conformityErrors || [];
+      
+      // Processa erros de conformidade
+      const processedConformityErrors: ConformityError[] = rawConformityErrors.map((err: { date: string; recipient: string; rawRow: string[] }) => ({
+        date: parseDate(err.date),
+        recipient: err.recipient || 'Não identificado',
+        rawRow: err.rawRow
+      }));
+      
       setSheets(data.data.sheets);
       setSectorMapping(mappings);
       setTasks(processSheets(data.data.sheets, mappings));
+      setConformityErrors(processedConformityErrors);
       setLastUpdated(new Date(data.data.lastUpdated));
       setError(null);
       
@@ -181,6 +200,7 @@ export function useSheetData() {
   return {
     sheets,
     tasks,
+    conformityErrors,
     sectorMapping,
     isLoading,
     error,

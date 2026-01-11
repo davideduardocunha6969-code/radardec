@@ -13,6 +13,9 @@ const MAIN_SHEET_GID = 0;
 // Aba de mapeamento de tipos de ação -> setores
 const SECTOR_MAPPING_GID = 1319762905;
 
+// Aba de erros de conformidade (GID 1590941680)
+const CONFORMITY_ERRORS_GID = 1590941680;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -80,6 +83,35 @@ serve(async (req) => {
       console.log('Error fetching sector mapping:', err);
     }
     
+    // Busca a aba de erros de conformidade
+    let conformityErrors: { date: string; recipient: string; rawRow: string[] }[] = [];
+    try {
+      const conformityUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${CONFORMITY_ERRORS_GID}`;
+      console.log(`Fetching conformity errors (gid=${CONFORMITY_ERRORS_GID})...`);
+      
+      const conformityResponse = await fetch(conformityUrl);
+      
+      if (conformityResponse.ok) {
+        const csvText = await conformityResponse.text();
+        const rows = parseCSV(csvText);
+        
+        // Pula o header
+        // Coluna B (1) = Data do erro
+        // Coluna K (10) = Destinatário
+        conformityErrors = rows.slice(1)
+          .filter(row => row.some(cell => cell.trim() !== ''))
+          .map(row => ({
+            date: row[1] || '',
+            recipient: (row[10] || '').trim(),
+            rawRow: row
+          }));
+        
+        console.log(`Found ${conformityErrors.length} conformity errors`);
+      }
+    } catch (err) {
+      console.log('Error fetching conformity errors:', err);
+    }
+    
     // Calcula estatísticas agregadas
     const totalTasks = mainSheet.rows.length;
     
@@ -89,8 +121,10 @@ serve(async (req) => {
         data: {
           sheets: [mainSheet],
           sectorMapping,
+          conformityErrors,
           totalSheets: 1,
           totalTasks,
+          totalConformityErrors: conformityErrors.length,
           lastUpdated: new Date().toISOString()
         }
       }),
