@@ -633,15 +633,22 @@ const RadarComercial = () => {
         onOpenChange={setRadarAtendimentosOpen}
         className="mb-8"
       >
-        <CollapsibleTrigger className="flex items-center gap-3 w-full p-4 bg-card rounded-lg border hover:bg-muted/50 transition-colors mb-4">
-          {radarAtendimentosOpen ? (
-            <ChevronDown className="h-5 w-5 text-primary" />
-          ) : (
-            <ChevronRight className="h-5 w-5 text-primary" />
-          )}
-          <h2 className="text-lg font-semibold text-foreground">Radar Atendimentos</h2>
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 rounded-lg border border-blue-500/30 hover:border-blue-500/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <BarChart3 className="h-6 w-6 text-blue-500" />
+              <h2 className="text-xl font-bold text-foreground">Radar Atendimentos</h2>
+            </div>
+            <div className="flex items-center gap-4">
+              {radarAtendimentosOpen ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </div>
         </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-8">
+        <CollapsibleContent className="space-y-8 mt-6">
           {/* Filtros */}
           <div className="space-y-4">
             {/* Filtro de Semanas */}
@@ -1363,15 +1370,22 @@ const RadarComercial = () => {
         onOpenChange={setRadarConversaoOpen}
         className="mb-8"
       >
-        <CollapsibleTrigger className="flex items-center gap-3 w-full p-4 bg-card rounded-lg border hover:bg-muted/50 transition-colors mb-4">
-          {radarConversaoOpen ? (
-            <ChevronDown className="h-5 w-5 text-primary" />
-          ) : (
-            <ChevronRight className="h-5 w-5 text-primary" />
-          )}
-          <h2 className="text-lg font-semibold text-foreground">Radar de Origens</h2>
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-emerald-600/20 to-green-600/20 rounded-lg border border-emerald-500/30 hover:border-emerald-500/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <TrendingUp className="h-6 w-6 text-emerald-500" />
+              <h2 className="text-xl font-bold text-foreground">Radar de Origens</h2>
+            </div>
+            <div className="flex items-center gap-4">
+              {radarConversaoOpen ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </div>
         </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-8">
+        <CollapsibleContent className="space-y-8 mt-6">
           {/* Filtro de Semanas */}
           <WeekFilter
             weeks={weeks}
@@ -1684,15 +1698,22 @@ const RadarComercial = () => {
         onOpenChange={setRadarNegociacoesOpen}
         className="mb-8"
       >
-        <CollapsibleTrigger className="flex items-center gap-3 w-full p-4 bg-card rounded-lg border hover:bg-muted/50 transition-colors mb-4">
-          {radarNegociacoesOpen ? (
-            <ChevronDown className="h-5 w-5 text-primary" />
-          ) : (
-            <ChevronRight className="h-5 w-5 text-primary" />
-          )}
-          <h2 className="text-lg font-semibold text-foreground">Radar de Negociações</h2>
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-600/20 to-violet-600/20 rounded-lg border border-purple-500/30 hover:border-purple-500/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <Target className="h-6 w-6 text-purple-500" />
+              <h2 className="text-xl font-bold text-foreground">Radar de Negociações</h2>
+            </div>
+            <div className="flex items-center gap-4">
+              {radarNegociacoesOpen ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </div>
         </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-8">
+        <CollapsibleContent className="space-y-8 mt-6">
           {/* Cards de métricas de negociações por setor */}
           <div className="grid gap-6 md:grid-cols-2">
             {/* Card de Negociação por Setor */}
