@@ -9,7 +9,8 @@ import {
   ArrowUpRight,
   Loader2,
   ChevronDown,
-  ChevronRight
+  ChevronRight,
+  ChevronUp
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeekFilter } from "@/components/WeekFilter";
@@ -903,6 +904,17 @@ const RadarComercial = () => {
             <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
           </div>
         )}
+          </div>
+
+          {/* Botão para recolher seção */}
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={() => setRadarAtendimentosOpen(false)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+            >
+              <ChevronUp className="h-4 w-4" />
+              Recolher seção
+            </button>
           </div>
         </CollapsibleContent>
       </Collapsible>
