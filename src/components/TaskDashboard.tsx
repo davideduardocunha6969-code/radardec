@@ -515,11 +515,11 @@ export function TaskDashboard({
           className="animate-slide-up stagger-6"
         />
         <MetricCard
-          title="Taxa de Erros Conformidade"
-          value={`${filteredTasks.length > 0 ? ((filteredConformityErrors.length / filteredTasks.length) * 100).toFixed(4) : 0}%`}
-          subtitle="Erros conformidade / Total de tarefas"
-          icon={<Percent className="h-5 w-5 text-destructive" />}
-          variant={filteredConformityErrors.length > 0 ? "warning" : "default"}
+          title="Taxa de Acerto Conformidade"
+          value={`${filteredTasks.length > 0 ? (((filteredTasks.length - filteredConformityErrors.length) / filteredTasks.length) * 100).toFixed(4) : 100}%`}
+          subtitle="Acertos / Total de tarefas"
+          icon={<Percent className="h-5 w-5 text-success" />}
+          variant="success"
           className="animate-slide-up stagger-7"
         />
         <MetricCard
