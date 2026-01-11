@@ -1841,14 +1841,14 @@ const RadarComercial = () => {
 
           {/* Gráficos de Negociação e Aguarda Documentação por Responsável */}
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Ranking de Negociação por Origem */}
+            {/* Ranking de Negociação por Responsável */}
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <TrendingUp className="h-5 w-5 text-blue-600" />
-                  <CardTitle className="text-lg">Ranking de Negociação por Origem</CardTitle>
+                  <CardTitle className="text-lg">Negociações por Responsável</CardTitle>
                 </div>
-                <p className="text-sm text-muted-foreground">Casos em negociação ordenados por origem</p>
+                <p className="text-sm text-muted-foreground">Casos em negociação ordenados por responsável</p>
               </CardHeader>
               <CardContent>
                 {(() => {
@@ -1857,16 +1857,16 @@ const RadarComercial = () => {
                     r.resultado?.toLowerCase().includes('negociacao')
                   );
                   
-                  const negociacaoPorOrigem: Record<string, number> = {};
+                  const negociacaoPorResponsavel: Record<string, number> = {};
                   casosNegociacao.forEach(r => {
-                    const origem = r.origemCliente || 'Sem origem';
-                    negociacaoPorOrigem[origem] = (negociacaoPorOrigem[origem] || 0) + 1;
+                    const responsavel = r.responsavel || 'Sem responsável';
+                    negociacaoPorResponsavel[responsavel] = (negociacaoPorResponsavel[responsavel] || 0) + 1;
                   });
                   
                   const total = casosNegociacao.length;
-                  const rankingData = Object.entries(negociacaoPorOrigem)
-                    .map(([origem, count]) => ({
-                      origem,
+                  const rankingData = Object.entries(negociacaoPorResponsavel)
+                    .map(([responsavel, count]) => ({
+                      responsavel,
                       total: count,
                       percentage: total > 0 ? ((count / total) * 100).toFixed(1) : '0',
                     }))
@@ -1892,7 +1892,7 @@ const RadarComercial = () => {
                         const barWidth = maxTotal > 0 ? (item.total / maxTotal) * 100 : 0;
                         
                         return (
-                          <div key={item.origem} className="flex items-center gap-3">
+                          <div key={item.responsavel} className="flex items-center gap-3">
                             {/* Posição no ranking */}
                             <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
                               item.posicao === 1 ? 'bg-yellow-500 text-yellow-950' :
@@ -1903,9 +1903,9 @@ const RadarComercial = () => {
                               {item.posicao}º
                             </div>
                             
-                            {/* Nome da origem */}
-                            <div className="flex-shrink-0 w-28 text-sm font-medium truncate" title={item.origem}>
-                              {item.origem}
+                            {/* Nome do responsável */}
+                            <div className="flex-shrink-0 w-28 text-sm font-medium truncate" title={item.responsavel}>
+                              {item.responsavel}
                             </div>
                             
                             {/* Barra horizontal */}
