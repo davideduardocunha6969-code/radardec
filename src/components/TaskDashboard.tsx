@@ -530,14 +530,21 @@ export function TaskDashboard({
             />
           );
         })()}
-        <MetricCard
-          title="Taxa de Acerto Prazo"
-          value={`${filteredTasks.length > 0 ? (((filteredTasks.length - filteredDeadlineErrors.length) / filteredTasks.length) * 100).toFixed(4) : 100}%`}
-          subtitle="Acertos / Total de tarefas"
-          icon={<Percent className="h-5 w-5 text-success" />}
-          variant="success"
-          className="animate-slide-up stagger-8"
-        />
+        {(() => {
+          const deadlineAccuracyRate = filteredTasks.length > 0 
+            ? ((filteredTasks.length - filteredDeadlineErrors.length) / filteredTasks.length) * 100 
+            : 100;
+          return (
+            <MetricCard
+              title="Taxa de Acerto Prazo"
+              value={`${deadlineAccuracyRate.toFixed(4)}%`}
+              subtitle={deadlineAccuracyRate < 99.80 ? "Fora da Meta" : deadlineAccuracyRate === 99.80 ? "Atenção, Limite da Meta" : "Dentro da Meta"}
+              icon={<Percent className={`h-5 w-5 ${deadlineAccuracyRate < 99.80 ? "text-destructive" : deadlineAccuracyRate === 99.80 ? "text-warning" : "text-success"}`} />}
+              variant={deadlineAccuracyRate < 99.80 ? "warning" : deadlineAccuracyRate === 99.80 ? "warning" : "success"}
+              className="animate-slide-up stagger-8"
+            />
+          );
+        })()}
       </div>
 
       {/* Gráficos lado a lado */}
