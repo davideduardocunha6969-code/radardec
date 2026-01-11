@@ -295,6 +295,39 @@ const RadarComercial = () => {
         posicao: index + 1,
       }));
   }, [filteredData]);
+
+  // Dados para o card de resultados por origem
+  const resultadosPorOrigemData = useMemo(() => {
+    const stats: Record<string, Record<string, number>> = {};
+    const allResultados = new Set<string>();
+    
+    filteredData.forEach(record => {
+      if (record.origemCliente) {
+        if (!stats[record.origemCliente]) {
+          stats[record.origemCliente] = {};
+        }
+        const resultado = record.resultado || 'Sem resultado';
+        allResultados.add(resultado);
+        stats[record.origemCliente][resultado] = (stats[record.origemCliente][resultado] || 0) + 1;
+      }
+    });
+    
+    const resultadosArray = Array.from(allResultados).sort();
+    
+    const origensData = Object.entries(stats)
+      .map(([origem, resultados]) => {
+        const total = Object.values(resultados).reduce((sum, val) => sum + val, 0);
+        return {
+          origem,
+          total,
+          resultados,
+        };
+      })
+      .sort((a, b) => b.total - a.total);
+    
+    return { origensData, resultadosArray };
+  }, [filteredData]);
+
   const noShowWeeklyChartData = useMemo(() => {
     const weekStats: Record<number, { total: number; noShow: number }> = {};
     
@@ -1304,6 +1337,64 @@ const RadarComercial = () => {
                       </div>
                     );
                   })}
+                </div>
+              ) : (
+                <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
+                  <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {/* Card de Resultados por Origem */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Resultados por Origem do Cliente</CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">Distribuição de resultados por cada origem de atendimento</p>
+            </CardHeader>
+            <CardContent>
+              {resultadosPorOrigemData.origensData.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b">
+                        <th className="text-left py-3 px-2 font-semibold text-foreground sticky left-0 bg-card">Origem</th>
+                        <th className="text-center py-3 px-2 font-semibold text-foreground">Total</th>
+                        {resultadosPorOrigemData.resultadosArray.map(resultado => (
+                          <th key={resultado} className="text-center py-3 px-2 font-semibold text-foreground min-w-[100px]">
+                            {resultado}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {resultadosPorOrigemData.origensData.map((item, index) => (
+                        <tr key={item.origem} className={index % 2 === 0 ? 'bg-muted/20' : ''}>
+                          <td className="py-2 px-2 font-medium text-foreground sticky left-0 bg-inherit">{item.origem}</td>
+                          <td className="text-center py-2 px-2 font-bold text-primary">{item.total}</td>
+                          {resultadosPorOrigemData.resultadosArray.map(resultado => {
+                            const count = item.resultados[resultado] || 0;
+                            const percentage = item.total > 0 ? ((count / item.total) * 100).toFixed(0) : '0';
+                            return (
+                              <td key={resultado} className="text-center py-2 px-2">
+                                {count > 0 ? (
+                                  <div className="flex flex-col items-center">
+                                    <span className="font-medium">{count}</span>
+                                    <span className="text-xs text-muted-foreground">({percentage}%)</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground">-</span>
+                                )}
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
               ) : (
                 <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
