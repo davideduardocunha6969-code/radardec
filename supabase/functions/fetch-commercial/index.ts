@@ -168,8 +168,9 @@ serve(async (req) => {
     }
     
     // Fetch SDR Messages sheet (GID 686842485)
-    // Coluna A = Semana, Coluna B = Mirelly, Coluna C = Stefania, Coluna D = Shazelli
+    // Coluna A = Semana, demais colunas = SDRs (nomes no cabeçalho)
     let sdrMessagesData: any[] = [];
+    let sdrMessagesSdrNames: string[] = [];
     
     try {
       const sdrMsgCsvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SDR_MESSAGES_GID}`;
@@ -190,15 +191,27 @@ serve(async (req) => {
             console.log(`Found SDR Messages sheet with ${sdrMsgDataRows.length} rows`);
             console.log('SDR Messages Headers:', sdrMsgHeaders);
             
-            // Mapeia os dados de mensagens por SDR
-            sdrMessagesData = sdrMsgDataRows.map(row => ({
-              semana: (row[0] || '').trim(),
-              mirelly: parseInt((row[1] || '0').replace(/[^\d]/g, '')) || 0,
-              stefania: parseInt((row[2] || '0').replace(/[^\d]/g, '')) || 0,
-              shazelli: parseInt((row[3] || '0').replace(/[^\d]/g, '')) || 0,
-            })).filter(d => d.semana !== '');
+            // Extrai nomes dos SDRs a partir das colunas B em diante (índice 1+)
+            sdrMessagesSdrNames = sdrMsgHeaders.slice(1).map(h => h.trim()).filter(h => h !== '');
+            console.log('SDR Names from headers:', sdrMessagesSdrNames);
             
-            console.log(`SDR Messages data loaded: ${sdrMessagesData.length} records`);
+            // Mapeia os dados de mensagens por SDR dinamicamente
+            sdrMessagesData = sdrMsgDataRows.map(row => {
+              const record: Record<string, any> = {
+                semana: (row[0] || '').trim(),
+              };
+              
+              // Adiciona cada SDR como propriedade dinâmica
+              sdrMessagesSdrNames.forEach((sdrName, index) => {
+                const colIndex = index + 1; // Colunas B, C, D... são índices 1, 2, 3...
+                const value = parseInt((row[colIndex] || '0').replace(/[^\d]/g, '')) || 0;
+                record[sdrName] = value;
+              });
+              
+              return record;
+            }).filter(d => d.semana !== '');
+            
+            console.log(`SDR Messages data loaded: ${sdrMessagesData.length} records for ${sdrMessagesSdrNames.length} SDRs`);
           }
         }
       } else {
@@ -222,6 +235,7 @@ serve(async (req) => {
           sdrWeeks,
           sdrTotalRecords: sdrData.length,
           sdrMessagesData,
+          sdrMessagesSdrNames,
           lastUpdated: new Date().toISOString()
         }
       }),

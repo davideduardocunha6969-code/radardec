@@ -50,7 +50,7 @@ import {
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
 const RadarComercial = () => {
-  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, isLoading, error } = useCommercialData();
+  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, isLoading, error } = useCommercialData();
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedSetor, setSelectedSetor] = useState<string | null>(null);
   const [selectedResponsavel, setSelectedResponsavel] = useState<string | null>(null);
@@ -3517,145 +3517,89 @@ const RadarComercial = () => {
             </Card>
           )}
 
-          {/* Gráficos de Mensagens Enviadas por SDR */}
+          {/* Gráficos de Mensagens Enviadas por SDR - Dinâmico */}
           <div className="flex flex-col gap-6">
-            {/* Gráfico Mirelly */}
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-3">
-                  <BarChart3 className="h-5 w-5 text-pink-500" />
-                  <CardTitle className="text-base">Mensagens - Mirelly</CardTitle>
-                </div>
-                <p className="text-xs text-muted-foreground">Quantidade de mensagens por semana</p>
-              </CardHeader>
-              <CardContent>
-                {sdrMessagesData.length > 0 ? (
-                  <div className="h-[280px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={sdrMessagesData} margin={{ top: 20, right: 10, left: 10, bottom: 40 }}>
-                        <XAxis 
-                          dataKey="semana" 
-                          tick={{ fontSize: 9 }}
-                          interval={0}
-                          angle={-45}
-                          textAnchor="end"
-                          height={60}
-                        />
-                        <YAxis tick={{ fontSize: 10 }} />
-                        <Tooltip 
-                          formatter={(value: number) => [value, 'Mensagens']}
-                          labelFormatter={(label) => `Semana ${label}`}
-                          contentStyle={{
-                            backgroundColor: 'hsl(var(--card))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px',
-                          }}
-                        />
-                        <Bar dataKey="mirelly" fill="hsl(var(--chart-1))" radius={[4, 4, 0, 0]}>
-                          <LabelList dataKey="mirelly" position="top" fontSize={9} />
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
+            {sdrMessagesSdrNames.length > 0 ? (
+              sdrMessagesSdrNames.map((sdrName, index) => {
+                const chartColors = [
+                  'hsl(var(--chart-1))',
+                  'hsl(var(--chart-2))',
+                  'hsl(var(--chart-3))',
+                  'hsl(var(--chart-4))',
+                  'hsl(var(--chart-5))',
+                ];
+                const iconColors = [
+                  'text-pink-500',
+                  'text-purple-500',
+                  'text-blue-500',
+                  'text-emerald-500',
+                  'text-orange-500',
+                ];
+                const fillColor = chartColors[index % chartColors.length];
+                const iconColor = iconColors[index % iconColors.length];
+                
+                return (
+                  <Card key={sdrName}>
+                    <CardHeader className="pb-2">
+                      <div className="flex items-center gap-3">
+                        <BarChart3 className={`h-5 w-5 ${iconColor}`} />
+                        <CardTitle className="text-base">Mensagens - {sdrName}</CardTitle>
+                      </div>
+                      <p className="text-xs text-muted-foreground">Quantidade de mensagens por semana</p>
+                    </CardHeader>
+                    <CardContent>
+                      {sdrMessagesData.length > 0 ? (
+                        <div className="h-[280px]">
+                          <ResponsiveContainer width="100%" height="100%">
+                            <BarChart data={sdrMessagesData} margin={{ top: 20, right: 10, left: 10, bottom: 40 }}>
+                              <XAxis 
+                                dataKey="semana" 
+                                tick={{ fontSize: 9 }}
+                                interval={0}
+                                angle={-45}
+                                textAnchor="end"
+                                height={60}
+                              />
+                              <YAxis tick={{ fontSize: 10 }} />
+                              <Tooltip 
+                                formatter={(value: number) => [value, 'Mensagens']}
+                                labelFormatter={(label) => `Semana ${label}`}
+                                contentStyle={{
+                                  backgroundColor: 'hsl(var(--card))',
+                                  border: '1px solid hsl(var(--border))',
+                                  borderRadius: '8px',
+                                }}
+                              />
+                              <Bar dataKey={sdrName} fill={fillColor} radius={[4, 4, 0, 0]}>
+                                <LabelList dataKey={sdrName} position="top" fontSize={9} />
+                              </Bar>
+                            </BarChart>
+                          </ResponsiveContainer>
+                        </div>
+                      ) : (
+                        <div className="h-[280px] flex items-center justify-center bg-muted/30 rounded-lg">
+                          <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })
+            ) : (
+              <Card className="bg-amber-500/10 border-amber-500/30">
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-3">
+                    <BarChart3 className="h-6 w-6 text-amber-600" />
+                    <div>
+                      <p className="font-medium text-amber-700">Nenhum SDR encontrado</p>
+                      <p className="text-sm text-muted-foreground">
+                        Verifique se a aba de mensagens (GID 686842485) possui SDRs no cabeçalho.
+                      </p>
+                    </div>
                   </div>
-                ) : (
-                  <div className="h-[280px] flex items-center justify-center bg-muted/30 rounded-lg">
-                    <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Gráfico Stefania */}
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-3">
-                  <BarChart3 className="h-5 w-5 text-purple-500" />
-                  <CardTitle className="text-base">Mensagens - Stefania</CardTitle>
-                </div>
-                <p className="text-xs text-muted-foreground">Quantidade de mensagens por semana</p>
-              </CardHeader>
-              <CardContent>
-                {sdrMessagesData.length > 0 ? (
-                  <div className="h-[280px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={sdrMessagesData} margin={{ top: 20, right: 10, left: 10, bottom: 40 }}>
-                        <XAxis 
-                          dataKey="semana" 
-                          tick={{ fontSize: 9 }}
-                          interval={0}
-                          angle={-45}
-                          textAnchor="end"
-                          height={60}
-                        />
-                        <YAxis tick={{ fontSize: 10 }} />
-                        <Tooltip 
-                          formatter={(value: number) => [value, 'Mensagens']}
-                          labelFormatter={(label) => `Semana ${label}`}
-                          contentStyle={{
-                            backgroundColor: 'hsl(var(--card))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px',
-                          }}
-                        />
-                        <Bar dataKey="stefania" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]}>
-                          <LabelList dataKey="stefania" position="top" fontSize={9} />
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="h-[280px] flex items-center justify-center bg-muted/30 rounded-lg">
-                    <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            {/* Gráfico Shazelli */}
-            <Card>
-              <CardHeader className="pb-2">
-                <div className="flex items-center gap-3">
-                  <BarChart3 className="h-5 w-5 text-blue-500" />
-                  <CardTitle className="text-base">Mensagens - Shazelli</CardTitle>
-                </div>
-                <p className="text-xs text-muted-foreground">Quantidade de mensagens por semana</p>
-              </CardHeader>
-              <CardContent>
-                {sdrMessagesData.length > 0 ? (
-                  <div className="h-[280px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={sdrMessagesData} margin={{ top: 20, right: 10, left: 10, bottom: 40 }}>
-                        <XAxis 
-                          dataKey="semana" 
-                          tick={{ fontSize: 9 }}
-                          interval={0}
-                          angle={-45}
-                          textAnchor="end"
-                          height={60}
-                        />
-                        <YAxis tick={{ fontSize: 10 }} />
-                        <Tooltip 
-                          formatter={(value: number) => [value, 'Mensagens']}
-                          labelFormatter={(label) => `Semana ${label}`}
-                          contentStyle={{
-                            backgroundColor: 'hsl(var(--card))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px',
-                          }}
-                        />
-                        <Bar dataKey="shazelli" fill="hsl(var(--chart-3))" radius={[4, 4, 0, 0]}>
-                          <LabelList dataKey="shazelli" position="top" fontSize={9} />
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="h-[280px] flex items-center justify-center bg-muted/30 rounded-lg">
-                    <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+            )}
           </div>
 
           {/* Botão para recolher seção */}
