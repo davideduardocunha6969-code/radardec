@@ -8,7 +8,7 @@ import {
   CheckCircle2,
   Users,
 } from "lucide-react";
-import { Bar, BarChart, Line, LineChart, XAxis, YAxis, CartesianGrid } from "recharts";
+import { Bar, BarChart, Line, LineChart, XAxis, YAxis, CartesianGrid, Legend } from "recharts";
 import MetricCard from "./MetricCard";
 import { TaskData } from "@/hooks/useSheetData";
 import { calculateBusinessDays } from "@/utils/businessDays";
@@ -51,6 +51,12 @@ export function TaskDashboard({
   const [chartPeriod, setChartPeriod] = useState<ChartPeriod>("all");
   const [customChartStart, setCustomChartStart] = useState<Date>();
   const [customChartEnd, setCustomChartEnd] = useState<Date>();
+
+  // States para o segundo gráfico (por controller)
+  const [chart2ViewMode, setChart2ViewMode] = useState<ChartViewMode>("daily");
+  const [chart2Period, setChart2Period] = useState<ChartPeriod>("all");
+  const [customChart2Start, setCustomChart2Start] = useState<Date>();
+  const [customChart2End, setCustomChart2End] = useState<Date>();
 
   // Filtra tarefas por período e colaboradores
   const filteredTasks = useMemo(() => {
@@ -183,6 +189,105 @@ export function TaskDashboard({
       })
       .sort((a, b) => a.date.localeCompare(b.date));
   }, [chartFilteredTasks, chartViewMode]);
+
+  // Filtra tarefas para o segundo gráfico (por controller) baseado no período selecionado
+  const chart2FilteredTasks = useMemo(() => {
+    const today = new Date();
+    
+    return filteredTasks.filter(task => {
+      if (!task.dataDistribuicao) return false;
+      
+      switch (chart2Period) {
+        case "30d":
+          return task.dataDistribuicao >= subDays(today, 30);
+        case "90d":
+          return task.dataDistribuicao >= subDays(today, 90);
+        case "custom":
+          if (customChart2Start && task.dataDistribuicao < customChart2Start) return false;
+          if (customChart2End && task.dataDistribuicao > customChart2End) return false;
+          return true;
+        default:
+          return true;
+      }
+    });
+  }, [filteredTasks, chart2Period, customChart2Start, customChart2End]);
+
+  // Tarefas por data e por controller (para segundo gráfico de linha)
+  const tasksByDateAndController = useMemo(() => {
+    const controllersList = [...new Set(chart2FilteredTasks.map(t => t.colaborador))];
+    const counts: Record<string, Record<string, number>> = {};
+    
+    chart2FilteredTasks.forEach(task => {
+      if (task.dataDistribuicao) {
+        let dateKey: string;
+        
+        switch (chart2ViewMode) {
+          case "weekly":
+            const weekStart = startOfWeek(task.dataDistribuicao, { locale: ptBR });
+            dateKey = format(weekStart, "yyyy-MM-dd");
+            break;
+          case "monthly":
+            const monthStart = startOfMonth(task.dataDistribuicao);
+            dateKey = format(monthStart, "yyyy-MM-dd");
+            break;
+          default:
+            dateKey = format(task.dataDistribuicao, "yyyy-MM-dd");
+        }
+        
+        if (!counts[dateKey]) {
+          counts[dateKey] = {};
+          controllersList.forEach(c => counts[dateKey][c] = 0);
+        }
+        counts[dateKey][task.colaborador] = (counts[dateKey][task.colaborador] || 0) + 1;
+      }
+    });
+    
+    return Object.entries(counts)
+      .map(([date, controllers]) => {
+        const dateObj = new Date(date + "T12:00:00");
+        let dateLabel: string;
+        let fullDate: string;
+        
+        switch (chart2ViewMode) {
+          case "weekly":
+            dateLabel = `Sem ${format(dateObj, "dd/MM", { locale: ptBR })}`;
+            fullDate = `Semana de ${format(dateObj, "dd/MM/yyyy", { locale: ptBR })}`;
+            break;
+          case "monthly":
+            dateLabel = format(dateObj, "MMM/yy", { locale: ptBR });
+            fullDate = format(dateObj, "MMMM 'de' yyyy", { locale: ptBR });
+            break;
+          default:
+            dateLabel = format(dateObj, "dd/MM", { locale: ptBR });
+            fullDate = format(dateObj, "dd/MM/yyyy", { locale: ptBR });
+        }
+        
+        return { date, dateLabel, fullDate, ...controllers };
+      })
+      .sort((a, b) => a.date.localeCompare(b.date));
+  }, [chart2FilteredTasks, chart2ViewMode]);
+
+  // Lista de controllers para o gráfico
+  const controllersList = useMemo(() => {
+    return [...new Set(chart2FilteredTasks.map(t => t.colaborador))].sort();
+  }, [chart2FilteredTasks]);
+
+  // Cores para cada controller
+  const controllerColors = useMemo(() => {
+    const colors = [
+      "hsl(var(--primary))",
+      "hsl(var(--warning))",
+      "hsl(142, 76%, 36%)", // verde
+      "hsl(280, 65%, 60%)", // roxo
+      "hsl(200, 80%, 50%)", // azul claro
+      "hsl(350, 80%, 55%)", // vermelho
+    ];
+    const colorMap: Record<string, string> = {};
+    controllersList.forEach((controller, idx) => {
+      colorMap[controller] = colors[idx % colors.length];
+    });
+    return colorMap;
+  }, [controllersList]);
 
   const colaboradores = [...new Set(tasks.map(t => t.colaborador))];
 
@@ -482,6 +587,194 @@ export function TaskDashboard({
                 dot={{ fill: "var(--color-quantidade)", strokeWidth: 2, r: 4 }}
                 activeDot={{ r: 6 }}
               />
+            </LineChart>
+          </ChartContainer>
+        </CardContent>
+      </Card>
+
+      {/* Gráfico de Linha: Tarefas por Controller */}
+      <Card>
+        <CardHeader>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <CardTitle className="text-lg">Tarefas por Controller ao Longo do Tempo</CardTitle>
+            
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Seletor de visualização */}
+              <ToggleGroup
+                type="single"
+                value={chart2ViewMode}
+                onValueChange={(value) => value && setChart2ViewMode(value as ChartViewMode)}
+                className="bg-muted rounded-lg p-1"
+              >
+                <ToggleGroupItem value="daily" size="sm" className="text-xs px-3">
+                  Diário
+                </ToggleGroupItem>
+                <ToggleGroupItem value="weekly" size="sm" className="text-xs px-3">
+                  Semanal
+                </ToggleGroupItem>
+                <ToggleGroupItem value="monthly" size="sm" className="text-xs px-3">
+                  Mensal
+                </ToggleGroupItem>
+              </ToggleGroup>
+
+              {/* Seletor de período */}
+              <ToggleGroup
+                type="single"
+                value={chart2Period}
+                onValueChange={(value) => value && setChart2Period(value as ChartPeriod)}
+                className="bg-muted rounded-lg p-1"
+              >
+                <ToggleGroupItem value="all" size="sm" className="text-xs px-3">
+                  Tudo
+                </ToggleGroupItem>
+                <ToggleGroupItem value="30d" size="sm" className="text-xs px-3">
+                  30 dias
+                </ToggleGroupItem>
+                <ToggleGroupItem value="90d" size="sm" className="text-xs px-3">
+                  90 dias
+                </ToggleGroupItem>
+                <ToggleGroupItem value="custom" size="sm" className="text-xs px-3">
+                  Período
+                </ToggleGroupItem>
+              </ToggleGroup>
+            </div>
+          </div>
+
+          {/* Seletores de data customizada */}
+          {chart2Period === "custom" && (
+            <div className="flex flex-wrap items-center gap-2 mt-4">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !customChart2Start && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customChart2Start
+                      ? format(customChart2Start, "dd/MM/yyyy", { locale: ptBR })
+                      : "Data início"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customChart2Start}
+                    onSelect={setCustomChart2Start}
+                    locale={ptBR}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+
+              <span className="text-muted-foreground">até</span>
+
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className={cn(
+                      "justify-start text-left font-normal",
+                      !customChart2End && "text-muted-foreground"
+                    )}
+                  >
+                    <CalendarIcon className="mr-2 h-4 w-4" />
+                    {customChart2End
+                      ? format(customChart2End, "dd/MM/yyyy", { locale: ptBR })
+                      : "Data fim"}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0" align="start">
+                  <Calendar
+                    mode="single"
+                    selected={customChart2End}
+                    onSelect={setCustomChart2End}
+                    locale={ptBR}
+                    className="pointer-events-auto"
+                  />
+                </PopoverContent>
+              </Popover>
+
+              {(customChart2Start || customChart2End) && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setCustomChart2Start(undefined);
+                    setCustomChart2End(undefined);
+                  }}
+                >
+                  Limpar
+                </Button>
+              )}
+            </div>
+          )}
+        </CardHeader>
+        <CardContent>
+          <ChartContainer
+            config={Object.fromEntries(
+              controllersList.map(controller => [
+                controller,
+                { label: controller, color: controllerColors[controller] }
+              ])
+            )}
+            className="h-[400px] w-full"
+          >
+            <LineChart data={tasksByDateAndController}>
+              <CartesianGrid strokeDasharray="3 3" vertical={false} />
+              <XAxis
+                dataKey="dateLabel"
+                tickLine={false}
+                axisLine={false}
+                tick={{ fontSize: 11 }}
+                interval="preserveStartEnd"
+                angle={-45}
+                textAnchor="end"
+                height={60}
+              />
+              <YAxis tickLine={false} axisLine={false} allowDecimals={false} />
+              <ChartTooltip
+                content={({ active, payload, label }) => {
+                  if (active && payload && payload.length) {
+                    const data = payload[0].payload;
+                    return (
+                      <div className="rounded-lg border bg-background p-3 shadow-sm">
+                        <div className="font-medium mb-2">{data.fullDate}</div>
+                        <div className="space-y-1">
+                          {payload.map((entry: any, idx: number) => (
+                            <div key={idx} className="flex items-center gap-2 text-sm">
+                              <div
+                                className="w-3 h-3 rounded-full"
+                                style={{ backgroundColor: entry.stroke }}
+                              />
+                              <span>{entry.name}:</span>
+                              <span className="font-medium">{entry.value}</span>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  }
+                  return null;
+                }}
+              />
+              <Legend />
+              {controllersList.map((controller) => (
+                <Line
+                  key={controller}
+                  type="monotone"
+                  dataKey={controller}
+                  name={controller}
+                  stroke={controllerColors[controller]}
+                  strokeWidth={2}
+                  dot={{ fill: controllerColors[controller], strokeWidth: 2, r: 3 }}
+                  activeDot={{ r: 5 }}
+                />
+              ))}
             </LineChart>
           </ChartContainer>
         </CardContent>
