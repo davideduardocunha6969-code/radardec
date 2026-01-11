@@ -506,7 +506,7 @@ export function TaskDashboard({
       </div>
 
       {/* Métricas Gerais - Linha 3 */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-2">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <MetricCard
           title="Média Cumprimento"
           value={`${avgCompletionDays.toFixed(1)} dias`}
@@ -515,12 +515,20 @@ export function TaskDashboard({
           className="animate-slide-up stagger-6"
         />
         <MetricCard
-          title="Taxa de Erros"
+          title="Taxa de Erros Conformidade"
           value={`${filteredTasks.length > 0 ? ((filteredConformityErrors.length / filteredTasks.length) * 100).toFixed(4) : 0}%`}
-          subtitle="Erros / Total de tarefas"
+          subtitle="Erros conformidade / Total de tarefas"
           icon={<Percent className="h-5 w-5 text-destructive" />}
           variant={filteredConformityErrors.length > 0 ? "warning" : "default"}
           className="animate-slide-up stagger-7"
+        />
+        <MetricCard
+          title="Taxa de Erros Prazo"
+          value={`${filteredTasks.length > 0 ? ((filteredDeadlineErrors.length / filteredTasks.length) * 100).toFixed(4) : 0}%`}
+          subtitle="Erros prazo / Total de tarefas"
+          icon={<Percent className="h-5 w-5 text-destructive" />}
+          variant={filteredDeadlineErrors.length > 0 ? "warning" : "default"}
+          className="animate-slide-up stagger-8"
         />
       </div>
 
