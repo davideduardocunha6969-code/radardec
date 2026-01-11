@@ -3297,53 +3297,53 @@ const RadarComercial = () => {
             </Card>
           </div>
 
-          {/* Gráfico de Linha - % de Clientes com Direito por SDR */}
+          {/* Gráfico de Linha - Evolução % de Clientes com Direito por SDR ao longo das Semanas */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
                 <TrendingUp className="h-5 w-5 text-purple-500" />
-                <CardTitle className="text-lg">Taxa de Qualificação por SDR</CardTitle>
+                <CardTitle className="text-lg">Evolução da Taxa de Qualificação por SDR</CardTitle>
               </div>
-              <p className="text-sm text-muted-foreground">Percentual de clientes com direito (Coluna J) por SDR - Dados da aba principal</p>
+              <p className="text-sm text-muted-foreground">Percentual de clientes com direito (Coluna J) por SDR ao longo das semanas - Dados da aba principal</p>
             </CardHeader>
             <CardContent>
               {(() => {
-                // Calcula % de clientes com direito por SDR
-                const sdrStats: Record<string, { comDireito: number; total: number }> = {};
+                // Agrupa dados por semana e SDR
+                const weekSdrStats: Record<number, Record<string, { comDireito: number; total: number }>> = {};
+                const allSdrs = new Set<string>();
                 
+                // Filtra apenas por setor (não filtra por semana para mostrar evolução)
                 const filteredDataForChart = data.filter(record => {
-                  if (selectedWeek && record.semana !== selectedWeek) return false;
                   if (selectedSetor && record.setor !== selectedSetor) return false;
                   return true;
                 });
                 
                 filteredDataForChart.forEach(record => {
                   const sdr = record.sdr?.trim();
+                  const semana = record.semana;
                   const possuiDireito = record.possuiDireito?.trim()?.toLowerCase();
                   
-                  if (sdr) {
-                    if (!sdrStats[sdr]) {
-                      sdrStats[sdr] = { comDireito: 0, total: 0 };
+                  if (sdr && semana) {
+                    allSdrs.add(sdr);
+                    
+                    if (!weekSdrStats[semana]) {
+                      weekSdrStats[semana] = {};
                     }
-                    sdrStats[sdr].total++;
+                    if (!weekSdrStats[semana][sdr]) {
+                      weekSdrStats[semana][sdr] = { comDireito: 0, total: 0 };
+                    }
+                    weekSdrStats[semana][sdr].total++;
                     if (possuiDireito === 'sim' || possuiDireito === 'com direito') {
-                      sdrStats[sdr].comDireito++;
+                      weekSdrStats[semana][sdr].comDireito++;
                     }
                   }
                 });
                 
-                // Transforma em array para o gráfico
-                const chartData = Object.entries(sdrStats)
-                  .filter(([_, stats]) => stats.total > 0)
-                  .map(([sdr, stats]) => ({
-                    sdr,
-                    percentual: parseFloat(((stats.comDireito / stats.total) * 100).toFixed(1)),
-                    comDireito: stats.comDireito,
-                    total: stats.total
-                  }))
-                  .sort((a, b) => b.percentual - a.percentual);
+                // Transforma em array para o gráfico (semanas 1-53)
+                const chartData = [];
+                const semanasComDados = Object.keys(weekSdrStats).map(Number).sort((a, b) => a - b);
                 
-                if (chartData.length === 0) {
+                if (semanasComDados.length === 0) {
                   return (
                     <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
                       <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
@@ -3351,16 +3351,46 @@ const RadarComercial = () => {
                   );
                 }
                 
+                // Pega o intervalo de semanas com dados
+                const minSemana = Math.min(...semanasComDados);
+                const maxSemana = Math.max(...semanasComDados);
+                
+                for (let semana = minSemana; semana <= maxSemana; semana++) {
+                  const weekData: Record<string, any> = { semana: `S${semana}` };
+                  
+                  allSdrs.forEach(sdr => {
+                    const stats = weekSdrStats[semana]?.[sdr];
+                    if (stats && stats.total > 0) {
+                      weekData[sdr] = parseFloat(((stats.comDireito / stats.total) * 100).toFixed(1));
+                    } else {
+                      weekData[sdr] = null; // Sem dados para essa semana
+                    }
+                  });
+                  
+                  chartData.push(weekData);
+                }
+                
+                // Cores distintas para cada SDR
+                const SDR_COLORS = [
+                  'hsl(270, 70%, 60%)', // Roxo
+                  'hsl(200, 70%, 50%)', // Azul
+                  'hsl(150, 70%, 45%)', // Verde
+                  'hsl(30, 80%, 55%)',  // Laranja
+                  'hsl(340, 70%, 55%)', // Rosa
+                  'hsl(180, 60%, 45%)', // Ciano
+                  'hsl(60, 70%, 45%)',  // Amarelo
+                  'hsl(300, 60%, 50%)', // Magenta
+                ];
+                
+                const sdrArray = Array.from(allSdrs).sort();
+                
                 return (
-                  <div className="h-[350px]">
+                  <div className="h-[400px]">
                     <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 60 }}>
+                      <LineChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
                         <XAxis 
-                          dataKey="sdr" 
-                          tick={{ fontSize: 11 }}
-                          angle={-45}
-                          textAnchor="end"
-                          height={80}
+                          dataKey="semana" 
+                          tick={{ fontSize: 10 }}
                           interval={0}
                         />
                         <YAxis 
@@ -3369,38 +3399,35 @@ const RadarComercial = () => {
                           tick={{ fontSize: 11 }}
                         />
                         <Tooltip 
-                          formatter={(value: number, name: string, props: any) => [
-                            `${value}% (${props.payload.comDireito}/${props.payload.total})`,
-                            'Com Direito'
-                          ]}
-                          labelFormatter={(label) => `SDR: ${label}`}
+                          formatter={(value: number | null) => value !== null ? [`${value}%`, ''] : ['Sem dados', '']}
                           contentStyle={{
                             backgroundColor: 'hsl(var(--card))',
                             border: '1px solid hsl(var(--border))',
                             borderRadius: '8px',
                           }}
                         />
+                        <Legend 
+                          wrapperStyle={{ paddingTop: '10px' }}
+                          iconType="line"
+                        />
                         <ReferenceLine 
                           y={50} 
                           stroke="hsl(var(--muted-foreground))" 
                           strokeDasharray="3 3"
-                          label={{ value: '50%', position: 'right', fontSize: 10 }}
                         />
-                        <Line 
-                          type="monotone" 
-                          dataKey="percentual" 
-                          stroke="hsl(270, 70%, 60%)"
-                          strokeWidth={3}
-                          dot={{ fill: 'hsl(270, 70%, 60%)', strokeWidth: 2, r: 5 }}
-                          activeDot={{ r: 8, fill: 'hsl(270, 70%, 50%)' }}
-                        />
-                        <LabelList 
-                          dataKey="percentual" 
-                          position="top" 
-                          formatter={(value: number) => `${value}%`}
-                          fontSize={10}
-                          fill="hsl(var(--foreground))"
-                        />
+                        {sdrArray.map((sdr, index) => (
+                          <Line 
+                            key={sdr}
+                            type="monotone" 
+                            dataKey={sdr}
+                            name={sdr}
+                            stroke={SDR_COLORS[index % SDR_COLORS.length]}
+                            strokeWidth={2}
+                            dot={{ fill: SDR_COLORS[index % SDR_COLORS.length], strokeWidth: 1, r: 3 }}
+                            activeDot={{ r: 6 }}
+                            connectNulls={false}
+                          />
+                        ))}
                       </LineChart>
                     </ResponsiveContainer>
                   </div>
