@@ -16,7 +16,6 @@ import {
   BarChart,
   Bar,
   XAxis,
-  YAxis,
   Tooltip,
   ResponsiveContainer,
   Cell,
@@ -201,18 +200,11 @@ const RadarComercial = () => {
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[300px] w-full">
             <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={weeklyChartData} margin={{ top: 20, right: 10, left: -10, bottom: 0 }}>
+              <BarChart data={weeklyChartData} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
                 <XAxis 
                   dataKey="semana" 
                   tick={{ fontSize: 11 }}
                   className="text-muted-foreground"
-                  axisLine={false}
-                  tickLine={false}
-                />
-                <YAxis 
-                  tick={{ fontSize: 12 }}
-                  className="text-muted-foreground"
-                  allowDecimals={false}
                   axisLine={false}
                   tickLine={false}
                 />
