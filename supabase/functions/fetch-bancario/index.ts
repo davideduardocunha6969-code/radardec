@@ -166,6 +166,7 @@ serve(async (req) => {
             // Coluna M (12) = Câmara
             // Coluna N (13) = Resultado do Acórdão
             // Coluna R (17) = Data Cumprimento de Sentença
+            // Coluna S (18) = Status Cumprimento de Sentença (ajuizado, etc)
             // Coluna T (19) = Valor Liquidação Estimada
             // Coluna U (20) = Valor Sucumbência Estimado
             // Coluna V (21) = Valor Honorários Êxito Estimados
@@ -188,6 +189,7 @@ serve(async (req) => {
               camara: (row[12] || '').trim(),
               resultadoAcordao: (row[13] || '').trim(),
               dataCumprimentoSentenca: (row[17] || '').trim(),
+              statusCumprimentoSentenca: (row[18] || '').trim(),
               valorLiquidacao: parseBrazilianCurrency(row[19] || '0'),
               valorSucumbencia: parseBrazilianCurrency(row[20] || '0'),
               valorHonorariosExito: parseBrazilianCurrency(row[21] || '0'),
