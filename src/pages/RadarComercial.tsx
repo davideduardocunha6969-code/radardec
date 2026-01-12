@@ -5360,6 +5360,27 @@ const RadarComercial = () => {
             
             const taxaConversao = totalTestemunhas > 0 ? ((agendamentos / totalTestemunhas) * 100).toFixed(1) : '0';
 
+            // Meta de agendamentos
+            const META_AGENDAMENTOS = 100;
+            const TOTAL_SEMANAS = 53;
+            
+            // Calcula semana atual do ano
+            const hoje = new Date();
+            const inicioAno = new Date(hoje.getFullYear(), 0, 1);
+            const diffDias = Math.floor((hoje.getTime() - inicioAno.getTime()) / (1000 * 60 * 60 * 24));
+            const semanaAtual = Math.ceil((diffDias + inicioAno.getDay() + 1) / 7);
+            
+            // Percentual alcançado da meta
+            const percentualAlcancado = ((agendamentos / META_AGENDAMENTOS) * 100);
+            
+            // Percentual esperado baseado na semana atual
+            const percentualEsperado = ((semanaAtual / TOTAL_SEMANAS) * 100);
+            
+            // Diferença entre esperado e alcançado
+            const diferencaPercentual = percentualAlcancado - percentualEsperado;
+            const metaEsperadaAtual = Math.round((semanaAtual / TOTAL_SEMANAS) * META_AGENDAMENTOS);
+            const diferencaAbsoluta = agendamentos - metaEsperadaAtual;
+
             // Semanas disponíveis
             const semanasDisponiveis = testemunhasData
               .map(r => parseInt((r.colA || '0').trim()) || 0)
@@ -5480,6 +5501,67 @@ const RadarComercial = () => {
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* Card de Meta de Agendamentos */}
+                <Card className="col-span-full bg-gradient-to-br from-purple-500/10 to-pink-500/10 border-purple-500/30">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center gap-3">
+                      <Goal className="h-5 w-5 text-purple-500" />
+                      <CardTitle className="text-lg">Meta Anual de Agendamentos via Testemunhas</CardTitle>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                      {/* Progresso da Meta */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm text-muted-foreground">Progresso da Meta</span>
+                          <span className="text-sm font-medium">{agendamentos} / {META_AGENDAMENTOS}</span>
+                        </div>
+                        <div className="h-4 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-gradient-to-r from-purple-500 to-pink-500 rounded-full transition-all"
+                            style={{ width: `${Math.min(percentualAlcancado, 100)}%` }}
+                          />
+                        </div>
+                        <p className="text-2xl font-bold text-purple-400">{percentualAlcancado.toFixed(1)}%</p>
+                        <p className="text-xs text-muted-foreground">da meta anual alcançada</p>
+                      </div>
+
+                      {/* Esperado vs Alcançado */}
+                      <div className="space-y-3">
+                        <span className="text-sm text-muted-foreground">Semana {semanaAtual} de {TOTAL_SEMANAS}</span>
+                        <div className="flex items-center gap-4">
+                          <div className="flex-1">
+                            <p className="text-xs text-muted-foreground mb-1">Esperado até agora</p>
+                            <p className="text-xl font-semibold text-muted-foreground">{metaEsperadaAtual} agend.</p>
+                            <p className="text-xs text-muted-foreground">({percentualEsperado.toFixed(1)}%)</p>
+                          </div>
+                          <div className="flex-1">
+                            <p className="text-xs text-muted-foreground mb-1">Alcançado</p>
+                            <p className="text-xl font-semibold text-purple-400">{agendamentos} agend.</p>
+                            <p className="text-xs text-muted-foreground">({percentualAlcancado.toFixed(1)}%)</p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Status */}
+                      <div className="flex flex-col items-center justify-center">
+                        <div className={`px-4 py-2 rounded-lg ${diferencaAbsoluta >= 0 ? 'bg-green-500/20 border border-green-500/30' : 'bg-red-500/20 border border-red-500/30'}`}>
+                          <p className={`text-2xl font-bold ${diferencaAbsoluta >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                            {diferencaAbsoluta >= 0 ? '+' : ''}{diferencaAbsoluta}
+                          </p>
+                          <p className="text-xs text-muted-foreground text-center">
+                            {diferencaAbsoluta >= 0 ? 'acima' : 'abaixo'} do esperado
+                          </p>
+                        </div>
+                        <p className={`text-sm mt-2 ${diferencaPercentual >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {diferencaPercentual >= 0 ? '+' : ''}{diferencaPercentual.toFixed(1)} p.p.
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
 
                 {/* Gráficos */}
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 col-span-full">
