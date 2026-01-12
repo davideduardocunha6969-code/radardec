@@ -4444,7 +4444,7 @@ const RadarComercial = () => {
                   totalPorResponsavel[responsavel] = (totalPorResponsavel[responsavel] || 0) + 1;
                   
                   const status = (record.colI || '').toLowerCase().trim();
-                  const isSaneada = status === 'sim' || status === 's' || status === 'x' || status === 'saneada' || status === 'ok' || status === 'concluído' || status === 'concluido';
+                  const isSaneada = status === 'saneado';
                   
                   if (isSaneada) {
                     saneadasPorResponsavel[responsavel] = (saneadasPorResponsavel[responsavel] || 0) + 1;
@@ -4538,7 +4538,7 @@ const RadarComercial = () => {
                 
                 saneamentoData.forEach(record => {
                   const status = (record.colI || '').toLowerCase().trim();
-                  const isSaneada = status === 'sim' || status === 's' || status === 'x' || status === 'saneada' || status === 'ok' || status === 'concluído' || status === 'concluido';
+                  const isSaneada = status === 'saneado';
                   
                   if (isSaneada) {
                     const semanaStr = (record.colJ || '').trim();
