@@ -379,6 +379,24 @@ const RadarBancario = () => {
       .map(([situacao, count]) => ({ situacao, count }))
       .sort((a, b) => b.count - a.count);
 
+    // Por réu (banco) - ranking por valor de honorários
+    const porReuValor: Record<string, { count: number; valorTotal: number }> = {};
+    transitoData.forEach(r => {
+      const reu = r.reu || 'Não informado';
+      if (!porReuValor[reu]) {
+        porReuValor[reu] = { count: 0, valorTotal: 0 };
+      }
+      porReuValor[reu].count += 1;
+      porReuValor[reu].valorTotal += r.valorTotalHonorarios || 0;
+    });
+    const rankingReusPorValor = Object.entries(porReuValor)
+      .map(([reu, dados]) => ({ reu, ...dados }))
+      .sort((a, b) => b.valorTotal - a.valorTotal);
+    
+    const rankingReusPorQuantidade = Object.entries(porReuValor)
+      .map(([reu, dados]) => ({ reu, ...dados }))
+      .sort((a, b) => b.count - a.count);
+
     // Processos com pagamento vs pendentes (vitórias)
     const vitorias = transitoData.filter(r => r.resultadoFinal?.toLowerCase().includes('vitória') || r.resultadoFinal?.toLowerCase().includes('vitoria'));
     const comPagamento = vitorias.filter(r => r.dataPagamento?.trim()).length;
@@ -396,6 +414,8 @@ const RadarBancario = () => {
       rankingTipoAcao,
       rankingEstados,
       rankingCamaras,
+      rankingReusPorValor,
+      rankingReusPorQuantidade,
       comPagamento,
       semPagamento
     };
@@ -1512,6 +1532,87 @@ const RadarBancario = () => {
                       Dados insuficientes para ranking
                     </p>
                   )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Rankings de Réus (Bancos) */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Ranking por Valor de Honorários */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-green-500" />
+                  <CardTitle className="text-lg">Ranking de Réus (por Honorários)</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {transitoMetricas.rankingReusPorValor.slice(0, 10).map((item, index) => {
+                    const maxValor = transitoMetricas.rankingReusPorValor[0]?.valorTotal || 1;
+                    const percentage = (item.valorTotal / maxValor) * 100;
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : null;
+                    
+                    return (
+                      <div key={item.reu} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2">
+                            {medal && <span>{medal}</span>}
+                            <span className="font-medium truncate max-w-[200px]" title={item.reu}>{item.reu}</span>
+                          </span>
+                          <span className="text-muted-foreground text-xs">
+                            {formatCurrency(item.valorTotal)}
+                          </span>
+                        </div>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-green-500 rounded-full transition-all"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Ranking por Quantidade de Casos */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-blue-500" />
+                  <CardTitle className="text-lg">Ranking de Réus (por Casos)</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {transitoMetricas.rankingReusPorQuantidade.slice(0, 10).map((item, index) => {
+                    const maxCount = transitoMetricas.rankingReusPorQuantidade[0]?.count || 1;
+                    const percentage = (item.count / maxCount) * 100;
+                    const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : null;
+                    
+                    return (
+                      <div key={item.reu} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2">
+                            {medal && <span>{medal}</span>}
+                            <span className="font-medium truncate max-w-[200px]" title={item.reu}>{item.reu}</span>
+                          </span>
+                          <span className="text-muted-foreground text-xs">
+                            {item.count} casos
+                          </span>
+                        </div>
+                        <div className="h-2 bg-muted rounded-full overflow-hidden">
+                          <div 
+                            className="h-full bg-blue-500 rounded-full transition-all"
+                            style={{ width: `${percentage}%` }}
+                          />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
