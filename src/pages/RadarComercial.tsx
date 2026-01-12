@@ -140,14 +140,51 @@ const RadarComercial = () => {
       produtoMap.get(produto)!.push(contrato);
     });
 
-    // Função para parsear moeda brasileira (R$ 90.000,00 -> 90000)
+    // Função para parsear moeda (pt-BR e en-US)
     const parseBrazilianCurrency = (value: string): number => {
       if (!value || value.trim() === '') return 0;
-      let cleaned = value.replace(/[^\d.,]/g, '');
+
+      let cleaned = value.replace(/[^\d,\.\-]/g, '');
       if (!cleaned || !/\d/.test(cleaned)) return 0;
-      cleaned = cleaned.replace(/\./g, '').replace(',', '.');
-      const result = parseFloat(cleaned);
-      return isNaN(result) ? 0 : result;
+
+      const hasComma = cleaned.includes(',');
+      const hasDot = cleaned.includes('.');
+
+      if (hasComma && hasDot) {
+        const lastComma = cleaned.lastIndexOf(',');
+        const lastDot = cleaned.lastIndexOf('.');
+
+        if (lastComma > lastDot) {
+          const integerPart = cleaned.slice(0, lastComma).replace(/\./g, '').replace(/,/g, '');
+          const decimalPart = cleaned.slice(lastComma + 1);
+          cleaned = `${integerPart}.${decimalPart}`;
+        } else {
+          const integerPart = cleaned.slice(0, lastDot).replace(/,/g, '').replace(/\./g, '');
+          const decimalPart = cleaned.slice(lastDot + 1);
+          cleaned = `${integerPart}.${decimalPart}`;
+        }
+      } else if (hasComma) {
+        const lastComma = cleaned.lastIndexOf(',');
+        const decimalPart = cleaned.slice(lastComma + 1);
+        if (/^\d{1,2}$/.test(decimalPart)) {
+          const integerPart = cleaned.slice(0, lastComma).replace(/,/g, '').replace(/\./g, '');
+          cleaned = `${integerPart}.${decimalPart}`;
+        } else {
+          cleaned = cleaned.replace(/,/g, '').replace(/\./g, '');
+        }
+      } else if (hasDot) {
+        const lastDot = cleaned.lastIndexOf('.');
+        const decimalPart = cleaned.slice(lastDot + 1);
+        if (/^\d{1,2}$/.test(decimalPart)) {
+          const integerPart = cleaned.slice(0, lastDot).replace(/\./g, '').replace(/,/g, '');
+          cleaned = `${integerPart}.${decimalPart}`;
+        } else {
+          cleaned = cleaned.replace(/\./g, '');
+        }
+      }
+
+      const result = Number(cleaned);
+      return Number.isFinite(result) ? result : 0;
     };
 
     // Converte para array ordenado por quantidade de contratos
