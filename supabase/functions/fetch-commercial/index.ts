@@ -74,26 +74,41 @@ serve(async (req) => {
     // Coluna P (15) = CADÊNCIA
     // Coluna Q (16) = ANO APOSENTADORIA FUTURA
     
-    const commercialData = dataRows.map(row => ({
-      responsavel: (row[0] || '').trim(),
-      sdr: (row[1] || '').trim(),
-      dataAtendimento: (row[2] || '').trim(),
-      dataFechamento: (row[3] || '').trim(),
-      semana: parseInt((row[4] || '0').trim()) || 0,
-      cliente: (row[5] || '').trim(),
-      modalidade: (row[6] || '').trim(),
-      setor: (row[7] || '').trim(),
-      produto: (row[8] || '').trim(),
-      possuiDireito: (row[9] || '').trim().toUpperCase(),
-      origemCliente: (row[10] || '').trim(),
-      honorariosExito: parseBrazilianCurrency(row[11] || '0'),
-      honorariosIniciais: parseBrazilianCurrency(row[12] || '0'),
-      tempoFechamento: parseInt((row[13] || '0').trim()) || 0,
-      resultado: (row[14] || '').trim(),
-      cadencia: (row[15] || '').trim(),
-      anoAposentadoriaFutura: (row[16] || '').trim(),
-      rawRow: row
-    }));
+    const commercialData = dataRows.map(row => {
+      const honorariosExitoRaw = (row[11] || '0');
+      const honorariosIniciaisRaw = (row[12] || '0');
+
+      return {
+        responsavel: (row[0] || '').trim(),
+        sdr: (row[1] || '').trim(),
+        dataAtendimento: (row[2] || '').trim(),
+        dataFechamento: (row[3] || '').trim(),
+        semana: parseInt((row[4] || '0').trim()) || 0,
+        cliente: (row[5] || '').trim(),
+        modalidade: (row[6] || '').trim(),
+        setor: (row[7] || '').trim(),
+        produto: (row[8] || '').trim(),
+        possuiDireito: (row[9] || '').trim().toUpperCase(),
+        origemCliente: (row[10] || '').trim(),
+        honorariosExito: parseBrazilianCurrency(honorariosExitoRaw),
+        honorariosIniciais: parseBrazilianCurrency(honorariosIniciaisRaw),
+        tempoFechamento: parseInt((row[13] || '0').trim()) || 0,
+        resultado: (row[14] || '').trim(),
+        cadencia: (row[15] || '').trim(),
+        anoAposentadoriaFutura: (row[16] || '').trim(),
+        rawRow: row
+      };
+    });
+
+    // Debug: loga o parsing da primeira linha com valor preenchido
+    const exemploValor = dataRows.find(r => (r[11] || '').trim() !== '' || (r[12] || '').trim() !== '');
+    if (exemploValor) {
+      console.log('Exemplo honorários (raw):', { exito: exemploValor[11], iniciais: exemploValor[12] });
+      console.log('Exemplo honorários (parsed):', {
+        exito: parseBrazilianCurrency(exemploValor[11] || '0'),
+        iniciais: parseBrazilianCurrency(exemploValor[12] || '0'),
+      });
+    }
     
     // Log de exemplo para debug do ano de aposentadoria
     const exemploComAno = commercialData.find(d => d.anoAposentadoriaFutura);
@@ -627,24 +642,70 @@ serve(async (req) => {
   }
 });
 
-// Função para parsear valores monetários no formato brasileiro (R$ 90.000,00 -> 90000)
+// Função para parsear valores monetários em formatos comuns (pt-BR e en-US)
+// Exemplos suportados:
+// - "R$ 90.000,00" -> 90000
+// - "90.000" -> 90000
+// - "90,000.00" -> 90000
+// - "90,000" -> 90000
 function parseBrazilianCurrency(value: string): number {
   if (!value || value.trim() === '') return 0;
-  
-  // Remove tudo exceto dígitos, pontos e vírgulas
-  let cleaned = value.replace(/[^\d.,]/g, '');
-  
-  // Se não há caracteres numéricos, retorna 0
+
+  // Mantém apenas dígitos e separadores comuns
+  let cleaned = value.replace(/[^\d,\.\-]/g, '');
   if (!cleaned || !/\d/.test(cleaned)) return 0;
-  
-  // Formato brasileiro: ponto como separador de milhar, vírgula como decimal
-  // Exemplo: 90.000,00 -> 90000.00
-  // Primeiro remove os pontos (separadores de milhar)
-  // Depois substitui vírgula por ponto (separador decimal)
-  cleaned = cleaned.replace(/\./g, '').replace(',', '.');
-  
-  const result = parseFloat(cleaned);
-  return isNaN(result) ? 0 : result;
+
+  const hasComma = cleaned.includes(',');
+  const hasDot = cleaned.includes('.');
+
+  // Caso 1: tem vírgula e ponto (decidir quem é decimal pelo último separador)
+  if (hasComma && hasDot) {
+    const lastComma = cleaned.lastIndexOf(',');
+    const lastDot = cleaned.lastIndexOf('.');
+
+    if (lastComma > lastDot) {
+      // pt-BR: 1.234,56
+      const integerPart = cleaned.slice(0, lastComma).replace(/\./g, '').replace(/,/g, '');
+      const decimalPart = cleaned.slice(lastComma + 1);
+      cleaned = `${integerPart}.${decimalPart}`;
+    } else {
+      // en-US: 1,234.56
+      const integerPart = cleaned.slice(0, lastDot).replace(/,/g, '').replace(/\./g, '');
+      const decimalPart = cleaned.slice(lastDot + 1);
+      cleaned = `${integerPart}.${decimalPart}`;
+    }
+  }
+  // Caso 2: apenas vírgula
+  else if (hasComma) {
+    const lastComma = cleaned.lastIndexOf(',');
+    const decimalPart = cleaned.slice(lastComma + 1);
+
+    // Se termina com 1-2 casas, tratar como decimal (pt-BR)
+    if (/^\d{1,2}$/.test(decimalPart)) {
+      const integerPart = cleaned.slice(0, lastComma).replace(/,/g, '').replace(/\./g, '');
+      cleaned = `${integerPart}.${decimalPart}`;
+    } else {
+      // Senão, tratar vírgulas como separadores de milhar
+      cleaned = cleaned.replace(/,/g, '').replace(/\./g, '');
+    }
+  }
+  // Caso 3: apenas ponto
+  else if (hasDot) {
+    const lastDot = cleaned.lastIndexOf('.');
+    const decimalPart = cleaned.slice(lastDot + 1);
+
+    // Se termina com 1-2 casas, tratar como decimal (en-US)
+    if (/^\d{1,2}$/.test(decimalPart)) {
+      const integerPart = cleaned.slice(0, lastDot).replace(/\./g, '').replace(/,/g, '');
+      cleaned = `${integerPart}.${decimalPart}`;
+    } else {
+      // Senão, tratar pontos como separadores de milhar
+      cleaned = cleaned.replace(/\./g, '');
+    }
+  }
+
+  const result = Number(cleaned);
+  return Number.isFinite(result) ? result : 0;
 }
 
 function parseCSV(csvText: string): string[][] {
