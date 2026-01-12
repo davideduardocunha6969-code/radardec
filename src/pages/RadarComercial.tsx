@@ -4585,7 +4585,7 @@ const RadarComercial = () => {
                             </div>
                             <div className="absolute inset-0 flex items-center justify-end pr-2">
                               <span className="text-xs font-semibold text-foreground">
-                                {item.saneadas}/{item.total} ({item.percentual.toFixed(0)}%)
+                                {item.saneadas}
                               </span>
                             </div>
                           </div>
