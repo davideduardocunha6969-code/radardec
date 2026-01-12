@@ -11,6 +11,7 @@ const MAIN_GID = 0;
 const SDR_GID = 1631515229;
 const SDR_MESSAGES_GID = 686842485;
 const INDICACOES_GID = 290508236;
+const INDICACOES_RECEBIDAS_GID = 2087539342;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -265,6 +266,47 @@ serve(async (req) => {
       // Continue without Indicações data
     }
     
+    // Fetch Indicações Recebidas sheet (GID 2087539342)
+    // Coluna A = Responsável, Coluna B = Semana, Coluna E = Resultado
+    let indicacoesRecebidasData: any[] = [];
+    
+    try {
+      const indicacoesRecebidasCsvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${INDICACOES_RECEBIDAS_GID}`;
+      console.log(`Fetching Indicações Recebidas sheet (gid=${INDICACOES_RECEBIDAS_GID})...`);
+      
+      const indicacoesRecebidasResponse = await fetch(indicacoesRecebidasCsvUrl);
+      
+      if (indicacoesRecebidasResponse.ok) {
+        const indicacoesRecebidasCsvText = await indicacoesRecebidasResponse.text();
+        
+        if (indicacoesRecebidasCsvText && indicacoesRecebidasCsvText.trim().length > 10) {
+          const indicacoesRecebidasRows = parseCSV(indicacoesRecebidasCsvText);
+          
+          if (indicacoesRecebidasRows.length >= 2) {
+            const indicacoesRecebidasHeaders = indicacoesRecebidasRows[0];
+            const indicacoesRecebidasDataRows = indicacoesRecebidasRows.slice(1).filter(row => row.some(cell => cell.trim() !== ''));
+            
+            console.log(`Found Indicações Recebidas sheet with ${indicacoesRecebidasDataRows.length} rows`);
+            console.log('Indicações Recebidas Headers:', indicacoesRecebidasHeaders);
+            
+            // Mapeia os dados de indicações recebidas
+            indicacoesRecebidasData = indicacoesRecebidasDataRows.map(row => ({
+              responsavel: (row[0] || '').trim(),   // Coluna A
+              semana: (row[1] || '').trim(),        // Coluna B
+              resultado: (row[4] || '').trim(),     // Coluna E
+            })).filter(d => d.responsavel !== '');
+            
+            console.log(`Indicações Recebidas data loaded: ${indicacoesRecebidasData.length} records`);
+          }
+        }
+      } else {
+        console.log('Indicações Recebidas sheet not accessible, continuing without it');
+      }
+    } catch (indicacoesRecebidasError) {
+      console.error('Error fetching Indicações Recebidas sheet:', indicacoesRecebidasError);
+      // Continue without Indicações Recebidas data
+    }
+    
     return new Response(
       JSON.stringify({
         success: true,
@@ -280,6 +322,7 @@ serve(async (req) => {
           sdrMessagesData,
           sdrMessagesSdrNames,
           indicacoesData,
+          indicacoesRecebidasData,
           lastUpdated: new Date().toISOString()
         }
       }),

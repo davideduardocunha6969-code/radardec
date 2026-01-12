@@ -50,7 +50,7 @@ import {
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
 const RadarComercial = () => {
-  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, indicacoesData, isLoading, error } = useCommercialData();
+  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, indicacoesData, indicacoesRecebidasData, isLoading, error } = useCommercialData();
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedSetor, setSelectedSetor] = useState<string | null>(null);
   const [selectedResponsavel, setSelectedResponsavel] = useState<string | null>(null);
@@ -3865,6 +3865,236 @@ const RadarComercial = () => {
                         </BarChart>
                       </ResponsiveContainer>
                     </ChartContainer>
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+
+          {/* === Cards de Indicações Recebidas (GID 2087539342) === */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {/* Card 1: Ranking de Indicações */}
+            <Card className="lg:col-span-2">
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <Trophy className="h-5 w-5 text-amber-500" />
+                  <CardTitle className="text-lg">Ranking de Indicações</CardTitle>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Responsáveis por conseguir mais indicações (aba GID 2087539342)
+                </p>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  // Agrupa por responsável e conta indicações
+                  const responsavelCounts: Record<string, number> = {};
+                  
+                  indicacoesRecebidasData.forEach(record => {
+                    const responsavel = record.responsavel?.trim();
+                    if (responsavel) {
+                      responsavelCounts[responsavel] = (responsavelCounts[responsavel] || 0) + 1;
+                    }
+                  });
+                  
+                  // Transforma em array e ordena
+                  const rankingData = Object.entries(responsavelCounts)
+                    .map(([responsavel, total]) => ({ responsavel, total }))
+                    .sort((a, b) => b.total - a.total)
+                    .map((item, index) => ({ ...item, posicao: index + 1 }));
+                  
+                  if (rankingData.length === 0) {
+                    return (
+                      <div className="h-[150px] flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
+                        <div className="text-center">
+                          <Users className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+                          <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                        </div>
+                      </div>
+                    );
+                  }
+                  
+                  const maxTotal = rankingData[0]?.total || 1;
+                  
+                  return (
+                    <div className="space-y-2 max-h-[300px] overflow-y-auto pr-2">
+                      {rankingData.map((item) => {
+                        const barWidth = maxTotal > 0 ? (item.total / maxTotal) * 100 : 0;
+                        
+                        let medalha = '';
+                        if (item.posicao === 1) { medalha = '🥇'; }
+                        else if (item.posicao === 2) { medalha = '🥈'; }
+                        else if (item.posicao === 3) { medalha = '🥉'; }
+                        
+                        return (
+                          <div key={item.responsavel} className="flex items-center gap-2">
+                            <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                              item.posicao === 1 ? 'bg-yellow-500 text-yellow-950' :
+                              item.posicao === 2 ? 'bg-gray-300 text-gray-700' :
+                              item.posicao === 3 ? 'bg-amber-600 text-amber-50' :
+                              'bg-muted text-muted-foreground'
+                            }`}>
+                              {medalha || `${item.posicao}º`}
+                            </div>
+                            <div className="flex-shrink-0 w-28 text-xs font-medium truncate" title={item.responsavel}>
+                              {item.responsavel}
+                            </div>
+                            <div className="flex-1 relative">
+                              <div className="h-6 bg-muted/50 rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-amber-500 rounded-full transition-all duration-500"
+                                  style={{ width: `${barWidth}%` }}
+                                />
+                              </div>
+                              <div className="absolute inset-0 flex items-center justify-end pr-2">
+                                <span className="text-xs font-semibold text-foreground">
+                                  {item.total}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            {/* Card 2: Total de Indicações */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <Users className="h-5 w-5 text-blue-500" />
+                  <CardTitle className="text-lg">Total de Indicações</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col items-center justify-center py-4">
+                  <span className="text-5xl font-bold text-blue-600">
+                    {indicacoesRecebidasData.length}
+                  </span>
+                  <span className="text-sm text-muted-foreground mt-2">
+                    indicações recebidas
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Card 3: Atingimento da Meta */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <Target className="h-5 w-5 text-green-500" />
+                  <CardTitle className="text-lg">Atingimento da Meta</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const META_INDICACOES = 750;
+                  const total = indicacoesRecebidasData.length;
+                  const percentual = (total / META_INDICACOES) * 100;
+                  
+                  return (
+                    <div className="flex flex-col items-center justify-center py-4">
+                      <span className={`text-5xl font-bold ${
+                        percentual >= 100 ? 'text-green-600' :
+                        percentual >= 75 ? 'text-yellow-600' :
+                        'text-amber-600'
+                      }`}>
+                        {percentual.toFixed(1)}%
+                      </span>
+                      <span className="text-sm text-muted-foreground mt-2">
+                        da meta de {META_INDICACOES}
+                      </span>
+                      <span className="text-xs text-muted-foreground">
+                        ({total} de {META_INDICACOES})
+                      </span>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Card 4: Resultado por Indicação */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <PieChart className="h-5 w-5 text-purple-500" />
+                <CardTitle className="text-lg">Resultado das Indicações</CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Distribuição dos resultados de cada indicação (Coluna E - GID 2087539342)
+              </p>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                // Agrupa por resultado
+                const resultadoCounts: Record<string, number> = {};
+                
+                indicacoesRecebidasData.forEach(record => {
+                  const resultado = record.resultado?.trim() || 'Sem resultado';
+                  resultadoCounts[resultado] = (resultadoCounts[resultado] || 0) + 1;
+                });
+                
+                // Transforma em array e ordena por quantidade
+                const resultadoData = Object.entries(resultadoCounts)
+                  .map(([resultado, total]) => ({ resultado, total }))
+                  .sort((a, b) => b.total - a.total);
+                
+                const total = indicacoesRecebidasData.length;
+                
+                if (resultadoData.length === 0) {
+                  return (
+                    <div className="h-[150px] flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
+                      <div className="text-center">
+                        <PieChart className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+                        <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                // Cores para os diferentes resultados
+                const coresResultado: Record<string, string> = {
+                  'contrato fechado': 'bg-green-500',
+                  'negociação': 'bg-blue-500',
+                  'aguarda documentação': 'bg-yellow-500',
+                  'não possui direito': 'bg-red-500',
+                  'desistiu': 'bg-gray-500',
+                  'não atende': 'bg-orange-500',
+                };
+                
+                const getCor = (resultado: string) => {
+                  const key = resultado.toLowerCase();
+                  for (const [pattern, cor] of Object.entries(coresResultado)) {
+                    if (key.includes(pattern)) return cor;
+                  }
+                  return 'bg-purple-500';
+                };
+                
+                return (
+                  <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+                    {resultadoData.map((item) => {
+                      const percentual = total > 0 ? ((item.total / total) * 100).toFixed(1) : '0';
+                      
+                      return (
+                        <div 
+                          key={item.resultado} 
+                          className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg"
+                        >
+                          <div className={`w-3 h-3 rounded-full ${getCor(item.resultado)}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate" title={item.resultado}>
+                              {item.resultado}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {item.total} ({percentual}%)
+                            </p>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 );
               })()}
