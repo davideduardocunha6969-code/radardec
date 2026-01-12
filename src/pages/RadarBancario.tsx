@@ -368,9 +368,10 @@ const RadarBancario = () => {
       .filter(c => c.camara !== 'Não informado' && c.count >= 3)
       .sort((a, b) => parseFloat(b.taxaVitoria) - parseFloat(a.taxaVitoria));
 
-    // Processos com pagamento vs pendentes
-    const comPagamento = transitoData.filter(r => r.dataPagamento?.trim()).length;
-    const semPagamento = total - comPagamento;
+    // Processos com pagamento vs pendentes (vitórias)
+    const vitorias = transitoData.filter(r => r.resultadoFinal?.toLowerCase().includes('vitória') || r.resultadoFinal?.toLowerCase().includes('vitoria'));
+    const comPagamento = vitorias.filter(r => r.dataPagamento?.trim()).length;
+    const semPagamento = vitorias.filter(r => !r.dataPagamento?.trim()).length;
 
     return { 
       total, 
