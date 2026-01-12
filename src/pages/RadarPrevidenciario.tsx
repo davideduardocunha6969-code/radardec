@@ -1,5 +1,19 @@
-import { useMemo } from "react";
-import { Loader2, AlertTriangle, FileText, Users, FolderCheck, TrendingUp, Clock } from "lucide-react";
+import { useMemo, useState } from "react";
+import { 
+  Loader2, 
+  AlertTriangle, 
+  FileText, 
+  Users, 
+  FolderCheck, 
+  TrendingUp, 
+  Clock,
+  ChevronDown,
+  ChevronRight,
+  BarChart3,
+  Trophy,
+  ClipboardList,
+  Calendar
+} from "lucide-react";
 import { usePrevidenciarioData } from "@/hooks/usePrevidenciarioData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -7,14 +21,18 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
-import { ChevronDown } from "lucide-react";
-import { useState } from "react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   BarChart,
   Bar,
   XAxis,
   YAxis,
-  CartesianGrid,
   Tooltip,
   ResponsiveContainer,
   LineChart,
@@ -22,22 +40,59 @@ import {
   PieChart,
   Pie,
   Cell,
+  LabelList,
+  CartesianGrid,
 } from "recharts";
+import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))', 'hsl(var(--chart-4))', 'hsl(var(--chart-5))'];
 
+const chartConfig = {
+  value: { label: "Quantidade", color: "hsl(var(--primary))" },
+  pendentes: { label: "Pendentes", color: "hsl(var(--primary))" },
+};
+
 const RadarPrevidenciario = () => {
   const { data, isLoading, error } = usePrevidenciarioData();
-  const [openSections, setOpenSections] = useState<Record<string, boolean>>({
-    peticoes: true,
-    tarefas: true,
-    aposentadorias: true,
-    pastas: true,
-    evolucao: true,
-  });
+  const [openSection, setOpenSection] = useState<string | null>(null);
+  const [peticoesWeekFilter, setPeticoesWeekFilter] = useState<string | null>(null);
+  const [tarefasWeekFilter, setTarefasWeekFilter] = useState<string | null>(null);
+  const [aposentadoriasWeekFilter, setAposentadoriasWeekFilter] = useState<string | null>(null);
 
-  const toggleSection = (section: string) => {
-    setOpenSections(prev => ({ ...prev, [section]: !prev[section] }));
+  // Handler para abrir/fechar seções (comportamento accordion)
+  const handleSectionToggle = (section: string) => {
+    setOpenSection(prev => prev === section ? null : section);
+  };
+
+  // Extrai semanas únicas para os filtros
+  const weekOptions = useMemo(() => {
+    const peticoesWeeks = [...new Set(data?.peticoesIniciais?.map(r => r.semana).filter(Boolean))].sort();
+    const tarefasWeeks = [...new Set(data?.tarefas?.map(r => r.semana).filter(Boolean))].sort();
+    const aposentadoriasWeeks = [...new Set(data?.aposentadorias?.map(r => r.semana).filter(Boolean))].sort();
+    return { peticoesWeeks, tarefasWeeks, aposentadoriasWeeks };
+  }, [data]);
+
+  // Custom XAxis tick para textos longos
+  const CustomXAxisTick = ({ x, y, payload }: any) => {
+    const text = payload.value || '';
+    const maxLength = 12;
+    const displayText = text.length > maxLength ? `${text.slice(0, maxLength)}...` : text;
+    
+    return (
+      <g transform={`translate(${x},${y})`}>
+        <text
+          x={0}
+          y={0}
+          dy={16}
+          textAnchor="end"
+          fill="hsl(var(--muted-foreground))"
+          fontSize={10}
+          transform="rotate(-45)"
+        >
+          {displayText}
+        </text>
+      </g>
+    );
   };
 
   // Process data for charts
@@ -50,26 +105,134 @@ const RadarPrevidenciario = () => {
   }, [data]);
 
   const peticoesPorResponsavelData = useMemo(() => {
-    if (!data?.stats?.peticoesPorResponsavel) return [];
-    return Object.entries(data.stats.peticoesPorResponsavel)
+    if (!data?.peticoesIniciais) return [];
+    
+    const filtered = peticoesWeekFilter 
+      ? data.peticoesIniciais.filter(p => p.semana === peticoesWeekFilter)
+      : data.peticoesIniciais;
+    
+    const byResponsavel = filtered.reduce((acc, p) => {
+      if (p.responsavel) {
+        acc[p.responsavel] = (acc[p.responsavel] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(byResponsavel)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [data, peticoesWeekFilter]);
+
+  const peticoesPorSituacaoData = useMemo(() => {
+    if (!data?.stats?.peticoesPorSituacao) return [];
+    return Object.entries(data.stats.peticoesPorSituacao)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
   }, [data]);
 
   const tarefasPorTipoData = useMemo(() => {
-    if (!data?.stats?.tarefasPorTipo) return [];
-    return Object.entries(data.stats.tarefasPorTipo)
+    if (!data?.tarefas) return [];
+    
+    const filtered = tarefasWeekFilter 
+      ? data.tarefas.filter(t => t.semana === tarefasWeekFilter)
+      : data.tarefas;
+    
+    const byTipo = filtered.reduce((acc, t) => {
+      if (t.tipoTarefa) {
+        acc[t.tipoTarefa] = (acc[t.tipoTarefa] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(byTipo)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value)
       .slice(0, 10);
-  }, [data]);
+  }, [data, tarefasWeekFilter]);
+
+  const tarefasPorResponsavelData = useMemo(() => {
+    if (!data?.tarefas) return [];
+    
+    const filtered = tarefasWeekFilter 
+      ? data.tarefas.filter(t => t.semana === tarefasWeekFilter)
+      : data.tarefas;
+    
+    const byResponsavel = filtered.reduce((acc, t) => {
+      if (t.responsavel) {
+        acc[t.responsavel] = (acc[t.responsavel] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(byResponsavel)
+      .map(([name, value], index) => ({ 
+        name, 
+        value,
+        posicao: index + 1
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [data, tarefasWeekFilter]);
 
   const aposentadoriasPorTipoData = useMemo(() => {
-    if (!data?.stats?.aposentadoriasPorTipo) return [];
-    return Object.entries(data.stats.aposentadoriasPorTipo)
+    if (!data?.aposentadorias) return [];
+    
+    const filtered = aposentadoriasWeekFilter 
+      ? data.aposentadorias.filter(a => a.semana === aposentadoriasWeekFilter)
+      : data.aposentadorias;
+    
+    const byTipo = filtered.reduce((acc, a) => {
+      if (a.tipoAcao) {
+        acc[a.tipoAcao] = (acc[a.tipoAcao] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(byTipo)
       .map(([name, value]) => ({ name, value }))
       .sort((a, b) => b.value - a.value);
-  }, [data]);
+  }, [data, aposentadoriasWeekFilter]);
+
+  const aposentadoriasPorSituacaoData = useMemo(() => {
+    if (!data?.aposentadorias) return [];
+    
+    const filtered = aposentadoriasWeekFilter 
+      ? data.aposentadorias.filter(a => a.semana === aposentadoriasWeekFilter)
+      : data.aposentadorias;
+    
+    const bySituacao = filtered.reduce((acc, a) => {
+      if (a.situacao) {
+        acc[a.situacao] = (acc[a.situacao] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(bySituacao)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value);
+  }, [data, aposentadoriasWeekFilter]);
+
+  const aposentadoriasPorResponsavelData = useMemo(() => {
+    if (!data?.aposentadorias) return [];
+    
+    const filtered = aposentadoriasWeekFilter 
+      ? data.aposentadorias.filter(a => a.semana === aposentadoriasWeekFilter)
+      : data.aposentadorias;
+    
+    const byResponsavel = filtered.reduce((acc, a) => {
+      if (a.responsavel) {
+        acc[a.responsavel] = (acc[a.responsavel] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(byResponsavel)
+      .map(([name, value], index) => ({ 
+        name, 
+        value,
+        posicao: index + 1
+      }))
+      .sort((a, b) => b.value - a.value);
+  }, [data, aposentadoriasWeekFilter]);
 
   const evolucaoData = useMemo(() => {
     if (!data?.evolucaoIncapacidade) return [];
@@ -83,6 +246,25 @@ const RadarPrevidenciario = () => {
     if (!data?.stats?.pastasPorSituacao) return [];
     return Object.entries(data.stats.pastasPorSituacao)
       .map(([name, value]) => ({ name, value }));
+  }, [data]);
+
+  const pastasPorResponsavelData = useMemo(() => {
+    if (!data?.pastasCorrecao) return [];
+    
+    const byResponsavel = data.pastasCorrecao.reduce((acc, p) => {
+      if (p.responsavel) {
+        acc[p.responsavel] = (acc[p.responsavel] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(byResponsavel)
+      .map(([name, value], index) => ({ 
+        name, 
+        value,
+        posicao: index + 1
+      }))
+      .sort((a, b) => b.value - a.value);
   }, [data]);
 
   const formatCurrency = (value: number) => {
@@ -145,7 +327,7 @@ const RadarPrevidenciario = () => {
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Tarefas
             </CardTitle>
-            <Users className="h-4 w-4 text-chart-2" />
+            <ClipboardList className="h-4 w-4 text-chart-2" />
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">{data?.stats?.totalTarefas || 0}</div>
@@ -208,112 +390,374 @@ const RadarPrevidenciario = () => {
         </Card>
       </div>
 
-      {/* Seção: Evolução Incapacidade */}
-      <Collapsible
-        open={openSections.evolucao}
-        onOpenChange={() => toggleSection('evolucao')}
-        className="mb-6"
+      {/* Seção 1: Radar Petições Iniciais (GID 1358203598) */}
+      <Collapsible 
+        open={openSection === 'peticoes'} 
+        onOpenChange={() => handleSectionToggle('peticoes')}
+        className="mb-8"
       >
-        <CollapsibleTrigger className="flex items-center gap-2 w-full p-4 bg-card rounded-lg border border-border/50 hover:bg-accent/50 transition-colors">
-          <ChevronDown className={`h-5 w-5 transition-transform ${openSections.evolucao ? 'rotate-0' : '-rotate-90'}`} />
-          <h2 className="text-lg font-semibold">Evolução de Casos por Incapacidade Pendentes</h2>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-4">
-          <Card className="bg-card border-border/50">
-            <CardContent className="pt-6">
-              {evolucaoData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <LineChart data={evolucaoData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis dataKey="semana" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                    />
-                    <Line
-                      type="monotone"
-                      dataKey="pendentes"
-                      stroke="hsl(var(--primary))"
-                      strokeWidth={2}
-                      dot={{ fill: 'hsl(var(--primary))' }}
-                      name="Casos Pendentes"
-                    />
-                  </LineChart>
-                </ResponsiveContainer>
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-blue-600/20 to-indigo-600/20 rounded-lg border border-blue-500/30 hover:border-blue-500/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <FileText className="h-6 w-6 text-blue-500" />
+              <h2 className="text-xl font-bold text-foreground">Radar Petições Iniciais</h2>
+              <span className="text-sm text-muted-foreground">({data?.stats?.totalPeticoes || 0} petições)</span>
+            </div>
+            <div className="flex items-center gap-4">
+              {openSection === 'peticoes' ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
               ) : (
-                <p className="text-muted-foreground text-center py-8">Nenhum dado de evolução disponível</p>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-6 mt-6">
+          {/* Filtro de Semana */}
+          <div className="flex items-center gap-4">
+            <Select
+              value={peticoesWeekFilter || "all"}
+              onValueChange={(value) => setPeticoesWeekFilter(value === "all" ? null : value)}
+            >
+              <SelectTrigger className="w-[200px]">
+                <Calendar className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Todas as semanas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as semanas</SelectItem>
+                {weekOptions.peticoesWeeks.map((week) => (
+                  <SelectItem key={week} value={week}>
+                    Semana {week}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {peticoesWeekFilter && (
+              <button
+                onClick={() => setPeticoesWeekFilter(null)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Limpar filtro
+              </button>
+            )}
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Petições por Tipo de Benefício */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-lg">Por Tipo de Benefício</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {peticoesPorBeneficioData.length > 0 ? (
+                  <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={peticoesPorBeneficioData} layout="vertical" margin={{ top: 10, right: 40, left: 10, bottom: 0 }}>
+                        <XAxis type="number" hide />
+                        <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={120} axisLine={false} tickLine={false} />
+                        <Tooltip formatter={(value: number) => [`${value} petições`, 'Total']} />
+                        <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]}>
+                          <LabelList dataKey="value" position="right" className="fill-foreground" fontSize={11} />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                    <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Ranking de Petições por Responsável */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <Trophy className="h-5 w-5 text-yellow-500" />
+                  <CardTitle className="text-lg">Ranking por Responsável</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {peticoesPorResponsavelData.length > 0 ? (
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                    {peticoesPorResponsavelData.map((item, index) => {
+                      const maxValue = peticoesPorResponsavelData[0]?.value || 1;
+                      const barWidth = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+                      const posicao = index + 1;
+                      
+                      return (
+                        <div key={item.name} className="flex items-center gap-3">
+                          <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                            {posicao === 1 ? (
+                              <span className="text-2xl">🥇</span>
+                            ) : posicao === 2 ? (
+                              <span className="text-2xl">🥈</span>
+                            ) : posicao === 3 ? (
+                              <span className="text-2xl">🥉</span>
+                            ) : (
+                              <span className="text-sm font-bold text-muted-foreground">{posicao}º</span>
+                            )}
+                          </div>
+                          <div className="flex-shrink-0 w-24 text-sm font-medium truncate" title={item.name}>
+                            {item.name}
+                          </div>
+                          <div className="flex-1 relative h-6 bg-muted/30 rounded overflow-hidden">
+                            <div 
+                              className="absolute inset-y-0 left-0 bg-primary rounded transition-all duration-300"
+                              style={{ width: `${barWidth}%` }}
+                            />
+                            <span className="absolute inset-0 flex items-center justify-center text-xs font-medium">
+                              {item.value}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                    <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Petições por Situação */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Por Situação</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {peticoesPorSituacaoData.length > 0 ? (
+                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={peticoesPorSituacaoData} margin={{ top: 20, right: 10, left: 10, bottom: 60 }}>
+                      <XAxis dataKey="name" tick={<CustomXAxisTick />} axisLine={false} tickLine={false} interval={0} height={80} />
+                      <Tooltip formatter={(value: number) => [`${value} petições`, 'Total']} />
+                      <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]}>
+                        <LabelList dataKey="value" position="top" className="fill-foreground" fontSize={12} />
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              ) : (
+                <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                  <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                </div>
               )}
             </CardContent>
           </Card>
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Seção: Petições Iniciais */}
-      <Collapsible
-        open={openSections.peticoes}
-        onOpenChange={() => toggleSection('peticoes')}
-        className="mb-6"
+      {/* Seção 2: Radar Evolução Incapacidade (GID 306675231) */}
+      <Collapsible 
+        open={openSection === 'evolucao'} 
+        onOpenChange={() => handleSectionToggle('evolucao')}
+        className="mb-8"
       >
-        <CollapsibleTrigger className="flex items-center gap-2 w-full p-4 bg-card rounded-lg border border-border/50 hover:bg-accent/50 transition-colors">
-          <ChevronDown className={`h-5 w-5 transition-transform ${openSections.peticoes ? 'rotate-0' : '-rotate-90'}`} />
-          <h2 className="text-lg font-semibold">Petições Iniciais</h2>
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-orange-600/20 to-red-600/20 rounded-lg border border-orange-500/30 hover:border-orange-500/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <TrendingUp className="h-6 w-6 text-orange-500" />
+              <h2 className="text-xl font-bold text-foreground">Radar Evolução Incapacidade</h2>
+              <span className="text-sm text-muted-foreground">(Casos pendentes de ajuizamento)</span>
+            </div>
+            <div className="flex items-center gap-4">
+              {openSection === 'evolucao' ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </div>
         </CollapsibleTrigger>
-        <CollapsibleContent className="mt-4">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-            <Card className="bg-card border-border/50">
-              <CardHeader>
-                <CardTitle className="text-base">Por Tipo de Benefício</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {peticoesPorBeneficioData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={peticoesPorBeneficioData} layout="vertical">
+        <CollapsibleContent className="space-y-6 mt-6">
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <TrendingUp className="h-5 w-5 text-orange-500" />
+                <CardTitle className="text-lg">Evolução Semanal de Casos Pendentes</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {evolucaoData.length > 0 ? (
+                <ChartContainer config={chartConfig} className="h-[350px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={evolucaoData} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
                       <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                      <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={10} width={120} />
-                      <Tooltip
+                      <XAxis dataKey="semana" tick={{ fontSize: 10 }} axisLine={false} tickLine={false} interval={2} />
+                      <YAxis tick={{ fontSize: 10 }} axisLine={false} tickLine={false} />
+                      <Tooltip 
                         contentStyle={{
                           backgroundColor: 'hsl(var(--card))',
                           border: '1px solid hsl(var(--border))',
                           borderRadius: '8px',
                         }}
+                        formatter={(value: number) => [`${value} casos`, 'Pendentes']}
+                        labelFormatter={(label) => `Semana ${label}`}
                       />
-                      <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]} name="Quantidade" />
-                    </BarChart>
+                      <Line
+                        type="monotone"
+                        dataKey="pendentes"
+                        stroke="hsl(var(--primary))"
+                        strokeWidth={2}
+                        dot={{ fill: 'hsl(var(--primary))', strokeWidth: 0, r: 3 }}
+                        activeDot={{ r: 5, fill: 'hsl(var(--primary))' }}
+                      />
+                    </LineChart>
                   </ResponsiveContainer>
+                </ChartContainer>
+              ) : (
+                <div className="h-[350px] flex items-center justify-center bg-muted/30 rounded-lg">
+                  <p className="text-muted-foreground text-sm">Nenhum dado de evolução disponível</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Seção 3: Radar Tarefas (GID 1379612642) */}
+      <Collapsible 
+        open={openSection === 'tarefas'} 
+        onOpenChange={() => handleSectionToggle('tarefas')}
+        className="mb-8"
+      >
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-green-600/20 to-emerald-600/20 rounded-lg border border-green-500/30 hover:border-green-500/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <ClipboardList className="h-6 w-6 text-green-500" />
+              <h2 className="text-xl font-bold text-foreground">Radar Tarefas</h2>
+              <span className="text-sm text-muted-foreground">({data?.stats?.totalTarefas || 0} tarefas)</span>
+            </div>
+            <div className="flex items-center gap-4">
+              {openSection === 'tarefas' ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-6 mt-6">
+          {/* Filtro de Semana */}
+          <div className="flex items-center gap-4">
+            <Select
+              value={tarefasWeekFilter || "all"}
+              onValueChange={(value) => setTarefasWeekFilter(value === "all" ? null : value)}
+            >
+              <SelectTrigger className="w-[200px]">
+                <Calendar className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Todas as semanas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as semanas</SelectItem>
+                {weekOptions.tarefasWeeks.map((week) => (
+                  <SelectItem key={week} value={week}>
+                    Semana {week}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {tarefasWeekFilter && (
+              <button
+                onClick={() => setTarefasWeekFilter(null)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Limpar filtro
+              </button>
+            )}
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Tarefas por Tipo */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-lg">Por Tipo de Tarefa</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {tarefasPorTipoData.length > 0 ? (
+                  <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <BarChart data={tarefasPorTipoData} layout="vertical" margin={{ top: 10, right: 40, left: 10, bottom: 0 }}>
+                        <XAxis type="number" hide />
+                        <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={140} axisLine={false} tickLine={false} />
+                        <Tooltip formatter={(value: number) => [`${value} tarefas`, 'Total']} />
+                        <Bar dataKey="value" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]}>
+                          <LabelList dataKey="value" position="right" className="fill-foreground" fontSize={11} />
+                        </Bar>
+                      </BarChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
                 ) : (
-                  <p className="text-muted-foreground text-center py-8">Nenhum dado disponível</p>
+                  <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                    <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
 
-            <Card className="bg-card border-border/50">
+            {/* Ranking de Tarefas por Responsável */}
+            <Card>
               <CardHeader>
-                <CardTitle className="text-base">Por Responsável</CardTitle>
+                <div className="flex items-center gap-3">
+                  <Trophy className="h-5 w-5 text-yellow-500" />
+                  <CardTitle className="text-lg">Ranking por Responsável</CardTitle>
+                </div>
               </CardHeader>
               <CardContent>
-                {peticoesPorResponsavelData.length > 0 ? (
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart data={peticoesPorResponsavelData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                      <XAxis dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={10} angle={-45} textAnchor="end" height={80} />
-                      <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: 'hsl(var(--card))',
-                          border: '1px solid hsl(var(--border))',
-                          borderRadius: '8px',
-                        }}
-                      />
-                      <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} name="Petições" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                {tarefasPorResponsavelData.length > 0 ? (
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                    {tarefasPorResponsavelData.map((item, index) => {
+                      const maxValue = tarefasPorResponsavelData[0]?.value || 1;
+                      const barWidth = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+                      const posicao = index + 1;
+                      
+                      return (
+                        <div key={item.name} className="flex items-center gap-3">
+                          <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                            {posicao === 1 ? (
+                              <span className="text-2xl">🥇</span>
+                            ) : posicao === 2 ? (
+                              <span className="text-2xl">🥈</span>
+                            ) : posicao === 3 ? (
+                              <span className="text-2xl">🥉</span>
+                            ) : (
+                              <span className="text-sm font-bold text-muted-foreground">{posicao}º</span>
+                            )}
+                          </div>
+                          <div className="flex-shrink-0 w-24 text-sm font-medium truncate" title={item.name}>
+                            {item.name}
+                          </div>
+                          <div className="flex-1 relative h-6 bg-muted/30 rounded overflow-hidden">
+                            <div 
+                              className="absolute inset-y-0 left-0 bg-green-600 rounded transition-all duration-300"
+                              style={{ width: `${barWidth}%` }}
+                            />
+                            <span className="absolute inset-0 flex items-center justify-center text-xs font-medium">
+                              {item.value}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
-                  <p className="text-muted-foreground text-center py-8">Nenhum dado disponível</p>
+                  <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                    <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                  </div>
                 )}
               </CardContent>
             </Card>
@@ -321,132 +765,295 @@ const RadarPrevidenciario = () => {
         </CollapsibleContent>
       </Collapsible>
 
-      {/* Seção: Tarefas */}
-      <Collapsible
-        open={openSections.tarefas}
-        onOpenChange={() => toggleSection('tarefas')}
-        className="mb-6"
+      {/* Seção 4: Radar Aposentadorias (GID 0) */}
+      <Collapsible 
+        open={openSection === 'aposentadorias'} 
+        onOpenChange={() => handleSectionToggle('aposentadorias')}
+        className="mb-8"
       >
-        <CollapsibleTrigger className="flex items-center gap-2 w-full p-4 bg-card rounded-lg border border-border/50 hover:bg-accent/50 transition-colors">
-          <ChevronDown className={`h-5 w-5 transition-transform ${openSections.tarefas ? 'rotate-0' : '-rotate-90'}`} />
-          <h2 className="text-lg font-semibold">Tarefas Realizadas</h2>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-4">
-          <Card className="bg-card border-border/50">
-            <CardHeader>
-              <CardTitle className="text-base">Por Tipo de Tarefa</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {tarefasPorTipoData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <BarChart data={tarefasPorTipoData} layout="vertical">
-                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                    <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} />
-                    <YAxis dataKey="name" type="category" stroke="hsl(var(--muted-foreground))" fontSize={10} width={150} />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                    />
-                    <Bar dataKey="value" fill="hsl(var(--chart-3))" radius={[0, 4, 4, 0]} name="Quantidade" />
-                  </BarChart>
-                </ResponsiveContainer>
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-purple-600/20 to-pink-600/20 rounded-lg border border-purple-500/30 hover:border-purple-500/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <Clock className="h-6 w-6 text-purple-500" />
+              <h2 className="text-xl font-bold text-foreground">Radar Aposentadorias</h2>
+              <span className="text-sm text-muted-foreground">({data?.stats?.totalAposentadorias || 0} análises)</span>
+            </div>
+            <div className="flex items-center gap-4">
+              {openSection === 'aposentadorias' ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
               ) : (
-                <p className="text-muted-foreground text-center py-8">Nenhum dado disponível</p>
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
               )}
-            </CardContent>
-          </Card>
-        </CollapsibleContent>
-      </Collapsible>
-
-      {/* Seção: Aposentadorias */}
-      <Collapsible
-        open={openSections.aposentadorias}
-        onOpenChange={() => toggleSection('aposentadorias')}
-        className="mb-6"
-      >
-        <CollapsibleTrigger className="flex items-center gap-2 w-full p-4 bg-card rounded-lg border border-border/50 hover:bg-accent/50 transition-colors">
-          <ChevronDown className={`h-5 w-5 transition-transform ${openSections.aposentadorias ? 'rotate-0' : '-rotate-90'}`} />
-          <h2 className="text-lg font-semibold">Análise de Aposentadorias</h2>
+            </div>
+          </div>
         </CollapsibleTrigger>
-        <CollapsibleContent className="mt-4">
-          <Card className="bg-card border-border/50">
-            <CardHeader>
-              <CardTitle className="text-base">Por Tipo de Ação</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {aposentadoriasPorTipoData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={300}>
-                  <PieChart>
-                    <Pie
-                      data={aposentadoriasPorTipoData}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
-                      outerRadius={100}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      {aposentadoriasPorTipoData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                      ))}
-                    </Pie>
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: 'hsl(var(--card))',
-                        border: '1px solid hsl(var(--border))',
-                        borderRadius: '8px',
-                      }}
-                    />
-                  </PieChart>
-                </ResponsiveContainer>
-              ) : (
-                <p className="text-muted-foreground text-center py-8">Nenhum dado disponível</p>
-              )}
-            </CardContent>
-          </Card>
-        </CollapsibleContent>
-      </Collapsible>
+        <CollapsibleContent className="space-y-6 mt-6">
+          {/* Filtro de Semana */}
+          <div className="flex items-center gap-4">
+            <Select
+              value={aposentadoriasWeekFilter || "all"}
+              onValueChange={(value) => setAposentadoriasWeekFilter(value === "all" ? null : value)}
+            >
+              <SelectTrigger className="w-[200px]">
+                <Calendar className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Todas as semanas" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todas as semanas</SelectItem>
+                {weekOptions.aposentadoriasWeeks.map((week) => (
+                  <SelectItem key={week} value={week}>
+                    Semana {week}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {aposentadoriasWeekFilter && (
+              <button
+                onClick={() => setAposentadoriasWeekFilter(null)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Limpar filtro
+              </button>
+            )}
+          </div>
 
-      {/* Seção: Pastas para Correção */}
-      <Collapsible
-        open={openSections.pastas}
-        onOpenChange={() => toggleSection('pastas')}
-        className="mb-6"
-      >
-        <CollapsibleTrigger className="flex items-center gap-2 w-full p-4 bg-card rounded-lg border border-border/50 hover:bg-accent/50 transition-colors">
-          <ChevronDown className={`h-5 w-5 transition-transform ${openSections.pastas ? 'rotate-0' : '-rotate-90'}`} />
-          <h2 className="text-lg font-semibold">Pastas para Correção</h2>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="mt-4">
-          <Card className="bg-card border-border/50">
-            <CardHeader>
-              <CardTitle className="text-base">Por Situação</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {pastasPorSituacaoData.length > 0 ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {pastasPorSituacaoData.map((item, index) => (
-                    <div
-                      key={item.name}
-                      className="p-4 rounded-lg border border-border/50"
-                      style={{ backgroundColor: `${COLORS[index % COLORS.length]}15` }}
-                    >
-                      <div className="text-2xl font-bold" style={{ color: COLORS[index % COLORS.length] }}>
-                        {item.value}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Aposentadorias por Tipo de Ação */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-lg">Por Tipo de Ação</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {aposentadoriasPorTipoData.length > 0 ? (
+                  <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <PieChart>
+                        <Pie
+                          data={aposentadoriasPorTipoData}
+                          cx="50%"
+                          cy="50%"
+                          labelLine={false}
+                          label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                          outerRadius={80}
+                          fill="#8884d8"
+                          dataKey="value"
+                        >
+                          {aposentadoriasPorTipoData.map((_, index) => (
+                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                          ))}
+                        </Pie>
+                        <Tooltip 
+                          contentStyle={{
+                            backgroundColor: 'hsl(var(--card))',
+                            border: '1px solid hsl(var(--border))',
+                            borderRadius: '8px',
+                          }}
+                        />
+                      </PieChart>
+                    </ResponsiveContainer>
+                  </ChartContainer>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                    <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Aposentadorias por Situação */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-lg">Por Situação</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {aposentadoriasPorSituacaoData.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    {aposentadoriasPorSituacaoData.map((item, index) => (
+                      <div
+                        key={item.name}
+                        className="p-4 rounded-lg border border-border/50"
+                        style={{ backgroundColor: `${COLORS[index % COLORS.length]}15` }}
+                      >
+                        <div className="text-2xl font-bold" style={{ color: COLORS[index % COLORS.length] }}>
+                          {item.value}
+                        </div>
+                        <div className="text-sm text-muted-foreground truncate" title={item.name}>{item.name}</div>
                       </div>
-                      <div className="text-sm text-muted-foreground">{item.name}</div>
-                    </div>
-                  ))}
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                    <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Ranking de Aposentadorias por Responsável */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Trophy className="h-5 w-5 text-yellow-500" />
+                <CardTitle className="text-lg">Ranking por Responsável</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              {aposentadoriasPorResponsavelData.length > 0 ? (
+                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+                  {aposentadoriasPorResponsavelData.slice(0, 9).map((item, index) => {
+                    const posicao = index + 1;
+                    
+                    return (
+                      <div key={item.name} className="flex items-center gap-3 p-3 bg-muted/20 rounded-lg">
+                        <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                          {posicao === 1 ? (
+                            <span className="text-2xl">🥇</span>
+                          ) : posicao === 2 ? (
+                            <span className="text-2xl">🥈</span>
+                          ) : posicao === 3 ? (
+                            <span className="text-2xl">🥉</span>
+                          ) : (
+                            <span className="text-sm font-bold text-muted-foreground">{posicao}º</span>
+                          )}
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium truncate" title={item.name}>
+                            {item.name}
+                          </div>
+                          <div className="text-lg font-bold text-purple-500">
+                            {item.value} análises
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               ) : (
-                <p className="text-muted-foreground text-center py-8">Nenhum dado disponível</p>
+                <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
+                  <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                </div>
               )}
             </CardContent>
           </Card>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Seção 5: Radar Pastas para Correção (GID 731526977) */}
+      <Collapsible 
+        open={openSection === 'pastas'} 
+        onOpenChange={() => handleSectionToggle('pastas')}
+        className="mb-8"
+      >
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-600/20 to-yellow-600/20 rounded-lg border border-amber-500/30 hover:border-amber-500/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <FolderCheck className="h-6 w-6 text-amber-500" />
+              <h2 className="text-xl font-bold text-foreground">Radar Pastas para Correção</h2>
+              <span className="text-sm text-muted-foreground">({data?.stats?.totalPastasCorrecao || 0} pastas)</span>
+            </div>
+            <div className="flex items-center gap-4">
+              {openSection === 'pastas' ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-6 mt-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Pastas por Situação */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <BarChart3 className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-lg">Por Situação</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {pastasPorSituacaoData.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-4">
+                    {pastasPorSituacaoData.map((item, index) => (
+                      <div
+                        key={item.name}
+                        className="p-4 rounded-lg border border-border/50"
+                        style={{ backgroundColor: `${COLORS[index % COLORS.length]}15` }}
+                      >
+                        <div className="text-2xl font-bold" style={{ color: COLORS[index % COLORS.length] }}>
+                          {item.value}
+                        </div>
+                        <div className="text-sm text-muted-foreground">{item.name}</div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
+                    <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Ranking de Pastas por Responsável */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <Trophy className="h-5 w-5 text-yellow-500" />
+                  <CardTitle className="text-lg">Ranking por Responsável</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {pastasPorResponsavelData.length > 0 ? (
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                    {pastasPorResponsavelData.map((item, index) => {
+                      const maxValue = pastasPorResponsavelData[0]?.value || 1;
+                      const barWidth = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+                      const posicao = index + 1;
+                      
+                      return (
+                        <div key={item.name} className="flex items-center gap-3">
+                          <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                            {posicao === 1 ? (
+                              <span className="text-2xl">🥇</span>
+                            ) : posicao === 2 ? (
+                              <span className="text-2xl">🥈</span>
+                            ) : posicao === 3 ? (
+                              <span className="text-2xl">🥉</span>
+                            ) : (
+                              <span className="text-sm font-bold text-muted-foreground">{posicao}º</span>
+                            )}
+                          </div>
+                          <div className="flex-shrink-0 w-24 text-sm font-medium truncate" title={item.name}>
+                            {item.name}
+                          </div>
+                          <div className="flex-1 relative h-6 bg-muted/30 rounded overflow-hidden">
+                            <div 
+                              className="absolute inset-y-0 left-0 bg-amber-500 rounded transition-all duration-300"
+                              style={{ width: `${barWidth}%` }}
+                            />
+                            <span className="absolute inset-0 flex items-center justify-center text-xs font-medium">
+                              {item.value}
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                    <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </CollapsibleContent>
       </Collapsible>
     </div>
