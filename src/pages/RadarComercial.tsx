@@ -2130,6 +2130,148 @@ const RadarComercial = () => {
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-8 mt-6">
+          {/* Rankings Gerais de Produtos */}
+          {!isLoading && contratosFechadosPorSetor.length > 0 && (() => {
+            // Calcula ranking de produtos por média e total de êxito
+            const todosProdutos = contratosFechadosPorSetor.flatMap(setor => 
+              setor.produtos.map(p => {
+                const somaExito = p.contracts.reduce((sum, c) => sum + (c.honorariosExito || 0), 0);
+                const totalContratos = p.contracts.length;
+                const mediaExito = totalContratos > 0 ? somaExito / totalContratos : 0;
+                return {
+                  produto: p.produto,
+                  setor: setor.setor,
+                  totalContratos,
+                  somaExito,
+                  mediaExito,
+                };
+              })
+            );
+
+            const rankingPorMedia = [...todosProdutos]
+              .filter(p => p.totalContratos >= 1)
+              .sort((a, b) => b.mediaExito - a.mediaExito)
+              .slice(0, 10);
+
+            const rankingPorTotal = [...todosProdutos]
+              .sort((a, b) => b.somaExito - a.somaExito)
+              .slice(0, 10);
+
+            const formatCurrency = (value: number) => {
+              return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+                minimumFractionDigits: 2,
+              }).format(value);
+            };
+
+            const getMedalEmoji = (position: number) => {
+              if (position === 0) return '🥇';
+              if (position === 1) return '🥈';
+              if (position === 2) return '🥉';
+              return null;
+            };
+
+            const maxMedia = rankingPorMedia.length > 0 ? rankingPorMedia[0].mediaExito : 1;
+            const maxTotal = rankingPorTotal.length > 0 ? rankingPorTotal[0].somaExito : 1;
+
+            return (
+              <div className="grid gap-6 md:grid-cols-2">
+                {/* Card: Ranking por Média de Êxito */}
+                <Card className="border-violet-500/30">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center gap-2">
+                      <Trophy className="h-5 w-5 text-yellow-500" />
+                      <CardTitle className="text-lg">Ranking por Média de Êxito</CardTitle>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Produtos com maior valor médio de honorários de êxito</p>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    <div className="space-y-3">
+                      {rankingPorMedia.map((item, index) => (
+                        <div key={`media-${item.produto}`} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {getMedalEmoji(index) ? (
+                                <span className="text-lg">{getMedalEmoji(index)}</span>
+                              ) : (
+                                <span className="w-7 text-center text-sm text-muted-foreground">{index + 1}º</span>
+                              )}
+                              <span className="text-sm font-medium truncate max-w-[180px]" title={item.produto}>
+                                {item.produto}
+                              </span>
+                            </div>
+                            <span className="text-sm font-bold text-violet-500">{formatCurrency(item.mediaExito)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-muted rounded-full h-2">
+                              <div 
+                                className="bg-gradient-to-r from-violet-500 to-purple-500 h-2 rounded-full transition-all"
+                                style={{ width: `${(item.mediaExito / maxMedia) * 100}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {item.totalContratos} contratos
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                      {rankingPorMedia.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">Nenhum produto encontrado</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Card: Ranking por Total de Êxito */}
+                <Card className="border-violet-500/30">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-center gap-2">
+                      <Award className="h-5 w-5 text-amber-500" />
+                      <CardTitle className="text-lg">Ranking por Total de Êxito</CardTitle>
+                    </div>
+                    <p className="text-xs text-muted-foreground">Produtos com maior soma de honorários de êxito</p>
+                  </CardHeader>
+                  <CardContent className="pt-2">
+                    <div className="space-y-3">
+                      {rankingPorTotal.map((item, index) => (
+                        <div key={`total-${item.produto}`} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              {getMedalEmoji(index) ? (
+                                <span className="text-lg">{getMedalEmoji(index)}</span>
+                              ) : (
+                                <span className="w-7 text-center text-sm text-muted-foreground">{index + 1}º</span>
+                              )}
+                              <span className="text-sm font-medium truncate max-w-[180px]" title={item.produto}>
+                                {item.produto}
+                              </span>
+                            </div>
+                            <span className="text-sm font-bold text-amber-500">{formatCurrency(item.somaExito)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="flex-1 bg-muted rounded-full h-2">
+                              <div 
+                                className="bg-gradient-to-r from-amber-500 to-yellow-500 h-2 rounded-full transition-all"
+                                style={{ width: `${(item.somaExito / maxTotal) * 100}%` }}
+                              />
+                            </div>
+                            <span className="text-xs text-muted-foreground whitespace-nowrap">
+                              {item.totalContratos} contratos
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                      {rankingPorTotal.length === 0 && (
+                        <p className="text-sm text-muted-foreground text-center py-4">Nenhum produto encontrado</p>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })()}
+
           {/* Cards de produtos com contratos fechados agrupados por setor */}
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
