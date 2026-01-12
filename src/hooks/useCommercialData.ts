@@ -77,6 +77,10 @@ export interface Administrativo2Record {
   [key: string]: string;
 }
 
+export interface TestemunhaRecord {
+  [key: string]: string;
+}
+
 export interface CommercialDataResponse {
   records: CommercialRecord[];
   weeks: number[];
@@ -96,6 +100,8 @@ export interface CommercialDataResponse {
   administrativoHeaders: string[];
   administrativo2Data: Administrativo2Record[];
   administrativo2Headers: string[];
+  testemunhasData: TestemunhaRecord[];
+  testemunhasHeaders: string[];
   lastUpdated: string;
 }
 
@@ -115,6 +121,8 @@ export const useCommercialData = () => {
   const [administrativoHeaders, setAdministrativoHeaders] = useState<string[]>([]);
   const [administrativo2Data, setAdministrativo2Data] = useState<Administrativo2Record[]>([]);
   const [administrativo2Headers, setAdministrativo2Headers] = useState<string[]>([]);
+  const [testemunhasData, setTestemunhasData] = useState<TestemunhaRecord[]>([]);
+  const [testemunhasHeaders, setTestemunhasHeaders] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -152,6 +160,8 @@ export const useCommercialData = () => {
       console.log(`Administrativo Headers: ${commercialData.administrativoHeaders?.join(', ') || 'none'}`);
       console.log(`Loaded ${commercialData.administrativo2Data?.length || 0} Administrativo 2 records`);
       console.log(`Administrativo 2 Headers: ${commercialData.administrativo2Headers?.join(', ') || 'none'}`);
+      console.log(`Loaded ${commercialData.testemunhasData?.length || 0} Testemunhas records`);
+      console.log(`Testemunhas Headers: ${commercialData.testemunhasHeaders?.join(', ') || 'none'}`);
 
       setData(commercialData.records);
       setWeeks(commercialData.weeks);
@@ -168,6 +178,8 @@ export const useCommercialData = () => {
       setAdministrativoHeaders(commercialData.administrativoHeaders || []);
       setAdministrativo2Data(commercialData.administrativo2Data || []);
       setAdministrativo2Headers(commercialData.administrativo2Headers || []);
+      setTestemunhasData(commercialData.testemunhasData || []);
+      setTestemunhasHeaders(commercialData.testemunhasHeaders || []);
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -207,6 +219,8 @@ export const useCommercialData = () => {
     administrativoHeaders,
     administrativo2Data,
     administrativo2Headers,
+    testemunhasData,
+    testemunhasHeaders,
     isLoading,
     error,
     refetch: fetchData,
