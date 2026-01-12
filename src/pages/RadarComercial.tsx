@@ -206,6 +206,77 @@ const RadarComercial = () => {
     };
   }, [indicacoesRecebidasData]);
 
+  // Meta Geral do Comercial Previdenciário (ponderada)
+  const metaGeral = useMemo(() => {
+    const pesos = {
+      highTicket: 0.63,
+      incapacidade: 0.32,
+      saneamento: 0.025,
+      indicacoes: 0.025,
+    };
+
+    // Percentual de cada meta individual (limitado a 100%)
+    const percentHighTicket = Math.min((metaHighTicket.alcancado / metaHighTicket.meta) * 100, 100);
+    const percentIncapacidade = Math.min((metaIncapacidade.alcancado / metaIncapacidade.meta) * 100, 100);
+    const percentSaneamento = metaSaneamento.meta > 0 
+      ? Math.min((metaSaneamento.alcancado / metaSaneamento.meta) * 100, 100) 
+      : 0;
+    const percentIndicacoes = Math.min((metaIndicacoes.alcancado / metaIndicacoes.meta) * 100, 100);
+
+    // Contribuição ponderada de cada meta
+    const contribuicaoHighTicket = percentHighTicket * pesos.highTicket;
+    const contribuicaoIncapacidade = percentIncapacidade * pesos.incapacidade;
+    const contribuicaoSaneamento = percentSaneamento * pesos.saneamento;
+    const contribuicaoIndicacoes = percentIndicacoes * pesos.indicacoes;
+
+    // Percentual total ponderado
+    const percentualTotal = contribuicaoHighTicket + contribuicaoIncapacidade + contribuicaoSaneamento + contribuicaoIndicacoes;
+
+    // Esperado para a semana atual
+    const esperadoSemana = (semanaAtualDoAno / 53) * 100;
+    const diferencaEsperado = percentualTotal - esperadoSemana;
+
+    return {
+      percentualTotal,
+      esperadoSemana,
+      diferencaEsperado,
+      metas: [
+        {
+          nome: 'Contratos High Ticket',
+          peso: pesos.highTicket * 100,
+          alcancado: metaHighTicket.alcancado,
+          meta: metaHighTicket.meta,
+          percentual: percentHighTicket,
+          contribuicao: contribuicaoHighTicket,
+        },
+        {
+          nome: 'Benefícios por Incapacidade',
+          peso: pesos.incapacidade * 100,
+          alcancado: metaIncapacidade.alcancado,
+          meta: metaIncapacidade.meta,
+          percentual: percentIncapacidade,
+          contribuicao: contribuicaoIncapacidade,
+        },
+        {
+          nome: 'Saneamento de Pastas',
+          peso: pesos.saneamento * 100,
+          alcancado: metaSaneamento.alcancado,
+          meta: metaSaneamento.meta,
+          percentual: percentSaneamento,
+          contribuicao: contribuicaoSaneamento,
+        },
+        {
+          nome: 'Indicações de Clientes',
+          peso: pesos.indicacoes * 100,
+          alcancado: metaIndicacoes.alcancado,
+          meta: metaIndicacoes.meta,
+          percentual: percentIndicacoes,
+          contribuicao: contribuicaoIndicacoes,
+        },
+      ],
+    };
+  }, [metaHighTicket, metaIncapacidade, metaSaneamento, metaIndicacoes, semanaAtualDoAno]);
+
   // Calcula métricas baseadas nos dados filtrados
   const metrics = useMemo(() => {
     const contratosFechados = filteredData.filter(
@@ -6173,6 +6244,105 @@ const RadarComercial = () => {
               semanaAtual={semanaAtualDoAno}
             />
           </div>
+
+          {/* Card Meta Geral do Comercial Previdenciário */}
+          <Card className="border-2 border-rose-500/50 bg-gradient-to-br from-rose-500/5 to-pink-500/5">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-rose-500/20">
+                  <Target className="h-6 w-6 text-rose-500" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">Meta Geral do Comercial Previdenciário</CardTitle>
+                  <p className="text-sm text-muted-foreground">Progresso ponderado de todas as metas</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Coluna 1: Percentual Total */}
+                <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-gradient-to-br from-rose-500/10 to-pink-500/10 border border-rose-500/20">
+                  <span className={`text-5xl font-bold ${
+                    metaGeral.diferencaEsperado >= 0 ? 'text-emerald-500' : 'text-rose-500'
+                  }`}>
+                    {metaGeral.percentualTotal.toFixed(1)}%
+                  </span>
+                  <span className="text-sm text-muted-foreground mt-2">da meta geral atingida</span>
+                  <div className="mt-4 text-center">
+                    <span className="text-xs text-muted-foreground">Esperado: </span>
+                    <span className="text-sm font-semibold text-foreground">{metaGeral.esperadoSemana.toFixed(1)}%</span>
+                    <span className={`ml-2 text-sm font-semibold ${
+                      metaGeral.diferencaEsperado >= 0 ? 'text-emerald-500' : 'text-red-500'
+                    }`}>
+                      ({metaGeral.diferencaEsperado >= 0 ? '+' : ''}{metaGeral.diferencaEsperado.toFixed(1)} p.p.)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Coluna 2: Breakdown das metas */}
+                <div className="lg:col-span-2 space-y-4">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Detalhamento por Meta</h4>
+                  {metaGeral.metas.map((meta, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{meta.nome}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                            Peso: {meta.peso}%
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-muted-foreground">{meta.alcancado}/{meta.meta}</span>
+                          <span className={`font-semibold ${
+                            meta.percentual >= (semanaAtualDoAno / 53) * 100 ? 'text-emerald-500' : 'text-amber-500'
+                          }`}>
+                            {meta.percentual.toFixed(1)}%
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            → {meta.contribuicao.toFixed(1)} p.p.
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all ${
+                            meta.percentual >= (semanaAtualDoAno / 53) * 100 ? 'bg-emerald-500' : 'bg-amber-500'
+                          }`}
+                          style={{ width: `${Math.min(meta.percentual, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Barra de progresso geral */}
+              <div className="mt-6 pt-6 border-t border-border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Progresso Geral Ponderado</span>
+                  <span className="text-sm text-muted-foreground">Semana {semanaAtualDoAno} de 53</span>
+                </div>
+                <div className="relative h-4 bg-muted rounded-full overflow-hidden">
+                  {/* Linha de referência do esperado */}
+                  <div 
+                    className="absolute top-0 bottom-0 w-0.5 bg-foreground/50 z-10"
+                    style={{ left: `${metaGeral.esperadoSemana}%` }}
+                  />
+                  {/* Barra de progresso */}
+                  <div 
+                    className={`h-full rounded-full transition-all ${
+                      metaGeral.diferencaEsperado >= 0 ? 'bg-emerald-500' : 'bg-rose-500'
+                    }`}
+                    style={{ width: `${Math.min(metaGeral.percentualTotal, 100)}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
+                  <span>0%</span>
+                  <span>Meta: 100%</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Botão para recolher seção */}
           <div className="flex justify-center pt-4">
