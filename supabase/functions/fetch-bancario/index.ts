@@ -198,6 +198,13 @@ serve(async (req) => {
               dataPagamento: (row[24] || '').trim(),
             }));
             
+            // Debug: log acordos e cumprimentos
+            const acordos = transitoData.filter((r: any) => r.dataAcordo && /\d/.test(r.dataAcordo));
+            const cumprimentos = transitoData.filter((r: any) => r.statusCumprimentoSentenca?.toLowerCase().trim() === 'ajuizado');
+            console.log(`Debug - Acordos com data (col J): ${acordos.length}`, acordos.map((r: any) => r.dataAcordo));
+            console.log(`Debug - Cumprimentos ajuizados (col S): ${cumprimentos.length}`, cumprimentos.map((r: any) => r.statusCumprimentoSentenca));
+            console.log(`Debug - Todos statusCumprimentoSentenca:`, transitoData.map((r: any) => r.statusCumprimentoSentenca));
+            
             console.log(`Transito data loaded: ${transitoData.length} records`);
           }
         }

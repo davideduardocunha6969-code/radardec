@@ -430,13 +430,17 @@ const RadarBancario = () => {
       const dataAcordo = r.dataAcordo?.trim();
       // Verifica se parece com uma data (contém números)
       return dataAcordo && /\d/.test(dataAcordo);
-    }).length;
+    });
 
     const cumprimentosAjuizados = transitoData.filter(r => 
       r.statusCumprimentoSentenca?.toLowerCase().trim() === 'ajuizado'
-    ).length;
+    );
 
-    const totalAcordosCumprimentos = acordosRealizados + cumprimentosAjuizados;
+    console.log('Debug Trânsito - Acordos realizados:', acordosRealizados.length, acordosRealizados.map(r => ({ autor: r.autor, dataAcordo: r.dataAcordo })));
+    console.log('Debug Trânsito - Cumprimentos ajuizados:', cumprimentosAjuizados.length, cumprimentosAjuizados.map(r => ({ autor: r.autor, status: r.statusCumprimentoSentenca })));
+    console.log('Debug Trânsito - Todos status:', transitoData.map(r => r.statusCumprimentoSentenca));
+
+    const totalAcordosCumprimentos = acordosRealizados.length + cumprimentosAjuizados.length;
 
     // Gera dados para todas as 52 semanas
     const dados = [];
@@ -460,8 +464,8 @@ const RadarBancario = () => {
       metricas: {
         semanaAtual,
         totalAcordosCumprimentos,
-        acordosRealizados,
-        cumprimentosAjuizados,
+        acordosRealizados: acordosRealizados.length,
+        cumprimentosAjuizados: cumprimentosAjuizados.length,
         metaEsperadaSemana,
         diferenca,
         percentualAtingimento
