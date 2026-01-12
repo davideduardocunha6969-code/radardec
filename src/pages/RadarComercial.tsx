@@ -1250,14 +1250,6 @@ const RadarComercial = () => {
         <CollapsibleContent className="space-y-8 mt-6">
           {/* Filtros */}
           <div className="space-y-4">
-            {/* Filtro de Semanas */}
-            <WeekFilter
-              weeks={weeks}
-              selectedWeek={selectedWeek}
-              onWeekChange={setSelectedWeek}
-              isLoading={isLoading}
-            />
-
             {/* Filtros adicionais */}
             <div className="flex flex-wrap gap-4">
               {/* Filtro por Setor */}
