@@ -86,8 +86,8 @@ serve(async (req) => {
       produto: (row[8] || '').trim(),
       possuiDireito: (row[9] || '').trim().toUpperCase(),
       origemCliente: (row[10] || '').trim(),
-      honorariosExito: parseFloat((row[11] || '0').replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
-      honorariosIniciais: parseFloat((row[12] || '0').replace(/[^\d.,]/g, '').replace(',', '.')) || 0,
+      honorariosExito: parseBrazilianCurrency(row[11] || '0'),
+      honorariosIniciais: parseBrazilianCurrency(row[12] || '0'),
       tempoFechamento: parseInt((row[13] || '0').trim()) || 0,
       resultado: (row[14] || '').trim(),
       cadencia: (row[15] || '').trim(),
@@ -626,6 +626,26 @@ serve(async (req) => {
     );
   }
 });
+
+// Função para parsear valores monetários no formato brasileiro (R$ 90.000,00 -> 90000)
+function parseBrazilianCurrency(value: string): number {
+  if (!value || value.trim() === '') return 0;
+  
+  // Remove tudo exceto dígitos, pontos e vírgulas
+  let cleaned = value.replace(/[^\d.,]/g, '');
+  
+  // Se não há caracteres numéricos, retorna 0
+  if (!cleaned || !/\d/.test(cleaned)) return 0;
+  
+  // Formato brasileiro: ponto como separador de milhar, vírgula como decimal
+  // Exemplo: 90.000,00 -> 90000.00
+  // Primeiro remove os pontos (separadores de milhar)
+  // Depois substitui vírgula por ponto (separador decimal)
+  cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+  
+  const result = parseFloat(cleaned);
+  return isNaN(result) ? 0 : result;
+}
 
 function parseCSV(csvText: string): string[][] {
   const rows: string[][] = [];
