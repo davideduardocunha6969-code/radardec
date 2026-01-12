@@ -390,7 +390,7 @@ const RadarBancario = () => {
           </div>
 
           {/* Cards de Métricas */}
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-6 md:grid-cols-2">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
@@ -411,23 +411,6 @@ const RadarBancario = () => {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between pb-2">
                 <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Tipos de Ação
-                </CardTitle>
-                <Gavel className="h-4 w-4 text-indigo-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  {isLoading ? '--' : iniciaisMetricas.rankingTipoAcao.length}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Tipos diferentes
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
                   Estados Atendidos
                 </CardTitle>
                 <MapPin className="h-4 w-4 text-green-500" />
@@ -438,23 +421,6 @@ const RadarBancario = () => {
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   UFs com processos
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between pb-2">
-                <CardTitle className="text-sm font-medium text-muted-foreground">
-                  Responsáveis Ativos
-                </CardTitle>
-                <Users className="h-4 w-4 text-purple-500" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold text-foreground">
-                  {isLoading ? '--' : iniciaisMetricas.rankingResponsaveis.length}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Profissionais
                 </p>
               </CardContent>
             </Card>
