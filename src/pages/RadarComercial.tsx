@@ -3239,13 +3239,13 @@ const RadarComercial = () => {
 
           {/* Cards de Honorários Perdidos em Negociações */}
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Card de Honorários de Êxito Perdidos */}
+            {/* Card de Honorários de Êxito Perdidos em Negociação */}
             <Card className="border-red-500/30">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <AlertTriangle className="h-5 w-5 text-red-500" />
-                    <CardTitle className="text-lg">Honorários de Êxito Perdidos</CardTitle>
+                    <CardTitle className="text-lg">Honorários de Êxito Perdidos em Negociação</CardTitle>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
@@ -3387,13 +3387,13 @@ const RadarComercial = () => {
               </CardContent>
             </Card>
 
-            {/* Card de Honorários Iniciais Perdidos */}
+            {/* Card de Honorários Iniciais Perdidos em Negociação */}
             <Card className="border-orange-500/30">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <AlertTriangle className="h-5 w-5 text-orange-500" />
-                    <CardTitle className="text-lg">Honorários Iniciais Perdidos</CardTitle>
+                    <CardTitle className="text-lg">Honorários Iniciais Perdidos em Negociação</CardTitle>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
@@ -3517,6 +3517,305 @@ const RadarComercial = () => {
                               <div className="relative h-6 bg-muted/30 rounded overflow-hidden">
                                 <div 
                                   className="absolute inset-y-0 left-0 bg-orange-500 rounded transition-all duration-300"
+                                  style={{ width: `${barWidth}%` }}
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <span className={`text-xs font-semibold ${barWidth > 40 ? 'text-white' : 'text-foreground'}`}>
+                                    {formatCurrency(item.valorPerdido)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Cards de Honorários Perdidos Aguardando Documentação */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Card de Honorários de Êxito Perdidos Aguardando Documentação */}
+            <Card className="border-amber-500/30">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-5 w-5 text-amber-500" />
+                    <CardTitle className="text-lg">Honorários de Êxito Perdidos Aguardando Documentação</CardTitle>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Valor potencial perdido aguardando documentação baseado na média de êxito dos contratos fechados
+                </p>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  // Função para parsear moeda
+                  const parseCurrency = (value: string): number => {
+                    if (!value || value.trim() === '') return 0;
+                    let cleaned = value.replace(/[^\d,\.\-]/g, '');
+                    if (!cleaned || !/\d/.test(cleaned)) return 0;
+                    const hasComma = cleaned.includes(',');
+                    const hasDot = cleaned.includes('.');
+                    if (hasComma && hasDot) {
+                      const lastComma = cleaned.lastIndexOf(',');
+                      const lastDot = cleaned.lastIndexOf('.');
+                      if (lastComma > lastDot) {
+                        const integerPart = cleaned.slice(0, lastComma).replace(/\./g, '').replace(/,/g, '');
+                        const decimalPart = cleaned.slice(lastComma + 1);
+                        cleaned = `${integerPart}.${decimalPart}`;
+                      } else {
+                        const integerPart = cleaned.slice(0, lastDot).replace(/,/g, '').replace(/\./g, '');
+                        const decimalPart = cleaned.slice(lastDot + 1);
+                        cleaned = `${integerPart}.${decimalPart}`;
+                      }
+                    } else if (hasComma) {
+                      const lastComma = cleaned.lastIndexOf(',');
+                      const decimalPart = cleaned.slice(lastComma + 1);
+                      if (/^\d{1,2}$/.test(decimalPart)) {
+                        const integerPart = cleaned.slice(0, lastComma).replace(/,/g, '').replace(/\./g, '');
+                        cleaned = `${integerPart}.${decimalPart}`;
+                      } else {
+                        cleaned = cleaned.replace(/,/g, '').replace(/\./g, '');
+                      }
+                    } else if (hasDot) {
+                      const lastDot = cleaned.lastIndexOf('.');
+                      const decimalPart = cleaned.slice(lastDot + 1);
+                      if (/^\d{1,2}$/.test(decimalPart)) {
+                        const integerPart = cleaned.slice(0, lastDot).replace(/\./g, '').replace(/,/g, '');
+                        cleaned = `${integerPart}.${decimalPart}`;
+                      } else {
+                        cleaned = cleaned.replace(/\./g, '');
+                      }
+                    }
+                    const result = Number(cleaned);
+                    return Number.isFinite(result) ? result : 0;
+                  };
+
+                  // Calcula média de êxito por produto (apenas contratos fechados)
+                  const mediaExitoPorProduto: Record<string, { soma: number; count: number }> = {};
+                  data.filter(r => r.resultado?.toLowerCase().includes('contrato fechado')).forEach(r => {
+                    const produto = r.produto?.trim() || '';
+                    if (!produto) return;
+                    const valorExito = parseCurrency(String(r.honorariosExito || ''));
+                    if (!mediaExitoPorProduto[produto]) {
+                      mediaExitoPorProduto[produto] = { soma: 0, count: 0 };
+                    }
+                    mediaExitoPorProduto[produto].soma += valorExito;
+                    mediaExitoPorProduto[produto].count += 1;
+                  });
+
+                  // Conta aguarda documentação por produto
+                  const aguardaDocPorProduto: Record<string, number> = {};
+                  data.filter(r => 
+                    r.resultado?.toLowerCase().includes('aguarda documentação') || 
+                    r.resultado?.toLowerCase().includes('aguarda documentacao')
+                  ).forEach(r => {
+                    const produto = r.produto?.trim() || '';
+                    if (!produto) return;
+                    aguardaDocPorProduto[produto] = (aguardaDocPorProduto[produto] || 0) + 1;
+                  });
+
+                  // Calcula valor perdido por produto
+                  const valorPerdidoPorProduto = Object.entries(aguardaDocPorProduto).map(([produto, count]) => {
+                    const mediaData = mediaExitoPorProduto[produto];
+                    const media = mediaData && mediaData.count > 0 ? mediaData.soma / mediaData.count : 0;
+                    const valorPerdido = media * count;
+                    return { produto, count, media, valorPerdido };
+                  }).filter(p => p.valorPerdido > 0).sort((a, b) => b.valorPerdido - a.valorPerdido);
+
+                  const totalPerdido = valorPerdidoPorProduto.reduce((sum, p) => sum + p.valorPerdido, 0);
+                  const maxValue = valorPerdidoPorProduto[0]?.valorPerdido || 1;
+
+                  if (valorPerdidoPorProduto.length === 0) {
+                    return (
+                      <div className="h-[150px] flex items-center justify-center bg-muted/30 rounded-lg">
+                        <p className="text-muted-foreground text-sm">Nenhum dado de aguarda documentação disponível</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-4">
+                      {/* Total geral */}
+                      <div className="p-4 bg-amber-500/10 rounded-lg border border-amber-500/30">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">Total Potencial Perdido</span>
+                          <span className="text-2xl font-bold text-amber-500">
+                            {formatCurrency(totalPerdido)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Breakdown por produto */}
+                      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                        {valorPerdidoPorProduto.map((item, index) => {
+                          const barWidth = (item.valorPerdido / maxValue) * 100;
+                          return (
+                            <div key={item.produto} className="space-y-1">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="font-medium truncate flex-1" title={item.produto}>
+                                  {index < 3 && (index === 0 ? '🥇 ' : index === 1 ? '🥈 ' : '🥉 ')}
+                                  {item.produto}
+                                </span>
+                                <span className="text-muted-foreground ml-2 flex-shrink-0">
+                                  {item.count} aguardando × {formatCurrency(item.media)} média
+                                </span>
+                              </div>
+                              <div className="relative h-6 bg-muted/30 rounded overflow-hidden">
+                                <div 
+                                  className="absolute inset-y-0 left-0 bg-amber-500 rounded transition-all duration-300"
+                                  style={{ width: `${barWidth}%` }}
+                                />
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <span className={`text-xs font-semibold ${barWidth > 40 ? 'text-white' : 'text-foreground'}`}>
+                                    {formatCurrency(item.valorPerdido)}
+                                  </span>
+                                </div>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            {/* Card de Honorários Iniciais Perdidos Aguardando Documentação */}
+            <Card className="border-yellow-500/30">
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <FileText className="h-5 w-5 text-yellow-500" />
+                    <CardTitle className="text-lg">Honorários Iniciais Perdidos Aguardando Documentação</CardTitle>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Valor potencial perdido aguardando documentação baseado na média de iniciais dos contratos fechados
+                </p>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  // Função para parsear moeda
+                  const parseCurrency = (value: string): number => {
+                    if (!value || value.trim() === '') return 0;
+                    let cleaned = value.replace(/[^\d,\.\-]/g, '');
+                    if (!cleaned || !/\d/.test(cleaned)) return 0;
+                    const hasComma = cleaned.includes(',');
+                    const hasDot = cleaned.includes('.');
+                    if (hasComma && hasDot) {
+                      const lastComma = cleaned.lastIndexOf(',');
+                      const lastDot = cleaned.lastIndexOf('.');
+                      if (lastComma > lastDot) {
+                        const integerPart = cleaned.slice(0, lastComma).replace(/\./g, '').replace(/,/g, '');
+                        const decimalPart = cleaned.slice(lastComma + 1);
+                        cleaned = `${integerPart}.${decimalPart}`;
+                      } else {
+                        const integerPart = cleaned.slice(0, lastDot).replace(/,/g, '').replace(/\./g, '');
+                        const decimalPart = cleaned.slice(lastDot + 1);
+                        cleaned = `${integerPart}.${decimalPart}`;
+                      }
+                    } else if (hasComma) {
+                      const lastComma = cleaned.lastIndexOf(',');
+                      const decimalPart = cleaned.slice(lastComma + 1);
+                      if (/^\d{1,2}$/.test(decimalPart)) {
+                        const integerPart = cleaned.slice(0, lastComma).replace(/,/g, '').replace(/\./g, '');
+                        cleaned = `${integerPart}.${decimalPart}`;
+                      } else {
+                        cleaned = cleaned.replace(/,/g, '').replace(/\./g, '');
+                      }
+                    } else if (hasDot) {
+                      const lastDot = cleaned.lastIndexOf('.');
+                      const decimalPart = cleaned.slice(lastDot + 1);
+                      if (/^\d{1,2}$/.test(decimalPart)) {
+                        const integerPart = cleaned.slice(0, lastDot).replace(/\./g, '').replace(/,/g, '');
+                        cleaned = `${integerPart}.${decimalPart}`;
+                      } else {
+                        cleaned = cleaned.replace(/\./g, '');
+                      }
+                    }
+                    const result = Number(cleaned);
+                    return Number.isFinite(result) ? result : 0;
+                  };
+
+                  // Calcula média de iniciais por produto (apenas contratos fechados)
+                  const mediaIniciaisPorProduto: Record<string, { soma: number; count: number }> = {};
+                  data.filter(r => r.resultado?.toLowerCase().includes('contrato fechado')).forEach(r => {
+                    const produto = r.produto?.trim() || '';
+                    if (!produto) return;
+                    const valorIniciais = parseCurrency(String(r.honorariosIniciais || ''));
+                    if (!mediaIniciaisPorProduto[produto]) {
+                      mediaIniciaisPorProduto[produto] = { soma: 0, count: 0 };
+                    }
+                    mediaIniciaisPorProduto[produto].soma += valorIniciais;
+                    mediaIniciaisPorProduto[produto].count += 1;
+                  });
+
+                  // Conta aguarda documentação por produto
+                  const aguardaDocPorProduto: Record<string, number> = {};
+                  data.filter(r => 
+                    r.resultado?.toLowerCase().includes('aguarda documentação') || 
+                    r.resultado?.toLowerCase().includes('aguarda documentacao')
+                  ).forEach(r => {
+                    const produto = r.produto?.trim() || '';
+                    if (!produto) return;
+                    aguardaDocPorProduto[produto] = (aguardaDocPorProduto[produto] || 0) + 1;
+                  });
+
+                  // Calcula valor perdido por produto
+                  const valorPerdidoPorProduto = Object.entries(aguardaDocPorProduto).map(([produto, count]) => {
+                    const mediaData = mediaIniciaisPorProduto[produto];
+                    const media = mediaData && mediaData.count > 0 ? mediaData.soma / mediaData.count : 0;
+                    const valorPerdido = media * count;
+                    return { produto, count, media, valorPerdido };
+                  }).filter(p => p.valorPerdido > 0).sort((a, b) => b.valorPerdido - a.valorPerdido);
+
+                  const totalPerdido = valorPerdidoPorProduto.reduce((sum, p) => sum + p.valorPerdido, 0);
+                  const maxValue = valorPerdidoPorProduto[0]?.valorPerdido || 1;
+
+                  if (valorPerdidoPorProduto.length === 0) {
+                    return (
+                      <div className="h-[150px] flex items-center justify-center bg-muted/30 rounded-lg">
+                        <p className="text-muted-foreground text-sm">Nenhum dado de aguarda documentação disponível</p>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div className="space-y-4">
+                      {/* Total geral */}
+                      <div className="p-4 bg-yellow-500/10 rounded-lg border border-yellow-500/30">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium text-muted-foreground">Total Potencial Perdido</span>
+                          <span className="text-2xl font-bold text-yellow-500">
+                            {formatCurrency(totalPerdido)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Breakdown por produto */}
+                      <div className="space-y-3 max-h-[300px] overflow-y-auto pr-2">
+                        {valorPerdidoPorProduto.map((item, index) => {
+                          const barWidth = (item.valorPerdido / maxValue) * 100;
+                          return (
+                            <div key={item.produto} className="space-y-1">
+                              <div className="flex items-center justify-between text-sm">
+                                <span className="font-medium truncate flex-1" title={item.produto}>
+                                  {index < 3 && (index === 0 ? '🥇 ' : index === 1 ? '🥈 ' : '🥉 ')}
+                                  {item.produto}
+                                </span>
+                                <span className="text-muted-foreground ml-2 flex-shrink-0">
+                                  {item.count} aguardando × {formatCurrency(item.media)} média
+                                </span>
+                              </div>
+                              <div className="relative h-6 bg-muted/30 rounded overflow-hidden">
+                                <div 
+                                  className="absolute inset-y-0 left-0 bg-yellow-500 rounded transition-all duration-300"
                                   style={{ width: `${barWidth}%` }}
                                 />
                                 <div className="absolute inset-0 flex items-center justify-center">
