@@ -21,8 +21,10 @@ import {
   ClipboardList,
   Calculator,
   Calendar,
-  ListChecks
+  ListChecks,
+  Target
 } from "lucide-react";
+import { GoalProgressCard } from "@/components/GoalProgressCard";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeekFilter } from "@/components/WeekFilter";
 import { useBancarioData } from "@/hooks/useBancarioData";
@@ -1780,6 +1782,96 @@ const RadarBancario = () => {
               </div>
             </CardContent>
           </Card>
+
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={() => setOpenSection(null)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+            >
+              <ChevronUp className="h-4 w-4" />
+              Recolher seção
+            </button>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* ===================== SEÇÃO: RADAR METAS BANCÁRIO ===================== */}
+      <Collapsible 
+        open={openSection === 'metas'} 
+        onOpenChange={() => handleSectionToggle('metas')}
+        className="mb-8"
+      >
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-amber-600/20 to-orange-600/20 rounded-lg border border-amber-500/30 hover:border-amber-500/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <Target className="h-6 w-6 text-amber-500" />
+              <h2 className="text-xl font-bold text-foreground">Radar Metas Bancário</h2>
+              <span className="text-sm text-muted-foreground">
+                (Acompanhamento de metas anuais)
+              </span>
+            </div>
+            <div className="flex items-center gap-4">
+              {openSection === 'metas' ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-6 mt-6">
+          {/* Resumo de Pesos */}
+          <Card className="bg-muted/30">
+            <CardContent className="p-4">
+              <div className="flex items-center gap-2 mb-2">
+                <BarChart3 className="h-4 w-4 text-amber-500" />
+                <span className="text-sm font-medium text-foreground">Composição da Meta Geral</span>
+              </div>
+              <div className="flex gap-4 text-sm text-muted-foreground">
+                <span><strong className="text-blue-500">45%</strong> Protocolos</span>
+                <span>•</span>
+                <span><strong className="text-emerald-500">10%</strong> Saneamento</span>
+                <span>•</span>
+                <span><strong className="text-purple-500">45%</strong> Execuções e Acordos</span>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Cards de Metas */}
+          <div className="grid gap-6">
+            {/* Meta Protocolos - Peso 45% */}
+            <GoalProgressCard
+              title="Meta Protocolos (Peso 45%)"
+              icon={FileText}
+              iconColor="text-blue-500"
+              meta={metaAnualIniciais}
+              alcancado={iniciaisData.length}
+              semanaAtual={semanaAtual}
+              totalSemanas={52}
+            />
+
+            {/* Meta Saneamento - Peso 10% */}
+            <GoalProgressCard
+              title="Meta Saneamento (Peso 10%)"
+              icon={FolderCheck}
+              iconColor="text-emerald-500"
+              meta={saneamentoData.length}
+              alcancado={saneamentoMetricas.saneadas}
+              semanaAtual={semanaAtual}
+              totalSemanas={52}
+            />
+
+            {/* Meta Execuções e Acordos - Peso 45% */}
+            <GoalProgressCard
+              title="Meta Execuções e Acordos (Peso 45%)"
+              icon={Scale}
+              iconColor="text-purple-500"
+              meta={metaAnualTransito}
+              alcancado={evolucaoAcumuladaTransito.metricas?.totalAcordosCumprimentos || 0}
+              semanaAtual={semanaAtual}
+              totalSemanas={52}
+            />
+          </div>
 
           <div className="flex justify-center pt-4">
             <button
