@@ -85,6 +85,10 @@ export interface DocumentoFisicoRecord {
   [key: string]: string;
 }
 
+export interface BancarioAgendamentoRecord {
+  [key: string]: string;
+}
+
 export interface CommercialDataResponse {
   records: CommercialRecord[];
   weeks: number[];
@@ -108,6 +112,8 @@ export interface CommercialDataResponse {
   testemunhasHeaders: string[];
   documentosFisicosData: DocumentoFisicoRecord[];
   documentosFisicosHeaders: string[];
+  bancarioAgendamentosData: BancarioAgendamentoRecord[];
+  bancarioAgendamentosHeaders: string[];
   lastUpdated: string;
 }
 
@@ -131,6 +137,8 @@ export const useCommercialData = () => {
   const [testemunhasHeaders, setTestemunhasHeaders] = useState<string[]>([]);
   const [documentosFisicosData, setDocumentosFisicosData] = useState<DocumentoFisicoRecord[]>([]);
   const [documentosFisicosHeaders, setDocumentosFisicosHeaders] = useState<string[]>([]);
+  const [bancarioAgendamentosData, setBancarioAgendamentosData] = useState<BancarioAgendamentoRecord[]>([]);
+  const [bancarioAgendamentosHeaders, setBancarioAgendamentosHeaders] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -172,6 +180,8 @@ export const useCommercialData = () => {
       console.log(`Testemunhas Headers: ${commercialData.testemunhasHeaders?.join(', ') || 'none'}`);
       console.log(`Loaded ${commercialData.documentosFisicosData?.length || 0} Documentos Fisicos records`);
       console.log(`Documentos Fisicos Headers: ${commercialData.documentosFisicosHeaders?.join(', ') || 'none'}`);
+      console.log(`Loaded ${commercialData.bancarioAgendamentosData?.length || 0} Bancário Agendamentos records`);
+      console.log(`Bancário Agendamentos Headers: ${commercialData.bancarioAgendamentosHeaders?.join(', ') || 'none'}`);
 
       setData(commercialData.records);
       setWeeks(commercialData.weeks);
@@ -192,6 +202,8 @@ export const useCommercialData = () => {
       setTestemunhasHeaders(commercialData.testemunhasHeaders || []);
       setDocumentosFisicosData(commercialData.documentosFisicosData || []);
       setDocumentosFisicosHeaders(commercialData.documentosFisicosHeaders || []);
+      setBancarioAgendamentosData(commercialData.bancarioAgendamentosData || []);
+      setBancarioAgendamentosHeaders(commercialData.bancarioAgendamentosHeaders || []);
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -235,6 +247,8 @@ export const useCommercialData = () => {
     testemunhasHeaders,
     documentosFisicosData,
     documentosFisicosHeaders,
+    bancarioAgendamentosData,
+    bancarioAgendamentosHeaders,
     isLoading,
     error,
     refetch: fetchData,

@@ -17,6 +17,7 @@ const ADMINISTRATIVO_GID = 651337262;
 const ADMINISTRATIVO2_GID = 1905290884;
 const TESTEMUNHAS_GID = 774111166;
 const DOCUMENTOS_FISICOS_GID = 186802545;
+const BANCARIO_AGENDAMENTOS_GID = 199327118;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -530,6 +531,50 @@ serve(async (req) => {
       // Continue without Documentos Fisicos data
     }
     
+    // Fetch Bancário Agendamentos sheet (GID 199327118)
+    // Coluna A = Cliente, Coluna E = Status (agendado)
+    let bancarioAgendamentosData: any[] = [];
+    let bancarioAgendamentosHeaders: string[] = [];
+    
+    try {
+      const bancarioAgendamentosCsvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${BANCARIO_AGENDAMENTOS_GID}`;
+      console.log(`Fetching Bancário Agendamentos sheet (gid=${BANCARIO_AGENDAMENTOS_GID})...`);
+      
+      const bancarioAgendamentosResponse = await fetch(bancarioAgendamentosCsvUrl);
+      
+      if (bancarioAgendamentosResponse.ok) {
+        const bancarioAgendamentosCsvText = await bancarioAgendamentosResponse.text();
+        
+        if (bancarioAgendamentosCsvText && bancarioAgendamentosCsvText.trim().length > 10) {
+          const bancarioAgendamentosRows = parseCSV(bancarioAgendamentosCsvText);
+          
+          if (bancarioAgendamentosRows.length >= 2) {
+            bancarioAgendamentosHeaders = bancarioAgendamentosRows[0].map(h => h.trim());
+            const bancarioAgendamentosDataRows = bancarioAgendamentosRows.slice(1).filter(row => row.some(cell => cell.trim() !== ''));
+            
+            console.log(`Found Bancário Agendamentos sheet with ${bancarioAgendamentosDataRows.length} rows`);
+            console.log('Bancário Agendamentos Headers:', bancarioAgendamentosHeaders);
+            
+            // Mapeia os dados com colunas genéricas
+            bancarioAgendamentosData = bancarioAgendamentosDataRows.map(row => {
+              const record: Record<string, any> = {};
+              bancarioAgendamentosHeaders.forEach((header, index) => {
+                record[`col${String.fromCharCode(65 + index)}`] = (row[index] || '').trim();
+              });
+              return record;
+            });
+            
+            console.log(`Bancário Agendamentos data loaded: ${bancarioAgendamentosData.length} records`);
+          }
+        }
+      } else {
+        console.log('Bancário Agendamentos sheet not accessible, continuing without it');
+      }
+    } catch (bancarioAgendamentosError) {
+      console.error('Error fetching Bancário Agendamentos sheet:', bancarioAgendamentosError);
+      // Continue without Bancário Agendamentos data
+    }
+    
     return new Response(
       JSON.stringify({
         success: true,
@@ -556,6 +601,8 @@ serve(async (req) => {
           testemunhasHeaders,
           documentosFisicosData,
           documentosFisicosHeaders,
+          bancarioAgendamentosData,
+          bancarioAgendamentosHeaders,
           lastUpdated: new Date().toISOString()
         }
       }),
