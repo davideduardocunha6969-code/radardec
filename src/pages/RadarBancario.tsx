@@ -26,6 +26,13 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeekFilter } from "@/components/WeekFilter";
 import { useBancarioData } from "@/hooks/useBancarioData";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Collapsible,
   CollapsibleContent,
   CollapsibleTrigger,
@@ -47,10 +54,29 @@ const RadarBancario = () => {
   const { iniciaisData, saneamentoData, transitoData, weeks, isLoading, error } = useBancarioData();
   const [openSection, setOpenSection] = useState<string | null>(null);
   const [iniciaisWeekFilter, setIniciaisWeekFilter] = useState<number | null>(null);
+  const [iniciaisResponsavelFilter, setIniciaisResponsavelFilter] = useState<string | null>(null);
+  const [iniciaisEstadoFilter, setIniciaisEstadoFilter] = useState<string | null>(null);
 
   const handleSectionToggle = (section: string) => {
     setOpenSection(prev => prev === section ? null : section);
   };
+
+  // Lista de responsáveis e estados únicos para os filtros
+  const responsaveisUnicos = useMemo(() => {
+    const responsaveis = new Set<string>();
+    iniciaisData.forEach(r => {
+      if (r.responsavel) responsaveis.add(r.responsavel);
+    });
+    return Array.from(responsaveis).sort();
+  }, [iniciaisData]);
+
+  const estadosUnicos = useMemo(() => {
+    const estados = new Set<string>();
+    iniciaisData.forEach(r => {
+      if (r.estado) estados.add(r.estado);
+    });
+    return Array.from(estados).sort();
+  }, [iniciaisData]);
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -63,9 +89,17 @@ const RadarBancario = () => {
 
   // ===================== INICIAIS - MÉTRICAS =====================
   const iniciaisMetricas = useMemo(() => {
-    const dadosFiltrados = iniciaisWeekFilter 
-      ? iniciaisData.filter(r => r.semana === iniciaisWeekFilter)
-      : iniciaisData;
+    let dadosFiltrados = iniciaisData;
+    
+    if (iniciaisWeekFilter) {
+      dadosFiltrados = dadosFiltrados.filter(r => r.semana === iniciaisWeekFilter);
+    }
+    if (iniciaisResponsavelFilter) {
+      dadosFiltrados = dadosFiltrados.filter(r => r.responsavel === iniciaisResponsavelFilter);
+    }
+    if (iniciaisEstadoFilter) {
+      dadosFiltrados = dadosFiltrados.filter(r => r.estado === iniciaisEstadoFilter);
+    }
 
     const total = dadosFiltrados.length;
     
@@ -111,7 +145,7 @@ const RadarBancario = () => {
       .sort((a, b) => a.weekNumber - b.weekNumber);
 
     return { total, rankingResponsaveis, rankingTipoAcao, rankingEstados, evolucaoSemanal };
-  }, [iniciaisData, iniciaisWeekFilter]);
+  }, [iniciaisData, iniciaisWeekFilter, iniciaisResponsavelFilter, iniciaisEstadoFilter]);
 
   // ===================== SANEAMENTO - MÉTRICAS =====================
   const saneamentoMetricas = useMemo(() => {
@@ -309,13 +343,45 @@ const RadarBancario = () => {
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-6 mt-6">
-          {/* Filtro de Semana */}
-          <div className="flex justify-end">
+          {/* Filtros */}
+          <div className="flex flex-wrap gap-3 items-center">
             <WeekFilter
               weeks={weeks}
               selectedWeek={iniciaisWeekFilter}
               onWeekChange={setIniciaisWeekFilter}
             />
+            
+            <Select
+              value={iniciaisResponsavelFilter || "all"}
+              onValueChange={(value) => setIniciaisResponsavelFilter(value === "all" ? null : value)}
+            >
+              <SelectTrigger className="w-[180px]">
+                <Users className="h-4 w-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Responsável" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {responsaveisUnicos.map(resp => (
+                  <SelectItem key={resp} value={resp}>{resp}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <Select
+              value={iniciaisEstadoFilter || "all"}
+              onValueChange={(value) => setIniciaisEstadoFilter(value === "all" ? null : value)}
+            >
+              <SelectTrigger className="w-[140px]">
+                <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                <SelectValue placeholder="Estado" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos</SelectItem>
+                {estadosUnicos.map(estado => (
+                  <SelectItem key={estado} value={estado}>{estado}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           {/* Cards de Métricas */}
