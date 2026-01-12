@@ -13,7 +13,10 @@ import {
   ChevronUp,
   Clock,
   Trophy,
-  Award
+  Award,
+  FolderCheck,
+  ClipboardList,
+  Goal
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeekFilter } from "@/components/WeekFilter";
@@ -4259,6 +4262,156 @@ const RadarComercial = () => {
                   </div>
                 );
               })()}
+            </CardContent>
+          </Card>
+
+          {/* Botão para recolher seção */}
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={() => setOpenSection(null)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+            >
+              <ChevronUp className="h-4 w-4" />
+              Recolher seção
+            </button>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* ===================== SEÇÃO: RADAR SANEAMENTO DE PASTAS ===================== */}
+      <Collapsible 
+        open={openSection === 'saneamento'} 
+        onOpenChange={() => handleSectionToggle('saneamento')}
+        className="mb-8"
+      >
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-teal-600/20 to-cyan-600/20 rounded-lg border border-teal-500/30 hover:border-teal-500/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <FolderCheck className="h-6 w-6 text-teal-500" />
+              <h2 className="text-xl font-bold text-foreground">Radar Saneamento de Pastas</h2>
+            </div>
+            <div className="flex items-center gap-4">
+              {openSection === 'saneamento' ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-8 mt-6">
+          
+          {/* Placeholder para conteúdo futuro */}
+          <Card className="border-dashed border-2 border-teal-500/30">
+            <CardContent className="py-12">
+              <div className="flex flex-col items-center justify-center text-center">
+                <FolderCheck className="h-16 w-16 text-teal-500/50 mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">Radar Saneamento de Pastas</h3>
+                <p className="text-muted-foreground max-w-md">
+                  Esta seção exibirá métricas e indicadores relacionados ao saneamento de pastas.
+                  Configure a fonte de dados para visualizar os gráficos e rankings.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Botão para recolher seção */}
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={() => setOpenSection(null)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+            >
+              <ChevronUp className="h-4 w-4" />
+              Recolher seção
+            </button>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* ===================== SEÇÃO: RADAR ADMINISTRATIVO ===================== */}
+      <Collapsible 
+        open={openSection === 'administrativo'} 
+        onOpenChange={() => handleSectionToggle('administrativo')}
+        className="mb-8"
+      >
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-indigo-600/20 to-violet-600/20 rounded-lg border border-indigo-500/30 hover:border-indigo-500/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <ClipboardList className="h-6 w-6 text-indigo-500" />
+              <h2 className="text-xl font-bold text-foreground">Radar Administrativo</h2>
+            </div>
+            <div className="flex items-center gap-4">
+              {openSection === 'administrativo' ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-8 mt-6">
+          
+          {/* Placeholder para conteúdo futuro */}
+          <Card className="border-dashed border-2 border-indigo-500/30">
+            <CardContent className="py-12">
+              <div className="flex flex-col items-center justify-center text-center">
+                <ClipboardList className="h-16 w-16 text-indigo-500/50 mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">Radar Administrativo</h3>
+                <p className="text-muted-foreground max-w-md">
+                  Esta seção exibirá métricas e indicadores relacionados às atividades administrativas.
+                  Configure a fonte de dados para visualizar os gráficos e rankings.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Botão para recolher seção */}
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={() => setOpenSection(null)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+            >
+              <ChevronUp className="h-4 w-4" />
+              Recolher seção
+            </button>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* ===================== SEÇÃO: RADAR METAS ===================== */}
+      <Collapsible 
+        open={openSection === 'metas'} 
+        onOpenChange={() => handleSectionToggle('metas')}
+        className="mb-8"
+      >
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-rose-600/20 to-pink-600/20 rounded-lg border border-rose-500/30 hover:border-rose-500/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <Goal className="h-6 w-6 text-rose-500" />
+              <h2 className="text-xl font-bold text-foreground">Radar Metas</h2>
+            </div>
+            <div className="flex items-center gap-4">
+              {openSection === 'metas' ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-8 mt-6">
+          
+          {/* Placeholder para conteúdo futuro */}
+          <Card className="border-dashed border-2 border-rose-500/30">
+            <CardContent className="py-12">
+              <div className="flex flex-col items-center justify-center text-center">
+                <Goal className="h-16 w-16 text-rose-500/50 mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">Radar Metas</h3>
+                <p className="text-muted-foreground max-w-md">
+                  Esta seção exibirá métricas e indicadores relacionados ao acompanhamento de metas.
+                  Configure a fonte de dados para visualizar os gráficos e rankings.
+                </p>
+              </div>
             </CardContent>
           </Card>
 
