@@ -224,6 +224,23 @@ const RadarComercial = () => {
     };
   }, [data]);
 
+  // ===================== METAS CÍVEIS =====================
+  // Meta Cível: Fechar 50 contratos cíveis
+  const metaCivel = useMemo(() => {
+    const contratosCiveis = data.filter(r => {
+      const setor = r.setor?.toLowerCase().trim() || '';
+      const resultado = r.resultado?.toLowerCase().trim() || '';
+      const isCivel = setor.includes('cível') || setor.includes('civel');
+      const isContratoFechado = resultado.includes('contrato fechado');
+      return isCivel && isContratoFechado;
+    });
+    
+    return {
+      meta: 50,
+      alcancado: contratosCiveis.length,
+    };
+  }, [data]);
+
   // ===================== METAS BANCÁRIAS =====================
   // Meta Bancário 1: Fechar 3000 contratos bancários
   const metaBancarioContratos = useMemo(() => {
@@ -6879,6 +6896,19 @@ const RadarComercial = () => {
           <div className="flex items-center gap-3 pb-2 border-b border-border mt-8">
             <Scale className="h-5 w-5 text-cyan-500" />
             <h3 className="text-lg font-semibold text-foreground">Metas Comercial Cível</h3>
+          </div>
+
+          {/* Cards de Metas Comercial Cível */}
+          <div className="grid gap-6">
+            {/* Meta: Contratos Cíveis */}
+            <GoalProgressCard
+              title="Meta Contratos Cíveis"
+              icon={Scale}
+              iconColor="text-cyan-500"
+              meta={metaCivel.meta}
+              alcancado={metaCivel.alcancado}
+              semanaAtual={semanaAtualDoAno}
+            />
           </div>
 
           {/* Botão para recolher seção */}
