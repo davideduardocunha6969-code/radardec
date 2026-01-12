@@ -6386,6 +6386,12 @@ const RadarComercial = () => {
             />
           </div>
 
+          {/* Título da seção de Metas Comercial Bancário */}
+          <div className="flex items-center gap-3 pb-2 border-b border-border mt-8">
+            <Briefcase className="h-5 w-5 text-emerald-500" />
+            <h3 className="text-lg font-semibold text-foreground">Metas Comercial Bancário</h3>
+          </div>
+
           {/* Botão para recolher seção */}
           <div className="flex justify-center pt-4">
             <button
