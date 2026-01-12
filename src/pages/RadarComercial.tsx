@@ -60,7 +60,7 @@ import {
 import { ChartContainer, ChartTooltipContent, ChartTooltip } from "@/components/ui/chart";
 
 const RadarComercial = () => {
-  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, indicacoesData, indicacoesRecebidasData, saneamentoData, saneamentoHeaders, administrativoData, administrativoHeaders, administrativo2Data, administrativo2Headers, testemunhasData, testemunhasHeaders, isLoading, error } = useCommercialData();
+  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, indicacoesData, indicacoesRecebidasData, saneamentoData, saneamentoHeaders, administrativoData, administrativoHeaders, administrativo2Data, administrativo2Headers, testemunhasData, testemunhasHeaders, documentosFisicosData, documentosFisicosHeaders, isLoading, error } = useCommercialData();
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedSetor, setSelectedSetor] = useState<string | null>(null);
   const [selectedResponsavel, setSelectedResponsavel] = useState<string | null>(null);
@@ -5665,6 +5665,332 @@ const RadarComercial = () => {
                     </CardContent>
                   </Card>
                 </div>
+
+                {/* ===================== SUBSEÇÃO: DOCUMENTOS FÍSICOS ===================== */}
+                {(() => {
+                  const TOTAL_SEMANAS_DOCS = 53;
+                  const agoraDocs = new Date();
+                  const inicioAnoDocs = new Date(agoraDocs.getFullYear(), 0, 1);
+                  const diasPassadosDocs = Math.floor((agoraDocs.getTime() - inicioAnoDocs.getTime()) / (1000 * 60 * 60 * 24));
+                  const semanaAtualDocs = Math.min(Math.ceil((diasPassadosDocs + 1) / 7), TOTAL_SEMANAS_DOCS);
+
+                  // Processa dados de documentos físicos
+                  const totalDocumentos = documentosFisicosData.filter(r => (r.colA || '').trim() !== '').length;
+                  
+                  // Resolvido se F=SIM ou G=SIM
+                  const resolvidosDocs = documentosFisicosData.filter(r => {
+                    const cliente = (r.colA || '').trim();
+                    if (!cliente) return false;
+                    const digitalizadoDescartado = (r.colF || '').toUpperCase().trim();
+                    const entregueCliente = (r.colG || '').toUpperCase().trim();
+                    return digitalizadoDescartado === 'SIM' || entregueCliente === 'SIM';
+                  }).length;
+                  
+                  // Pendentes = não tem SIM em F nem G
+                  const pendentesDocs = totalDocumentos - resolvidosDocs;
+                  
+                  // Conta por tipo de resolução
+                  const digitalizadosDescartados = documentosFisicosData.filter(r => {
+                    const cliente = (r.colA || '').trim();
+                    if (!cliente) return false;
+                    return (r.colF || '').toUpperCase().trim() === 'SIM';
+                  }).length;
+                  
+                  const entreguesCliente = documentosFisicosData.filter(r => {
+                    const cliente = (r.colA || '').trim();
+                    if (!cliente) return false;
+                    return (r.colG || '').toUpperCase().trim() === 'SIM';
+                  }).length;
+                  
+                  // Métricas da meta
+                  const metaTotalDocs = totalDocumentos; // Meta = resolver todos
+                  const percentualResolvidoDocs = metaTotalDocs > 0 ? (resolvidosDocs / metaTotalDocs) * 100 : 0;
+                  const percentualEsperadoDocs = (semanaAtualDocs / TOTAL_SEMANAS_DOCS) * 100;
+                  const metaEsperadaAtualDocs = Math.round((semanaAtualDocs / TOTAL_SEMANAS_DOCS) * metaTotalDocs);
+                  const diferencaAbsolutaDocs = resolvidosDocs - metaEsperadaAtualDocs;
+                  const diferencaPercentualDocs = percentualResolvidoDocs - percentualEsperadoDocs;
+                  
+                  // Média necessária por semana restante para completar a meta
+                  const semanasRestantesDocs = TOTAL_SEMANAS_DOCS - semanaAtualDocs;
+                  const faltamResolverDocs = pendentesDocs;
+                  const mediaNecessariaDocs = semanasRestantesDocs > 0 ? Math.ceil(faltamResolverDocs / semanasRestantesDocs) : faltamResolverDocs;
+                  
+                  // Dados para gráfico de pizza
+                  const statusDistribuicaoData = [
+                    { name: 'Digitalizado/Descartado', value: digitalizadosDescartados, color: 'hsl(142, 70%, 45%)' },
+                    { name: 'Entregue ao Cliente', value: entreguesCliente, color: 'hsl(199, 89%, 48%)' },
+                    { name: 'Pendente', value: pendentesDocs, color: 'hsl(0, 70%, 50%)' },
+                  ].filter(d => d.value > 0);
+
+                  return (
+                    <>
+                      {/* Separador visual */}
+                      <div className="col-span-full border-t border-amber-500/30 pt-6 mt-4">
+                        <div className="flex items-center gap-3 mb-6">
+                          <FolderOpen className="h-5 w-5 text-amber-500" />
+                          <h3 className="text-lg font-semibold text-foreground">Documentos Físicos</h3>
+                          <span className="text-sm text-muted-foreground">- Meta: resolver todos os casos até o fim do ano</span>
+                        </div>
+                      </div>
+
+                      {/* Cards de métricas de documentos */}
+                      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 col-span-full">
+                        <Card className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/30">
+                          <CardContent className="pt-6">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm text-muted-foreground">Total de Casos</p>
+                                <p className="text-3xl font-bold text-amber-400">{totalDocumentos}</p>
+                                <p className="text-xs text-muted-foreground mt-1">documentos físicos</p>
+                              </div>
+                              <FolderOpen className="h-10 w-10 text-amber-500/50" />
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/30">
+                          <CardContent className="pt-6">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm text-muted-foreground">Casos Resolvidos</p>
+                                <p className="text-3xl font-bold text-green-400">{resolvidosDocs}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{percentualResolvidoDocs.toFixed(1)}% do total</p>
+                              </div>
+                              <CheckCircle2 className="h-10 w-10 text-green-500/50" />
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="bg-gradient-to-br from-red-500/10 to-rose-500/10 border-red-500/30">
+                          <CardContent className="pt-6">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm text-muted-foreground">Casos Pendentes</p>
+                                <p className="text-3xl font-bold text-red-400">{pendentesDocs}</p>
+                                <p className="text-xs text-muted-foreground mt-1">{(100 - percentualResolvidoDocs).toFixed(1)}% do total</p>
+                              </div>
+                              <AlertTriangle className="h-10 w-10 text-red-500/50" />
+                            </div>
+                          </CardContent>
+                        </Card>
+
+                        <Card className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border-blue-500/30">
+                          <CardContent className="pt-6">
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <p className="text-sm text-muted-foreground">Média Necessária/Semana</p>
+                                <p className="text-3xl font-bold text-blue-400">{mediaNecessariaDocs}</p>
+                                <p className="text-xs text-muted-foreground mt-1">para cumprir meta até fim do ano</p>
+                              </div>
+                              <Target className="h-10 w-10 text-blue-500/50" />
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+
+                      {/* Card de Progresso da Meta */}
+                      <Card className="col-span-full bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/30">
+                        <CardHeader className="pb-2">
+                          <div className="flex items-center gap-3">
+                            <Goal className="h-5 w-5 text-amber-500" />
+                            <CardTitle className="text-lg">Meta Anual - Documentos Físicos</CardTitle>
+                          </div>
+                        </CardHeader>
+                        <CardContent>
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            {/* Progresso da Meta */}
+                            <div className="space-y-3">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm text-muted-foreground">Progresso</span>
+                                <span className="text-sm font-medium">{resolvidosDocs} / {metaTotalDocs}</span>
+                              </div>
+                              <div className="h-4 bg-muted rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-amber-500 to-orange-500 rounded-full transition-all"
+                                  style={{ width: `${Math.min(percentualResolvidoDocs, 100)}%` }}
+                                />
+                              </div>
+                              <p className="text-2xl font-bold text-amber-400">{percentualResolvidoDocs.toFixed(1)}%</p>
+                              <p className="text-xs text-muted-foreground">dos documentos resolvidos</p>
+                            </div>
+
+                            {/* Esperado vs Alcançado */}
+                            <div className="space-y-3">
+                              <span className="text-sm text-muted-foreground">Semana {semanaAtualDocs} de {TOTAL_SEMANAS_DOCS}</span>
+                              <div className="flex items-center gap-4">
+                                <div className="flex-1">
+                                  <p className="text-xs text-muted-foreground mb-1">Esperado até agora</p>
+                                  <p className="text-xl font-semibold text-muted-foreground">{metaEsperadaAtualDocs} docs</p>
+                                  <p className="text-xs text-muted-foreground">({percentualEsperadoDocs.toFixed(1)}%)</p>
+                                </div>
+                                <div className="flex-1">
+                                  <p className="text-xs text-muted-foreground mb-1">Resolvidos</p>
+                                  <p className="text-xl font-semibold text-amber-400">{resolvidosDocs} docs</p>
+                                  <p className="text-xs text-muted-foreground">({percentualResolvidoDocs.toFixed(1)}%)</p>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Status */}
+                            <div className="flex flex-col items-center justify-center">
+                              <div className={`px-4 py-2 rounded-lg ${diferencaAbsolutaDocs >= 0 ? 'bg-green-500/20 border border-green-500/30' : 'bg-red-500/20 border border-red-500/30'}`}>
+                                <p className={`text-2xl font-bold ${diferencaAbsolutaDocs >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                  {diferencaAbsolutaDocs >= 0 ? '+' : ''}{diferencaAbsolutaDocs}
+                                </p>
+                                <p className="text-xs text-muted-foreground text-center">
+                                  {diferencaAbsolutaDocs >= 0 ? 'acima' : 'abaixo'} do esperado
+                                </p>
+                              </div>
+                              <p className={`text-sm mt-2 ${diferencaPercentualDocs >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                                {diferencaPercentualDocs >= 0 ? '+' : ''}{diferencaPercentualDocs.toFixed(1)} p.p.
+                              </p>
+                            </div>
+                          </div>
+                        </CardContent>
+                      </Card>
+
+                      {/* Gráficos */}
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 col-span-full">
+                        {/* Gráfico Pizza - Distribuição de Status */}
+                        <Card>
+                          <CardHeader>
+                            <div className="flex items-center gap-3">
+                              <PieChart className="h-5 w-5 text-amber-500" />
+                              <CardTitle className="text-lg">Distribuição por Status</CardTitle>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Status dos documentos físicos no escritório
+                            </p>
+                          </CardHeader>
+                          <CardContent>
+                            {statusDistribuicaoData.length > 0 ? (
+                              <ChartContainer config={{}} className="h-[300px] w-full">
+                                <RechartsPieChart>
+                                  <Pie
+                                    data={statusDistribuicaoData}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    outerRadius={100}
+                                    label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                                    labelLine={false}
+                                  >
+                                    {statusDistribuicaoData.map((entry, index) => (
+                                      <Cell key={`cell-docs-${index}`} fill={entry.color} />
+                                    ))}
+                                  </Pie>
+                                  <Tooltip 
+                                    content={({ active, payload }) => {
+                                      if (active && payload && payload.length) {
+                                        const dataDocs = payload[0].payload;
+                                        return (
+                                          <div className="bg-background border rounded-lg p-2 shadow-lg">
+                                            <p className="font-medium">{dataDocs.name}</p>
+                                            <p className="text-sm text-muted-foreground">{dataDocs.value} documentos</p>
+                                          </div>
+                                        );
+                                      }
+                                      return null;
+                                    }}
+                                  />
+                                </RechartsPieChart>
+                              </ChartContainer>
+                            ) : (
+                              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                                Sem dados de documentos físicos
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+
+                        {/* Card de Detalhamento */}
+                        <Card>
+                          <CardHeader>
+                            <div className="flex items-center gap-3">
+                              <FileText className="h-5 w-5 text-amber-500" />
+                              <CardTitle className="text-lg">Detalhamento de Resoluções</CardTitle>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Como os documentos foram resolvidos
+                            </p>
+                          </CardHeader>
+                          <CardContent>
+                            <div className="space-y-6">
+                              {/* Digitalizados e Descartados */}
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                                    <span className="text-sm">Digitalizados e Descartados</span>
+                                  </div>
+                                  <span className="font-semibold text-emerald-400">{digitalizadosDescartados}</span>
+                                </div>
+                                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-emerald-500 rounded-full transition-all"
+                                    style={{ width: `${totalDocumentos > 0 ? (digitalizadosDescartados / totalDocumentos) * 100 : 0}%` }}
+                                  />
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {totalDocumentos > 0 ? ((digitalizadosDescartados / totalDocumentos) * 100).toFixed(1) : 0}% do total
+                                </p>
+                              </div>
+
+                              {/* Entregues ao Cliente */}
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded-full bg-cyan-500" />
+                                    <span className="text-sm">Entregues ao Cliente</span>
+                                  </div>
+                                  <span className="font-semibold text-cyan-400">{entreguesCliente}</span>
+                                </div>
+                                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-cyan-500 rounded-full transition-all"
+                                    style={{ width: `${totalDocumentos > 0 ? (entreguesCliente / totalDocumentos) * 100 : 0}%` }}
+                                  />
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {totalDocumentos > 0 ? ((entreguesCliente / totalDocumentos) * 100).toFixed(1) : 0}% do total
+                                </p>
+                              </div>
+
+                              {/* Pendentes */}
+                              <div className="space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <div className="w-3 h-3 rounded-full bg-red-500" />
+                                    <span className="text-sm">Pendentes</span>
+                                  </div>
+                                  <span className="font-semibold text-red-400">{pendentesDocs}</span>
+                                </div>
+                                <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                  <div 
+                                    className="h-full bg-red-500 rounded-full transition-all"
+                                    style={{ width: `${totalDocumentos > 0 ? (pendentesDocs / totalDocumentos) * 100 : 0}%` }}
+                                  />
+                                </div>
+                                <p className="text-xs text-muted-foreground">
+                                  {totalDocumentos > 0 ? ((pendentesDocs / totalDocumentos) * 100).toFixed(1) : 0}% do total
+                                </p>
+                              </div>
+
+                              {/* Resumo */}
+                              <div className="pt-4 border-t border-border">
+                                <div className="flex items-center justify-between text-sm">
+                                  <span className="text-muted-foreground">Total de resoluções:</span>
+                                  <span className="font-semibold text-foreground">{resolvidosDocs} de {totalDocumentos}</span>
+                                </div>
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      </div>
+                    </>
+                  );
+                })()}
               </>
             );
           })()}
