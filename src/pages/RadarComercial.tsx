@@ -65,7 +65,7 @@ import {
 import { ChartContainer, ChartTooltipContent, ChartTooltip } from "@/components/ui/chart";
 
 const RadarComercial = () => {
-  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, indicacoesData, indicacoesRecebidasData, saneamentoData, saneamentoHeaders, administrativoData, administrativoHeaders, administrativo2Data, administrativo2Headers, testemunhasData, testemunhasHeaders, documentosFisicosData, documentosFisicosHeaders, isLoading, error } = useCommercialData();
+  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, indicacoesData, indicacoesRecebidasData, saneamentoData, saneamentoHeaders, administrativoData, administrativoHeaders, administrativo2Data, administrativo2Headers, testemunhasData, testemunhasHeaders, documentosFisicosData, documentosFisicosHeaders, bancarioAgendamentosData, bancarioAgendamentosHeaders, isLoading, error } = useCommercialData();
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedSetor, setSelectedSetor] = useState<string | null>(null);
   const [selectedResponsavel, setSelectedResponsavel] = useState<string | null>(null);
@@ -222,6 +222,38 @@ const RadarComercial = () => {
       alcancado: contratosTrabalhistas.length,
     };
   }, [data]);
+
+  // ===================== METAS BANCÁRIAS =====================
+  // Meta Bancário 1: Fechar 3000 contratos bancários
+  const metaBancarioContratos = useMemo(() => {
+    const contratosBancarios = data.filter(r => {
+      const setor = r.setor?.toLowerCase().trim() || '';
+      const resultado = r.resultado?.toLowerCase().trim() || '';
+      const isBancario = setor.includes('bancário') || setor.includes('bancario');
+      const isContratoFechado = resultado.includes('contrato fechado');
+      return isBancario && isContratoFechado;
+    });
+    
+    return {
+      meta: 3000,
+      alcancado: contratosBancarios.length,
+    };
+  }, [data]);
+
+  // Meta Bancário 2: Agendar 50 novos clientes (GID 199327118)
+  // Coluna A preenchida e Coluna E = "agendado"
+  const metaBancarioAgendamentos = useMemo(() => {
+    const clientesAgendados = bancarioAgendamentosData.filter(r => {
+      const colunaA = r.colA?.trim() || '';
+      const colunaE = r.colE?.toLowerCase().trim() || '';
+      return colunaA !== '' && colunaE === 'agendado';
+    });
+    
+    return {
+      meta: 50,
+      alcancado: clientesAgendados.length,
+    };
+  }, [bancarioAgendamentosData]);
 
   // Meta Geral do Comercial Previdenciário (ponderada)
   const metaGeral = useMemo(() => {
@@ -6390,6 +6422,29 @@ const RadarComercial = () => {
           <div className="flex items-center gap-3 pb-2 border-b border-border mt-8">
             <Briefcase className="h-5 w-5 text-emerald-500" />
             <h3 className="text-lg font-semibold text-foreground">Metas Comercial Bancário</h3>
+          </div>
+
+          {/* Cards de Metas Bancárias */}
+          <div className="grid gap-6">
+            {/* Meta: Contratos Bancários */}
+            <GoalProgressCard
+              title="Meta Contratos Bancários"
+              icon={Briefcase}
+              iconColor="text-emerald-500"
+              meta={metaBancarioContratos.meta}
+              alcancado={metaBancarioContratos.alcancado}
+              semanaAtual={semanaAtualDoAno}
+            />
+
+            {/* Meta: Agendamentos Bancários */}
+            <GoalProgressCard
+              title="Meta Agendamentos Bancários"
+              icon={Calendar}
+              iconColor="text-emerald-500"
+              meta={metaBancarioAgendamentos.meta}
+              alcancado={metaBancarioAgendamentos.alcancado}
+              semanaAtual={semanaAtualDoAno}
+            />
           </div>
 
           {/* Botão para recolher seção */}
