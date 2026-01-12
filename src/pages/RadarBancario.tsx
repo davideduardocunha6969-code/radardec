@@ -1278,7 +1278,7 @@ const RadarBancario = () => {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Scale className="h-5 w-5 text-emerald-500" />
-                  <CardTitle className="text-lg">Distribuição por Grau</CardTitle>
+                  <CardTitle className="text-lg">Local de Trânsito em Julgado</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
@@ -1312,7 +1312,7 @@ const RadarBancario = () => {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Gavel className="h-5 w-5 text-blue-500" />
-                  <CardTitle className="text-lg">Distribuição por Resultado</CardTitle>
+                  <CardTitle className="text-lg">Resultado da Ação</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
