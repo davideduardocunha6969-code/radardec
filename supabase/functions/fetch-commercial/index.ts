@@ -15,6 +15,7 @@ const INDICACOES_RECEBIDAS_GID = 2087539342;
 const SANEAMENTO_GID = 1874749978;
 const ADMINISTRATIVO_GID = 651337262;
 const ADMINISTRATIVO2_GID = 1905290884;
+const TESTEMUNHAS_GID = 774111166;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -439,6 +440,51 @@ serve(async (req) => {
       // Continue without Administrativo 2 data
     }
     
+    // Fetch Testemunhas sheet (GID 774111166)
+    // Coluna A = Semana, Coluna F = Status Aposentadoria, Coluna G = Tempo Contribuição
+    // Coluna H = Trabalhou Agricultura, Coluna I = Lead Qualificado, Coluna J = SDR, Coluna K = Resultado
+    let testemunhasData: any[] = [];
+    let testemunhasHeaders: string[] = [];
+    
+    try {
+      const testemunhasCsvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${TESTEMUNHAS_GID}`;
+      console.log(`Fetching Testemunhas sheet (gid=${TESTEMUNHAS_GID})...`);
+      
+      const testemunhasResponse = await fetch(testemunhasCsvUrl);
+      
+      if (testemunhasResponse.ok) {
+        const testemunhasCsvText = await testemunhasResponse.text();
+        
+        if (testemunhasCsvText && testemunhasCsvText.trim().length > 10) {
+          const testemunhasRows = parseCSV(testemunhasCsvText);
+          
+          if (testemunhasRows.length >= 2) {
+            testemunhasHeaders = testemunhasRows[0].map(h => h.trim());
+            const testemunhasDataRows = testemunhasRows.slice(1).filter(row => row.some(cell => cell.trim() !== ''));
+            
+            console.log(`Found Testemunhas sheet with ${testemunhasDataRows.length} rows`);
+            console.log('Testemunhas Headers:', testemunhasHeaders);
+            
+            // Mapeia os dados com colunas genéricas
+            testemunhasData = testemunhasDataRows.map(row => {
+              const record: Record<string, any> = {};
+              testemunhasHeaders.forEach((header, index) => {
+                record[`col${String.fromCharCode(65 + index)}`] = (row[index] || '').trim();
+              });
+              return record;
+            });
+            
+            console.log(`Testemunhas data loaded: ${testemunhasData.length} records`);
+          }
+        }
+      } else {
+        console.log('Testemunhas sheet not accessible, continuing without it');
+      }
+    } catch (testemunhasError) {
+      console.error('Error fetching Testemunhas sheet:', testemunhasError);
+      // Continue without Testemunhas data
+    }
+    
     return new Response(
       JSON.stringify({
         success: true,
@@ -461,6 +507,8 @@ serve(async (req) => {
           administrativoHeaders,
           administrativo2Data,
           administrativo2Headers,
+          testemunhasData,
+          testemunhasHeaders,
           lastUpdated: new Date().toISOString()
         }
       }),

@@ -60,7 +60,7 @@ import {
 import { ChartContainer, ChartTooltipContent, ChartTooltip } from "@/components/ui/chart";
 
 const RadarComercial = () => {
-  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, indicacoesData, indicacoesRecebidasData, saneamentoData, saneamentoHeaders, administrativoData, administrativoHeaders, administrativo2Data, administrativo2Headers, isLoading, error } = useCommercialData();
+  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, indicacoesData, indicacoesRecebidasData, saneamentoData, saneamentoHeaders, administrativoData, administrativoHeaders, administrativo2Data, administrativo2Headers, testemunhasData, testemunhasHeaders, isLoading, error } = useCommercialData();
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedSetor, setSelectedSetor] = useState<string | null>(null);
   const [selectedResponsavel, setSelectedResponsavel] = useState<string | null>(null);
@@ -73,6 +73,7 @@ const RadarComercial = () => {
   const [sdrEvolutionFilter, setSdrEvolutionFilter] = useState<string | null>(null);
   const [selectedSdrsForChart, setSelectedSdrsForChart] = useState<string[]>([]);
   const [adminRankingWeek, setAdminRankingWeek] = useState<number | null>(null);
+  const [testemunhasWeekFilter, setTestemunhasWeekFilter] = useState<number | null>(null);
 
   // Handlers para abrir/fechar seções (comportamento accordion)
   const handleSectionToggle = (section: string) => {
@@ -5316,6 +5317,403 @@ const RadarComercial = () => {
               Recolher seção
             </button>
           </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* ===================== SEÇÃO: RADAR TESTEMUNHAS ===================== */}
+      <Collapsible 
+        open={openSection === 'testemunhas'} 
+        onOpenChange={() => handleSectionToggle('testemunhas')}
+        className="mb-8"
+      >
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-cyan-600/20 to-teal-600/20 rounded-lg border border-cyan-500/30 hover:border-cyan-500/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <Users className="h-6 w-6 text-cyan-500" />
+              <h2 className="text-xl font-bold text-foreground">Radar Testemunhas</h2>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground bg-cyan-500/20 px-2 py-1 rounded">
+                {testemunhasData.length} abordagens
+              </span>
+              {openSection === 'testemunhas' ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-8 mt-6">
+          
+          {(() => {
+            // Processa dados da aba de testemunhas (GID 774111166)
+            // Coluna A = Semana, F = Status Aposentadoria, G = Tempo Contribuição
+            // H = Agricultura, I = Lead Qualificado, J = SDR, K = Resultado
+            
+            const totalTestemunhas = testemunhasData.length;
+            
+            // Status de aposentadoria (Coluna F)
+            const aposentados10Anos = testemunhasData.filter(r => {
+              const status = (r.colF || '').toLowerCase().trim();
+              return status.includes('mais de 10') || status.includes('+ 10') || status.includes('>10');
+            }).length;
+            
+            const aposentadosMenos10Anos = testemunhasData.filter(r => {
+              const status = (r.colF || '').toLowerCase().trim();
+              return status.includes('menos de 10') || status.includes('< 10') || status.includes('-10') || (status.includes('aposentad') && !status.includes('mais') && !status.includes('não'));
+            }).length;
+            
+            const naoAposentados = testemunhasData.filter(r => {
+              const status = (r.colF || '').toLowerCase().trim();
+              return status.includes('não') || status.includes('nao') || status === '';
+            }).length;
+            
+            // Leads qualificados (Coluna I)
+            const leadsQualificados = testemunhasData.filter(r => {
+              const qualificado = (r.colI || '').toLowerCase().trim();
+              return qualificado === 'sim' || qualificado === 's' || qualificado === 'yes' || qualificado === 'x';
+            }).length;
+            
+            const taxaQualificacao = totalTestemunhas > 0 ? ((leadsQualificados / totalTestemunhas) * 100).toFixed(1) : '0';
+            
+            // Trabalhou na agricultura (Coluna H)
+            const trabalhouAgricultura = testemunhasData.filter(r => {
+              const agri = (r.colH || '').toLowerCase().trim();
+              return agri === 'sim' || agri === 's' || agri === 'yes' || agri === 'x';
+            }).length;
+            
+            // Agendamentos realizados (Coluna K)
+            const agendamentos = testemunhasData.filter(r => {
+              const resultado = (r.colK || '').toLowerCase().trim();
+              return resultado.includes('agendado') || resultado.includes('agendamento') || resultado === 'sim';
+            }).length;
+            
+            const taxaConversao = totalTestemunhas > 0 ? ((agendamentos / totalTestemunhas) * 100).toFixed(1) : '0';
+
+            // Semanas disponíveis
+            const semanasDisponiveis = testemunhasData
+              .map(r => parseInt((r.colA || '0').trim()) || 0)
+              .filter(s => s >= 1 && s <= 53);
+            const semanasUnicas = [...new Set(semanasDisponiveis)].sort((a, b) => a - b);
+
+            // Dados filtrados por semana
+            const dadosFiltrados = testemunhasWeekFilter
+              ? testemunhasData.filter(r => {
+                  const semana = parseInt((r.colA || '0').trim()) || 0;
+                  return semana === testemunhasWeekFilter;
+                })
+              : testemunhasData;
+
+            // Distribuição por Status de Aposentadoria (para gráfico pizza)
+            const statusAposentadoriaData = [
+              { name: 'Aposentado +10 anos', value: aposentados10Anos, color: 'hsl(0, 70%, 50%)' },
+              { name: 'Aposentado -10 anos', value: aposentadosMenos10Anos, color: 'hsl(45, 90%, 50%)' },
+              { name: 'Não aposentado', value: naoAposentados, color: 'hsl(142, 70%, 45%)' },
+            ].filter(d => d.value > 0);
+
+            // Evolução semanal de abordagens
+            const evolucaoSemanal = semanasUnicas.map(semana => {
+              const dadosSemana = testemunhasData.filter(r => {
+                const s = parseInt((r.colA || '0').trim()) || 0;
+                return s === semana;
+              });
+              const qualificadosSemana = dadosSemana.filter(r => {
+                const qualificado = (r.colI || '').toLowerCase().trim();
+                return qualificado === 'sim' || qualificado === 's' || qualificado === 'yes' || qualificado === 'x';
+              }).length;
+              const agendadosSemana = dadosSemana.filter(r => {
+                const resultado = (r.colK || '').toLowerCase().trim();
+                return resultado.includes('agendado') || resultado.includes('agendamento') || resultado === 'sim';
+              }).length;
+              
+              return {
+                semana,
+                abordagens: dadosSemana.length,
+                qualificados: qualificadosSemana,
+                agendados: agendadosSemana,
+              };
+            });
+
+            // Ranking por SDR (Coluna J)
+            const porSdr: Record<string, { abordagens: number; qualificados: number; agendados: number }> = {};
+            dadosFiltrados.forEach(r => {
+              const sdr = (r.colJ || 'Não informado').trim();
+              if (!sdr) return;
+              
+              if (!porSdr[sdr]) {
+                porSdr[sdr] = { abordagens: 0, qualificados: 0, agendados: 0 };
+              }
+              porSdr[sdr].abordagens++;
+              
+              const qualificado = (r.colI || '').toLowerCase().trim();
+              if (qualificado === 'sim' || qualificado === 's' || qualificado === 'yes' || qualificado === 'x') {
+                porSdr[sdr].qualificados++;
+              }
+              
+              const resultado = (r.colK || '').toLowerCase().trim();
+              if (resultado.includes('agendado') || resultado.includes('agendamento') || resultado === 'sim') {
+                porSdr[sdr].agendados++;
+              }
+            });
+            
+            const rankingSdr = Object.entries(porSdr)
+              .map(([sdr, stats]) => ({
+                sdr,
+                ...stats,
+                taxaQualificacao: stats.abordagens > 0 ? ((stats.qualificados / stats.abordagens) * 100) : 0,
+                taxaConversao: stats.abordagens > 0 ? ((stats.agendados / stats.abordagens) * 100) : 0,
+              }))
+              .filter(r => r.sdr !== 'Não informado' && r.abordagens > 0)
+              .sort((a, b) => b.agendados - a.agendados);
+            
+            const maxAgendados = Math.max(...rankingSdr.map(r => r.agendados), 1);
+
+            return (
+              <>
+                {/* Cards de métricas */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <Card className="bg-gradient-to-br from-cyan-500/10 to-teal-500/10 border-cyan-500/30">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Total Abordagens</p>
+                          <p className="text-3xl font-bold text-cyan-400">{totalTestemunhas}</p>
+                        </div>
+                        <Users className="h-10 w-10 text-cyan-500/50" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/30">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Leads Qualificados</p>
+                          <p className="text-3xl font-bold text-green-400">{leadsQualificados}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{taxaQualificacao}% do total</p>
+                        </div>
+                        <CheckCircle2 className="h-10 w-10 text-green-500/50" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/30">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Trabalhou Agricultura</p>
+                          <p className="text-3xl font-bold text-amber-400">{trabalhouAgricultura}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {totalTestemunhas > 0 ? ((trabalhouAgricultura / totalTestemunhas) * 100).toFixed(1) : '0'}% do total
+                          </p>
+                        </div>
+                        <Target className="h-10 w-10 text-amber-500/50" />
+                      </div>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border-blue-500/30">
+                    <CardContent className="pt-6">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm text-muted-foreground">Agendamentos</p>
+                          <p className="text-3xl font-bold text-blue-400">{agendamentos}</p>
+                          <p className="text-xs text-muted-foreground mt-1">{taxaConversao}% conversão</p>
+                        </div>
+                        <Calendar className="h-10 w-10 text-blue-500/50" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Gráficos */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {/* Gráfico Pizza - Status de Aposentadoria */}
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center gap-3">
+                        <PieChart className="h-5 w-5 text-cyan-500" />
+                        <CardTitle className="text-lg">Distribuição por Status de Aposentadoria</CardTitle>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Classificação das testemunhas por situação previdenciária
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      {statusAposentadoriaData.length > 0 ? (
+                        <ChartContainer config={{}} className="h-[300px] w-full">
+                          <RechartsPieChart>
+                            <Pie
+                              data={statusAposentadoriaData}
+                              dataKey="value"
+                              nameKey="name"
+                              cx="50%"
+                              cy="50%"
+                              outerRadius={100}
+                              label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+                              labelLine={false}
+                            >
+                              {statusAposentadoriaData.map((entry, index) => (
+                                <Cell key={`cell-${index}`} fill={entry.color} />
+                              ))}
+                            </Pie>
+                            <Tooltip 
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  const data = payload[0].payload;
+                                  return (
+                                    <div className="bg-background border rounded-lg p-2 shadow-lg">
+                                      <p className="font-medium">{data.name}</p>
+                                      <p className="text-sm text-muted-foreground">{data.value} testemunhas</p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                          </RechartsPieChart>
+                        </ChartContainer>
+                      ) : (
+                        <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                          Sem dados de status de aposentadoria
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Gráfico de Evolução Semanal */}
+                  <Card>
+                    <CardHeader>
+                      <div className="flex items-center gap-3">
+                        <TrendingUp className="h-5 w-5 text-cyan-500" />
+                        <CardTitle className="text-lg">Evolução Semanal de Abordagens</CardTitle>
+                      </div>
+                      <p className="text-sm text-muted-foreground">
+                        Volume de testemunhas abordadas por semana
+                      </p>
+                    </CardHeader>
+                    <CardContent>
+                      {evolucaoSemanal.length > 0 ? (
+                        <ChartContainer config={{ abordagens: { label: "Abordagens", color: "hsl(187, 85%, 53%)" } }} className="h-[300px] w-full">
+                          <BarChart data={evolucaoSemanal} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                            <CartesianGrid strokeDasharray="3 3" />
+                            <XAxis dataKey="semana" tick={{ fontSize: 11 }} tickFormatter={(value) => `S${value}`} />
+                            <YAxis allowDecimals={false} />
+                            <ChartTooltip 
+                              content={({ active, payload }) => {
+                                if (active && payload && payload.length) {
+                                  const data = payload[0].payload;
+                                  return (
+                                    <div className="bg-background border rounded-lg p-2 shadow-lg">
+                                      <p className="font-medium">Semana {data.semana}</p>
+                                      <p className="text-sm text-cyan-400">{data.abordagens} abordagens</p>
+                                      <p className="text-sm text-green-400">{data.qualificados} qualificados</p>
+                                      <p className="text-sm text-blue-400">{data.agendados} agendados</p>
+                                    </div>
+                                  );
+                                }
+                                return null;
+                              }}
+                            />
+                            <Bar dataKey="abordagens" fill="hsl(187, 85%, 53%)" radius={[4, 4, 0, 0]}>
+                              <LabelList dataKey="abordagens" position="top" className="fill-foreground text-xs" />
+                            </Bar>
+                          </BarChart>
+                        </ChartContainer>
+                      ) : (
+                        <div className="h-[300px] flex items-center justify-center text-muted-foreground">
+                          Sem dados de evolução semanal
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Ranking por SDR */}
+                <Card>
+                  <CardHeader>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Trophy className="h-5 w-5 text-cyan-500" />
+                        <div>
+                          <CardTitle className="text-lg">Ranking de Abordagens por SDR</CardTitle>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {testemunhasWeekFilter 
+                              ? `Desempenho na Semana ${testemunhasWeekFilter}`
+                              : 'Desempenho total de abordagens a testemunhas'
+                            }
+                          </p>
+                        </div>
+                      </div>
+                      <Select
+                        value={testemunhasWeekFilter?.toString() || "all"}
+                        onValueChange={(value) => setTestemunhasWeekFilter(value === "all" ? null : parseInt(value))}
+                      >
+                        <SelectTrigger className="w-[140px]">
+                          <SelectValue placeholder="Semana" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas</SelectItem>
+                          {semanasUnicas.map(s => (
+                            <SelectItem key={s} value={s.toString()}>Semana {s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {rankingSdr.length > 0 ? (
+                      <div className="space-y-3">
+                        {rankingSdr.map((item, index) => (
+                          <div key={item.sdr} className="flex items-center gap-4">
+                            <div className="w-8 text-center">
+                              {index === 0 && <span className="text-xl">🥇</span>}
+                              {index === 1 && <span className="text-xl">🥈</span>}
+                              {index === 2 && <span className="text-xl">🥉</span>}
+                              {index > 2 && <span className="text-sm text-muted-foreground">{index + 1}º</span>}
+                            </div>
+                            <div className="flex-1">
+                              <div className="flex items-center justify-between mb-1">
+                                <span className="font-medium">{item.sdr}</span>
+                                <div className="flex items-center gap-4 text-sm">
+                                  <span className="text-cyan-400">{item.abordagens} abordagens</span>
+                                  <span className="text-green-400">{item.qualificados} qualif.</span>
+                                  <span className="text-blue-400 font-semibold">{item.agendados} agend.</span>
+                                </div>
+                              </div>
+                              <div className="h-2 bg-muted rounded-full overflow-hidden">
+                                <div 
+                                  className="h-full bg-gradient-to-r from-cyan-500 to-teal-500 rounded-full transition-all"
+                                  style={{ width: `${(item.agendados / maxAgendados) * 100}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-8 text-center text-muted-foreground">
+                        Sem dados de abordagens por SDR
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Botão para recolher seção */}
+                <div className="flex justify-center pt-4">
+                  <button
+                    onClick={() => setOpenSection(null)}
+                    className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+                  >
+                    <ChevronUp className="h-4 w-4" />
+                    Recolher seção
+                  </button>
+                </div>
+              </>
+            );
+          })()}
+
         </CollapsibleContent>
       </Collapsible>
 
