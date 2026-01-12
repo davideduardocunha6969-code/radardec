@@ -5307,45 +5307,14 @@ const RadarComercial = () => {
             );
           })()}
 
-          {/* Botão para recolher seção */}
-          <div className="flex justify-center pt-4">
-            <button
-              onClick={() => setOpenSection(null)}
-              className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
-            >
-              <ChevronUp className="h-4 w-4" />
-              Recolher seção
-            </button>
+          {/* ===== SEÇÃO: ABORDAGEM DE TESTEMUNHAS (GID 774111166) ===== */}
+          <div className="col-span-full mt-8">
+            <div className="flex items-center gap-3 mb-4">
+              <Users className="h-5 w-5 text-cyan-500" />
+              <h3 className="text-lg font-semibold text-cyan-300">Abordagem de Testemunhas</h3>
+            </div>
           </div>
-        </CollapsibleContent>
-      </Collapsible>
 
-      {/* ===================== SEÇÃO: RADAR TESTEMUNHAS ===================== */}
-      <Collapsible 
-        open={openSection === 'testemunhas'} 
-        onOpenChange={() => handleSectionToggle('testemunhas')}
-        className="mb-8"
-      >
-        <CollapsibleTrigger className="w-full">
-          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-cyan-600/20 to-teal-600/20 rounded-lg border border-cyan-500/30 hover:border-cyan-500/50 transition-colors cursor-pointer">
-            <div className="flex items-center gap-3">
-              <Users className="h-6 w-6 text-cyan-500" />
-              <h2 className="text-xl font-bold text-foreground">Radar Testemunhas</h2>
-            </div>
-            <div className="flex items-center gap-4">
-              <span className="text-sm text-muted-foreground bg-cyan-500/20 px-2 py-1 rounded">
-                {testemunhasData.length} abordagens
-              </span>
-              {openSection === 'testemunhas' ? (
-                <ChevronDown className="h-5 w-5 text-muted-foreground" />
-              ) : (
-                <ChevronRight className="h-5 w-5 text-muted-foreground" />
-              )}
-            </div>
-          </div>
-        </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-8 mt-6">
-          
           {(() => {
             // Processa dados da aba de testemunhas (GID 774111166)
             // Coluna A = Semana, F = Status Aposentadoria, G = Tempo Contribuição
@@ -5472,7 +5441,7 @@ const RadarComercial = () => {
             return (
               <>
                 {/* Cards de métricas */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 col-span-full">
                   <Card className="bg-gradient-to-br from-cyan-500/10 to-teal-500/10 border-cyan-500/30">
                     <CardContent className="pt-6">
                       <div className="flex items-center justify-between">
@@ -5528,7 +5497,7 @@ const RadarComercial = () => {
                 </div>
 
                 {/* Gráficos */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 col-span-full">
                   {/* Gráfico Pizza - Status de Aposentadoria */}
                   <Card>
                     <CardHeader>
@@ -5631,7 +5600,7 @@ const RadarComercial = () => {
                 </div>
 
                 {/* Ranking por SDR */}
-                <Card>
+                <Card className="col-span-full">
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
@@ -5699,21 +5668,20 @@ const RadarComercial = () => {
                     )}
                   </CardContent>
                 </Card>
-
-                {/* Botão para recolher seção */}
-                <div className="flex justify-center pt-4">
-                  <button
-                    onClick={() => setOpenSection(null)}
-                    className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
-                  >
-                    <ChevronUp className="h-4 w-4" />
-                    Recolher seção
-                  </button>
-                </div>
               </>
             );
           })()}
 
+          {/* Botão para recolher seção */}
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={() => setOpenSection(null)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+            >
+              <ChevronUp className="h-4 w-4" />
+              Recolher seção
+            </button>
+          </div>
         </CollapsibleContent>
       </Collapsible>
 
