@@ -3237,15 +3237,15 @@ const RadarComercial = () => {
             </CardContent>
           </Card>
 
-          {/* Cards de Honorários Perdidos em Negociações */}
+          {/* Cards de Honorários Potenciais em Negociações */}
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Card de Honorários de Êxito Perdidos em Negociação */}
+            {/* Card de Honorários de Êxito Potenciais em Negociação */}
             <Card className="border-red-500/30">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <AlertTriangle className="h-5 w-5 text-red-500" />
-                    <CardTitle className="text-lg">Honorários de Êxito Perdidos em Negociação</CardTitle>
+                    <CardTitle className="text-lg">Honorários de Êxito Potenciais em Negociação</CardTitle>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
@@ -3387,13 +3387,13 @@ const RadarComercial = () => {
               </CardContent>
             </Card>
 
-            {/* Card de Honorários Iniciais Perdidos em Negociação */}
+            {/* Card de Honorários Iniciais Potenciais em Negociação */}
             <Card className="border-orange-500/30">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <AlertTriangle className="h-5 w-5 text-orange-500" />
-                    <CardTitle className="text-lg">Honorários Iniciais Perdidos em Negociação</CardTitle>
+                    <CardTitle className="text-lg">Honorários Iniciais Potenciais em Negociação</CardTitle>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
@@ -3536,15 +3536,15 @@ const RadarComercial = () => {
             </Card>
           </div>
 
-          {/* Cards de Honorários Perdidos Aguardando Documentação */}
+          {/* Cards de Honorários Potenciais Aguardando Documentação */}
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Card de Honorários de Êxito Perdidos Aguardando Documentação */}
+            {/* Card de Honorários de Êxito Potenciais Aguardando Documentação */}
             <Card className="border-amber-500/30">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <FileText className="h-5 w-5 text-amber-500" />
-                    <CardTitle className="text-lg">Honorários de Êxito Perdidos Aguardando Documentação</CardTitle>
+                    <CardTitle className="text-lg">Honorários de Êxito Potenciais Aguardando Documentação</CardTitle>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
@@ -3686,13 +3686,13 @@ const RadarComercial = () => {
               </CardContent>
             </Card>
 
-            {/* Card de Honorários Iniciais Perdidos Aguardando Documentação */}
+            {/* Card de Honorários Iniciais Potenciais Aguardando Documentação */}
             <Card className="border-yellow-500/30">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <FileText className="h-5 w-5 text-yellow-500" />
-                    <CardTitle className="text-lg">Honorários Iniciais Perdidos Aguardando Documentação</CardTitle>
+                    <CardTitle className="text-lg">Honorários Iniciais Potenciais Aguardando Documentação</CardTitle>
                   </div>
                 </div>
                 <p className="text-sm text-muted-foreground">
