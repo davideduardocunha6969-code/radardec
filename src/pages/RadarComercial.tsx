@@ -4385,34 +4385,112 @@ const RadarComercial = () => {
               </CardContent>
             </Card>
 
-            {/* Card 4: Taxa de Conclusão */}
+            {/* Card 4: Taxa de Conclusão e Meta */}
             <Card>
               <CardHeader className="pb-3">
                 <div className="flex items-center gap-3">
                   <TrendingUp className="h-5 w-5 text-blue-500" />
-                  <CardTitle className="text-lg">Taxa de Conclusão</CardTitle>
+                  <CardTitle className="text-lg">Evolução do Saneamento</CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 {(() => {
+                  const totalPastas = saneamentoData.length;
                   const saneadas = saneamentoData.filter(r => {
                     const status = (r.colI || '').toLowerCase().trim();
                     return status === 'saneado';
                   }).length;
-                  const percentual = saneamentoData.length > 0 ? ((saneadas / saneamentoData.length) * 100) : 0;
+                  
+                  // Calcula a semana atual baseada nas pastas saneadas
+                  const semanasComDados = saneamentoData
+                    .filter(r => (r.colI || '').toLowerCase().trim() === 'saneado')
+                    .map(r => parseInt((r.colJ || '').trim()) || 0)
+                    .filter(s => s >= 1 && s <= 53);
+                  
+                  const semanaAtual = semanasComDados.length > 0 ? Math.max(...semanasComDados) : 1;
+                  const totalSemanas = 53;
+                  
+                  // Taxa atual
+                  const taxaAtual = totalPastas > 0 ? ((saneadas / totalPastas) * 100) : 0;
+                  
+                  // Taxa esperada (proporcional à semana do ano)
+                  const taxaEsperada = (semanaAtual / totalSemanas) * 100;
+                  
+                  // Pastas esperadas até agora
+                  const pastasEsperadas = Math.ceil((semanaAtual / totalSemanas) * totalPastas);
+                  
+                  // Gap: quantas pastas faltam para atingir a meta
+                  const gap = pastasEsperadas - saneadas;
+                  
+                  // Status: acima, dentro ou abaixo da meta
+                  const diferencaTaxa = taxaAtual - taxaEsperada;
+                  const statusCor = diferencaTaxa >= 0 ? 'text-green-600' : diferencaTaxa >= -5 ? 'text-yellow-600' : 'text-red-600';
+                  const statusBg = diferencaTaxa >= 0 ? 'bg-green-100' : diferencaTaxa >= -5 ? 'bg-yellow-100' : 'bg-red-100';
+                  const statusLabel = diferencaTaxa >= 0 ? 'Dentro da Meta' : diferencaTaxa >= -5 ? 'Atenção' : 'Abaixo da Meta';
                   
                   return (
-                    <div className="flex flex-col items-center justify-center py-4">
-                      <span className={`text-5xl font-bold ${
-                        percentual >= 80 ? 'text-green-600' :
-                        percentual >= 50 ? 'text-yellow-600' :
-                        'text-red-600'
-                      }`}>
-                        {percentual.toFixed(1)}%
-                      </span>
-                      <span className="text-sm text-muted-foreground mt-2">
-                        de conclusão
-                      </span>
+                    <div className="space-y-4">
+                      {/* Taxa Atual vs Esperada */}
+                      <div className="flex items-center justify-between gap-4">
+                        <div className="flex flex-col items-center flex-1">
+                          <span className="text-xs text-muted-foreground uppercase tracking-wide">Atual</span>
+                          <span className={`text-3xl font-bold ${statusCor}`}>
+                            {taxaAtual.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className="text-muted-foreground text-xl">vs</div>
+                        <div className="flex flex-col items-center flex-1">
+                          <span className="text-xs text-muted-foreground uppercase tracking-wide">Esperada</span>
+                          <span className="text-3xl font-bold text-blue-600">
+                            {taxaEsperada.toFixed(1)}%
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Barra de progresso visual */}
+                      <div className="relative h-3 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className="absolute h-full bg-blue-300 rounded-full"
+                          style={{ width: `${Math.min(taxaEsperada, 100)}%` }}
+                        />
+                        <div 
+                          className={`absolute h-full rounded-full ${diferencaTaxa >= 0 ? 'bg-green-500' : 'bg-amber-500'}`}
+                          style={{ width: `${Math.min(taxaAtual, 100)}%` }}
+                        />
+                      </div>
+                      
+                      {/* Status e Gap */}
+                      <div className="flex items-center justify-between text-sm">
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusBg} ${statusCor}`}>
+                          {statusLabel}
+                        </span>
+                        <span className="text-muted-foreground text-xs">
+                          Semana {semanaAtual} de {totalSemanas}
+                        </span>
+                      </div>
+                      
+                      {/* Gap de pastas */}
+                      {gap > 0 && (
+                        <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 text-center">
+                          <span className="text-amber-800 text-sm font-medium">
+                            ⚠️ Faltam <strong>{gap}</strong> pasta{gap !== 1 ? 's' : ''} para atingir a meta
+                          </span>
+                          <p className="text-amber-600 text-xs mt-1">
+                            ({saneadas} saneadas / {pastasEsperadas} esperadas até a semana {semanaAtual})
+                          </p>
+                        </div>
+                      )}
+                      
+                      {gap <= 0 && (
+                        <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
+                          <span className="text-green-800 text-sm font-medium">
+                            ✅ {Math.abs(gap)} pasta{Math.abs(gap) !== 1 ? 's' : ''} à frente da meta!
+                          </span>
+                          <p className="text-green-600 text-xs mt-1">
+                            ({saneadas} saneadas / {pastasEsperadas} esperadas até a semana {semanaAtual})
+                          </p>
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
