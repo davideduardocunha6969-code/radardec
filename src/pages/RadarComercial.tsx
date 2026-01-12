@@ -190,12 +190,21 @@ const RadarComercial = () => {
   }, [saneamentoData]);
 
   // Meta 4: Indicações de Novos Clientes (250)
+  // Usa a aba GID=2087539342 (indicacoesRecebidasData)
+  // Considera como indicação válida somente se a coluna A estiver preenchida
   const metaIndicacoes = useMemo(() => {
+    // A coluna A é mapeada como 'responsavel' na edge function
+    // Só conta registros onde a coluna A está preenchida
+    const indicacoesValidas = indicacoesRecebidasData.filter(r => {
+      const colunaA = r.responsavel?.trim() || '';
+      return colunaA !== '';
+    });
+    
     return {
       meta: 250,
-      alcancado: indicacoesData.length,
+      alcancado: indicacoesValidas.length,
     };
-  }, [indicacoesData]);
+  }, [indicacoesRecebidasData]);
 
   // Calcula métricas baseadas nos dados filtrados
   const metrics = useMemo(() => {
