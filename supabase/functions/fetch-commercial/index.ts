@@ -441,50 +441,6 @@ serve(async (req) => {
       // Continue without Administrativo 2 data
     }
     
-    // Fetch Documentos Fisicos sheet (GID 186802545)
-    // Coluna A = Nome do cliente, Coluna F = Digitalizado/Descartado (SIM), Coluna G = Entregue ao Cliente (SIM)
-    let documentosFisicosData: any[] = [];
-    let documentosFisicosHeaders: string[] = [];
-    
-    try {
-      const documentosFisicosCsvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${DOCUMENTOS_FISICOS_GID}`;
-      console.log(`Fetching Documentos Fisicos sheet (gid=${DOCUMENTOS_FISICOS_GID})...`);
-      
-      const documentosFisicosResponse = await fetch(documentosFisicosCsvUrl);
-      
-      if (documentosFisicosResponse.ok) {
-        const documentosFisicosCsvText = await documentosFisicosResponse.text();
-        
-        if (documentosFisicosCsvText && documentosFisicosCsvText.trim().length > 10) {
-          const documentosFisicosRows = parseCSV(documentosFisicosCsvText);
-          
-          if (documentosFisicosRows.length >= 2) {
-            documentosFisicosHeaders = documentosFisicosRows[0].map(h => h.trim());
-            const documentosFisicosDataRows = documentosFisicosRows.slice(1).filter(row => row.some(cell => cell.trim() !== ''));
-            
-            console.log(`Found Documentos Fisicos sheet with ${documentosFisicosDataRows.length} rows`);
-            console.log('Documentos Fisicos Headers:', documentosFisicosHeaders);
-            
-            // Mapeia os dados com colunas genéricas
-            documentosFisicosData = documentosFisicosDataRows.map(row => {
-              const record: Record<string, any> = {};
-              documentosFisicosHeaders.forEach((header, index) => {
-                record[`col${String.fromCharCode(65 + index)}`] = (row[index] || '').trim();
-              });
-              return record;
-            });
-            
-            console.log(`Documentos Fisicos data loaded: ${documentosFisicosData.length} records`);
-          }
-        }
-      } else {
-        console.log('Documentos Fisicos sheet not accessible, continuing without it');
-      }
-    } catch (documentosFisicosError) {
-      console.error('Error fetching Documentos Fisicos sheet:', documentosFisicosError);
-      // Continue without Documentos Fisicos data
-    }
-    
     // Fetch Testemunhas sheet (GID 774111166)
     // Coluna A = Semana, Coluna F = Status Aposentadoria, Coluna G = Tempo Contribuição
     // Coluna H = Trabalhou Agricultura, Coluna I = Lead Qualificado, Coluna J = SDR, Coluna K = Resultado
@@ -528,6 +484,50 @@ serve(async (req) => {
     } catch (testemunhasError) {
       console.error('Error fetching Testemunhas sheet:', testemunhasError);
       // Continue without Testemunhas data
+    }
+    
+    // Fetch Documentos Fisicos sheet (GID 186802545)
+    // Coluna A = Nome do cliente, Coluna F = Digitalizado/Descartado (SIM), Coluna G = Entregue ao Cliente (SIM)
+    let documentosFisicosData: any[] = [];
+    let documentosFisicosHeaders: string[] = [];
+    
+    try {
+      const documentosFisicosCsvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${DOCUMENTOS_FISICOS_GID}`;
+      console.log(`Fetching Documentos Fisicos sheet (gid=${DOCUMENTOS_FISICOS_GID})...`);
+      
+      const documentosFisicosResponse = await fetch(documentosFisicosCsvUrl);
+      
+      if (documentosFisicosResponse.ok) {
+        const documentosFisicosCsvText = await documentosFisicosResponse.text();
+        
+        if (documentosFisicosCsvText && documentosFisicosCsvText.trim().length > 10) {
+          const documentosFisicosRows = parseCSV(documentosFisicosCsvText);
+          
+          if (documentosFisicosRows.length >= 2) {
+            documentosFisicosHeaders = documentosFisicosRows[0].map(h => h.trim());
+            const documentosFisicosDataRows = documentosFisicosRows.slice(1).filter(row => row.some(cell => cell.trim() !== ''));
+            
+            console.log(`Found Documentos Fisicos sheet with ${documentosFisicosDataRows.length} rows`);
+            console.log('Documentos Fisicos Headers:', documentosFisicosHeaders);
+            
+            // Mapeia os dados com colunas genéricas
+            documentosFisicosData = documentosFisicosDataRows.map(row => {
+              const record: Record<string, any> = {};
+              documentosFisicosHeaders.forEach((header, index) => {
+                record[`col${String.fromCharCode(65 + index)}`] = (row[index] || '').trim();
+              });
+              return record;
+            });
+            
+            console.log(`Documentos Fisicos data loaded: ${documentosFisicosData.length} records`);
+          }
+        }
+      } else {
+        console.log('Documentos Fisicos sheet not accessible, continuing without it');
+      }
+    } catch (documentosFisicosError) {
+      console.error('Error fetching Documentos Fisicos sheet:', documentosFisicosError);
+      // Continue without Documentos Fisicos data
     }
     
     return new Response(
