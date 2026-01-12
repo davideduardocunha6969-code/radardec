@@ -1820,24 +1820,175 @@ const RadarBancario = () => {
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-6 mt-6">
-          {/* Resumo de Pesos */}
-          <Card className="bg-muted/30">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-2 mb-2">
-                <BarChart3 className="h-4 w-4 text-amber-500" />
-                <span className="text-sm font-medium text-foreground">Composição da Meta Geral</span>
-              </div>
-              <div className="flex gap-4 text-sm text-muted-foreground">
-                <span><strong className="text-blue-500">45%</strong> Protocolos</span>
-                <span>•</span>
-                <span><strong className="text-emerald-500">10%</strong> Saneamento</span>
-                <span>•</span>
-                <span><strong className="text-purple-500">45%</strong> Execuções e Acordos</span>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Card Meta Geral Ponderada */}
+          {(() => {
+            // Cálculos das metas individuais
+            const protocolosMeta = metaAnualIniciais;
+            const protocolosAlcancado = iniciaisData.length;
+            const protocolosPercent = protocolosMeta > 0 ? (protocolosAlcancado / protocolosMeta) * 100 : 0;
+            const protocolosEsperado = (protocolosMeta / 52) * semanaAtual;
+            const protocolosEsperadoPercent = protocolosMeta > 0 ? (protocolosEsperado / protocolosMeta) * 100 : 0;
+            const protocolosDiffPP = protocolosPercent - protocolosEsperadoPercent;
 
-          {/* Cards de Metas */}
+            const saneamentoMeta = saneamentoData.length;
+            const saneamentoAlcancado = saneamentoMetricas.saneadas;
+            const saneamentoPercent = saneamentoMeta > 0 ? (saneamentoAlcancado / saneamentoMeta) * 100 : 0;
+            const saneamentoEsperado = (saneamentoMeta / 52) * semanaAtual;
+            const saneamentoEsperadoPercent = saneamentoMeta > 0 ? (saneamentoEsperado / saneamentoMeta) * 100 : 0;
+            const saneamentoDiffPP = saneamentoPercent - saneamentoEsperadoPercent;
+
+            const transitoMeta = metaAnualTransito;
+            const transitoAlcancado = evolucaoAcumuladaTransito.metricas?.totalAcordosCumprimentos || 0;
+            const transitoPercent = transitoMeta > 0 ? (transitoAlcancado / transitoMeta) * 100 : 0;
+            const transitoEsperado = (transitoMeta / 52) * semanaAtual;
+            const transitoEsperadoPercent = transitoMeta > 0 ? (transitoEsperado / transitoMeta) * 100 : 0;
+            const transitoDiffPP = transitoPercent - transitoEsperadoPercent;
+
+            // Pesos
+            const pesoProtocolos = 0.45;
+            const pesoSaneamento = 0.10;
+            const pesoTransito = 0.45;
+
+            // Progresso ponderado
+            const progressoPonderado = (protocolosPercent * pesoProtocolos) + (saneamentoPercent * pesoSaneamento) + (transitoPercent * pesoTransito);
+            const esperadoPonderado = (protocolosEsperadoPercent * pesoProtocolos) + (saneamentoEsperadoPercent * pesoSaneamento) + (transitoEsperadoPercent * pesoTransito);
+            const diffPonderado = progressoPonderado - esperadoPonderado;
+            const isPositivo = diffPonderado >= 0;
+
+            return (
+              <Card className="overflow-hidden">
+                <CardHeader className="pb-2">
+                  <div className="flex items-center gap-2">
+                    <Target className="h-5 w-5 text-amber-500" />
+                    <div>
+                      <CardTitle className="text-lg font-semibold">Meta Geral do Bancário</CardTitle>
+                      <p className="text-sm text-muted-foreground">Progresso ponderado de todas as metas</p>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  <div className="grid grid-cols-1 lg:grid-cols-[280px_1fr] gap-6">
+                    {/* Coluna Esquerda: Percentual Geral */}
+                    <div className={`rounded-lg p-6 text-center ${isPositivo ? 'bg-emerald-500/10' : 'bg-red-500/10'}`}>
+                      <p className={`text-5xl font-bold ${isPositivo ? 'text-emerald-500' : 'text-red-500'}`}>
+                        {progressoPonderado.toFixed(1)}%
+                      </p>
+                      <p className="text-sm text-muted-foreground mt-2">da meta geral atingida</p>
+                      <div className="mt-3 pt-3 border-t border-border">
+                        <p className="text-sm">
+                          <span className="text-muted-foreground">Esperado: </span>
+                          <span className="font-medium">{esperadoPonderado.toFixed(1)}%</span>
+                          <span className={`ml-2 font-medium ${isPositivo ? 'text-emerald-500' : 'text-red-500'}`}>
+                            ({isPositivo ? '+' : ''}{diffPonderado.toFixed(1)} p.p.)
+                          </span>
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Coluna Direita: Detalhamento por Meta */}
+                    <div className="space-y-4">
+                      <p className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Detalhamento por Meta</p>
+                      
+                      {/* Protocolos */}
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-sm truncate">Protocolos</span>
+                            <span className="text-xs px-2 py-0.5 bg-blue-500/20 text-blue-500 rounded-full">Peso: 45%</span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-blue-500 transition-all duration-500" 
+                              style={{ width: `${Math.min(protocolosPercent, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                        <div className="text-right text-sm whitespace-nowrap">
+                          <span className="text-muted-foreground">{protocolosAlcancado}/{protocolosMeta}</span>
+                          <span className="ml-2 font-medium">{protocolosPercent.toFixed(1)}%</span>
+                          <span className={`ml-2 ${protocolosDiffPP >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {protocolosDiffPP >= 0 ? '→' : '→'} {protocolosDiffPP.toFixed(1)} p.p.
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Saneamento */}
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-sm truncate">Saneamento de Pastas</span>
+                            <span className="text-xs px-2 py-0.5 bg-emerald-500/20 text-emerald-500 rounded-full">Peso: 10%</span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-emerald-500 transition-all duration-500" 
+                              style={{ width: `${Math.min(saneamentoPercent, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                        <div className="text-right text-sm whitespace-nowrap">
+                          <span className="text-muted-foreground">{saneamentoAlcancado}/{saneamentoMeta}</span>
+                          <span className="ml-2 font-medium">{saneamentoPercent.toFixed(1)}%</span>
+                          <span className={`ml-2 ${saneamentoDiffPP >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {saneamentoDiffPP >= 0 ? '→' : '→'} {saneamentoDiffPP.toFixed(1)} p.p.
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Execuções e Acordos */}
+                      <div className="flex items-center gap-4">
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 mb-1">
+                            <span className="font-medium text-sm truncate">Execuções e Acordos</span>
+                            <span className="text-xs px-2 py-0.5 bg-purple-500/20 text-purple-500 rounded-full">Peso: 45%</span>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-purple-500 transition-all duration-500" 
+                              style={{ width: `${Math.min(transitoPercent, 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                        <div className="text-right text-sm whitespace-nowrap">
+                          <span className="text-muted-foreground">{transitoAlcancado}/{transitoMeta}</span>
+                          <span className="ml-2 font-medium">{transitoPercent.toFixed(1)}%</span>
+                          <span className={`ml-2 ${transitoDiffPP >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
+                            {transitoDiffPP >= 0 ? '→' : '→'} {transitoDiffPP.toFixed(1)} p.p.
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Barra de Progresso Geral Ponderado */}
+                  <div className="mt-6 pt-4 border-t border-border">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-sm font-medium">Progresso Geral Ponderado</span>
+                      <span className="text-sm text-muted-foreground">Semana {semanaAtual} de 52</span>
+                    </div>
+                    <div className="relative h-4 bg-muted rounded-full overflow-hidden">
+                      {/* Marcador de meta esperada */}
+                      <div 
+                        className="absolute top-0 bottom-0 w-0.5 bg-foreground/50 z-10"
+                        style={{ left: `${Math.min(esperadoPonderado, 100)}%` }}
+                      />
+                      {/* Barra de progresso */}
+                      <div 
+                        className={`h-full transition-all duration-500 ${isPositivo ? 'bg-emerald-500' : 'bg-red-500'}`}
+                        style={{ width: `${Math.min(progressoPonderado, 100)}%` }}
+                      />
+                    </div>
+                    <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
+                      <span>0%</span>
+                      <span>Meta: 100%</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })()}
+
+          {/* Cards de Metas Individuais */}
           <div className="grid gap-6">
             {/* Meta Protocolos - Peso 45% */}
             <GoalProgressCard
