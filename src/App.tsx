@@ -7,6 +7,7 @@ import { MainLayout } from "./layouts/MainLayout";
 import GestaoGeral from "./pages/GestaoGeral";
 import RadarControladoria from "./pages/RadarControladoria";
 import RadarComercial from "./pages/RadarComercial";
+import RadarBancario from "./pages/RadarBancario";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -22,6 +23,7 @@ const App = () => (
             <Route path="/" element={<GestaoGeral />} />
             <Route path="/radar-controladoria" element={<RadarControladoria />} />
             <Route path="/radar-comercial" element={<RadarComercial />} />
+            <Route path="/radar-bancario" element={<RadarBancario />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
