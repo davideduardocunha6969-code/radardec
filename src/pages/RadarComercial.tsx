@@ -5100,9 +5100,10 @@ const RadarComercial = () => {
                 pendentes: dados.total - dados.finalizadas,
                 taxa: dados.total > 0 ? ((dados.finalizadas / dados.total) * 100).toFixed(1) : '0'
               }))
-              .sort((a, b) => b.total - a.total);
+              .filter(r => r.finalizadas > 0) // Considera apenas quem tem pelo menos 1 finalizada
+              .sort((a, b) => b.finalizadas - a.finalizadas); // Ordena por finalizadas
 
-            const maxTotal = Math.max(...rankingResponsavel.map(r => r.total), 1);
+            const maxFinalizadas = Math.max(...rankingResponsavel.map(r => r.finalizadas), 1);
 
             // Evolução por semana (Coluna A)
             const porSemana: Record<string, { total: number; finalizadas: number }> = {};
@@ -5194,7 +5195,7 @@ const RadarComercial = () => {
                       <CardTitle className="text-lg">Ranking por Responsável</CardTitle>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Pastas salvas por cada responsável (Coluna C)
+                      Documentações salvas no Advbox (marcadas como "feito")
                     </p>
                   </CardHeader>
                   <CardContent>
@@ -5208,16 +5209,12 @@ const RadarComercial = () => {
                               </span>
                               <span className="font-medium truncate max-w-[150px]">{resp.nome}</span>
                             </div>
-                            <div className="flex items-center gap-3 text-xs">
-                              <span className="text-green-500">{resp.finalizadas} ✓</span>
-                              <span className="text-amber-500">{resp.pendentes} ⏳</span>
-                              <span className="font-bold">{resp.total}</span>
-                            </div>
+                            <span className="font-bold text-green-500">{resp.finalizadas}</span>
                           </div>
                           <div className="h-2 bg-muted rounded-full overflow-hidden">
                             <div 
-                              className="h-full bg-gradient-to-r from-violet-600 to-violet-400 rounded-full transition-all"
-                              style={{ width: `${(resp.total / maxTotal) * 100}%` }}
+                              className="h-full bg-gradient-to-r from-green-600 to-green-400 rounded-full transition-all"
+                              style={{ width: `${(resp.finalizadas / maxFinalizadas) * 100}%` }}
                             />
                           </div>
                         </div>
