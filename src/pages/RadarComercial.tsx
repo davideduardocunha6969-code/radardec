@@ -5266,7 +5266,7 @@ const RadarComercial = () => {
                       <CardTitle className="text-lg">Evolução Semanal de Documentação</CardTitle>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Pastas finalizadas por semana (Coluna A)
+                      Pastas com documentos salvos no ADVBOX por semana
                     </p>
                   </CardHeader>
                   <CardContent>
