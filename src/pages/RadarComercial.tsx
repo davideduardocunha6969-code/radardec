@@ -5055,17 +5055,17 @@ const RadarComercial = () => {
             const diffDias = Math.floor((hoje.getTime() - inicioAno.getTime()) / (1000 * 60 * 60 * 24));
             const semanaAtual = Math.ceil((diffDias + inicioAno.getDay() + 1) / 7);
 
-            // Conta pastas esperadas (todas até a semana atual) vs realizadas (feito até semana atual)
-            const pastasAteSemanAtual = administrativo2Data.filter(r => {
+            // Conta pastas esperadas da semana atual vs realizadas na semana atual
+            const pastasSemanaAtual = administrativo2Data.filter(r => {
               const semana = parseInt((r.colA || '0').trim()) || 0;
-              return semana >= 1 && semana <= semanaAtual;
+              return semana === semanaAtual;
             });
-            const esperadoAcumulado = pastasAteSemanAtual.length;
-            const realizadoAcumulado = pastasAteSemanAtual.filter(r => {
+            const esperadoSemanaAtual = pastasSemanaAtual.length;
+            const realizadoSemanaAtual = pastasSemanaAtual.filter(r => {
               const status = (r.colD || '').toLowerCase().trim();
               return status === 'feito' || status.includes('feito');
             }).length;
-            const percentualMeta = esperadoAcumulado > 0 ? ((realizadoAcumulado / esperadoAcumulado) * 100).toFixed(1) : '0';
+            const percentualSemanaAtual = esperadoSemanaAtual > 0 ? ((realizadoSemanaAtual / esperadoSemanaAtual) * 100).toFixed(1) : '0';
 
             // Ranking por responsável (Coluna C)
             const porResponsavel: Record<string, { total: number; finalizadas: number }> = {};
@@ -5176,17 +5176,28 @@ const RadarComercial = () => {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <Target className="h-4 w-4 text-primary" />
-                        Meta Semana {semanaAtual}
+                        Semana {semanaAtual}
                       </CardTitle>
                     </CardHeader>
-                    <CardContent>
-                      <div className="text-2xl font-bold">
-                        <span className={parseFloat(percentualMeta) >= 100 ? 'text-green-500' : parseFloat(percentualMeta) >= 80 ? 'text-amber-500' : 'text-red-500'}>
-                          {realizadoAcumulado}
-                        </span>
-                        <span className="text-muted-foreground text-lg font-normal"> / {esperadoAcumulado}</span>
+                    <CardContent className="space-y-2">
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-xs text-muted-foreground">Esperado:</span>
+                        <span className="text-lg font-semibold">{esperadoSemanaAtual} pastas</span>
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">{percentualMeta}% concluído até a semana atual</p>
+                      <div className="flex items-baseline justify-between">
+                        <span className="text-xs text-muted-foreground">Realizado:</span>
+                        <span className={`text-lg font-semibold ${parseFloat(percentualSemanaAtual) >= 100 ? 'text-green-500' : parseFloat(percentualSemanaAtual) >= 80 ? 'text-amber-500' : 'text-red-500'}`}>
+                          {realizadoSemanaAtual} pastas
+                        </span>
+                      </div>
+                      <div className="pt-1 border-t border-border">
+                        <div className="flex items-baseline justify-between">
+                          <span className="text-xs text-muted-foreground">Progresso:</span>
+                          <span className={`text-sm font-bold ${parseFloat(percentualSemanaAtual) >= 100 ? 'text-green-500' : parseFloat(percentualSemanaAtual) >= 80 ? 'text-amber-500' : 'text-red-500'}`}>
+                            {percentualSemanaAtual}%
+                          </span>
+                        </div>
+                      </div>
                     </CardContent>
                   </Card>
                 </div>
