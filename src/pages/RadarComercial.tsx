@@ -72,6 +72,7 @@ const RadarComercial = () => {
   const [sdrRankingWeek, setSdrRankingWeek] = useState<number | null>(null);
   const [sdrEvolutionFilter, setSdrEvolutionFilter] = useState<string | null>(null);
   const [selectedSdrsForChart, setSelectedSdrsForChart] = useState<string[]>([]);
+  const [adminRankingWeek, setAdminRankingWeek] = useState<number | null>(null);
 
   // Handlers para abrir/fechar seções (comportamento accordion)
   const handleSectionToggle = (section: string) => {
@@ -5080,9 +5081,20 @@ const RadarComercial = () => {
             // Flag para indicar se estamos mostrando semana atual ou a última disponível
             const mostrandoSemanaAtual = semanaParaExibir === semanaAtual;
 
+            // Semanas únicas disponíveis para o filtro do ranking
+            const semanasUnicasAdmin = [...new Set(semanasDisponiveis)].sort((a, b) => a - b);
+
+            // Filtra dados para o ranking baseado na semana selecionada
+            const dadosParaRanking = adminRankingWeek 
+              ? administrativo2Data.filter(r => {
+                  const semana = parseInt((r.colA || '0').trim()) || 0;
+                  return semana === adminRankingWeek;
+                })
+              : administrativo2Data;
+
             // Ranking por responsável (Coluna C)
             const porResponsavel: Record<string, { total: number; finalizadas: number }> = {};
-            administrativo2Data.forEach(r => {
+            dadosParaRanking.forEach(r => {
               const resp = (r.colC || 'Não informado').trim();
               const status = (r.colD || '').toLowerCase().trim();
               const finalizado = status === 'feito' || status.includes('feito');
@@ -5190,36 +5202,59 @@ const RadarComercial = () => {
                 {/* Ranking por Responsável */}
                 <Card className="col-span-full md:col-span-1">
                   <CardHeader>
-                    <div className="flex items-center gap-3">
-                      <Trophy className="h-5 w-5 text-yellow-500" />
-                      <CardTitle className="text-lg">Ranking por Responsável</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <Trophy className="h-5 w-5 text-yellow-500" />
+                        <CardTitle className="text-lg">Ranking por Responsável</CardTitle>
+                      </div>
+                      <Select 
+                        value={adminRankingWeek?.toString() || "all"} 
+                        onValueChange={(v) => setAdminRankingWeek(v === "all" ? null : parseInt(v))}
+                      >
+                        <SelectTrigger className="w-[130px] h-8 text-xs">
+                          <SelectValue placeholder="Semana" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Todas</SelectItem>
+                          {semanasUnicasAdmin.map(s => (
+                            <SelectItem key={s} value={s.toString()}>Semana {s}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       Documentações salvas no Advbox (marcadas como "feito")
+                      {adminRankingWeek && ` - Semana ${adminRankingWeek}`}
                     </p>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-3">
-                      {rankingResponsavel.slice(0, 10).map((resp, index) => (
-                        <div key={resp.nome} className="space-y-1">
-                          <div className="flex items-center justify-between text-sm">
-                            <div className="flex items-center gap-2">
-                              <span className="text-lg w-8">
-                                {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}º`}
-                              </span>
-                              <span className="font-medium truncate max-w-[150px]">{resp.nome}</span>
+                    {rankingResponsavel.length > 0 ? (
+                      <div className="space-y-3">
+                        {rankingResponsavel.slice(0, 10).map((resp, index) => (
+                          <div key={resp.nome} className="space-y-1">
+                            <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-2">
+                                <span className="text-lg w-8">
+                                  {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}º`}
+                                </span>
+                                <span className="font-medium truncate max-w-[150px]">{resp.nome}</span>
+                              </div>
+                              <span className="font-bold text-green-500">{resp.finalizadas}</span>
                             </div>
-                            <span className="font-bold text-green-500">{resp.finalizadas}</span>
+                            <div className="h-2 bg-muted rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-gradient-to-r from-green-600 to-green-400 rounded-full transition-all"
+                                style={{ width: `${(resp.finalizadas / maxFinalizadas) * 100}%` }}
+                              />
+                            </div>
                           </div>
-                          <div className="h-2 bg-muted rounded-full overflow-hidden">
-                            <div 
-                              className="h-full bg-gradient-to-r from-green-600 to-green-400 rounded-full transition-all"
-                              style={{ width: `${(resp.finalizadas / maxFinalizadas) * 100}%` }}
-                            />
-                          </div>
-                        </div>
-                      ))}
-                    </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="h-[150px] flex items-center justify-center text-muted-foreground text-sm">
+                        Nenhuma finalização encontrada {adminRankingWeek && `na semana ${adminRankingWeek}`}
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
 
