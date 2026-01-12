@@ -26,11 +26,16 @@ serve(async (req) => {
     try {
       const iniciaisCsvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${INICIAIS_GID}`;
       console.log(`Fetching Iniciais sheet (gid=${INICIAIS_GID})...`);
+      console.log(`URL: ${iniciaisCsvUrl}`);
       
       const iniciaisResponse = await fetch(iniciaisCsvUrl);
       
+      console.log(`Iniciais response status: ${iniciaisResponse.status}`);
+      
       if (iniciaisResponse.ok) {
         const iniciaisCsvText = await iniciaisResponse.text();
+        
+        console.log(`Iniciais CSV length: ${iniciaisCsvText.length}`);
         
         if (iniciaisCsvText && iniciaisCsvText.trim().length > 10) {
           const iniciaisRows = parseCSV(iniciaisCsvText);
@@ -62,9 +67,12 @@ serve(async (req) => {
             
             console.log(`Iniciais data loaded: ${iniciaisData.length} records`);
           }
+        } else {
+          console.log('Iniciais CSV is empty or too short');
         }
       } else {
-        console.log('Iniciais sheet not accessible');
+        const errorText = await iniciaisResponse.text();
+        console.log(`Iniciais sheet not accessible - Status: ${iniciaisResponse.status}, Error: ${errorText.substring(0, 200)}`);
       }
     } catch (iniciaisError) {
       console.error('Error fetching Iniciais sheet:', iniciaisError);
