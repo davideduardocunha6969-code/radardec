@@ -255,6 +255,53 @@ const RadarComercial = () => {
     };
   }, [bancarioAgendamentosData]);
 
+  // Meta Geral do Comercial Bancário (ponderada: 90% contratos + 10% agendamentos)
+  const metaGeralBancario = useMemo(() => {
+    const pesos = {
+      contratos: 0.90,
+      agendamentos: 0.10,
+    };
+
+    // Percentual de cada meta individual (limitado a 100%)
+    const percentContratos = Math.min((metaBancarioContratos.alcancado / metaBancarioContratos.meta) * 100, 100);
+    const percentAgendamentos = Math.min((metaBancarioAgendamentos.alcancado / metaBancarioAgendamentos.meta) * 100, 100);
+
+    // Contribuição ponderada de cada meta
+    const contribuicaoContratos = percentContratos * pesos.contratos;
+    const contribuicaoAgendamentos = percentAgendamentos * pesos.agendamentos;
+
+    // Percentual total ponderado
+    const percentualTotal = contribuicaoContratos + contribuicaoAgendamentos;
+
+    // Esperado para a semana atual
+    const esperadoSemana = (semanaAtualDoAno / 53) * 100;
+    const diferencaEsperado = percentualTotal - esperadoSemana;
+
+    return {
+      percentualTotal,
+      esperadoSemana,
+      diferencaEsperado,
+      metas: [
+        {
+          nome: 'Contratos Bancários',
+          peso: pesos.contratos * 100,
+          alcancado: metaBancarioContratos.alcancado,
+          meta: metaBancarioContratos.meta,
+          percentual: percentContratos,
+          contribuicao: contribuicaoContratos,
+        },
+        {
+          nome: 'Agendamentos Bancários',
+          peso: pesos.agendamentos * 100,
+          alcancado: metaBancarioAgendamentos.alcancado,
+          meta: metaBancarioAgendamentos.meta,
+          percentual: percentAgendamentos,
+          contribuicao: contribuicaoAgendamentos,
+        },
+      ],
+    };
+  }, [metaBancarioContratos, metaBancarioAgendamentos, semanaAtualDoAno]);
+
   // Meta Geral do Comercial Previdenciário (ponderada)
   const metaGeral = useMemo(() => {
     const pesos = {
@@ -6446,6 +6493,105 @@ const RadarComercial = () => {
               semanaAtual={semanaAtualDoAno}
             />
           </div>
+
+          {/* Card Meta Geral do Comercial Bancário */}
+          <Card className="border-2 border-emerald-500/50 bg-gradient-to-br from-emerald-500/5 to-teal-500/5">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-emerald-500/20">
+                  <Target className="h-6 w-6 text-emerald-500" />
+                </div>
+                <div>
+                  <CardTitle className="text-xl">Meta Geral do Comercial Bancário</CardTitle>
+                  <p className="text-sm text-muted-foreground">Progresso ponderado de todas as metas</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Coluna 1: Percentual Total */}
+                <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20">
+                  <span className={`text-5xl font-bold ${
+                    metaGeralBancario.diferencaEsperado >= 0 ? 'text-emerald-500' : 'text-rose-500'
+                  }`}>
+                    {metaGeralBancario.percentualTotal.toFixed(1)}%
+                  </span>
+                  <span className="text-sm text-muted-foreground mt-2">da meta geral atingida</span>
+                  <div className="mt-4 text-center">
+                    <span className="text-xs text-muted-foreground">Esperado: </span>
+                    <span className="text-sm font-semibold text-foreground">{metaGeralBancario.esperadoSemana.toFixed(1)}%</span>
+                    <span className={`ml-2 text-sm font-semibold ${
+                      metaGeralBancario.diferencaEsperado >= 0 ? 'text-emerald-500' : 'text-red-500'
+                    }`}>
+                      ({metaGeralBancario.diferencaEsperado >= 0 ? '+' : ''}{metaGeralBancario.diferencaEsperado.toFixed(1)} p.p.)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Coluna 2: Breakdown das metas */}
+                <div className="lg:col-span-2 space-y-4">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Detalhamento por Meta</h4>
+                  {metaGeralBancario.metas.map((meta, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{meta.nome}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                            Peso: {meta.peso}%
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-muted-foreground">{meta.alcancado}/{meta.meta}</span>
+                          <span className={`font-semibold ${
+                            meta.percentual >= (semanaAtualDoAno / 53) * 100 ? 'text-emerald-500' : 'text-amber-500'
+                          }`}>
+                            {meta.percentual.toFixed(1)}%
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            → {meta.contribuicao.toFixed(1)} p.p.
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all ${
+                            meta.percentual >= (semanaAtualDoAno / 53) * 100 ? 'bg-emerald-500' : 'bg-amber-500'
+                          }`}
+                          style={{ width: `${Math.min(meta.percentual, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Barra de progresso geral */}
+              <div className="mt-6 pt-6 border-t border-border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Progresso Geral Ponderado</span>
+                  <span className="text-sm text-muted-foreground">Semana {semanaAtualDoAno} de 53</span>
+                </div>
+                <div className="relative h-4 bg-muted rounded-full overflow-hidden">
+                  {/* Linha de referência do esperado */}
+                  <div 
+                    className="absolute top-0 bottom-0 w-0.5 bg-foreground/50 z-10"
+                    style={{ left: `${metaGeralBancario.esperadoSemana}%` }}
+                  />
+                  {/* Barra de progresso */}
+                  <div 
+                    className={`h-full rounded-full transition-all ${
+                      metaGeralBancario.diferencaEsperado >= 0 ? 'bg-emerald-500' : 'bg-rose-500'
+                    }`}
+                    style={{ width: `${Math.min(metaGeralBancario.percentualTotal, 100)}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
+                  <span>0%</span>
+                  <span>Meta: 100%</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Botão para recolher seção */}
           <div className="flex justify-center pt-4">
