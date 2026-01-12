@@ -14,6 +14,7 @@ const INDICACOES_GID = 290508236;
 const INDICACOES_RECEBIDAS_GID = 2087539342;
 const SANEAMENTO_GID = 1874749978;
 const ADMINISTRATIVO_GID = 651337262;
+const ADMINISTRATIVO2_GID = 1905290884;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -395,6 +396,49 @@ serve(async (req) => {
       // Continue without Administrativo data
     }
     
+    // Fetch Administrativo 2 sheet (GID 1905290884)
+    let administrativo2Data: any[] = [];
+    let administrativo2Headers: string[] = [];
+    
+    try {
+      const administrativo2CsvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${ADMINISTRATIVO2_GID}`;
+      console.log(`Fetching Administrativo 2 sheet (gid=${ADMINISTRATIVO2_GID})...`);
+      
+      const administrativo2Response = await fetch(administrativo2CsvUrl);
+      
+      if (administrativo2Response.ok) {
+        const administrativo2CsvText = await administrativo2Response.text();
+        
+        if (administrativo2CsvText && administrativo2CsvText.trim().length > 10) {
+          const administrativo2Rows = parseCSV(administrativo2CsvText);
+          
+          if (administrativo2Rows.length >= 2) {
+            administrativo2Headers = administrativo2Rows[0].map(h => h.trim());
+            const administrativo2DataRows = administrativo2Rows.slice(1).filter(row => row.some(cell => cell.trim() !== ''));
+            
+            console.log(`Found Administrativo 2 sheet with ${administrativo2DataRows.length} rows`);
+            console.log('Administrativo 2 Headers:', administrativo2Headers);
+            
+            // Mapeia os dados com colunas genéricas
+            administrativo2Data = administrativo2DataRows.map(row => {
+              const record: Record<string, any> = {};
+              administrativo2Headers.forEach((header, index) => {
+                record[`col${String.fromCharCode(65 + index)}`] = (row[index] || '').trim();
+              });
+              return record;
+            });
+            
+            console.log(`Administrativo 2 data loaded: ${administrativo2Data.length} records`);
+          }
+        }
+      } else {
+        console.log('Administrativo 2 sheet not accessible, continuing without it');
+      }
+    } catch (administrativo2Error) {
+      console.error('Error fetching Administrativo 2 sheet:', administrativo2Error);
+      // Continue without Administrativo 2 data
+    }
+    
     return new Response(
       JSON.stringify({
         success: true,
@@ -415,6 +459,8 @@ serve(async (req) => {
           saneamentoHeaders,
           administrativoData,
           administrativoHeaders,
+          administrativo2Data,
+          administrativo2Headers,
           lastUpdated: new Date().toISOString()
         }
       }),
