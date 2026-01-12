@@ -2130,6 +2130,63 @@ const RadarComercial = () => {
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-8 mt-6">
+          {/* Cards de Totais Gerais */}
+          {!isLoading && contratosFechadosPorSetor.length > 0 && (() => {
+            // Calcula totais gerais de todos os contratos fechados
+            const totaisGerais = contratosFechadosPorSetor.reduce((acc, setor) => {
+              setor.produtos.forEach(p => {
+                p.contracts.forEach(c => {
+                  acc.somaExito += c.honorariosExito || 0;
+                  acc.somaIniciais += c.honorariosIniciais || 0;
+                  acc.totalContratos += 1;
+                });
+              });
+              return acc;
+            }, { somaExito: 0, somaIniciais: 0, totalContratos: 0 });
+
+            const formatCurrency = (value: number) => {
+              return new Intl.NumberFormat('pt-BR', {
+                style: 'currency',
+                currency: 'BRL',
+                minimumFractionDigits: 2,
+              }).format(value);
+            };
+
+            return (
+              <div className="grid gap-6 md:grid-cols-2">
+                <Card className="border-green-500/30 bg-gradient-to-br from-green-500/5 to-emerald-500/5">
+                  <CardContent className="pt-6 pb-6">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-green-500/20 rounded-lg">
+                        <TrendingUp className="h-5 w-5 text-green-500" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">Total Honorários de Êxito</p>
+                    </div>
+                    <p className="text-3xl font-bold text-green-500">{formatCurrency(totaisGerais.somaExito)}</p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Soma de todos os {totaisGerais.totalContratos} contratos fechados
+                    </p>
+                  </CardContent>
+                </Card>
+
+                <Card className="border-blue-500/30 bg-gradient-to-br from-blue-500/5 to-indigo-500/5">
+                  <CardContent className="pt-6 pb-6">
+                    <div className="flex items-center gap-3 mb-2">
+                      <div className="p-2 bg-blue-500/20 rounded-lg">
+                        <Target className="h-5 w-5 text-blue-500" />
+                      </div>
+                      <p className="text-sm text-muted-foreground">Total Honorários Iniciais</p>
+                    </div>
+                    <p className="text-3xl font-bold text-blue-500">{formatCurrency(totaisGerais.somaIniciais)}</p>
+                    <p className="text-xs text-muted-foreground mt-2">
+                      Soma de todos os {totaisGerais.totalContratos} contratos fechados
+                    </p>
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })()}
+
           {/* Rankings Gerais de Produtos */}
           {!isLoading && contratosFechadosPorSetor.length > 0 && (() => {
             // Calcula ranking de produtos por média e total de êxito
