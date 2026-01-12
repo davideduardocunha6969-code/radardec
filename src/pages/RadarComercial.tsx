@@ -140,6 +140,16 @@ const RadarComercial = () => {
       produtoMap.get(produto)!.push(contrato);
     });
 
+    // Função para parsear moeda brasileira (R$ 90.000,00 -> 90000)
+    const parseBrazilianCurrency = (value: string): number => {
+      if (!value || value.trim() === '') return 0;
+      let cleaned = value.replace(/[^\d.,]/g, '');
+      if (!cleaned || !/\d/.test(cleaned)) return 0;
+      cleaned = cleaned.replace(/\./g, '').replace(',', '.');
+      const result = parseFloat(cleaned);
+      return isNaN(result) ? 0 : result;
+    };
+
     // Converte para array ordenado por quantidade de contratos
     return Array.from(produtoMap.entries())
       .map(([produto, contracts]) => ({
@@ -150,7 +160,7 @@ const RadarComercial = () => {
           resultado: c.resultado,
           honorariosExito: c.honorariosExito,
           honorariosIniciais: c.honorariosIniciais,
-          valorContrato: c.rawRow?.[8] ? parseFloat(c.rawRow[8].replace(/[^\d,.-]/g, '').replace(',', '.')) || 0 : 0, // Coluna I (índice 8)
+          valorContrato: c.rawRow?.[8] ? parseBrazilianCurrency(c.rawRow[8]) : 0, // Coluna I (índice 8)
         })),
       }))
       .sort((a, b) => b.contracts.length - a.contracts.length);
