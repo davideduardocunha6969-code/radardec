@@ -17,7 +17,9 @@ import {
   FolderCheck,
   ClipboardList,
   Goal,
-  Settings2
+  Settings2,
+  Star,
+  AlertTriangle
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeekFilter } from "@/components/WeekFilter";
@@ -50,8 +52,9 @@ import {
   Line,
   ReferenceLine,
   Legend,
+  CartesianGrid,
 } from "recharts";
-import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
+import { ChartContainer, ChartTooltipContent, ChartTooltip } from "@/components/ui/chart";
 
 const RadarComercial = () => {
   const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, indicacoesData, indicacoesRecebidasData, saneamentoData, saneamentoHeaders, administrativoData, administrativoHeaders, isLoading, error } = useCommercialData();
@@ -4734,45 +4737,292 @@ const RadarComercial = () => {
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-8 mt-6">
           
-          {/* Card de informação sobre os dados */}
+          {/* Cards de métricas principais */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {/* Card 1: Total de Avaliações */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <Star className="h-5 w-5 text-indigo-500" />
+                  <CardTitle className="text-lg">Total de Avaliações</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col items-center justify-center py-4">
+                  <span className="text-5xl font-bold text-indigo-600">
+                    {administrativoData.length}
+                  </span>
+                  <span className="text-sm text-muted-foreground mt-2">
+                    avaliações recebidas
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Card 2: Média de Estrelas */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                  <CardTitle className="text-lg">Média de Estrelas</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const avaliacoes = administrativoData
+                    .map(r => parseInt((r.colD || '0').trim()) || 0)
+                    .filter(e => e >= 1 && e <= 5);
+                  const media = avaliacoes.length > 0 
+                    ? avaliacoes.reduce((a, b) => a + b, 0) / avaliacoes.length 
+                    : 0;
+                  
+                  return (
+                    <div className="flex flex-col items-center justify-center py-4">
+                      <div className="flex items-center gap-1">
+                        <span className="text-5xl font-bold text-yellow-600">
+                          {media.toFixed(1)}
+                        </span>
+                        <Star className="h-8 w-8 text-yellow-500 fill-yellow-500" />
+                      </div>
+                      <div className="flex gap-0.5 mt-2">
+                        {[1, 2, 3, 4, 5].map(star => (
+                          <Star 
+                            key={star} 
+                            className={`h-4 w-4 ${star <= Math.round(media) ? 'text-yellow-500 fill-yellow-500' : 'text-gray-300'}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            {/* Card 3: Avaliações 5 Estrelas */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <Trophy className="h-5 w-5 text-green-500" />
+                  <CardTitle className="text-lg">5 Estrelas</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const cincoEstrelas = administrativoData.filter(r => {
+                    const estrelas = parseInt((r.colD || '0').trim()) || 0;
+                    return estrelas === 5;
+                  }).length;
+                  const percentual = administrativoData.length > 0 
+                    ? ((cincoEstrelas / administrativoData.length) * 100) 
+                    : 0;
+                  
+                  return (
+                    <div className="flex flex-col items-center justify-center py-4">
+                      <span className="text-5xl font-bold text-green-600">
+                        {cincoEstrelas}
+                      </span>
+                      <span className="text-sm text-muted-foreground mt-2">
+                        ({percentual.toFixed(1)}% do total)
+                      </span>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            {/* Card 4: Avaliações Negativas (1-3 estrelas) */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <AlertTriangle className="h-5 w-5 text-red-500" />
+                  <CardTitle className="text-lg">Avaliações Críticas</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const criticas = administrativoData.filter(r => {
+                    const estrelas = parseInt((r.colD || '0').trim()) || 0;
+                    return estrelas >= 1 && estrelas <= 3;
+                  }).length;
+                  const percentual = administrativoData.length > 0 
+                    ? ((criticas / administrativoData.length) * 100) 
+                    : 0;
+                  
+                  return (
+                    <div className="flex flex-col items-center justify-center py-4">
+                      <span className={`text-5xl font-bold ${criticas > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                        {criticas}
+                      </span>
+                      <span className="text-sm text-muted-foreground mt-2">
+                        de 1 a 3 estrelas ({percentual.toFixed(1)}%)
+                      </span>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Distribuição por Estrelas */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
-                <ClipboardList className="h-5 w-5 text-indigo-500" />
-                <CardTitle className="text-lg">Dados Administrativos</CardTitle>
+                <BarChart3 className="h-5 w-5 text-indigo-500" />
+                <CardTitle className="text-lg">Distribuição por Estrelas</CardTitle>
               </div>
               <p className="text-sm text-muted-foreground">
-                Total de {administrativoData.length} registros carregados da aba GID 651337262
+                Quantidade de avaliações por nota (Coluna D)
               </p>
             </CardHeader>
             <CardContent>
-              {administrativoData.length === 0 ? (
-                <div className="h-[150px] flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
-                  <div className="text-center">
-                    <ClipboardList className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
-                    <p className="text-muted-foreground text-sm">Nenhum dado encontrado na aba</p>
-                    <p className="text-muted-foreground/70 text-xs mt-1">Verifique se a aba GID 651337262 está acessível</p>
-                  </div>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Exibe as colunas detectadas */}
-                  <div className="bg-muted/30 rounded-lg p-4">
-                    <h4 className="text-sm font-medium mb-2">Colunas detectadas:</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {administrativoHeaders.map((header, index) => (
-                        <span key={index} className="px-2 py-1 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 rounded text-xs">
-                          {String.fromCharCode(65 + index)}: {header || '(vazio)'}
-                        </span>
-                      ))}
+              {(() => {
+                // Conta avaliações por estrela
+                const distribuicao: Record<number, number> = { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0 };
+                
+                administrativoData.forEach(record => {
+                  const estrelas = parseInt((record.colD || '0').trim()) || 0;
+                  if (estrelas >= 1 && estrelas <= 5) {
+                    distribuicao[estrelas]++;
+                  }
+                });
+                
+                const total = Object.values(distribuicao).reduce((a, b) => a + b, 0);
+                const maxCount = Math.max(...Object.values(distribuicao), 1);
+                
+                if (total === 0) {
+                  return (
+                    <div className="h-[150px] flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
+                      <div className="text-center">
+                        <Star className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+                        <p className="text-muted-foreground text-sm">Nenhuma avaliação disponível</p>
+                      </div>
                     </div>
+                  );
+                }
+                
+                return (
+                  <div className="space-y-3">
+                    {[5, 4, 3, 2, 1].map(estrela => {
+                      const count = distribuicao[estrela];
+                      const percentual = total > 0 ? (count / total) * 100 : 0;
+                      const barWidth = maxCount > 0 ? (count / maxCount) * 100 : 0;
+                      
+                      const barColor = estrela >= 4 ? 'bg-green-500' : estrela === 3 ? 'bg-yellow-500' : 'bg-red-500';
+                      
+                      return (
+                        <div key={estrela} className="flex items-center gap-3">
+                          <div className="flex items-center gap-1 w-20">
+                            <span className="text-sm font-medium">{estrela}</span>
+                            <Star className="h-4 w-4 text-yellow-500 fill-yellow-500" />
+                          </div>
+                          <div className="flex-1 relative">
+                            <div className="h-6 bg-muted/50 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full ${barColor} rounded-full transition-all duration-500`}
+                                style={{ width: `${barWidth}%` }}
+                              />
+                            </div>
+                          </div>
+                          <div className="w-24 text-right">
+                            <span className="text-sm font-semibold">{count}</span>
+                            <span className="text-xs text-muted-foreground ml-1">({percentual.toFixed(0)}%)</span>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+
+          {/* Gráfico de Evolução Semanal */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <TrendingUp className="h-5 w-5 text-indigo-500" />
+                <CardTitle className="text-lg">Evolução Semanal de Avaliações</CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Quantidade de avaliações por semana (Coluna B)
+              </p>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                // Agrupa avaliações por semana
+                const avaliacoesPorSemana: Record<number, { total: number; soma: number }> = {};
+                
+                administrativoData.forEach(record => {
+                  const semanaStr = (record.colB || '').trim();
+                  const semana = parseInt(semanaStr) || 0;
+                  const estrelas = parseInt((record.colD || '0').trim()) || 0;
                   
-                  <p className="text-sm text-muted-foreground text-center">
-                    💡 Informe quais colunas devem ser utilizadas para criar os gráficos e rankings desta seção
-                  </p>
-                </div>
-              )}
+                  if (semana >= 1 && semana <= 53 && estrelas >= 1 && estrelas <= 5) {
+                    if (!avaliacoesPorSemana[semana]) {
+                      avaliacoesPorSemana[semana] = { total: 0, soma: 0 };
+                    }
+                    avaliacoesPorSemana[semana].total++;
+                    avaliacoesPorSemana[semana].soma += estrelas;
+                  }
+                });
+                
+                // Encontra a primeira e última semana com dados
+                const semanasComDados = Object.keys(avaliacoesPorSemana).map(Number).filter(s => s > 0);
+                
+                if (semanasComDados.length === 0) {
+                  return (
+                    <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
+                      <div className="text-center">
+                        <BarChart3 className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+                        <p className="text-muted-foreground text-sm">Nenhum dado semanal disponível</p>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                const primeiraSemanaDados = Math.min(...semanasComDados);
+                const ultimaSemanaDados = Math.max(...semanasComDados);
+                
+                // Cria array com semanas do intervalo
+                const chartData = [];
+                for (let semana = Math.max(1, primeiraSemanaDados); semana <= Math.min(53, ultimaSemanaDados); semana++) {
+                  const dados = avaliacoesPorSemana[semana] || { total: 0, soma: 0 };
+                  const media = dados.total > 0 ? (dados.soma / dados.total) : 0;
+                  chartData.push({
+                    semana: `S${semana}`,
+                    avaliacoes: dados.total,
+                    media: parseFloat(media.toFixed(1))
+                  });
+                }
+                
+                return (
+                  <ChartContainer config={{ avaliacoes: { label: "Avaliações", color: "hsl(var(--chart-1))" } }} className="h-[300px] w-full">
+                    <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <CartesianGrid strokeDasharray="3 3" />
+                      <XAxis dataKey="semana" tick={{ fontSize: 11 }} />
+                      <YAxis allowDecimals={false} />
+                      <ChartTooltip 
+                        content={({ active, payload }) => {
+                          if (active && payload && payload.length) {
+                            const data = payload[0].payload;
+                            return (
+                              <div className="bg-background border rounded-lg shadow-lg p-3">
+                                <p className="font-medium">{data.semana}</p>
+                                <p className="text-sm text-muted-foreground">{data.avaliacoes} avaliações</p>
+                                <p className="text-sm text-yellow-600">Média: {data.media} ⭐</p>
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <Bar dataKey="avaliacoes" fill="hsl(239, 84%, 67%)" radius={[4, 4, 0, 0]}>
+                        <LabelList dataKey="avaliacoes" position="top" fontSize={11} />
+                      </Bar>
+                    </BarChart>
+                  </ChartContainer>
+                );
+              })()}
             </CardContent>
           </Card>
 
