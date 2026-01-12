@@ -176,7 +176,7 @@ const RadarPrevidenciario = () => {
       .sort((a, b) => b.value - a.value);
   }, [data, peticoesWeekFilter]);
 
-  // Campos booleanos (EPI, GPS, Autônomo, Rural < 12)
+  // Campos booleanos (EPI, GPS, Autônomo, Rural < 12) - Categorias mutuamente exclusivas
   const camposBooleanos = useMemo(() => {
     if (!data?.peticoesIniciais) return null;
     
@@ -190,23 +190,34 @@ const RadarPrevidenciario = () => {
     const isSim = (value: string) => value?.toLowerCase().trim() === 'sim';
     const isNao = (value: string) => value?.toLowerCase().trim() === 'não' || value?.toLowerCase().trim() === 'nao';
 
+    // Casos onde TODOS são "não" (processos "bons")
+    const todosNao = filtered.filter(p => 
+      isNao(p.epiEficaz) && isNao(p.gps) && isNao(p.autonomo) && isNao(p.ruralMenor12)
+    ).length;
+
+    // Casos com pelo menos um tema especial
+    const comTemasEspeciais = total - todosNao;
+
+    // Contagem de cada tema (para mostrar distribuição dentro dos processos com temas)
     const epiSim = filtered.filter(p => isSim(p.epiEficaz)).length;
     const gpsSim = filtered.filter(p => isSim(p.gps)).length;
     const autonomoSim = filtered.filter(p => isSim(p.autonomo)).length;
     const ruralSim = filtered.filter(p => isSim(p.ruralMenor12)).length;
 
-    // Casos onde TODOS são "não"
-    const todosNao = filtered.filter(p => 
-      isNao(p.epiEficaz) && isNao(p.gps) && isNao(p.autonomo) && isNao(p.ruralMenor12)
-    ).length;
+    // Total de ocorrências de temas (um processo pode ter múltiplos temas)
+    const totalTemasOcorrencias = epiSim + gpsSim + autonomoSim + ruralSim;
 
     return {
       total,
-      epi: { sim: epiSim, percent: Math.round((epiSim / total) * 100) },
-      gps: { sim: gpsSim, percent: Math.round((gpsSim / total) * 100) },
-      autonomo: { sim: autonomoSim, percent: Math.round((autonomoSim / total) * 100) },
-      rural: { sim: ruralSim, percent: Math.round((ruralSim / total) * 100) },
+      // Percentuais que somam 100% (processos bons vs processos com temas)
       todosNao: { count: todosNao, percent: Math.round((todosNao / total) * 100) },
+      comTemas: { count: comTemasEspeciais, percent: Math.round((comTemasEspeciais / total) * 100) },
+      // Distribuição dos temas dentro do total de processos (contagem absoluta + % sobre total)
+      epi: { sim: epiSim, percentTotal: Math.round((epiSim / total) * 100), percentTemas: totalTemasOcorrencias > 0 ? Math.round((epiSim / totalTemasOcorrencias) * 100) : 0 },
+      gps: { sim: gpsSim, percentTotal: Math.round((gpsSim / total) * 100), percentTemas: totalTemasOcorrencias > 0 ? Math.round((gpsSim / totalTemasOcorrencias) * 100) : 0 },
+      autonomo: { sim: autonomoSim, percentTotal: Math.round((autonomoSim / total) * 100), percentTemas: totalTemasOcorrencias > 0 ? Math.round((autonomoSim / totalTemasOcorrencias) * 100) : 0 },
+      rural: { sim: ruralSim, percentTotal: Math.round((ruralSim / total) * 100), percentTemas: totalTemasOcorrencias > 0 ? Math.round((ruralSim / totalTemasOcorrencias) * 100) : 0 },
+      totalTemasOcorrencias,
     };
   }, [data, peticoesWeekFilter]);
 
@@ -746,75 +757,99 @@ const RadarPrevidenciario = () => {
               <CardHeader>
                 <div className="flex items-center gap-3">
                   <Shield className="h-5 w-5 text-blue-500" />
-                  <CardTitle className="text-lg">Campos Especiais nas Ações</CardTitle>
+                  <CardTitle className="text-lg">Análise de Temas Especiais</CardTitle>
                 </div>
-                <p className="text-xs text-muted-foreground">Percentual de casos marcados como "SIM"</p>
+                <p className="text-xs text-muted-foreground">Distribuição de processos por complexidade</p>
               </CardHeader>
               <CardContent>
                 {camposBooleanos ? (
-                  <div className="space-y-4">
-                    {/* EPI Eficaz */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          EPI Eficaz
-                        </span>
-                        <span className="font-medium">{camposBooleanos.epi.sim} ({camposBooleanos.epi.percent}%)</span>
+                  <div className="space-y-5">
+                    {/* Resumo Principal - Soma = 100% */}
+                    <div className="p-4 bg-muted/30 rounded-lg space-y-3">
+                      <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Classificação dos Processos (100%)</p>
+                      
+                      {/* Processos "Bons" - Todos NÃO */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2">
+                            <CheckCircle2 className="h-4 w-4 text-green-500" />
+                            <span className="font-medium">Processos Simples</span>
+                            <span className="text-xs text-muted-foreground">(sem temas especiais)</span>
+                          </span>
+                          <span className="font-bold text-green-600">{camposBooleanos.todosNao.count} ({camposBooleanos.todosNao.percent}%)</span>
+                        </div>
+                        <Progress value={camposBooleanos.todosNao.percent} className="h-3 [&>div]:bg-green-500" />
                       </div>
-                      <Progress value={camposBooleanos.epi.percent} className="h-2" />
+
+                      {/* Processos com Temas Especiais */}
+                      <div className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="flex items-center gap-2">
+                            <XCircle className="h-4 w-4 text-amber-500" />
+                            <span className="font-medium">Processos Complexos</span>
+                            <span className="text-xs text-muted-foreground">(com temas especiais)</span>
+                          </span>
+                          <span className="font-bold text-amber-600">{camposBooleanos.comTemas.count} ({camposBooleanos.comTemas.percent}%)</span>
+                        </div>
+                        <Progress value={camposBooleanos.comTemas.percent} className="h-3 [&>div]:bg-amber-500" />
+                      </div>
                     </div>
 
-                    {/* Emissão de GPS */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          Emissão de GPS
-                        </span>
-                        <span className="font-medium">{camposBooleanos.gps.sim} ({camposBooleanos.gps.percent}%)</span>
-                      </div>
-                      <Progress value={camposBooleanos.gps.percent} className="h-2" />
-                    </div>
+                    {/* Detalhamento dos Temas Especiais */}
+                    {camposBooleanos.comTemas.count > 0 && (
+                      <div className="space-y-3">
+                        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Detalhamento dos Temas Especiais</p>
+                        <p className="text-xs text-muted-foreground">Um processo pode discutir múltiplos temas</p>
+                        
+                        {/* EPI Eficaz */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-blue-500" />
+                              EPI Eficaz
+                            </span>
+                            <span className="font-medium">{camposBooleanos.epi.sim} casos ({camposBooleanos.epi.percentTotal}% do total)</span>
+                          </div>
+                          <Progress value={camposBooleanos.epi.percentTotal} className="h-2 [&>div]:bg-blue-500" />
+                        </div>
 
-                    {/* Período Especial Autônomo */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          Período Especial Autônomo
-                        </span>
-                        <span className="font-medium">{camposBooleanos.autonomo.sim} ({camposBooleanos.autonomo.percent}%)</span>
-                      </div>
-                      <Progress value={camposBooleanos.autonomo.percent} className="h-2" />
-                    </div>
+                        {/* Emissão de GPS */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-purple-500" />
+                              Emissão de GPS
+                            </span>
+                            <span className="font-medium">{camposBooleanos.gps.sim} casos ({camposBooleanos.gps.percentTotal}% do total)</span>
+                          </div>
+                          <Progress value={camposBooleanos.gps.percentTotal} className="h-2 [&>div]:bg-purple-500" />
+                        </div>
 
-                    {/* Período Rural &lt; 12 anos */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="flex items-center gap-2">
-                          <CheckCircle2 className="h-4 w-4 text-green-500" />
-                          Período Rural &lt; 12 anos
-                        </span>
-                        <span className="font-medium">{camposBooleanos.rural.sim} ({camposBooleanos.rural.percent}%)</span>
-                      </div>
-                      <Progress value={camposBooleanos.rural.percent} className="h-2" />
-                    </div>
+                        {/* Período Especial Autônomo */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-orange-500" />
+                              Período Especial Autônomo
+                            </span>
+                            <span className="font-medium">{camposBooleanos.autonomo.sim} casos ({camposBooleanos.autonomo.percentTotal}% do total)</span>
+                          </div>
+                          <Progress value={camposBooleanos.autonomo.percentTotal} className="h-2 [&>div]:bg-orange-500" />
+                        </div>
 
-                    {/* Separador */}
-                    <div className="border-t border-border my-2" />
-
-                    {/* Todos marcados como NÃO */}
-                    <div className="space-y-1">
-                      <div className="flex items-center justify-between text-sm">
-                        <span className="flex items-center gap-2">
-                          <XCircle className="h-4 w-4 text-red-500" />
-                          Todos marcados como NÃO
-                        </span>
-                        <span className="font-medium text-red-600">{camposBooleanos.todosNao.count} ({camposBooleanos.todosNao.percent}%)</span>
+                        {/* Período Rural < 12 anos */}
+                        <div className="space-y-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <span className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-rose-500" />
+                              Período Rural &lt; 12 anos
+                            </span>
+                            <span className="font-medium">{camposBooleanos.rural.sim} casos ({camposBooleanos.rural.percentTotal}% do total)</span>
+                          </div>
+                          <Progress value={camposBooleanos.rural.percentTotal} className="h-2 [&>div]:bg-rose-500" />
+                        </div>
                       </div>
-                      <Progress value={camposBooleanos.todosNao.percent} className="h-2 [&>div]:bg-red-500" />
-                    </div>
+                    )}
                   </div>
                 ) : (
                   <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
