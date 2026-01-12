@@ -57,7 +57,7 @@ import {
 import { ChartContainer, ChartTooltipContent, ChartTooltip } from "@/components/ui/chart";
 
 const RadarComercial = () => {
-  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, indicacoesData, indicacoesRecebidasData, saneamentoData, saneamentoHeaders, administrativoData, administrativoHeaders, isLoading, error } = useCommercialData();
+  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, indicacoesData, indicacoesRecebidasData, saneamentoData, saneamentoHeaders, administrativoData, administrativoHeaders, administrativo2Data, administrativo2Headers, isLoading, error } = useCommercialData();
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedSetor, setSelectedSetor] = useState<string | null>(null);
   const [selectedResponsavel, setSelectedResponsavel] = useState<string | null>(null);
@@ -5023,6 +5023,48 @@ const RadarComercial = () => {
                   </ChartContainer>
                 );
               })()}
+            </CardContent>
+          </Card>
+
+          {/* Card da segunda aba - GID 1905290884 */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <ClipboardList className="h-5 w-5 text-violet-500" />
+                <CardTitle className="text-lg">Dados Adicionais (GID 1905290884)</CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Total de {administrativo2Data.length} registros carregados
+              </p>
+            </CardHeader>
+            <CardContent>
+              {administrativo2Data.length === 0 ? (
+                <div className="h-[150px] flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
+                  <div className="text-center">
+                    <ClipboardList className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+                    <p className="text-muted-foreground text-sm">Nenhum dado encontrado na aba</p>
+                    <p className="text-muted-foreground/70 text-xs mt-1">Verifique se a aba GID 1905290884 está acessível</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Exibe as colunas detectadas */}
+                  <div className="bg-muted/30 rounded-lg p-4">
+                    <h4 className="text-sm font-medium mb-2">Colunas detectadas:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {administrativo2Headers.map((header, index) => (
+                        <span key={index} className="px-2 py-1 bg-violet-500/10 text-violet-700 dark:text-violet-300 rounded text-xs">
+                          {String.fromCharCode(65 + index)}: {header || '(vazio)'}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <p className="text-sm text-muted-foreground text-center">
+                    💡 Informe quais colunas devem ser utilizadas para criar os gráficos e rankings desta aba
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
