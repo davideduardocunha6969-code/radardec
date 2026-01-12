@@ -13,6 +13,7 @@ const SDR_MESSAGES_GID = 686842485;
 const INDICACOES_GID = 290508236;
 const INDICACOES_RECEBIDAS_GID = 2087539342;
 const SANEAMENTO_GID = 1874749978;
+const ADMINISTRATIVO_GID = 651337262;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -351,6 +352,49 @@ serve(async (req) => {
       // Continue without Saneamento data
     }
     
+    // Fetch Administrativo sheet (GID 651337262)
+    let administrativoData: any[] = [];
+    let administrativoHeaders: string[] = [];
+    
+    try {
+      const administrativoCsvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${ADMINISTRATIVO_GID}`;
+      console.log(`Fetching Administrativo sheet (gid=${ADMINISTRATIVO_GID})...`);
+      
+      const administrativoResponse = await fetch(administrativoCsvUrl);
+      
+      if (administrativoResponse.ok) {
+        const administrativoCsvText = await administrativoResponse.text();
+        
+        if (administrativoCsvText && administrativoCsvText.trim().length > 10) {
+          const administrativoRows = parseCSV(administrativoCsvText);
+          
+          if (administrativoRows.length >= 2) {
+            administrativoHeaders = administrativoRows[0].map(h => h.trim());
+            const administrativoDataRows = administrativoRows.slice(1).filter(row => row.some(cell => cell.trim() !== ''));
+            
+            console.log(`Found Administrativo sheet with ${administrativoDataRows.length} rows`);
+            console.log('Administrativo Headers:', administrativoHeaders);
+            
+            // Mapeia os dados com colunas genéricas
+            administrativoData = administrativoDataRows.map(row => {
+              const record: Record<string, any> = {};
+              administrativoHeaders.forEach((header, index) => {
+                record[`col${String.fromCharCode(65 + index)}`] = (row[index] || '').trim();
+              });
+              return record;
+            });
+            
+            console.log(`Administrativo data loaded: ${administrativoData.length} records`);
+          }
+        }
+      } else {
+        console.log('Administrativo sheet not accessible, continuing without it');
+      }
+    } catch (administrativoError) {
+      console.error('Error fetching Administrativo sheet:', administrativoError);
+      // Continue without Administrativo data
+    }
+    
     return new Response(
       JSON.stringify({
         success: true,
@@ -369,6 +413,8 @@ serve(async (req) => {
           indicacoesRecebidasData,
           saneamentoData,
           saneamentoHeaders,
+          administrativoData,
+          administrativoHeaders,
           lastUpdated: new Date().toISOString()
         }
       }),

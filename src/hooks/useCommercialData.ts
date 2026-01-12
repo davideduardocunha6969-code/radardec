@@ -69,6 +69,10 @@ export interface SaneamentoRecord {
   [key: string]: string;
 }
 
+export interface AdministrativoRecord {
+  [key: string]: string;
+}
+
 export interface CommercialDataResponse {
   records: CommercialRecord[];
   weeks: number[];
@@ -84,6 +88,8 @@ export interface CommercialDataResponse {
   indicacoesRecebidasData: IndicacaoRecebidaRecord[];
   saneamentoData: SaneamentoRecord[];
   saneamentoHeaders: string[];
+  administrativoData: AdministrativoRecord[];
+  administrativoHeaders: string[];
   lastUpdated: string;
 }
 
@@ -99,6 +105,8 @@ export const useCommercialData = () => {
   const [indicacoesRecebidasData, setIndicacoesRecebidasData] = useState<IndicacaoRecebidaRecord[]>([]);
   const [saneamentoData, setSaneamentoData] = useState<SaneamentoRecord[]>([]);
   const [saneamentoHeaders, setSaneamentoHeaders] = useState<string[]>([]);
+  const [administrativoData, setAdministrativoData] = useState<AdministrativoRecord[]>([]);
+  const [administrativoHeaders, setAdministrativoHeaders] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -132,6 +140,8 @@ export const useCommercialData = () => {
       console.log(`Loaded ${commercialData.indicacoesRecebidasData?.length || 0} Indicações Recebidas records`);
       console.log(`Loaded ${commercialData.saneamentoData?.length || 0} Saneamento records`);
       console.log(`Saneamento Headers: ${commercialData.saneamentoHeaders?.join(', ') || 'none'}`);
+      console.log(`Loaded ${commercialData.administrativoData?.length || 0} Administrativo records`);
+      console.log(`Administrativo Headers: ${commercialData.administrativoHeaders?.join(', ') || 'none'}`);
 
       setData(commercialData.records);
       setWeeks(commercialData.weeks);
@@ -144,6 +154,8 @@ export const useCommercialData = () => {
       setIndicacoesRecebidasData(commercialData.indicacoesRecebidasData || []);
       setSaneamentoData(commercialData.saneamentoData || []);
       setSaneamentoHeaders(commercialData.saneamentoHeaders || []);
+      setAdministrativoData(commercialData.administrativoData || []);
+      setAdministrativoHeaders(commercialData.administrativoHeaders || []);
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -179,6 +191,8 @@ export const useCommercialData = () => {
     indicacoesRecebidasData,
     saneamentoData,
     saneamentoHeaders,
+    administrativoData,
+    administrativoHeaders,
     isLoading,
     error,
     refetch: fetchData,

@@ -54,7 +54,7 @@ import {
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
 const RadarComercial = () => {
-  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, indicacoesData, indicacoesRecebidasData, saneamentoData, saneamentoHeaders, isLoading, error } = useCommercialData();
+  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, indicacoesData, indicacoesRecebidasData, saneamentoData, saneamentoHeaders, administrativoData, administrativoHeaders, isLoading, error } = useCommercialData();
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedSetor, setSelectedSetor] = useState<string | null>(null);
   const [selectedResponsavel, setSelectedResponsavel] = useState<string | null>(null);
@@ -4734,17 +4734,45 @@ const RadarComercial = () => {
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-8 mt-6">
           
-          {/* Placeholder para conteúdo futuro */}
-          <Card className="border-dashed border-2 border-indigo-500/30">
-            <CardContent className="py-12">
-              <div className="flex flex-col items-center justify-center text-center">
-                <ClipboardList className="h-16 w-16 text-indigo-500/50 mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">Radar Administrativo</h3>
-                <p className="text-muted-foreground max-w-md">
-                  Esta seção exibirá métricas e indicadores relacionados às atividades administrativas.
-                  Configure a fonte de dados para visualizar os gráficos e rankings.
-                </p>
+          {/* Card de informação sobre os dados */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <ClipboardList className="h-5 w-5 text-indigo-500" />
+                <CardTitle className="text-lg">Dados Administrativos</CardTitle>
               </div>
+              <p className="text-sm text-muted-foreground">
+                Total de {administrativoData.length} registros carregados da aba GID 651337262
+              </p>
+            </CardHeader>
+            <CardContent>
+              {administrativoData.length === 0 ? (
+                <div className="h-[150px] flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
+                  <div className="text-center">
+                    <ClipboardList className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+                    <p className="text-muted-foreground text-sm">Nenhum dado encontrado na aba</p>
+                    <p className="text-muted-foreground/70 text-xs mt-1">Verifique se a aba GID 651337262 está acessível</p>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {/* Exibe as colunas detectadas */}
+                  <div className="bg-muted/30 rounded-lg p-4">
+                    <h4 className="text-sm font-medium mb-2">Colunas detectadas:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {administrativoHeaders.map((header, index) => (
+                        <span key={index} className="px-2 py-1 bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 rounded text-xs">
+                          {String.fromCharCode(65 + index)}: {header || '(vazio)'}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <p className="text-sm text-muted-foreground text-center">
+                    💡 Informe quais colunas devem ser utilizadas para criar os gráficos e rankings desta seção
+                  </p>
+                </div>
+              )}
             </CardContent>
           </Card>
 
