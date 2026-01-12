@@ -12,6 +12,7 @@ const SDR_GID = 1631515229;
 const SDR_MESSAGES_GID = 686842485;
 const INDICACOES_GID = 290508236;
 const INDICACOES_RECEBIDAS_GID = 2087539342;
+const SANEAMENTO_GID = 1874749978;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -307,6 +308,49 @@ serve(async (req) => {
       // Continue without Indicações Recebidas data
     }
     
+    // Fetch Saneamento de Pastas sheet (GID 1874749978)
+    let saneamentoData: any[] = [];
+    let saneamentoHeaders: string[] = [];
+    
+    try {
+      const saneamentoCsvUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${SANEAMENTO_GID}`;
+      console.log(`Fetching Saneamento sheet (gid=${SANEAMENTO_GID})...`);
+      
+      const saneamentoResponse = await fetch(saneamentoCsvUrl);
+      
+      if (saneamentoResponse.ok) {
+        const saneamentoCsvText = await saneamentoResponse.text();
+        
+        if (saneamentoCsvText && saneamentoCsvText.trim().length > 10) {
+          const saneamentoRows = parseCSV(saneamentoCsvText);
+          
+          if (saneamentoRows.length >= 2) {
+            saneamentoHeaders = saneamentoRows[0].map(h => h.trim());
+            const saneamentoDataRows = saneamentoRows.slice(1).filter(row => row.some(cell => cell.trim() !== ''));
+            
+            console.log(`Found Saneamento sheet with ${saneamentoDataRows.length} rows`);
+            console.log('Saneamento Headers:', saneamentoHeaders);
+            
+            // Mapeia os dados com colunas genéricas
+            saneamentoData = saneamentoDataRows.map(row => {
+              const record: Record<string, any> = {};
+              saneamentoHeaders.forEach((header, index) => {
+                record[`col${String.fromCharCode(65 + index)}`] = (row[index] || '').trim();
+              });
+              return record;
+            });
+            
+            console.log(`Saneamento data loaded: ${saneamentoData.length} records`);
+          }
+        }
+      } else {
+        console.log('Saneamento sheet not accessible, continuing without it');
+      }
+    } catch (saneamentoError) {
+      console.error('Error fetching Saneamento sheet:', saneamentoError);
+      // Continue without Saneamento data
+    }
+    
     return new Response(
       JSON.stringify({
         success: true,
@@ -323,6 +367,8 @@ serve(async (req) => {
           sdrMessagesSdrNames,
           indicacoesData,
           indicacoesRecebidasData,
+          saneamentoData,
+          saneamentoHeaders,
           lastUpdated: new Date().toISOString()
         }
       }),

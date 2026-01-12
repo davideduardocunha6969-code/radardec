@@ -65,6 +65,10 @@ export interface IndicacaoRecebidaRecord {
   resultado: string;
 }
 
+export interface SaneamentoRecord {
+  [key: string]: string;
+}
+
 export interface CommercialDataResponse {
   records: CommercialRecord[];
   weeks: number[];
@@ -78,6 +82,8 @@ export interface CommercialDataResponse {
   sdrMessagesSdrNames: string[];
   indicacoesData: IndicacaoRecord[];
   indicacoesRecebidasData: IndicacaoRecebidaRecord[];
+  saneamentoData: SaneamentoRecord[];
+  saneamentoHeaders: string[];
   lastUpdated: string;
 }
 
@@ -91,6 +97,8 @@ export const useCommercialData = () => {
   const [sdrMessagesSdrNames, setSdrMessagesSdrNames] = useState<string[]>([]);
   const [indicacoesData, setIndicacoesData] = useState<IndicacaoRecord[]>([]);
   const [indicacoesRecebidasData, setIndicacoesRecebidasData] = useState<IndicacaoRecebidaRecord[]>([]);
+  const [saneamentoData, setSaneamentoData] = useState<SaneamentoRecord[]>([]);
+  const [saneamentoHeaders, setSaneamentoHeaders] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -122,6 +130,8 @@ export const useCommercialData = () => {
       console.log(`SDR Messages Names: ${commercialData.sdrMessagesSdrNames?.join(', ') || 'none'}`);
       console.log(`Loaded ${commercialData.indicacoesData?.length || 0} Indicações records`);
       console.log(`Loaded ${commercialData.indicacoesRecebidasData?.length || 0} Indicações Recebidas records`);
+      console.log(`Loaded ${commercialData.saneamentoData?.length || 0} Saneamento records`);
+      console.log(`Saneamento Headers: ${commercialData.saneamentoHeaders?.join(', ') || 'none'}`);
 
       setData(commercialData.records);
       setWeeks(commercialData.weeks);
@@ -132,6 +142,8 @@ export const useCommercialData = () => {
       setSdrWeeks(commercialData.sdrWeeks || []);
       setIndicacoesData(commercialData.indicacoesData || []);
       setIndicacoesRecebidasData(commercialData.indicacoesRecebidasData || []);
+      setSaneamentoData(commercialData.saneamentoData || []);
+      setSaneamentoHeaders(commercialData.saneamentoHeaders || []);
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -165,6 +177,8 @@ export const useCommercialData = () => {
     sdrMessagesSdrNames,
     indicacoesData,
     indicacoesRecebidasData,
+    saneamentoData,
+    saneamentoHeaders,
     isLoading,
     error,
     refetch: fetchData,

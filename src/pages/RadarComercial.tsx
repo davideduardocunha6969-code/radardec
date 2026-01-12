@@ -54,7 +54,7 @@ import {
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
 const RadarComercial = () => {
-  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, indicacoesData, indicacoesRecebidasData, isLoading, error } = useCommercialData();
+  const { data, weeks, sdrData, sdrHeaders, sdrMessagesData, sdrMessagesSdrNames, indicacoesData, indicacoesRecebidasData, saneamentoData, saneamentoHeaders, isLoading, error } = useCommercialData();
   const [selectedWeek, setSelectedWeek] = useState<number | null>(null);
   const [selectedSetor, setSelectedSetor] = useState<string | null>(null);
   const [selectedResponsavel, setSelectedResponsavel] = useState<string | null>(null);
@@ -4302,17 +4302,61 @@ const RadarComercial = () => {
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-8 mt-6">
           
-          {/* Placeholder para conteúdo futuro */}
-          <Card className="border-dashed border-2 border-teal-500/30">
-            <CardContent className="py-12">
-              <div className="flex flex-col items-center justify-center text-center">
-                <FolderCheck className="h-16 w-16 text-teal-500/50 mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">Radar Saneamento de Pastas</h3>
-                <p className="text-muted-foreground max-w-md">
-                  Esta seção exibirá métricas e indicadores relacionados ao saneamento de pastas.
-                  Configure a fonte de dados para visualizar os gráficos e rankings.
-                </p>
+          {/* Card de informação da fonte de dados */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <FolderCheck className="h-5 w-5 text-teal-500" />
+                <CardTitle className="text-lg">Dados de Saneamento de Pastas</CardTitle>
               </div>
+              <p className="text-sm text-muted-foreground">
+                Fonte: Aba GID 1874749978
+              </p>
+            </CardHeader>
+            <CardContent>
+              {saneamentoData.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-6 flex-wrap">
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Total de registros: </span>
+                      <span className="font-bold text-teal-600">{saneamentoData.length}</span>
+                    </div>
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Colunas encontradas: </span>
+                      <span className="font-bold text-foreground">{saneamentoHeaders.length}</span>
+                    </div>
+                  </div>
+                  
+                  {/* Exibe headers encontrados */}
+                  <div className="p-4 bg-muted/30 rounded-lg">
+                    <p className="text-sm font-medium mb-2">Colunas da planilha:</p>
+                    <div className="flex flex-wrap gap-2">
+                      {saneamentoHeaders.map((header, index) => (
+                        <span 
+                          key={index} 
+                          className="px-2 py-1 bg-teal-500/20 text-teal-700 rounded text-xs font-medium"
+                        >
+                          {String.fromCharCode(65 + index)}: {header || '(vazio)'}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  
+                  <p className="text-sm text-muted-foreground italic">
+                    Informe quais colunas devem ser utilizadas para criar os gráficos e rankings desta seção.
+                  </p>
+                </div>
+              ) : (
+                <div className="h-[150px] flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
+                  <div className="text-center">
+                    <FolderCheck className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
+                    <p className="text-muted-foreground font-medium">Nenhum dado encontrado</p>
+                    <p className="text-sm text-muted-foreground/70">
+                      Verifique se a aba GID 1874749978 contém dados
+                    </p>
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 
