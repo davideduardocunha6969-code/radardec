@@ -5266,20 +5266,16 @@ const RadarComercial = () => {
                       <CardTitle className="text-lg">Evolução Semanal de Documentação</CardTitle>
                     </div>
                     <p className="text-sm text-muted-foreground">
-                      Pastas processadas por semana (Coluna A)
+                      Pastas finalizadas por semana (Coluna A)
                     </p>
                   </CardHeader>
                   <CardContent>
                     {evolucaoSemanal.length > 0 ? (
-                      <ChartContainer config={{ finalizadas: { label: "Finalizadas", color: "hsl(142, 76%, 36%)" }, pendentes: { label: "Pendentes", color: "hsl(38, 92%, 50%)" } }} className="h-[280px] w-full">
-                        <BarChart data={evolucaoSemanal} margin={{ top: 20, right: 20, left: 0, bottom: 5 }}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                          <XAxis 
-                            dataKey="semana" 
-                            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
-                            tickFormatter={(value) => `S${value}`}
-                          />
-                          <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
+                      <ChartContainer config={{ finalizadas: { label: "Finalizadas", color: "hsl(239, 84%, 67%)" } }} className="h-[300px] w-full">
+                        <BarChart data={evolucaoSemanal} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" />
+                          <XAxis dataKey="semana" tick={{ fontSize: 11 }} tickFormatter={(value) => `S${value}`} />
+                          <YAxis allowDecimals={false} />
                           <ChartTooltip 
                             content={({ active, payload }) => {
                               if (active && payload && payload.length) {
@@ -5287,29 +5283,16 @@ const RadarComercial = () => {
                                 return (
                                   <div className="bg-background border rounded-lg shadow-lg p-3">
                                     <p className="font-medium">Semana {data.semana}</p>
-                                    <p className="text-sm text-green-500">{data.finalizadas} finalizadas</p>
-                                    <p className="text-sm text-amber-500">{data.pendentes} pendentes</p>
-                                    <p className="text-sm text-muted-foreground mt-1">Total: {data.total}</p>
+                                    <p className="text-sm text-muted-foreground">{data.finalizadas} finalizadas</p>
                                   </div>
                                 );
                               }
                               return null;
                             }}
                           />
-                          <Bar 
-                            dataKey="finalizadas" 
-                            stackId="a"
-                            fill="hsl(142, 76%, 36%)" 
-                            radius={[0, 0, 0, 0]}
-                            name="finalizadas"
-                          />
-                          <Bar 
-                            dataKey="pendentes" 
-                            stackId="a"
-                            fill="hsl(38, 92%, 50%)" 
-                            radius={[4, 4, 0, 0]}
-                            name="pendentes"
-                          />
+                          <Bar dataKey="finalizadas" fill="hsl(239, 84%, 67%)" radius={[4, 4, 0, 0]}>
+                            <LabelList dataKey="finalizadas" position="top" fontSize={11} />
+                          </Bar>
                         </BarChart>
                       </ChartContainer>
                     ) : (
@@ -5317,16 +5300,6 @@ const RadarComercial = () => {
                         <p className="text-muted-foreground text-sm">Nenhum dado semanal disponível</p>
                       </div>
                     )}
-                    <div className="flex justify-center gap-6 mt-3 text-xs">
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded bg-green-600" />
-                        <span>Finalizadas</span>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="w-3 h-3 rounded bg-amber-500" />
-                        <span>Pendentes</span>
-                      </div>
-                    </div>
                   </CardContent>
                 </Card>
               </>
