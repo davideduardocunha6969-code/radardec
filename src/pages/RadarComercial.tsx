@@ -26,7 +26,8 @@ import {
   Briefcase,
   HeartPulse,
   FolderSync,
-  UserPlus
+  UserPlus,
+  Scale
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeekFilter } from "@/components/WeekFilter";
@@ -6873,6 +6874,12 @@ const RadarComercial = () => {
               </div>
             </CardContent>
           </Card>
+
+          {/* Título da seção de Metas Comercial Cível */}
+          <div className="flex items-center gap-3 pb-2 border-b border-border mt-8">
+            <Scale className="h-5 w-5 text-cyan-500" />
+            <h3 className="text-lg font-semibold text-foreground">Metas Comercial Cível</h3>
+          </div>
 
           {/* Botão para recolher seção */}
           <div className="flex justify-center pt-4">
