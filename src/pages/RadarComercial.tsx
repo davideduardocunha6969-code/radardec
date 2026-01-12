@@ -34,6 +34,7 @@ import { WeekFilter } from "@/components/WeekFilter";
 import { useCommercialData } from "@/hooks/useCommercialData";
 import { AposentadoriasFuturasDialog } from "@/components/AposentadoriasFuturasDialog";
 import { GoalProgressCard } from "@/components/GoalProgressCard";
+import { ContractProductCard } from "@/components/ContractProductCard";
 import {
   Collapsible,
   CollapsibleContent,
@@ -121,6 +122,39 @@ const RadarComercial = () => {
     const oneWeek = 1000 * 60 * 60 * 24 * 7;
     return Math.ceil(diff / oneWeek);
   }, []);
+
+  // ===================== CONTRATOS FECHADOS POR PRODUTO =====================
+  const contratosFechadosPorProduto = useMemo(() => {
+    // Filtra apenas registros com resultado "contrato fechado"
+    const contratosFechados = data.filter(r => 
+      r.resultado?.toLowerCase().includes('contrato fechado')
+    );
+
+    // Agrupa por produto
+    const produtoMap = new Map<string, typeof contratosFechados>();
+    contratosFechados.forEach(contrato => {
+      const produto = contrato.produto?.trim() || 'Não especificado';
+      if (!produtoMap.has(produto)) {
+        produtoMap.set(produto, []);
+      }
+      produtoMap.get(produto)!.push(contrato);
+    });
+
+    // Converte para array ordenado por quantidade de contratos
+    return Array.from(produtoMap.entries())
+      .map(([produto, contracts]) => ({
+        produto,
+        contracts: contracts.map(c => ({
+          responsavel: c.responsavel,
+          produto: c.produto,
+          resultado: c.resultado,
+          honorariosExito: c.honorariosExito,
+          honorariosIniciais: c.honorariosIniciais,
+          valorContrato: c.rawRow?.[8] ? parseFloat(c.rawRow[8].replace(/[^\d,.-]/g, '').replace(',', '.')) || 0 : 0, // Coluna I (índice 8)
+        })),
+      }))
+      .sort((a, b) => b.contracts.length - a.contracts.length);
+  }, [data]);
 
   // ===================== METAS =====================
   // Meta 1: Contratos High Ticket (500)
@@ -1984,6 +2018,65 @@ const RadarComercial = () => {
             </Card>
             </div>
           </div>
+
+          {/* Botão para recolher seção */}
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={() => setOpenSection(null)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+            >
+              <ChevronUp className="h-4 w-4" />
+              Recolher seção
+            </button>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Seção: Radar Contratos Fechados */}
+      <Collapsible 
+        open={openSection === 'contratosFechados'} 
+        onOpenChange={() => handleSectionToggle('contratosFechados')}
+        className="mb-8"
+      >
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-violet-600/20 to-purple-600/20 rounded-lg border border-violet-500/30 hover:border-violet-500/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <FileText className="h-6 w-6 text-violet-500" />
+              <h2 className="text-xl font-bold text-foreground">Radar Contratos Fechados</h2>
+            </div>
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground">
+                {contratosFechadosPorProduto.length} produtos
+              </span>
+              {openSection === 'contratosFechados' ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-8 mt-6">
+          {/* Cards de produtos com contratos fechados */}
+          {isLoading ? (
+            <div className="flex items-center justify-center py-12">
+              <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+            </div>
+          ) : contratosFechadosPorProduto.length > 0 ? (
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {contratosFechadosPorProduto.map(({ produto, contracts }) => (
+                <ContractProductCard
+                  key={produto}
+                  produto={produto}
+                  contracts={contracts}
+                />
+              ))}
+            </div>
+          ) : (
+            <div className="flex items-center justify-center py-12 bg-muted/30 rounded-lg">
+              <p className="text-muted-foreground">Nenhum contrato fechado encontrado</p>
+            </div>
+          )}
 
           {/* Botão para recolher seção */}
           <div className="flex justify-center pt-4">
