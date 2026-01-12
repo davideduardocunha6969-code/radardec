@@ -5263,7 +5263,7 @@ const RadarComercial = () => {
                   <CardHeader>
                     <div className="flex items-center gap-3">
                       <TrendingUp className="h-5 w-5 text-blue-500" />
-                      <CardTitle className="text-lg">Evolução Semanal de Documentação</CardTitle>
+                      <CardTitle className="text-lg">Evolução Semanal de Documentos Salvos no ADVBOX</CardTitle>
                     </div>
                     <p className="text-sm text-muted-foreground">
                       Pastas com documentos salvos no ADVBOX por semana
