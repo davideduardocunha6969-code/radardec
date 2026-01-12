@@ -481,44 +481,6 @@ const RadarBancario = () => {
             </Card>
           </div>
 
-          {/* Gráfico de Evolução Semanal */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <BarChart3 className="h-5 w-5 text-blue-500" />
-                <CardTitle className="text-lg">Evolução Semanal de Protocolos</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={iniciaisMetricas.evolucaoSemanal} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
-                    <XAxis 
-                      dataKey="semana" 
-                      tick={{ fontSize: 11 }}
-                      axisLine={false}
-                      tickLine={false}
-                    />
-                    <Tooltip content={<ChartTooltipContent />} />
-                    <Bar 
-                      dataKey="count" 
-                      fill="hsl(239, 84%, 67%)"
-                      radius={[4, 4, 0, 0]}
-                    >
-                      <LabelList 
-                        dataKey="count" 
-                        position="top" 
-                        className="fill-foreground"
-                        fontSize={10}
-                        formatter={(value: number) => value > 0 ? value : ''}
-                      />
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
-              </ChartContainer>
-            </CardContent>
-          </Card>
-
           {/* Rankings */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
             {/* Ranking por Responsável */}
@@ -624,6 +586,44 @@ const RadarBancario = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Gráfico de Evolução Semanal */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-5 w-5 text-blue-500" />
+                <CardTitle className="text-lg">Evolução Semanal de Protocolos</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={iniciaisMetricas.evolucaoSemanal} margin={{ top: 20, right: 10, left: 10, bottom: 0 }}>
+                    <XAxis 
+                      dataKey="semana" 
+                      tick={{ fontSize: 11 }}
+                      axisLine={false}
+                      tickLine={false}
+                    />
+                    <Tooltip content={<ChartTooltipContent />} />
+                    <Bar 
+                      dataKey="count" 
+                      fill="hsl(239, 84%, 67%)"
+                      radius={[4, 4, 0, 0]}
+                    >
+                      <LabelList 
+                        dataKey="count" 
+                        position="top" 
+                        className="fill-foreground"
+                        fontSize={10}
+                        formatter={(value: number) => value > 0 ? value : ''}
+                      />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
 
           {/* Gráfico de Evolução Acumulada vs Meta */}
           <Card>
