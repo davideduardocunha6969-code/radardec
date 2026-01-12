@@ -5441,7 +5441,7 @@ const RadarComercial = () => {
             return (
               <>
                 {/* Cards de métricas */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 col-span-full">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 col-span-full">
                   <Card className="bg-gradient-to-br from-cyan-500/10 to-teal-500/10 border-cyan-500/30">
                     <CardContent className="pt-6">
                       <div className="flex items-center justify-between">
@@ -5463,21 +5463,6 @@ const RadarComercial = () => {
                           <p className="text-xs text-muted-foreground mt-1">{taxaQualificacao}% do total</p>
                         </div>
                         <CheckCircle2 className="h-10 w-10 text-green-500/50" />
-                      </div>
-                    </CardContent>
-                  </Card>
-
-                  <Card className="bg-gradient-to-br from-amber-500/10 to-orange-500/10 border-amber-500/30">
-                    <CardContent className="pt-6">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="text-sm text-muted-foreground">Trabalhou Agricultura</p>
-                          <p className="text-3xl font-bold text-amber-400">{trabalhouAgricultura}</p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {totalTestemunhas > 0 ? ((trabalhouAgricultura / totalTestemunhas) * 100).toFixed(1) : '0'}% do total
-                          </p>
-                        </div>
-                        <Target className="h-10 w-10 text-amber-500/50" />
                       </div>
                     </CardContent>
                   </Card>
