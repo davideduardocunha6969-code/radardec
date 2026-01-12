@@ -80,6 +80,7 @@ const RadarComercial = () => {
   const [selectedSdrsForChart, setSelectedSdrsForChart] = useState<string[]>([]);
   const [adminRankingWeek, setAdminRankingWeek] = useState<number | null>(null);
   const [testemunhasWeekFilter, setTestemunhasWeekFilter] = useState<number | null>(null);
+  const [atendimentosWeekFilter, setAtendimentosWeekFilter] = useState<number | null>(null);
 
   // Handlers para abrir/fechar seções (comportamento accordion)
   const handleSectionToggle = (section: string) => {
@@ -719,10 +720,16 @@ const RadarComercial = () => {
     'hsl(340, 80%, 55%)', // rose
   ];
 
+  // Dados filtrados para Radar Atendimentos (com filtro de semana específico)
+  const atendimentosFilteredData = useMemo(() => {
+    if (!atendimentosWeekFilter) return filteredData;
+    return filteredData.filter(record => record.semana === atendimentosWeekFilter);
+  }, [filteredData, atendimentosWeekFilter]);
+
   const responsavelChartData = useMemo(() => {
     const counts: Record<string, number> = {};
     
-    filteredData.forEach(record => {
+    atendimentosFilteredData.forEach(record => {
       if (record.responsavel) {
         counts[record.responsavel] = (counts[record.responsavel] || 0) + 1;
       }
@@ -734,13 +741,13 @@ const RadarComercial = () => {
         atendimentos: total,
       }))
       .sort((a, b) => b.atendimentos - a.atendimentos);
-  }, [filteredData]);
+  }, [atendimentosFilteredData]);
 
   // Dados para o gráfico de pizza - Modalidade de Atendimento
   const modalidadeChartData = useMemo(() => {
     const counts: Record<string, number> = {};
     
-    filteredData.forEach(record => {
+    atendimentosFilteredData.forEach(record => {
       if (record.modalidade) {
         counts[record.modalidade] = (counts[record.modalidade] || 0) + 1;
       }
@@ -755,13 +762,13 @@ const RadarComercial = () => {
         percentage: total > 0 ? ((value / total) * 100).toFixed(1) : '0',
       }))
       .sort((a, b) => b.value - a.value);
-  }, [filteredData]);
+  }, [atendimentosFilteredData]);
 
   // Dados para o gráfico de pizza - Possui Direito
   const possuiDireitoChartData = useMemo(() => {
     const counts: Record<string, number> = {};
     
-    filteredData.forEach(record => {
+    atendimentosFilteredData.forEach(record => {
       if (record.possuiDireito) {
         const label = record.possuiDireito === 'SIM' ? 'Possui Direito' : 
                       record.possuiDireito === 'NÃO' ? 'Não Possui Direito' : record.possuiDireito;
@@ -778,14 +785,14 @@ const RadarComercial = () => {
         percentage: total > 0 ? ((value / total) * 100).toFixed(1) : '0',
       }))
       .sort((a, b) => b.value - a.value);
-  }, [filteredData]);
+  }, [atendimentosFilteredData]);
 
   // Dados para o gráfico de resultado dos atendimentos qualificados (clientes com direito)
   const resultadoQualificadosChartData = useMemo(() => {
     const counts: Record<string, number> = {};
     
     // Filtra apenas clientes que possuem direito
-    filteredData
+    atendimentosFilteredData
       .filter(record => record.possuiDireito === 'SIM')
       .forEach(record => {
         if (record.resultado) {
@@ -799,13 +806,13 @@ const RadarComercial = () => {
         total,
       }))
       .sort((a, b) => b.total - a.total);
-  }, [filteredData]);
+  }, [atendimentosFilteredData]);
 
   // Dados para o gráfico de atendimentos por setor
   const setorChartData = useMemo(() => {
     const counts: Record<string, number> = {};
     
-    filteredData.forEach(record => {
+    atendimentosFilteredData.forEach(record => {
       if (record.setor) {
         counts[record.setor] = (counts[record.setor] || 0) + 1;
       }
@@ -817,13 +824,13 @@ const RadarComercial = () => {
         total,
       }))
       .sort((a, b) => b.total - a.total);
-  }, [filteredData]);
+  }, [atendimentosFilteredData]);
 
   // Dados para o gráfico de resultado de TODOS os atendimentos
   const resultadoTodosChartData = useMemo(() => {
     const counts: Record<string, number> = {};
     
-    filteredData.forEach(record => {
+    atendimentosFilteredData.forEach(record => {
       if (record.resultado) {
         counts[record.resultado] = (counts[record.resultado] || 0) + 1;
       }
@@ -838,7 +845,7 @@ const RadarComercial = () => {
         percentage: total > 0 ? ((count / total) * 100).toFixed(1) : '0',
       }))
       .sort((a, b) => b.total - a.total);
-  }, [filteredData]);
+  }, [atendimentosFilteredData]);
 
   // Dados para o gráfico de origem do cliente
   const origemClienteChartData = useMemo(() => {
@@ -1250,6 +1257,14 @@ const RadarComercial = () => {
         <CollapsibleContent className="space-y-8 mt-6">
           {/* Filtros */}
           <div className="space-y-4">
+            {/* Filtro de Semana para Atendimentos */}
+            <WeekFilter
+              weeks={weeks}
+              selectedWeek={atendimentosWeekFilter}
+              onWeekChange={setAtendimentosWeekFilter}
+              isLoading={isLoading}
+            />
+            
             {/* Filtros adicionais */}
             <div className="flex flex-wrap gap-4">
               {/* Filtro por Setor */}
