@@ -421,6 +421,54 @@ const RadarBancario = () => {
     };
   }, [transitoData]);
 
+  // ===================== TRÂNSITO - GRÁFICO ACUMULADO VS META =====================
+  const metaAnualTransito = 1700; // Meta: 1700 acordos + cumprimentos de sentença
+
+  const evolucaoAcumuladaTransito = useMemo(() => {
+    // Conta acordos realizados (dataAcordo preenchido com data) e cumprimentos ajuizados (statusCumprimentoSentenca = "ajuizado")
+    const acordosRealizados = transitoData.filter(r => {
+      const dataAcordo = r.dataAcordo?.trim();
+      // Verifica se parece com uma data (contém números)
+      return dataAcordo && /\d/.test(dataAcordo);
+    }).length;
+
+    const cumprimentosAjuizados = transitoData.filter(r => 
+      r.statusCumprimentoSentenca?.toLowerCase().trim() === 'ajuizado'
+    ).length;
+
+    const totalAcordosCumprimentos = acordosRealizados + cumprimentosAjuizados;
+
+    // Gera dados para todas as 52 semanas
+    const dados = [];
+    
+    for (let semana = 1; semana <= 52; semana++) {
+      const metaEsperada = Math.round((metaAnualTransito / 52) * semana);
+      
+      dados.push({
+        semana,
+        acumulado: semana <= semanaAtual ? totalAcordosCumprimentos : null,
+        metaSustentavel: metaEsperada,
+      });
+    }
+
+    const metaEsperadaSemana = Math.round((metaAnualTransito / 52) * semanaAtual);
+    const diferenca = totalAcordosCumprimentos - metaEsperadaSemana;
+    const percentualAtingimento = ((totalAcordosCumprimentos / metaAnualTransito) * 100).toFixed(1);
+
+    return {
+      dados,
+      metricas: {
+        semanaAtual,
+        totalAcordosCumprimentos,
+        acordosRealizados,
+        cumprimentosAjuizados,
+        metaEsperadaSemana,
+        diferenca,
+        percentualAtingimento
+      }
+    };
+  }, [transitoData, semanaAtual]);
+
   const chartConfig = {
     count: { label: "Quantidade", color: "hsl(var(--primary))" },
     valor: { label: "Valor", color: "hsl(var(--success))" },
@@ -1617,6 +1665,117 @@ const RadarBancario = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Gráfico: Evolução Acumulada vs Meta - Acordos e Cumprimentos */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <TrendingUp className="h-5 w-5 text-green-500" />
+                <CardTitle className="text-lg">Evolução Acumulada vs Meta</CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Comparativo entre acordos realizados + cumprimentos ajuizados e a meta de 1.700 no ano
+              </p>
+            </CardHeader>
+            <CardContent>
+              {/* Indicadores */}
+              <div className="flex flex-wrap gap-4 mb-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Semana atual:</span>
+                  <span className="font-bold text-primary">{evolucaoAcumuladaTransito.metricas?.semanaAtual}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Total acumulado:</span>
+                  <span className="font-bold text-blue-500">
+                    {evolucaoAcumuladaTransito.metricas?.totalAcordosCumprimentos.toLocaleString('pt-BR')}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    ({evolucaoAcumuladaTransito.metricas?.acordosRealizados} acordos + {evolucaoAcumuladaTransito.metricas?.cumprimentosAjuizados} cumprimentos)
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Meta esperada (S{evolucaoAcumuladaTransito.metricas?.semanaAtual}):</span>
+                  <span className="font-bold">
+                    {evolucaoAcumuladaTransito.metricas?.metaEsperadaSemana.toLocaleString('pt-BR')}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Diferença:</span>
+                  <span className={`font-bold ${(evolucaoAcumuladaTransito.metricas?.diferenca || 0) >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                    {(evolucaoAcumuladaTransito.metricas?.diferenca || 0) >= 0 ? '+' : ''}
+                    {evolucaoAcumuladaTransito.metricas?.diferenca.toLocaleString('pt-BR')}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-muted-foreground">Atingimento:</span>
+                  <span className={`font-bold ${parseFloat(evolucaoAcumuladaTransito.metricas?.percentualAtingimento || '0') >= 100 ? 'text-green-500' : 'text-amber-500'}`}>
+                    {evolucaoAcumuladaTransito.metricas?.percentualAtingimento}%
+                  </span>
+                </div>
+              </div>
+
+              {/* Legenda */}
+              <div className="flex gap-6 mb-4 text-sm">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-1 bg-blue-500 rounded" />
+                  <span className="text-muted-foreground">Acordos + Cumprimentos Acumulados</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-1 bg-green-500 rounded" style={{ borderStyle: 'dashed' }} />
+                  <span className="text-muted-foreground">Meta Sustentável (1.700/ano)</span>
+                </div>
+              </div>
+
+              {/* Gráfico */}
+              <div className="h-80">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={evolucaoAcumuladaTransito.dados}>
+                    <XAxis 
+                      dataKey="semana" 
+                      tick={{ fontSize: 11 }}
+                      tickFormatter={(value) => value % 4 === 1 ? value.toString() : ''}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 11 }}
+                      domain={[0, metaAnualTransito]}
+                      tickFormatter={(value) => value.toLocaleString('pt-BR')}
+                    />
+                    <Tooltip 
+                      formatter={(value: number, name: string) => [
+                        value?.toLocaleString('pt-BR') || '-',
+                        name === 'acumulado' ? 'Acumulado' : 'Meta'
+                      ]}
+                      labelFormatter={(label) => `Semana ${label}`}
+                    />
+                    <ReferenceLine 
+                      x={semanaAtual} 
+                      stroke="hsl(var(--muted-foreground))" 
+                      strokeDasharray="3 3"
+                      label={{ value: 'Hoje', position: 'top', fontSize: 10 }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="metaSustentavel" 
+                      stroke="hsl(142, 71%, 45%)" 
+                      strokeDasharray="5 5"
+                      strokeWidth={2}
+                      dot={false}
+                      name="Meta Sustentável"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="acumulado" 
+                      stroke="hsl(217, 91%, 60%)" 
+                      strokeWidth={3}
+                      dot={false}
+                      name="Acumulado"
+                      connectNulls={false}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
 
           <div className="flex justify-center pt-4">
             <button

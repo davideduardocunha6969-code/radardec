@@ -37,6 +37,7 @@ export interface TransitoJulgadoRecord {
   camara: string;
   resultadoAcordao: string;
   dataCumprimentoSentenca: string;
+  statusCumprimentoSentenca: string;
   valorLiquidacao: number;
   valorSucumbencia: number;
   valorHonorariosExito: number;
