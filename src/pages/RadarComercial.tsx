@@ -5040,21 +5040,39 @@ const RadarComercial = () => {
           {(() => {
             // Processa dados da aba de documentação
             const totalTarefas = administrativo2Data.length;
+            
+            // Detecta "feito" na coluna D
             const tarefasFinalizadas = administrativo2Data.filter(r => {
               const status = (r.colD || '').toLowerCase().trim();
-              return status.includes('sim') || status.includes('finalizado') || 
-                     status.includes('concluído') || status === 's' || status === 'ok';
+              return status === 'feito' || status.includes('feito');
             }).length;
             const tarefasPendentes = totalTarefas - tarefasFinalizadas;
             const taxaConclusao = totalTarefas > 0 ? ((tarefasFinalizadas / totalTarefas) * 100).toFixed(1) : '0';
+
+            // Calcula semana atual do ano
+            const hoje = new Date();
+            const inicioAno = new Date(hoje.getFullYear(), 0, 1);
+            const diffDias = Math.floor((hoje.getTime() - inicioAno.getTime()) / (1000 * 60 * 60 * 24));
+            const semanaAtual = Math.ceil((diffDias + inicioAno.getDay() + 1) / 7);
+
+            // Conta pastas esperadas (todas até a semana atual) vs realizadas (feito até semana atual)
+            const pastasAteSemanAtual = administrativo2Data.filter(r => {
+              const semana = parseInt((r.colA || '0').trim()) || 0;
+              return semana >= 1 && semana <= semanaAtual;
+            });
+            const esperadoAcumulado = pastasAteSemanAtual.length;
+            const realizadoAcumulado = pastasAteSemanAtual.filter(r => {
+              const status = (r.colD || '').toLowerCase().trim();
+              return status === 'feito' || status.includes('feito');
+            }).length;
+            const percentualMeta = esperadoAcumulado > 0 ? ((realizadoAcumulado / esperadoAcumulado) * 100).toFixed(1) : '0';
 
             // Ranking por responsável (Coluna C)
             const porResponsavel: Record<string, { total: number; finalizadas: number }> = {};
             administrativo2Data.forEach(r => {
               const resp = (r.colC || 'Não informado').trim();
               const status = (r.colD || '').toLowerCase().trim();
-              const finalizado = status.includes('sim') || status.includes('finalizado') || 
-                                 status.includes('concluído') || status === 's' || status === 'ok';
+              const finalizado = status === 'feito' || status.includes('feito');
               
               if (!porResponsavel[resp]) porResponsavel[resp] = { total: 0, finalizadas: 0 };
               porResponsavel[resp].total++;
@@ -5078,8 +5096,7 @@ const RadarComercial = () => {
             administrativo2Data.forEach(r => {
               const semana = (r.colA || 'N/A').trim();
               const status = (r.colD || '').toLowerCase().trim();
-              const finalizado = status.includes('sim') || status.includes('finalizado') || 
-                                 status.includes('concluído') || status === 's' || status === 'ok';
+              const finalizado = status === 'feito' || status.includes('feito');
               
               if (!porSemana[semana]) porSemana[semana] = { total: 0, finalizadas: 0 };
               porSemana[semana].total++;
@@ -5116,7 +5133,7 @@ const RadarComercial = () => {
               <>
                 {/* Cards de métricas */}
                 <div className="grid gap-4 grid-cols-2 md:grid-cols-4 col-span-full">
-                  <Card className="bg-gradient-to-br from-slate-900/80 to-background border-slate-700/50">
+                  <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <FolderOpen className="h-4 w-4" />
@@ -5125,11 +5142,11 @@ const RadarComercial = () => {
                     </CardHeader>
                     <CardContent>
                       <div className="text-3xl font-bold">{totalTarefas}</div>
-                      <p className="text-xs text-muted-foreground mt-1">pastas processadas</p>
+                      <p className="text-xs text-muted-foreground mt-1">pastas cadastradas</p>
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-gradient-to-br from-green-950/50 to-background border-green-800/30">
+                  <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <CheckCircle2 className="h-4 w-4 text-green-500" />
@@ -5142,7 +5159,7 @@ const RadarComercial = () => {
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-gradient-to-br from-amber-950/50 to-background border-amber-800/30">
+                  <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <Clock className="h-4 w-4 text-amber-500" />
@@ -5155,16 +5172,21 @@ const RadarComercial = () => {
                     </CardContent>
                   </Card>
 
-                  <Card className="bg-gradient-to-br from-blue-950/50 to-background border-blue-800/30">
+                  <Card>
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                        <Users className="h-4 w-4 text-blue-500" />
-                        Responsáveis
+                        <Target className="h-4 w-4 text-primary" />
+                        Meta Semana {semanaAtual}
                       </CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="text-3xl font-bold text-blue-500">{rankingResponsavel.length}</div>
-                      <p className="text-xs text-muted-foreground mt-1">pessoas envolvidas</p>
+                      <div className="text-2xl font-bold">
+                        <span className={parseFloat(percentualMeta) >= 100 ? 'text-green-500' : parseFloat(percentualMeta) >= 80 ? 'text-amber-500' : 'text-red-500'}>
+                          {realizadoAcumulado}
+                        </span>
+                        <span className="text-muted-foreground text-lg font-normal"> / {esperadoAcumulado}</span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">{percentualMeta}% concluído até a semana atual</p>
                     </CardContent>
                   </Card>
                 </div>
