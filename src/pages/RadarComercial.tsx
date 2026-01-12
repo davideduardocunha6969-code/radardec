@@ -5049,16 +5049,26 @@ const RadarComercial = () => {
             const tarefasPendentes = totalTarefas - tarefasFinalizadas;
             const taxaConclusao = totalTarefas > 0 ? ((tarefasFinalizadas / totalTarefas) * 100).toFixed(1) : '0';
 
-            // Calcula semana atual do ano
+            // Calcula semana atual do ano (usando getWeek do date-fns seria mais preciso, mas vamos usar cálculo manual)
             const hoje = new Date();
             const inicioAno = new Date(hoje.getFullYear(), 0, 1);
             const diffDias = Math.floor((hoje.getTime() - inicioAno.getTime()) / (1000 * 60 * 60 * 24));
             const semanaAtual = Math.ceil((diffDias + inicioAno.getDay() + 1) / 7);
 
-            // Conta pastas esperadas da semana atual vs realizadas na semana atual
+            // Identifica todas as semanas disponíveis nos dados para encontrar a mais recente
+            const semanasDisponiveis = administrativo2Data
+              .map(r => parseInt((r.colA || '0').trim()) || 0)
+              .filter(s => s >= 1 && s <= 53);
+            
+            // Se não há dados da semana atual, usa a última semana com dados
+            const semanaParaExibir = semanasDisponiveis.includes(semanaAtual) 
+              ? semanaAtual 
+              : Math.max(...semanasDisponiveis, 1);
+
+            // Conta pastas esperadas da semana vs realizadas na semana
             const pastasSemanaAtual = administrativo2Data.filter(r => {
               const semana = parseInt((r.colA || '0').trim()) || 0;
-              return semana === semanaAtual;
+              return semana === semanaParaExibir;
             });
             const esperadoSemanaAtual = pastasSemanaAtual.length;
             const realizadoSemanaAtual = pastasSemanaAtual.filter(r => {
@@ -5066,6 +5076,9 @@ const RadarComercial = () => {
               return status === 'feito' || status.includes('feito');
             }).length;
             const percentualSemanaAtual = esperadoSemanaAtual > 0 ? ((realizadoSemanaAtual / esperadoSemanaAtual) * 100).toFixed(1) : '0';
+            
+            // Flag para indicar se estamos mostrando semana atual ou a última disponível
+            const mostrandoSemanaAtual = semanaParaExibir === semanaAtual;
 
             // Ranking por responsável (Coluna C)
             const porResponsavel: Record<string, { total: number; finalizadas: number }> = {};
@@ -5176,7 +5189,10 @@ const RadarComercial = () => {
                     <CardHeader className="pb-2">
                       <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
                         <Target className="h-4 w-4 text-primary" />
-                        Semana {semanaAtual}
+                        Semana {semanaParaExibir}
+                        {!mostrandoSemanaAtual && (
+                          <span className="text-xs text-muted-foreground/70">(última com dados)</span>
+                        )}
                       </CardTitle>
                     </CardHeader>
                     <CardContent className="space-y-2">
