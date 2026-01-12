@@ -22,10 +22,9 @@ export const ContractProductCard = ({ produto, contracts }: ContractProductCardP
     const somaHonorariosExito = contracts.reduce((sum, c) => sum + (c.honorariosExito || 0), 0);
     const somaHonorariosIniciais = contracts.reduce((sum, c) => sum + (c.honorariosIniciais || 0), 0);
     
-    // Média de valor entre os contratos (Coluna I = valorContrato)
-    const valoresContratos = contracts.map(c => c.valorContrato || 0).filter(v => v > 0);
-    const mediaValor = valoresContratos.length > 0 
-      ? valoresContratos.reduce((sum, v) => sum + v, 0) / valoresContratos.length 
+    // Média de honorários de êxito por contrato fechado deste produto
+    const mediaValor = totalContratos > 0 
+      ? somaHonorariosExito / totalContratos 
       : 0;
 
     // Ranking por honorários de êxito (Coluna L)
@@ -92,7 +91,7 @@ export const ContractProductCard = ({ produto, contracts }: ContractProductCardP
           <div className="space-y-1">
             <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
               <TrendingUp className="h-3.5 w-3.5" />
-              <span>Média Valor</span>
+              <span>Média Êxito/Contrato</span>
             </div>
             <p className="text-lg font-semibold text-foreground">
               {formatCurrency(stats.mediaValor)}
