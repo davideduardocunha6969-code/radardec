@@ -6593,6 +6593,12 @@ const RadarComercial = () => {
             </CardContent>
           </Card>
 
+          {/* Título da seção de Metas Administrativo */}
+          <div className="flex items-center gap-3 pb-2 border-b border-border mt-8">
+            <ClipboardList className="h-5 w-5 text-purple-500" />
+            <h3 className="text-lg font-semibold text-foreground">Metas Administrativo</h3>
+          </div>
+
           {/* Botão para recolher seção */}
           <div className="flex justify-center pt-4">
             <button
