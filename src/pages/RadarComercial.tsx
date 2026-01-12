@@ -206,6 +206,23 @@ const RadarComercial = () => {
     };
   }, [indicacoesRecebidasData]);
 
+  // ===================== METAS TRABALHISTAS =====================
+  // Meta Trabalhista: Fechar 220 contratos trabalhistas
+  const metaTrabalhista = useMemo(() => {
+    const contratosTrabalhistas = data.filter(r => {
+      const setor = r.setor?.toLowerCase().trim() || '';
+      const resultado = r.resultado?.toLowerCase().trim() || '';
+      const isTrabalhista = setor.includes('trabalhista');
+      const isContratoFechado = resultado.includes('contrato fechado');
+      return isTrabalhista && isContratoFechado;
+    });
+    
+    return {
+      meta: 220,
+      alcancado: contratosTrabalhistas.length,
+    };
+  }, [data]);
+
   // Meta Geral do Comercial Previdenciário (ponderada)
   const metaGeral = useMemo(() => {
     const pesos = {
@@ -6354,6 +6371,19 @@ const RadarComercial = () => {
           <div className="flex items-center gap-3 pb-2 border-b border-border mt-8">
             <Briefcase className="h-5 w-5 text-blue-500" />
             <h3 className="text-lg font-semibold text-foreground">Metas Comercial Trabalhista</h3>
+          </div>
+
+          {/* Cards de Metas Trabalhistas */}
+          <div className="grid gap-6">
+            {/* Meta: Contratos Trabalhistas */}
+            <GoalProgressCard
+              title="Meta Contratos Trabalhistas"
+              icon={Briefcase}
+              iconColor="text-blue-500"
+              meta={metaTrabalhista.meta}
+              alcancado={metaTrabalhista.alcancado}
+              semanaAtual={semanaAtualDoAno}
+            />
           </div>
 
           {/* Botão para recolher seção */}
