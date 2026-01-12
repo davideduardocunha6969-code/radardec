@@ -302,6 +302,139 @@ const RadarComercial = () => {
     };
   }, [metaBancarioContratos, metaBancarioAgendamentos, semanaAtualDoAno]);
 
+  // ===================== METAS ADMINISTRATIVO =====================
+  // Meta Admin 1: 1000 avaliações 5 estrelas (GID 651337262, coluna D = 5)
+  const metaAvaliacoes5Estrelas = useMemo(() => {
+    const avaliacoesValidas = administrativoData.filter(r => {
+      const colunaD = r.colD?.trim() || '';
+      return colunaD === '5';
+    });
+    
+    return {
+      meta: 1000,
+      alcancado: avaliacoesValidas.length,
+    };
+  }, [administrativoData]);
+
+  // Meta Admin 2: Agendar 100 atendimentos de testemunhas (GID 774111166, coluna K = "sim")
+  const metaTestemunhasAgendadas = useMemo(() => {
+    const agendamentosValidos = testemunhasData.filter(r => {
+      const colunaK = r.colK?.toLowerCase().trim() || '';
+      return colunaK === 'sim';
+    });
+    
+    return {
+      meta: 100,
+      alcancado: agendamentosValidos.length,
+    };
+  }, [testemunhasData]);
+
+  // Meta Admin 3: Transferir todos arquivos do OneDrive para ADVBOX (GID 1905290884, coluna D = "feito")
+  const metaTransferenciaAdvbox = useMemo(() => {
+    const totalArquivos = administrativo2Data.length;
+    const arquivosTransferidos = administrativo2Data.filter(r => {
+      const colunaD = r.colD?.toLowerCase().trim() || '';
+      return colunaD === 'feito';
+    });
+    
+    return {
+      meta: totalArquivos,
+      alcancado: arquivosTransferidos.length,
+    };
+  }, [administrativo2Data]);
+
+  // Meta Admin 4: Devolver 90% dos documentos pendentes (GID 186802545, coluna F ou G = "SIM")
+  const metaDocumentosFisicos = useMemo(() => {
+    const totalDocumentos = documentosFisicosData.length;
+    const documentosDevolvidos = documentosFisicosData.filter(r => {
+      const colunaF = r.colF?.toUpperCase().trim() || '';
+      const colunaG = r.colG?.toUpperCase().trim() || '';
+      return colunaF === 'SIM' || colunaG === 'SIM';
+    });
+    
+    // Meta é 90% do total
+    const metaAlvo = Math.ceil(totalDocumentos * 0.9);
+    
+    return {
+      meta: metaAlvo,
+      alcancado: documentosDevolvidos.length,
+      totalDocumentos,
+    };
+  }, [documentosFisicosData]);
+
+  // Meta Geral do Administrativo (ponderada: 70% avaliações + 10% testemunhas + 10% transferência + 10% documentos)
+  const metaGeralAdministrativo = useMemo(() => {
+    const pesos = {
+      avaliacoes: 0.70,
+      testemunhas: 0.10,
+      transferencia: 0.10,
+      documentos: 0.10,
+    };
+
+    // Percentual de cada meta individual (limitado a 100%)
+    const percentAvaliacoes = Math.min((metaAvaliacoes5Estrelas.alcancado / metaAvaliacoes5Estrelas.meta) * 100, 100);
+    const percentTestemunhas = Math.min((metaTestemunhasAgendadas.alcancado / metaTestemunhasAgendadas.meta) * 100, 100);
+    const percentTransferencia = metaTransferenciaAdvbox.meta > 0 
+      ? Math.min((metaTransferenciaAdvbox.alcancado / metaTransferenciaAdvbox.meta) * 100, 100) 
+      : 0;
+    const percentDocumentos = metaDocumentosFisicos.meta > 0 
+      ? Math.min((metaDocumentosFisicos.alcancado / metaDocumentosFisicos.meta) * 100, 100) 
+      : 0;
+
+    // Contribuição ponderada de cada meta
+    const contribuicaoAvaliacoes = percentAvaliacoes * pesos.avaliacoes;
+    const contribuicaoTestemunhas = percentTestemunhas * pesos.testemunhas;
+    const contribuicaoTransferencia = percentTransferencia * pesos.transferencia;
+    const contribuicaoDocumentos = percentDocumentos * pesos.documentos;
+
+    // Percentual total ponderado
+    const percentualTotal = contribuicaoAvaliacoes + contribuicaoTestemunhas + contribuicaoTransferencia + contribuicaoDocumentos;
+
+    // Esperado para a semana atual
+    const esperadoSemana = (semanaAtualDoAno / 53) * 100;
+    const diferencaEsperado = percentualTotal - esperadoSemana;
+
+    return {
+      percentualTotal,
+      esperadoSemana,
+      diferencaEsperado,
+      metas: [
+        {
+          nome: 'Avaliações 5 Estrelas',
+          peso: pesos.avaliacoes * 100,
+          alcancado: metaAvaliacoes5Estrelas.alcancado,
+          meta: metaAvaliacoes5Estrelas.meta,
+          percentual: percentAvaliacoes,
+          contribuicao: contribuicaoAvaliacoes,
+        },
+        {
+          nome: 'Testemunhas Agendadas',
+          peso: pesos.testemunhas * 100,
+          alcancado: metaTestemunhasAgendadas.alcancado,
+          meta: metaTestemunhasAgendadas.meta,
+          percentual: percentTestemunhas,
+          contribuicao: contribuicaoTestemunhas,
+        },
+        {
+          nome: 'Transferência ADVBOX',
+          peso: pesos.transferencia * 100,
+          alcancado: metaTransferenciaAdvbox.alcancado,
+          meta: metaTransferenciaAdvbox.meta,
+          percentual: percentTransferencia,
+          contribuicao: contribuicaoTransferencia,
+        },
+        {
+          nome: 'Documentos Devolvidos',
+          peso: pesos.documentos * 100,
+          alcancado: metaDocumentosFisicos.alcancado,
+          meta: metaDocumentosFisicos.meta,
+          percentual: percentDocumentos,
+          contribuicao: contribuicaoDocumentos,
+        },
+      ],
+    };
+  }, [metaAvaliacoes5Estrelas, metaTestemunhasAgendadas, metaTransferenciaAdvbox, metaDocumentosFisicos, semanaAtualDoAno]);
+
   // Meta Geral do Comercial Previdenciário (ponderada)
   const metaGeral = useMemo(() => {
     const pesos = {
@@ -6598,6 +6731,148 @@ const RadarComercial = () => {
             <ClipboardList className="h-5 w-5 text-purple-500" />
             <h3 className="text-lg font-semibold text-foreground">Metas Administrativo</h3>
           </div>
+
+          {/* Cards de Metas Administrativo */}
+          <div className="grid gap-6">
+            {/* Meta: Avaliações 5 Estrelas */}
+            <GoalProgressCard
+              title="Meta Avaliações 5 Estrelas"
+              icon={Star}
+              iconColor="text-purple-500"
+              meta={metaAvaliacoes5Estrelas.meta}
+              alcancado={metaAvaliacoes5Estrelas.alcancado}
+              semanaAtual={semanaAtualDoAno}
+            />
+
+            {/* Meta: Testemunhas Agendadas */}
+            <GoalProgressCard
+              title="Meta Testemunhas Agendadas"
+              icon={Users}
+              iconColor="text-purple-500"
+              meta={metaTestemunhasAgendadas.meta}
+              alcancado={metaTestemunhasAgendadas.alcancado}
+              semanaAtual={semanaAtualDoAno}
+            />
+
+            {/* Meta: Transferência ADVBOX */}
+            <GoalProgressCard
+              title="Meta Transferência OneDrive → ADVBOX"
+              icon={FolderSync}
+              iconColor="text-purple-500"
+              meta={metaTransferenciaAdvbox.meta}
+              alcancado={metaTransferenciaAdvbox.alcancado}
+              semanaAtual={semanaAtualDoAno}
+            />
+
+            {/* Meta: Documentos Devolvidos */}
+            <GoalProgressCard
+              title="Meta Devolução Documentos (90%)"
+              icon={FileText}
+              iconColor="text-purple-500"
+              meta={metaDocumentosFisicos.meta}
+              alcancado={metaDocumentosFisicos.alcancado}
+              semanaAtual={semanaAtualDoAno}
+            />
+          </div>
+
+          {/* Card Meta Geral do Administrativo */}
+          <Card className="border-2 border-purple-500/50 bg-gradient-to-br from-purple-500/5 to-violet-500/5">
+            <CardHeader className="pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-lg bg-purple-500/20">
+                  <Target className="h-6 w-6 text-purple-500" />
+                </div>
+                <div>
+                  <CardTitle className="xl">Meta Geral Administrativo</CardTitle>
+                  <p className="text-sm text-muted-foreground">Progresso ponderado de todas as metas</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Coluna 1: Percentual Total */}
+                <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-gradient-to-br from-purple-500/10 to-violet-500/10 border border-purple-500/20">
+                  <span className={`text-5xl font-bold ${
+                    metaGeralAdministrativo.diferencaEsperado >= 0 ? 'text-emerald-500' : 'text-rose-500'
+                  }`}>
+                    {metaGeralAdministrativo.percentualTotal.toFixed(1)}%
+                  </span>
+                  <span className="text-sm text-muted-foreground mt-2">da meta geral atingida</span>
+                  <div className="mt-4 text-center">
+                    <span className="text-xs text-muted-foreground">Esperado: </span>
+                    <span className="text-sm font-semibold text-foreground">{metaGeralAdministrativo.esperadoSemana.toFixed(1)}%</span>
+                    <span className={`ml-2 text-sm font-semibold ${
+                      metaGeralAdministrativo.diferencaEsperado >= 0 ? 'text-emerald-500' : 'text-red-500'
+                    }`}>
+                      ({metaGeralAdministrativo.diferencaEsperado >= 0 ? '+' : ''}{metaGeralAdministrativo.diferencaEsperado.toFixed(1)} p.p.)
+                    </span>
+                  </div>
+                </div>
+
+                {/* Coluna 2: Breakdown das metas */}
+                <div className="lg:col-span-2 space-y-4">
+                  <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Detalhamento por Meta</h4>
+                  {metaGeralAdministrativo.metas.map((meta, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <div className="flex items-center gap-2">
+                          <span className="font-medium">{meta.nome}</span>
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-muted text-muted-foreground">
+                            Peso: {meta.peso}%
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-muted-foreground">{meta.alcancado}/{meta.meta}</span>
+                          <span className={`font-semibold ${
+                            meta.percentual >= (semanaAtualDoAno / 53) * 100 ? 'text-emerald-500' : 'text-amber-500'
+                          }`}>
+                            {meta.percentual.toFixed(1)}%
+                          </span>
+                          <span className="text-xs text-muted-foreground">
+                            → {meta.contribuicao.toFixed(1)} p.p.
+                          </span>
+                        </div>
+                      </div>
+                      <div className="h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full rounded-full transition-all ${
+                            meta.percentual >= (semanaAtualDoAno / 53) * 100 ? 'bg-purple-500' : 'bg-amber-500'
+                          }`}
+                          style={{ width: `${Math.min(meta.percentual, 100)}%` }}
+                        />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Barra de progresso geral */}
+              <div className="mt-6 pt-6 border-t border-border">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-sm font-medium">Progresso Geral Ponderado</span>
+                  <span className="text-sm text-muted-foreground">Semana {semanaAtualDoAno} de 53</span>
+                </div>
+                <div className="relative h-4 bg-muted rounded-full overflow-hidden">
+                  {/* Linha de referência do esperado */}
+                  <div 
+                    className="absolute top-0 bottom-0 w-0.5 bg-foreground/50 z-10"
+                    style={{ left: `${metaGeralAdministrativo.esperadoSemana}%` }}
+                  />
+                  {/* Barra de progresso */}
+                  <div 
+                    className={`h-full rounded-full transition-all ${
+                      metaGeralAdministrativo.diferencaEsperado >= 0 ? 'bg-purple-500' : 'bg-rose-500'
+                    }`}
+                    style={{ width: `${Math.min(metaGeralAdministrativo.percentualTotal, 100)}%` }}
+                  />
+                </div>
+                <div className="flex items-center justify-between mt-1 text-xs text-muted-foreground">
+                  <span>0%</span>
+                  <span>Meta: 100%</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Botão para recolher seção */}
           <div className="flex justify-center pt-4">
