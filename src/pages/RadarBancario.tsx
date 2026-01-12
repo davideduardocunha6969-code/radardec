@@ -1820,6 +1820,42 @@ const RadarBancario = () => {
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-6 mt-6">
+          {/* Cards de Metas Individuais */}
+          <div className="grid gap-6">
+            {/* Meta Protocolos - Peso 45% */}
+            <GoalProgressCard
+              title="Meta Protocolos (Peso 45%)"
+              icon={FileText}
+              iconColor="text-blue-500"
+              meta={metaAnualIniciais}
+              alcancado={iniciaisData.length}
+              semanaAtual={semanaAtual}
+              totalSemanas={52}
+            />
+
+            {/* Meta Saneamento - Peso 10% */}
+            <GoalProgressCard
+              title="Meta Saneamento (Peso 10%)"
+              icon={FolderCheck}
+              iconColor="text-emerald-500"
+              meta={saneamentoData.length}
+              alcancado={saneamentoMetricas.saneadas}
+              semanaAtual={semanaAtual}
+              totalSemanas={52}
+            />
+
+            {/* Meta Execuções e Acordos - Peso 45% */}
+            <GoalProgressCard
+              title="Meta Execuções e Acordos (Peso 45%)"
+              icon={Scale}
+              iconColor="text-purple-500"
+              meta={metaAnualTransito}
+              alcancado={evolucaoAcumuladaTransito.metricas?.totalAcordosCumprimentos || 0}
+              semanaAtual={semanaAtual}
+              totalSemanas={52}
+            />
+          </div>
+
           {/* Card Meta Geral Ponderada */}
           {(() => {
             // Cálculos das metas individuais
@@ -1987,42 +2023,6 @@ const RadarBancario = () => {
               </Card>
             );
           })()}
-
-          {/* Cards de Metas Individuais */}
-          <div className="grid gap-6">
-            {/* Meta Protocolos - Peso 45% */}
-            <GoalProgressCard
-              title="Meta Protocolos (Peso 45%)"
-              icon={FileText}
-              iconColor="text-blue-500"
-              meta={metaAnualIniciais}
-              alcancado={iniciaisData.length}
-              semanaAtual={semanaAtual}
-              totalSemanas={52}
-            />
-
-            {/* Meta Saneamento - Peso 10% */}
-            <GoalProgressCard
-              title="Meta Saneamento (Peso 10%)"
-              icon={FolderCheck}
-              iconColor="text-emerald-500"
-              meta={saneamentoData.length}
-              alcancado={saneamentoMetricas.saneadas}
-              semanaAtual={semanaAtual}
-              totalSemanas={52}
-            />
-
-            {/* Meta Execuções e Acordos - Peso 45% */}
-            <GoalProgressCard
-              title="Meta Execuções e Acordos (Peso 45%)"
-              icon={Scale}
-              iconColor="text-purple-500"
-              meta={metaAnualTransito}
-              alcancado={evolucaoAcumuladaTransito.metricas?.totalAcordosCumprimentos || 0}
-              semanaAtual={semanaAtual}
-              totalSemanas={52}
-            />
-          </div>
 
           <div className="flex justify-center pt-4">
             <button
