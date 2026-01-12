@@ -124,21 +124,12 @@ const RadarComercial = () => {
   }, []);
 
   // ===================== CONTRATOS FECHADOS POR PRODUTO =====================
-  const contratosFechadosPorProduto = useMemo(() => {
+  // Agrupa contratos fechados por setor e depois por produto
+  const contratosFechadosPorSetor = useMemo(() => {
     // Filtra apenas registros com resultado "contrato fechado"
     const contratosFechados = data.filter(r => 
       r.resultado?.toLowerCase().includes('contrato fechado')
     );
-
-    // Agrupa por produto
-    const produtoMap = new Map<string, typeof contratosFechados>();
-    contratosFechados.forEach(contrato => {
-      const produto = contrato.produto?.trim() || 'Não especificado';
-      if (!produtoMap.has(produto)) {
-        produtoMap.set(produto, []);
-      }
-      produtoMap.get(produto)!.push(contrato);
-    });
 
     // Função para parsear moeda (pt-BR e en-US)
     const parseBrazilianCurrency = (value: string): number => {
@@ -187,21 +178,56 @@ const RadarComercial = () => {
       return Number.isFinite(result) ? result : 0;
     };
 
-    // Converte para array ordenado por quantidade de contratos
-    return Array.from(produtoMap.entries())
-      .map(([produto, contracts]) => ({
-        produto,
-        contracts: contracts.map(c => ({
-          responsavel: c.responsavel,
-          produto: c.produto,
-          resultado: c.resultado,
-          honorariosExito: c.honorariosExito,
-          honorariosIniciais: c.honorariosIniciais,
-          valorContrato: c.rawRow?.[8] ? parseBrazilianCurrency(c.rawRow[8]) : 0, // Coluna I (índice 8)
-        })),
-      }))
-      .sort((a, b) => b.contracts.length - a.contracts.length);
+    // Primeiro agrupa por setor
+    const setorMap = new Map<string, typeof contratosFechados>();
+    contratosFechados.forEach(contrato => {
+      const setor = contrato.setor?.trim() || 'Não especificado';
+      if (!setorMap.has(setor)) {
+        setorMap.set(setor, []);
+      }
+      setorMap.get(setor)!.push(contrato);
+    });
+
+    // Para cada setor, agrupa por produto
+    return Array.from(setorMap.entries())
+      .map(([setor, contratosDoSetor]) => {
+        // Agrupa por produto dentro do setor
+        const produtoMap = new Map<string, typeof contratosDoSetor>();
+        contratosDoSetor.forEach(contrato => {
+          const produto = contrato.produto?.trim() || 'Não especificado';
+          if (!produtoMap.has(produto)) {
+            produtoMap.set(produto, []);
+          }
+          produtoMap.get(produto)!.push(contrato);
+        });
+
+        const produtos = Array.from(produtoMap.entries())
+          .map(([produto, contracts]) => ({
+            produto,
+            contracts: contracts.map(c => ({
+              responsavel: c.responsavel,
+              produto: c.produto,
+              resultado: c.resultado,
+              honorariosExito: c.honorariosExito,
+              honorariosIniciais: c.honorariosIniciais,
+              valorContrato: c.rawRow?.[8] ? parseBrazilianCurrency(c.rawRow[8]) : 0,
+            })),
+          }))
+          .sort((a, b) => b.contracts.length - a.contracts.length);
+
+        return {
+          setor,
+          totalContratos: contratosDoSetor.length,
+          produtos,
+        };
+      })
+      .sort((a, b) => b.totalContratos - a.totalContratos);
   }, [data]);
+
+  // Mantém compatibilidade com contagem de produtos (para o badge no header)
+  const totalProdutosContratosFechados = useMemo(() => {
+    return contratosFechadosPorSetor.reduce((sum, setor) => sum + setor.produtos.length, 0);
+  }, [contratosFechadosPorSetor]);
 
   // ===================== METAS =====================
   // Meta 1: Contratos High Ticket (500)
@@ -2093,7 +2119,7 @@ const RadarComercial = () => {
             </div>
             <div className="flex items-center gap-4">
               <span className="text-sm text-muted-foreground">
-                {contratosFechadosPorProduto.length} produtos
+                {totalProdutosContratosFechados} produtos em {contratosFechadosPorSetor.length} setores
               </span>
               {openSection === 'contratosFechados' ? (
                 <ChevronDown className="h-5 w-5 text-muted-foreground" />
@@ -2104,19 +2130,35 @@ const RadarComercial = () => {
           </div>
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-8 mt-6">
-          {/* Cards de produtos com contratos fechados */}
+          {/* Cards de produtos com contratos fechados agrupados por setor */}
           {isLoading ? (
             <div className="flex items-center justify-center py-12">
               <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
             </div>
-          ) : contratosFechadosPorProduto.length > 0 ? (
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {contratosFechadosPorProduto.map(({ produto, contracts }) => (
-                <ContractProductCard
-                  key={produto}
-                  produto={produto}
-                  contracts={contracts}
-                />
+          ) : contratosFechadosPorSetor.length > 0 ? (
+            <div className="space-y-8">
+              {contratosFechadosPorSetor.map(({ setor, totalContratos, produtos }) => (
+                <div key={setor} className="space-y-4">
+                  {/* Header do setor */}
+                  <div className="flex items-center gap-3 pb-2 border-b border-border">
+                    <Briefcase className="h-5 w-5 text-violet-500" />
+                    <h3 className="text-lg font-semibold text-foreground">{setor}</h3>
+                    <span className="text-sm text-muted-foreground">
+                      ({totalContratos} contratos em {produtos.length} produtos)
+                    </span>
+                  </div>
+                  
+                  {/* Cards de produtos do setor */}
+                  <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+                    {produtos.map(({ produto, contracts }) => (
+                      <ContractProductCard
+                        key={produto}
+                        produto={produto}
+                        contracts={contracts}
+                      />
+                    ))}
+                  </div>
+                </div>
               ))}
             </div>
           ) : (
