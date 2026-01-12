@@ -20,7 +20,8 @@ import {
   Briefcase,
   ClipboardList,
   Calculator,
-  Calendar
+  Calendar,
+  ListChecks
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeekFilter } from "@/components/WeekFilter";
@@ -368,6 +369,16 @@ const RadarBancario = () => {
       .filter(c => c.camara !== 'Não informado' && c.count >= 3)
       .sort((a, b) => parseFloat(b.taxaVitoria) - parseFloat(a.taxaVitoria));
 
+    // Por situação atual
+    const porSituacao: Record<string, number> = {};
+    transitoData.forEach(r => {
+      const situacao = r.situacaoAtual || 'Não informado';
+      porSituacao[situacao] = (porSituacao[situacao] || 0) + 1;
+    });
+    const distribuicaoSituacao = Object.entries(porSituacao)
+      .map(([situacao, count]) => ({ situacao, count }))
+      .sort((a, b) => b.count - a.count);
+
     // Processos com pagamento vs pendentes (vitórias)
     const vitorias = transitoData.filter(r => r.resultadoFinal?.toLowerCase().includes('vitória') || r.resultadoFinal?.toLowerCase().includes('vitoria'));
     const comPagamento = vitorias.filter(r => r.dataPagamento?.trim()).length;
@@ -381,6 +392,7 @@ const RadarBancario = () => {
       totalHonorarios,
       distribuicaoGrau,
       distribuicaoResultadoFinal,
+      distribuicaoSituacao,
       rankingTipoAcao,
       rankingEstados,
       rankingCamaras,
@@ -1341,6 +1353,50 @@ const RadarBancario = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Situação dos Processos */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <ListChecks className="h-5 w-5 text-violet-500" />
+                <CardTitle className="text-lg">Situação dos Processos</CardTitle>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+                {transitoMetricas.distribuicaoSituacao.map((item, index) => {
+                  const total = transitoMetricas.total || 1;
+                  const percentage = ((item.count / total) * 100).toFixed(1);
+                  const colors = [
+                    'bg-violet-500', 'bg-purple-500', 'bg-indigo-500', 'bg-blue-500',
+                    'bg-cyan-500', 'bg-teal-500', 'bg-emerald-500', 'bg-green-500',
+                    'bg-amber-500', 'bg-orange-500', 'bg-rose-500', 'bg-pink-500'
+                  ];
+                  
+                  return (
+                    <div key={item.situacao} className="p-4 rounded-lg bg-muted/50 border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className={`w-3 h-3 rounded-full ${colors[index % colors.length]}`} />
+                        <span className="font-medium text-sm truncate" title={item.situacao}>
+                          {item.situacao}
+                        </span>
+                      </div>
+                      <div className="flex items-baseline gap-2">
+                        <span className="text-2xl font-bold">{item.count}</span>
+                        <span className="text-sm text-muted-foreground">({percentage}%)</span>
+                      </div>
+                      <div className="mt-2 h-2 bg-muted rounded-full overflow-hidden">
+                        <div 
+                          className={`h-full ${colors[index % colors.length]} rounded-full transition-all`}
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Rankings de Valores */}
           <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
