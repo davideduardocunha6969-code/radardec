@@ -41,13 +41,19 @@ import {
   BarChart,
   Bar,
   XAxis,
+  YAxis,
   Tooltip,
   ResponsiveContainer,
   LabelList,
   PieChart as RechartsPieChart,
   Pie,
   Cell,
+  LineChart,
+  Line,
+  ReferenceLine,
+  Legend,
 } from "recharts";
+import { getWeek } from "date-fns";
 import { ChartContainer, ChartTooltipContent } from "@/components/ui/chart";
 
 const RadarBancario = () => {
@@ -146,6 +152,55 @@ const RadarBancario = () => {
 
     return { total, rankingResponsaveis, rankingTipoAcao, rankingEstados, evolucaoSemanal };
   }, [iniciaisData, iniciaisWeekFilter, iniciaisResponsavelFilter, iniciaisEstadoFilter]);
+
+  // ===================== INICIAIS - GRÁFICO ACUMULADO VS META =====================
+  const metaAnualIniciais = 10000;
+  const semanaAtual = getWeek(new Date()) - 1; // Ajuste 0-indexed
+
+  const evolucaoAcumuladaIniciais = useMemo(() => {
+    // Calcula os protocolos acumulados por semana
+    const porSemana: Record<number, number> = {};
+    iniciaisData.forEach(r => {
+      if (r.semana > 0) {
+        porSemana[r.semana] = (porSemana[r.semana] || 0) + 1;
+      }
+    });
+
+    // Gera dados para todas as 52 semanas
+    const dados = [];
+    let acumulado = 0;
+    
+    for (let semana = 1; semana <= 52; semana++) {
+      const protocolosSemana = porSemana[semana] || 0;
+      acumulado += protocolosSemana;
+      
+      const metaEsperada = Math.round((metaAnualIniciais / 52) * semana);
+      
+      dados.push({
+        semana,
+        acumulado: semana <= semanaAtual ? acumulado : null,
+        metaSustentavel: metaEsperada,
+      });
+    }
+
+    return dados;
+  }, [iniciaisData, semanaAtual]);
+
+  // Métricas do gráfico acumulado
+  const metricasAcumuladoIniciais = useMemo(() => {
+    const totalAcumulado = iniciaisData.length;
+    const metaEsperadaSemana = Math.round((metaAnualIniciais / 52) * semanaAtual);
+    const diferenca = totalAcumulado - metaEsperadaSemana;
+    const percentualAtingimento = ((totalAcumulado / metaAnualIniciais) * 100).toFixed(1);
+
+    return {
+      semanaAtual,
+      totalAcumulado,
+      metaEsperadaSemana,
+      diferenca,
+      percentualAtingimento
+    };
+  }, [iniciaisData, semanaAtual]);
 
   // ===================== SANEAMENTO - MÉTRICAS =====================
   const saneamentoMetricas = useMemo(() => {
@@ -425,6 +480,124 @@ const RadarBancario = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Gráfico de Evolução Acumulada vs Meta */}
+          <Card>
+            <CardHeader className="pb-2">
+              <div className="flex items-center gap-3">
+                <TrendingUp className="h-5 w-5 text-green-500" />
+                <CardTitle className="text-lg">Evolução Acumulada vs Meta</CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                Comparativo entre protocolos acumulados e a meta de {metaAnualIniciais.toLocaleString('pt-BR')} ajuizamentos no ano
+              </p>
+            </CardHeader>
+            <CardContent>
+              {/* Métricas do gráfico */}
+              <div className="flex flex-wrap gap-x-8 gap-y-2 mb-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Semana atual: </span>
+                  <span className="font-semibold">{metricasAcumuladoIniciais.semanaAtual}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Total acumulado: </span>
+                  <span className="font-semibold text-blue-600">{metricasAcumuladoIniciais.totalAcumulado.toLocaleString('pt-BR')}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Meta esperada (S{metricasAcumuladoIniciais.semanaAtual}): </span>
+                  <span className="font-semibold">{metricasAcumuladoIniciais.metaEsperadaSemana.toLocaleString('pt-BR')}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Diferença: </span>
+                  <span className={`font-semibold ${metricasAcumuladoIniciais.diferenca >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    {metricasAcumuladoIniciais.diferenca >= 0 ? '+' : ''}{metricasAcumuladoIniciais.diferenca.toLocaleString('pt-BR')}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Atingimento: </span>
+                  <span className="font-semibold text-primary">{metricasAcumuladoIniciais.percentualAtingimento}%</span>
+                </div>
+              </div>
+
+              {/* Legenda */}
+              <div className="flex items-center gap-6 mb-2 text-xs">
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-0.5 bg-blue-600 rounded" />
+                  <span className="text-muted-foreground">Protocolos Acumulados</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-0.5 bg-green-500 rounded border-dashed" style={{ borderStyle: 'dashed', borderWidth: '1px', borderColor: 'hsl(142, 71%, 45%)' }} />
+                  <span className="text-muted-foreground">Meta Sustentável ({metaAnualIniciais.toLocaleString('pt-BR')}/ano)</span>
+                </div>
+              </div>
+
+              <ChartContainer config={chartConfig} className="h-[350px] w-full">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={evolucaoAcumuladaIniciais} margin={{ top: 30, right: 20, left: 20, bottom: 10 }}>
+                    <XAxis 
+                      dataKey="semana" 
+                      tick={{ fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                      interval={3}
+                    />
+                    <YAxis 
+                      tick={{ fontSize: 10 }}
+                      axisLine={false}
+                      tickLine={false}
+                      tickFormatter={(value) => value.toLocaleString('pt-BR')}
+                    />
+                    <Tooltip 
+                      content={({ active, payload, label }) => {
+                        if (active && payload && payload.length) {
+                          return (
+                            <div className="bg-card border border-border rounded-lg p-3 shadow-lg">
+                              <p className="font-semibold mb-2">Semana {label}</p>
+                              {payload.map((entry, index) => (
+                                <p key={index} className="text-sm" style={{ color: entry.color }}>
+                                  {entry.name === 'acumulado' ? 'Acumulado' : 'Meta'}: {entry.value?.toLocaleString('pt-BR') || '-'}
+                                </p>
+                              ))}
+                            </div>
+                          );
+                        }
+                        return null;
+                      }}
+                    />
+                    <ReferenceLine 
+                      x={semanaAtual} 
+                      stroke="hsl(var(--muted-foreground))" 
+                      strokeDasharray="4 4"
+                      label={{ 
+                        value: 'Hoje', 
+                        position: 'top', 
+                        fill: 'hsl(var(--muted-foreground))',
+                        fontSize: 11
+                      }}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="metaSustentavel" 
+                      stroke="hsl(142, 71%, 45%)" 
+                      strokeWidth={2}
+                      strokeDasharray="6 4"
+                      dot={false}
+                      name="metaSustentavel"
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="acumulado" 
+                      stroke="hsl(239, 84%, 67%)" 
+                      strokeWidth={3}
+                      dot={false}
+                      connectNulls={false}
+                      name="acumulado"
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
 
           {/* Gráfico de Evolução Semanal */}
           <Card>
