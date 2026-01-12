@@ -9,13 +9,15 @@ interface WeekFilterProps {
   selectedWeek: number | null;
   onWeekChange: (week: number | null) => void;
   isLoading?: boolean;
+  className?: string;
 }
 
 export const WeekFilter = ({ 
   weeks, 
   selectedWeek, 
   onWeekChange, 
-  isLoading = false 
+  isLoading = false,
+  className
 }: WeekFilterProps) => {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
@@ -62,7 +64,7 @@ export const WeekFilter = ({
   };
 
   return (
-    <div className="bg-card rounded-lg border border-border p-4 mb-6">
+    <div className={cn("bg-card rounded-lg border border-border p-4", className)}>
       <div className="flex items-center gap-3 mb-4">
         <CalendarDays className="h-5 w-5 text-primary" />
         <h3 className="text-sm font-medium text-foreground">Filtrar por Semana</h3>

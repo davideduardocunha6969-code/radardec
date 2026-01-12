@@ -344,44 +344,49 @@ const RadarBancario = () => {
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-6 mt-6">
           {/* Filtros */}
-          <div className="flex flex-wrap gap-3 items-center">
-            <WeekFilter
-              weeks={weeks}
-              selectedWeek={iniciaisWeekFilter}
-              onWeekChange={setIniciaisWeekFilter}
-            />
+          <div className="flex gap-4 items-stretch w-full">
+            <div className="flex-1">
+              <WeekFilter
+                weeks={weeks}
+                selectedWeek={iniciaisWeekFilter}
+                onWeekChange={setIniciaisWeekFilter}
+                className="w-full"
+              />
+            </div>
             
-            <Select
-              value={iniciaisResponsavelFilter || "all"}
-              onValueChange={(value) => setIniciaisResponsavelFilter(value === "all" ? null : value)}
-            >
-              <SelectTrigger className="w-[180px]">
-                <Users className="h-4 w-4 mr-2 text-muted-foreground" />
-                <SelectValue placeholder="Responsável" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {responsaveisUnicos.map(resp => (
-                  <SelectItem key={resp} value={resp}>{resp}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col gap-2 w-[180px]">
+              <Select
+                value={iniciaisResponsavelFilter || "all"}
+                onValueChange={(value) => setIniciaisResponsavelFilter(value === "all" ? null : value)}
+              >
+                <SelectTrigger className="w-full">
+                  <Users className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <SelectValue placeholder="Responsável" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {responsaveisUnicos.map(resp => (
+                    <SelectItem key={resp} value={resp}>{resp}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-            <Select
-              value={iniciaisEstadoFilter || "all"}
-              onValueChange={(value) => setIniciaisEstadoFilter(value === "all" ? null : value)}
-            >
-              <SelectTrigger className="w-[140px]">
-                <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                <SelectValue placeholder="Estado" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos</SelectItem>
-                {estadosUnicos.map(estado => (
-                  <SelectItem key={estado} value={estado}>{estado}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+              <Select
+                value={iniciaisEstadoFilter || "all"}
+                onValueChange={(value) => setIniciaisEstadoFilter(value === "all" ? null : value)}
+              >
+                <SelectTrigger className="w-full">
+                  <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos</SelectItem>
+                  {estadosUnicos.map(estado => (
+                    <SelectItem key={estado} value={estado}>{estado}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           {/* Cards de Métricas */}
