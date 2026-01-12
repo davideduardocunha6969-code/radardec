@@ -19,7 +19,10 @@ import {
   Goal,
   Settings2,
   Star,
-  AlertTriangle
+  AlertTriangle,
+  FileText,
+  FolderOpen,
+  CheckCircle2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeekFilter } from "@/components/WeekFilter";
@@ -5026,47 +5029,260 @@ const RadarComercial = () => {
             </CardContent>
           </Card>
 
-          {/* Card da segunda aba - GID 1905290884 */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <ClipboardList className="h-5 w-5 text-violet-500" />
-                <CardTitle className="text-lg">Dados Adicionais (GID 1905290884)</CardTitle>
-              </div>
-              <p className="text-sm text-muted-foreground">
-                Total de {administrativo2Data.length} registros carregados
-              </p>
-            </CardHeader>
-            <CardContent>
-              {administrativo2Data.length === 0 ? (
-                <div className="h-[150px] flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
-                  <div className="text-center">
-                    <ClipboardList className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
-                    <p className="text-muted-foreground text-sm">Nenhum dado encontrado na aba</p>
-                    <p className="text-muted-foreground/70 text-xs mt-1">Verifique se a aba GID 1905290884 está acessível</p>
-                  </div>
+          {/* ===== SEÇÃO: TAREFAS DE DOCUMENTAÇÃO (GID 1905290884) ===== */}
+          <div className="col-span-full mt-4">
+            <div className="flex items-center gap-3 mb-4">
+              <FileText className="h-5 w-5 text-violet-500" />
+              <h3 className="text-lg font-semibold text-violet-300">Tarefas de Documentação no Sistema</h3>
+            </div>
+          </div>
+
+          {(() => {
+            // Processa dados da aba de documentação
+            const totalTarefas = administrativo2Data.length;
+            const tarefasFinalizadas = administrativo2Data.filter(r => {
+              const status = (r.colD || '').toLowerCase().trim();
+              return status.includes('sim') || status.includes('finalizado') || 
+                     status.includes('concluído') || status === 's' || status === 'ok';
+            }).length;
+            const tarefasPendentes = totalTarefas - tarefasFinalizadas;
+            const taxaConclusao = totalTarefas > 0 ? ((tarefasFinalizadas / totalTarefas) * 100).toFixed(1) : '0';
+
+            // Ranking por responsável (Coluna C)
+            const porResponsavel: Record<string, { total: number; finalizadas: number }> = {};
+            administrativo2Data.forEach(r => {
+              const resp = (r.colC || 'Não informado').trim();
+              const status = (r.colD || '').toLowerCase().trim();
+              const finalizado = status.includes('sim') || status.includes('finalizado') || 
+                                 status.includes('concluído') || status === 's' || status === 'ok';
+              
+              if (!porResponsavel[resp]) porResponsavel[resp] = { total: 0, finalizadas: 0 };
+              porResponsavel[resp].total++;
+              if (finalizado) porResponsavel[resp].finalizadas++;
+            });
+
+            const rankingResponsavel = Object.entries(porResponsavel)
+              .map(([nome, dados]) => ({
+                nome,
+                total: dados.total,
+                finalizadas: dados.finalizadas,
+                pendentes: dados.total - dados.finalizadas,
+                taxa: dados.total > 0 ? ((dados.finalizadas / dados.total) * 100).toFixed(1) : '0'
+              }))
+              .sort((a, b) => b.total - a.total);
+
+            const maxTotal = Math.max(...rankingResponsavel.map(r => r.total), 1);
+
+            // Evolução por semana (Coluna A)
+            const porSemana: Record<string, { total: number; finalizadas: number }> = {};
+            administrativo2Data.forEach(r => {
+              const semana = (r.colA || 'N/A').trim();
+              const status = (r.colD || '').toLowerCase().trim();
+              const finalizado = status.includes('sim') || status.includes('finalizado') || 
+                                 status.includes('concluído') || status === 's' || status === 'ok';
+              
+              if (!porSemana[semana]) porSemana[semana] = { total: 0, finalizadas: 0 };
+              porSemana[semana].total++;
+              if (finalizado) porSemana[semana].finalizadas++;
+            });
+
+            const evolucaoSemanal = Object.entries(porSemana)
+              .map(([semana, dados]) => ({
+                semana,
+                total: dados.total,
+                finalizadas: dados.finalizadas,
+                pendentes: dados.total - dados.finalizadas
+              }))
+              .sort((a, b) => {
+                const numA = parseInt(a.semana) || 0;
+                const numB = parseInt(b.semana) || 0;
+                return numA - numB;
+              });
+
+            if (totalTarefas === 0) {
+              return (
+                <Card className="col-span-full">
+                  <CardContent className="py-12">
+                    <div className="flex flex-col items-center justify-center text-center">
+                      <FolderOpen className="h-12 w-12 text-muted-foreground/50 mb-3" />
+                      <p className="text-muted-foreground">Nenhum dado encontrado na aba de documentação</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              );
+            }
+
+            return (
+              <>
+                {/* Cards de métricas */}
+                <div className="grid gap-4 grid-cols-2 md:grid-cols-4 col-span-full">
+                  <Card className="bg-gradient-to-br from-slate-900/80 to-background border-slate-700/50">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <FolderOpen className="h-4 w-4" />
+                        Total de Pastas
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold">{totalTarefas}</div>
+                      <p className="text-xs text-muted-foreground mt-1">pastas processadas</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-green-950/50 to-background border-green-800/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-green-500" />
+                        Finalizadas
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-green-500">{tarefasFinalizadas}</div>
+                      <p className="text-xs text-muted-foreground mt-1">{taxaConclusao}% do total</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-amber-950/50 to-background border-amber-800/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Clock className="h-4 w-4 text-amber-500" />
+                        Pendentes
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-amber-500">{tarefasPendentes}</div>
+                      <p className="text-xs text-muted-foreground mt-1">aguardando finalização</p>
+                    </CardContent>
+                  </Card>
+
+                  <Card className="bg-gradient-to-br from-blue-950/50 to-background border-blue-800/30">
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
+                        <Users className="h-4 w-4 text-blue-500" />
+                        Responsáveis
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="text-3xl font-bold text-blue-500">{rankingResponsavel.length}</div>
+                      <p className="text-xs text-muted-foreground mt-1">pessoas envolvidas</p>
+                    </CardContent>
+                  </Card>
                 </div>
-              ) : (
-                <div className="space-y-4">
-                  {/* Exibe as colunas detectadas */}
-                  <div className="bg-muted/30 rounded-lg p-4">
-                    <h4 className="text-sm font-medium mb-2">Colunas detectadas:</h4>
-                    <div className="flex flex-wrap gap-2">
-                      {administrativo2Headers.map((header, index) => (
-                        <span key={index} className="px-2 py-1 bg-violet-500/10 text-violet-700 dark:text-violet-300 rounded text-xs">
-                          {String.fromCharCode(65 + index)}: {header || '(vazio)'}
-                        </span>
+
+                {/* Ranking por Responsável */}
+                <Card className="col-span-full md:col-span-1">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <Trophy className="h-5 w-5 text-yellow-500" />
+                      <CardTitle className="text-lg">Ranking por Responsável</CardTitle>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Pastas salvas por cada responsável (Coluna C)
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {rankingResponsavel.slice(0, 10).map((resp, index) => (
+                        <div key={resp.nome} className="space-y-1">
+                          <div className="flex items-center justify-between text-sm">
+                            <div className="flex items-center gap-2">
+                              <span className="text-lg w-8">
+                                {index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}º`}
+                              </span>
+                              <span className="font-medium truncate max-w-[150px]">{resp.nome}</span>
+                            </div>
+                            <div className="flex items-center gap-3 text-xs">
+                              <span className="text-green-500">{resp.finalizadas} ✓</span>
+                              <span className="text-amber-500">{resp.pendentes} ⏳</span>
+                              <span className="font-bold">{resp.total}</span>
+                            </div>
+                          </div>
+                          <div className="h-2 bg-muted rounded-full overflow-hidden">
+                            <div 
+                              className="h-full bg-gradient-to-r from-violet-600 to-violet-400 rounded-full transition-all"
+                              style={{ width: `${(resp.total / maxTotal) * 100}%` }}
+                            />
+                          </div>
+                        </div>
                       ))}
                     </div>
-                  </div>
-                  
-                  <p className="text-sm text-muted-foreground text-center">
-                    💡 Informe quais colunas devem ser utilizadas para criar os gráficos e rankings desta aba
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                  </CardContent>
+                </Card>
+
+                {/* Gráfico de Evolução Semanal */}
+                <Card className="col-span-full md:col-span-1">
+                  <CardHeader>
+                    <div className="flex items-center gap-3">
+                      <TrendingUp className="h-5 w-5 text-blue-500" />
+                      <CardTitle className="text-lg">Evolução Semanal de Documentação</CardTitle>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Pastas processadas por semana (Coluna A)
+                    </p>
+                  </CardHeader>
+                  <CardContent>
+                    {evolucaoSemanal.length > 0 ? (
+                      <ChartContainer config={{ finalizadas: { label: "Finalizadas", color: "hsl(142, 76%, 36%)" }, pendentes: { label: "Pendentes", color: "hsl(38, 92%, 50%)" } }} className="h-[280px] w-full">
+                        <BarChart data={evolucaoSemanal} margin={{ top: 20, right: 20, left: 0, bottom: 5 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
+                          <XAxis 
+                            dataKey="semana" 
+                            tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }}
+                            tickFormatter={(value) => `S${value}`}
+                          />
+                          <YAxis tick={{ fill: 'hsl(var(--muted-foreground))', fontSize: 11 }} allowDecimals={false} />
+                          <ChartTooltip 
+                            content={({ active, payload }) => {
+                              if (active && payload && payload.length) {
+                                const data = payload[0].payload;
+                                return (
+                                  <div className="bg-background border rounded-lg shadow-lg p-3">
+                                    <p className="font-medium">Semana {data.semana}</p>
+                                    <p className="text-sm text-green-500">{data.finalizadas} finalizadas</p>
+                                    <p className="text-sm text-amber-500">{data.pendentes} pendentes</p>
+                                    <p className="text-sm text-muted-foreground mt-1">Total: {data.total}</p>
+                                  </div>
+                                );
+                              }
+                              return null;
+                            }}
+                          />
+                          <Bar 
+                            dataKey="finalizadas" 
+                            stackId="a"
+                            fill="hsl(142, 76%, 36%)" 
+                            radius={[0, 0, 0, 0]}
+                            name="finalizadas"
+                          />
+                          <Bar 
+                            dataKey="pendentes" 
+                            stackId="a"
+                            fill="hsl(38, 92%, 50%)" 
+                            radius={[4, 4, 0, 0]}
+                            name="pendentes"
+                          />
+                        </BarChart>
+                      </ChartContainer>
+                    ) : (
+                      <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
+                        <p className="text-muted-foreground text-sm">Nenhum dado semanal disponível</p>
+                      </div>
+                    )}
+                    <div className="flex justify-center gap-6 mt-3 text-xs">
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded bg-green-600" />
+                        <span>Finalizadas</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded bg-amber-500" />
+                        <span>Pendentes</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            );
+          })()}
 
           {/* Botão para recolher seção */}
           <div className="flex justify-center pt-4">
