@@ -5184,38 +5184,6 @@ const RadarComercial = () => {
                       <p className="text-xs text-muted-foreground mt-1">aguardando finalização</p>
                     </CardContent>
                   </Card>
-
-                  <Card>
-                    <CardHeader className="pb-2">
-                      <CardTitle className="text-sm font-medium text-muted-foreground flex items-center gap-2">
-                        <Target className="h-4 w-4 text-primary" />
-                        Semana {semanaParaExibir}
-                        {!mostrandoSemanaAtual && (
-                          <span className="text-xs text-muted-foreground/70">(última com dados)</span>
-                        )}
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-2">
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-xs text-muted-foreground">Esperado:</span>
-                        <span className="text-lg font-semibold">{esperadoSemanaAtual} pastas</span>
-                      </div>
-                      <div className="flex items-baseline justify-between">
-                        <span className="text-xs text-muted-foreground">Realizado:</span>
-                        <span className={`text-lg font-semibold ${parseFloat(percentualSemanaAtual) >= 100 ? 'text-green-500' : parseFloat(percentualSemanaAtual) >= 80 ? 'text-amber-500' : 'text-red-500'}`}>
-                          {realizadoSemanaAtual} pastas
-                        </span>
-                      </div>
-                      <div className="pt-1 border-t border-border">
-                        <div className="flex items-baseline justify-between">
-                          <span className="text-xs text-muted-foreground">Progresso:</span>
-                          <span className={`text-sm font-bold ${parseFloat(percentualSemanaAtual) >= 100 ? 'text-green-500' : parseFloat(percentualSemanaAtual) >= 80 ? 'text-amber-500' : 'text-red-500'}`}>
-                            {percentualSemanaAtual}%
-                          </span>
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
                 </div>
 
                 {/* Ranking por Responsável */}
