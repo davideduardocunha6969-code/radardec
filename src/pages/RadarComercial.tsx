@@ -16,7 +16,8 @@ import {
   Award,
   FolderCheck,
   ClipboardList,
-  Goal
+  Goal,
+  Settings2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeekFilter } from "@/components/WeekFilter";
@@ -4309,6 +4310,56 @@ const RadarComercial = () => {
                 <h3 className="text-lg font-semibold text-foreground mb-2">Radar Saneamento de Pastas</h3>
                 <p className="text-muted-foreground max-w-md">
                   Esta seção exibirá métricas e indicadores relacionados ao saneamento de pastas.
+                  Configure a fonte de dados para visualizar os gráficos e rankings.
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Botão para recolher seção */}
+          <div className="flex justify-center pt-4">
+            <button
+              onClick={() => setOpenSection(null)}
+              className="flex items-center gap-2 px-4 py-2 text-sm text-muted-foreground hover:text-foreground hover:bg-muted/50 rounded-lg transition-colors"
+            >
+              <ChevronUp className="h-4 w-4" />
+              Recolher seção
+            </button>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* ===================== SEÇÃO: RADAR AJUSTE ADVBOX ===================== */}
+      <Collapsible 
+        open={openSection === 'advbox'} 
+        onOpenChange={() => handleSectionToggle('advbox')}
+        className="mb-8"
+      >
+        <CollapsibleTrigger className="w-full">
+          <div className="flex items-center justify-between p-4 bg-gradient-to-r from-sky-600/20 to-blue-600/20 rounded-lg border border-sky-500/30 hover:border-sky-500/50 transition-colors cursor-pointer">
+            <div className="flex items-center gap-3">
+              <Settings2 className="h-6 w-6 text-sky-500" />
+              <h2 className="text-xl font-bold text-foreground">Radar Ajuste ADVBOX</h2>
+            </div>
+            <div className="flex items-center gap-4">
+              {openSection === 'advbox' ? (
+                <ChevronDown className="h-5 w-5 text-muted-foreground" />
+              ) : (
+                <ChevronRight className="h-5 w-5 text-muted-foreground" />
+              )}
+            </div>
+          </div>
+        </CollapsibleTrigger>
+        <CollapsibleContent className="space-y-8 mt-6">
+          
+          {/* Placeholder para conteúdo futuro */}
+          <Card className="border-dashed border-2 border-sky-500/30">
+            <CardContent className="py-12">
+              <div className="flex flex-col items-center justify-center text-center">
+                <Settings2 className="h-16 w-16 text-sky-500/50 mb-4" />
+                <h3 className="text-lg font-semibold text-foreground mb-2">Radar Ajuste ADVBOX</h3>
+                <p className="text-muted-foreground max-w-md">
+                  Esta seção exibirá métricas e indicadores relacionados aos ajustes do sistema ADVBOX.
                   Configure a fonte de dados para visualizar os gráficos e rankings.
                 </p>
               </div>
