@@ -1175,6 +1175,12 @@ const RadarBancario = () => {
                 <div className="text-2xl font-bold text-green-500">
                   {isLoading ? '--' : formatCurrency(transitoMetricas.totalHonorarios)}
                 </div>
+                <div className="flex items-center gap-1 mt-2">
+                  <span className="text-xs text-muted-foreground">Média:</span>
+                  <span className="text-sm font-semibold text-green-500/80">
+                    {isLoading ? '--' : formatCurrency(transitoMetricas.total > 0 ? transitoMetricas.totalHonorarios / transitoMetricas.total : 0)}
+                  </span>
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Êxito + Sucumbência
                 </p>
@@ -1192,6 +1198,12 @@ const RadarBancario = () => {
                 <div className="text-2xl font-bold text-blue-500">
                   {isLoading ? '--' : formatCurrency(transitoMetricas.totalHonorariosExito)}
                 </div>
+                <div className="flex items-center gap-1 mt-2">
+                  <span className="text-xs text-muted-foreground">Média:</span>
+                  <span className="text-sm font-semibold text-blue-500/80">
+                    {isLoading ? '--' : formatCurrency(transitoMetricas.total > 0 ? transitoMetricas.totalHonorariosExito / transitoMetricas.total : 0)}
+                  </span>
+                </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Valor estimado
                 </p>
@@ -1208,6 +1220,12 @@ const RadarBancario = () => {
               <CardContent>
                 <div className="text-2xl font-bold text-purple-500">
                   {isLoading ? '--' : formatCurrency(transitoMetricas.totalSucumbencia)}
+                </div>
+                <div className="flex items-center gap-1 mt-2">
+                  <span className="text-xs text-muted-foreground">Média:</span>
+                  <span className="text-sm font-semibold text-purple-500/80">
+                    {isLoading ? '--' : formatCurrency(transitoMetricas.total > 0 ? transitoMetricas.totalSucumbencia / transitoMetricas.total : 0)}
+                  </span>
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
                   Valor estimado
