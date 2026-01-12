@@ -4302,61 +4302,320 @@ const RadarComercial = () => {
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-8 mt-6">
           
-          {/* Card de informação da fonte de dados */}
+          {/* Cards de métricas principais */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+            {/* Card 1: Total de Pastas */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <FolderCheck className="h-5 w-5 text-teal-500" />
+                  <CardTitle className="text-lg">Total de Pastas</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col items-center justify-center py-4">
+                  <span className="text-5xl font-bold text-teal-600">
+                    {saneamentoData.length}
+                  </span>
+                  <span className="text-sm text-muted-foreground mt-2">
+                    pastas para sanear
+                  </span>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Card 2: Pastas Saneadas */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <Target className="h-5 w-5 text-green-500" />
+                  <CardTitle className="text-lg">Pastas Saneadas</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const saneadas = saneamentoData.filter(r => {
+                    const status = (r.colI || '').toLowerCase().trim();
+                    return status === 'sim' || status === 's' || status === 'x' || status === 'saneada' || status === 'ok' || status === 'concluído' || status === 'concluido';
+                  }).length;
+                  const percentual = saneamentoData.length > 0 ? ((saneadas / saneamentoData.length) * 100).toFixed(1) : '0';
+                  
+                  return (
+                    <div className="flex flex-col items-center justify-center py-4">
+                      <span className="text-5xl font-bold text-green-600">
+                        {saneadas}
+                      </span>
+                      <span className="text-sm text-muted-foreground mt-2">
+                        saneadas ({percentual}%)
+                      </span>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            {/* Card 3: Pastas Pendentes */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <Clock className="h-5 w-5 text-amber-500" />
+                  <CardTitle className="text-lg">Pastas Pendentes</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const saneadas = saneamentoData.filter(r => {
+                    const status = (r.colI || '').toLowerCase().trim();
+                    return status === 'sim' || status === 's' || status === 'x' || status === 'saneada' || status === 'ok' || status === 'concluído' || status === 'concluido';
+                  }).length;
+                  const pendentes = saneamentoData.length - saneadas;
+                  const percentual = saneamentoData.length > 0 ? ((pendentes / saneamentoData.length) * 100).toFixed(1) : '0';
+                  
+                  return (
+                    <div className="flex flex-col items-center justify-center py-4">
+                      <span className="text-5xl font-bold text-amber-600">
+                        {pendentes}
+                      </span>
+                      <span className="text-sm text-muted-foreground mt-2">
+                        pendentes ({percentual}%)
+                      </span>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+
+            {/* Card 4: Taxa de Conclusão */}
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex items-center gap-3">
+                  <TrendingUp className="h-5 w-5 text-blue-500" />
+                  <CardTitle className="text-lg">Taxa de Conclusão</CardTitle>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {(() => {
+                  const saneadas = saneamentoData.filter(r => {
+                    const status = (r.colI || '').toLowerCase().trim();
+                    return status === 'sim' || status === 's' || status === 'x' || status === 'saneada' || status === 'ok' || status === 'concluído' || status === 'concluido';
+                  }).length;
+                  const percentual = saneamentoData.length > 0 ? ((saneadas / saneamentoData.length) * 100) : 0;
+                  
+                  return (
+                    <div className="flex flex-col items-center justify-center py-4">
+                      <span className={`text-5xl font-bold ${
+                        percentual >= 80 ? 'text-green-600' :
+                        percentual >= 50 ? 'text-yellow-600' :
+                        'text-red-600'
+                      }`}>
+                        {percentual.toFixed(1)}%
+                      </span>
+                      <span className="text-sm text-muted-foreground mt-2">
+                        de conclusão
+                      </span>
+                    </div>
+                  );
+                })()}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Ranking de Responsáveis */}
           <Card>
             <CardHeader>
               <div className="flex items-center gap-3">
-                <FolderCheck className="h-5 w-5 text-teal-500" />
-                <CardTitle className="text-lg">Dados de Saneamento de Pastas</CardTitle>
+                <Trophy className="h-5 w-5 text-teal-500" />
+                <CardTitle className="text-lg">Ranking de Saneamento por Responsável</CardTitle>
               </div>
               <p className="text-sm text-muted-foreground">
-                Fonte: Aba GID 1874749978
+                Responsáveis com mais pastas saneadas (Coluna H)
               </p>
             </CardHeader>
             <CardContent>
-              {saneamentoData.length > 0 ? (
-                <div className="space-y-4">
-                  <div className="flex items-center gap-6 flex-wrap">
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Total de registros: </span>
-                      <span className="font-bold text-teal-600">{saneamentoData.length}</span>
-                    </div>
-                    <div className="text-sm">
-                      <span className="text-muted-foreground">Colunas encontradas: </span>
-                      <span className="font-bold text-foreground">{saneamentoHeaders.length}</span>
-                    </div>
-                  </div>
+              {(() => {
+                // Filtra apenas pastas saneadas e agrupa por responsável
+                const saneadasPorResponsavel: Record<string, number> = {};
+                const totalPorResponsavel: Record<string, number> = {};
+                
+                saneamentoData.forEach(record => {
+                  const responsavel = (record.colH || '').trim();
+                  if (!responsavel) return;
                   
-                  {/* Exibe headers encontrados */}
-                  <div className="p-4 bg-muted/30 rounded-lg">
-                    <p className="text-sm font-medium mb-2">Colunas da planilha:</p>
-                    <div className="flex flex-wrap gap-2">
-                      {saneamentoHeaders.map((header, index) => (
-                        <span 
-                          key={index} 
-                          className="px-2 py-1 bg-teal-500/20 text-teal-700 rounded text-xs font-medium"
-                        >
-                          {String.fromCharCode(65 + index)}: {header || '(vazio)'}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
+                  totalPorResponsavel[responsavel] = (totalPorResponsavel[responsavel] || 0) + 1;
                   
-                  <p className="text-sm text-muted-foreground italic">
-                    Informe quais colunas devem ser utilizadas para criar os gráficos e rankings desta seção.
-                  </p>
-                </div>
-              ) : (
-                <div className="h-[150px] flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
-                  <div className="text-center">
-                    <FolderCheck className="h-12 w-12 text-muted-foreground/50 mx-auto mb-3" />
-                    <p className="text-muted-foreground font-medium">Nenhum dado encontrado</p>
-                    <p className="text-sm text-muted-foreground/70">
-                      Verifique se a aba GID 1874749978 contém dados
-                    </p>
+                  const status = (record.colI || '').toLowerCase().trim();
+                  const isSaneada = status === 'sim' || status === 's' || status === 'x' || status === 'saneada' || status === 'ok' || status === 'concluído' || status === 'concluido';
+                  
+                  if (isSaneada) {
+                    saneadasPorResponsavel[responsavel] = (saneadasPorResponsavel[responsavel] || 0) + 1;
+                  }
+                });
+                
+                // Transforma em array e ordena por quantidade saneada
+                const rankingData = Object.entries(totalPorResponsavel)
+                  .map(([responsavel, total]) => ({
+                    responsavel,
+                    total,
+                    saneadas: saneadasPorResponsavel[responsavel] || 0,
+                    percentual: total > 0 ? ((saneadasPorResponsavel[responsavel] || 0) / total) * 100 : 0
+                  }))
+                  .sort((a, b) => b.saneadas - a.saneadas)
+                  .map((item, index) => ({ ...item, posicao: index + 1 }));
+                
+                if (rankingData.length === 0) {
+                  return (
+                    <div className="h-[150px] flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
+                      <div className="text-center">
+                        <Users className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+                        <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                const maxSaneadas = rankingData[0]?.saneadas || 1;
+                
+                return (
+                  <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                    {rankingData.map((item) => {
+                      const barWidth = maxSaneadas > 0 ? (item.saneadas / maxSaneadas) * 100 : 0;
+                      
+                      let medalha = '';
+                      if (item.posicao === 1) { medalha = '🥇'; }
+                      else if (item.posicao === 2) { medalha = '🥈'; }
+                      else if (item.posicao === 3) { medalha = '🥉'; }
+                      
+                      return (
+                        <div key={item.responsavel} className="flex items-center gap-2">
+                          <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                            item.posicao === 1 ? 'bg-yellow-500 text-yellow-950' :
+                            item.posicao === 2 ? 'bg-gray-300 text-gray-700' :
+                            item.posicao === 3 ? 'bg-amber-600 text-amber-50' :
+                            'bg-muted text-muted-foreground'
+                          }`}>
+                            {medalha || `${item.posicao}º`}
+                          </div>
+                          <div className="flex-shrink-0 w-32 text-xs font-medium truncate" title={item.responsavel}>
+                            {item.responsavel}
+                          </div>
+                          <div className="flex-1 relative">
+                            <div className="h-6 bg-muted/50 rounded-full overflow-hidden">
+                              <div 
+                                className="h-full bg-teal-500 rounded-full transition-all duration-500"
+                                style={{ width: `${barWidth}%` }}
+                              />
+                            </div>
+                            <div className="absolute inset-0 flex items-center justify-end pr-2">
+                              <span className="text-xs font-semibold text-foreground">
+                                {item.saneadas}/{item.total} ({item.percentual.toFixed(0)}%)
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
-                </div>
-              )}
+                );
+              })()}
+            </CardContent>
+          </Card>
+
+          {/* Gráfico de Evolução Semanal */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-5 w-5 text-teal-500" />
+                <CardTitle className="text-lg">Evolução Semanal de Saneamento</CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Quantidade de pastas saneadas por semana (Coluna J)
+              </p>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                // Agrupa saneamentos por semana
+                const saneamentosPorSemana: Record<number, number> = {};
+                
+                saneamentoData.forEach(record => {
+                  const status = (record.colI || '').toLowerCase().trim();
+                  const isSaneada = status === 'sim' || status === 's' || status === 'x' || status === 'saneada' || status === 'ok' || status === 'concluído' || status === 'concluido';
+                  
+                  if (isSaneada) {
+                    const semanaStr = (record.colJ || '').trim();
+                    const semana = parseInt(semanaStr) || 0;
+                    if (semana >= 1 && semana <= 53) {
+                      saneamentosPorSemana[semana] = (saneamentosPorSemana[semana] || 0) + 1;
+                    }
+                  }
+                });
+                
+                // Encontra a primeira e última semana com dados
+                const semanasComDados = Object.keys(saneamentosPorSemana).map(Number).filter(s => s > 0);
+                const primeiraSemanaDados = semanasComDados.length > 0 ? Math.min(...semanasComDados) : 1;
+                const ultimaSemanaDados = semanasComDados.length > 0 ? Math.max(...semanasComDados) : 53;
+                
+                // Cria array com semanas do intervalo
+                const chartData = [];
+                for (let semana = Math.max(1, primeiraSemanaDados - 2); semana <= Math.min(53, ultimaSemanaDados + 2); semana++) {
+                  chartData.push({
+                    semana,
+                    saneadas: saneamentosPorSemana[semana] || 0,
+                  });
+                }
+                
+                const totalSaneadas = Object.values(saneamentosPorSemana).reduce((sum, v) => sum + v, 0);
+                
+                if (totalSaneadas === 0) {
+                  return (
+                    <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg border-2 border-dashed border-muted-foreground/20">
+                      <div className="text-center">
+                        <BarChart3 className="h-10 w-10 text-muted-foreground/50 mx-auto mb-2" />
+                        <p className="text-muted-foreground text-sm">Nenhum saneamento registrado com semana</p>
+                      </div>
+                    </div>
+                  );
+                }
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="text-sm">
+                      <span className="text-muted-foreground">Total saneadas com semana registrada: </span>
+                      <span className="font-bold text-teal-600">{totalSaneadas}</span>
+                    </div>
+                    <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={chartData} margin={{ top: 30, right: 10, left: 10, bottom: 20 }}>
+                          <XAxis 
+                            dataKey="semana" 
+                            tick={{ fontSize: 10 }}
+                            className="text-muted-foreground"
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <Tooltip 
+                            content={<ChartTooltipContent />}
+                            formatter={(value: number) => [`${value} pastas`, 'Saneadas']}
+                            labelFormatter={(label) => `Semana ${label}`}
+                          />
+                          <Bar 
+                            dataKey="saneadas" 
+                            fill="hsl(var(--chart-4))"
+                            radius={[4, 4, 0, 0]}
+                          >
+                            <LabelList 
+                              dataKey="saneadas" 
+                              position="top" 
+                              className="fill-foreground"
+                              fontSize={10}
+                              formatter={(value: number) => value > 0 ? value : ''}
+                            />
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  </div>
+                );
+              })()}
             </CardContent>
           </Card>
 
