@@ -4336,7 +4336,7 @@ const RadarComercial = () => {
                 {(() => {
                   const saneadas = saneamentoData.filter(r => {
                     const status = (r.colI || '').toLowerCase().trim();
-                    return status === 'sim' || status === 's' || status === 'x' || status === 'saneada' || status === 'ok' || status === 'concluído' || status === 'concluido';
+                    return status === 'saneado';
                   }).length;
                   const percentual = saneamentoData.length > 0 ? ((saneadas / saneamentoData.length) * 100).toFixed(1) : '0';
                   
@@ -4366,7 +4366,7 @@ const RadarComercial = () => {
                 {(() => {
                   const saneadas = saneamentoData.filter(r => {
                     const status = (r.colI || '').toLowerCase().trim();
-                    return status === 'sim' || status === 's' || status === 'x' || status === 'saneada' || status === 'ok' || status === 'concluído' || status === 'concluido';
+                    return status === 'saneado';
                   }).length;
                   const pendentes = saneamentoData.length - saneadas;
                   const percentual = saneamentoData.length > 0 ? ((pendentes / saneamentoData.length) * 100).toFixed(1) : '0';
@@ -4397,7 +4397,7 @@ const RadarComercial = () => {
                 {(() => {
                   const saneadas = saneamentoData.filter(r => {
                     const status = (r.colI || '').toLowerCase().trim();
-                    return status === 'sim' || status === 's' || status === 'x' || status === 'saneada' || status === 'ok' || status === 'concluído' || status === 'concluido';
+                    return status === 'saneado';
                   }).length;
                   const percentual = saneamentoData.length > 0 ? ((saneadas / saneamentoData.length) * 100) : 0;
                   
