@@ -12,10 +12,17 @@ import {
   BarChart3,
   Trophy,
   ClipboardList,
-  Calendar
+  Calendar,
+  DollarSign,
+  CheckCircle2,
+  XCircle,
+  Star,
+  Shield,
+  FileCheck
 } from "lucide-react";
 import { usePrevidenciarioData } from "@/hooks/usePrevidenciarioData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Progress } from "@/components/ui/progress";
 import {
   Collapsible,
   CollapsibleContent,
@@ -104,6 +111,52 @@ const RadarPrevidenciario = () => {
       .slice(0, 10);
   }, [data]);
 
+  // Ranking por soma de honorários de êxito
+  const rankingHonorariosData = useMemo(() => {
+    if (!data?.peticoesIniciais) return [];
+    
+    const filtered = peticoesWeekFilter 
+      ? data.peticoesIniciais.filter(p => p.semana === peticoesWeekFilter)
+      : data.peticoesIniciais;
+    
+    const byBeneficio = filtered.reduce((acc, p) => {
+      if (p.tipoBeneficio) {
+        if (!acc[p.tipoBeneficio]) {
+          acc[p.tipoBeneficio] = { total: 0, count: 0 };
+        }
+        acc[p.tipoBeneficio].total += p.expectativaHonorarios || 0;
+        acc[p.tipoBeneficio].count += 1;
+      }
+      return acc;
+    }, {} as Record<string, { total: number; count: number }>);
+
+    return Object.entries(byBeneficio)
+      .map(([name, { total, count }]) => ({ name, total, count }))
+      .sort((a, b) => b.total - a.total)
+      .slice(0, 10);
+  }, [data, peticoesWeekFilter]);
+
+  // Ranking por quantidade de petições por tipo
+  const rankingTipoPeticoesData = useMemo(() => {
+    if (!data?.peticoesIniciais) return [];
+    
+    const filtered = peticoesWeekFilter 
+      ? data.peticoesIniciais.filter(p => p.semana === peticoesWeekFilter)
+      : data.peticoesIniciais;
+    
+    const byTipo = filtered.reduce((acc, p) => {
+      if (p.tipoBeneficio) {
+        acc[p.tipoBeneficio] = (acc[p.tipoBeneficio] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    return Object.entries(byTipo)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 10);
+  }, [data, peticoesWeekFilter]);
+
   const peticoesPorResponsavelData = useMemo(() => {
     if (!data?.peticoesIniciais) return [];
     
@@ -123,12 +176,88 @@ const RadarPrevidenciario = () => {
       .sort((a, b) => b.value - a.value);
   }, [data, peticoesWeekFilter]);
 
+  // Campos booleanos (EPI, GPS, Autônomo, Rural < 12)
+  const camposBooleanos = useMemo(() => {
+    if (!data?.peticoesIniciais) return null;
+    
+    const filtered = peticoesWeekFilter 
+      ? data.peticoesIniciais.filter(p => p.semana === peticoesWeekFilter)
+      : data.peticoesIniciais;
+    
+    const total = filtered.length;
+    if (total === 0) return null;
+
+    const isSim = (value: string) => value?.toLowerCase().trim() === 'sim';
+    const isNao = (value: string) => value?.toLowerCase().trim() === 'não' || value?.toLowerCase().trim() === 'nao';
+
+    const epiSim = filtered.filter(p => isSim(p.epiEficaz)).length;
+    const gpsSim = filtered.filter(p => isSim(p.gps)).length;
+    const autonomoSim = filtered.filter(p => isSim(p.autonomo)).length;
+    const ruralSim = filtered.filter(p => isSim(p.ruralMenor12)).length;
+
+    // Casos onde TODOS são "não"
+    const todosNao = filtered.filter(p => 
+      isNao(p.epiEficaz) && isNao(p.gps) && isNao(p.autonomo) && isNao(p.ruralMenor12)
+    ).length;
+
+    return {
+      total,
+      epi: { sim: epiSim, percent: Math.round((epiSim / total) * 100) },
+      gps: { sim: gpsSim, percent: Math.round((gpsSim / total) * 100) },
+      autonomo: { sim: autonomoSim, percent: Math.round((autonomoSim / total) * 100) },
+      rural: { sim: ruralSim, percent: Math.round((ruralSim / total) * 100) },
+      todosNao: { count: todosNao, percent: Math.round((todosNao / total) * 100) },
+    };
+  }, [data, peticoesWeekFilter]);
+
+  // Petições por situação (filtrado)
   const peticoesPorSituacaoData = useMemo(() => {
-    if (!data?.stats?.peticoesPorSituacao) return [];
-    return Object.entries(data.stats.peticoesPorSituacao)
-      .map(([name, value]) => ({ name, value }))
+    if (!data?.peticoesIniciais) return [];
+    
+    const filtered = peticoesWeekFilter 
+      ? data.peticoesIniciais.filter(p => p.semana === peticoesWeekFilter)
+      : data.peticoesIniciais;
+    
+    const bySituacao = filtered.reduce((acc, p) => {
+      if (p.situacao) {
+        acc[p.situacao] = (acc[p.situacao] || 0) + 1;
+      }
+      return acc;
+    }, {} as Record<string, number>);
+
+    const total = filtered.length;
+    return Object.entries(bySituacao)
+      .map(([name, value]) => ({ 
+        name, 
+        value,
+        percent: total > 0 ? Math.round((value / total) * 100) : 0
+      }))
       .sort((a, b) => b.value - a.value);
-  }, [data]);
+  }, [data, peticoesWeekFilter]);
+
+  // Nota média das petições corrigidas
+  const notaMediaCorrecao = useMemo(() => {
+    if (!data?.peticoesIniciais) return null;
+    
+    const filtered = peticoesWeekFilter 
+      ? data.peticoesIniciais.filter(p => p.semana === peticoesWeekFilter)
+      : data.peticoesIniciais;
+    
+    const comNota = filtered.filter(p => {
+      const nota = parseFloat(p.notaCorrecao);
+      return !isNaN(nota) && nota > 0;
+    });
+
+    if (comNota.length === 0) return null;
+
+    const somaNotas = comNota.reduce((acc, p) => acc + parseFloat(p.notaCorrecao), 0);
+    const media = somaNotas / comNota.length;
+
+    return {
+      media: media.toFixed(2),
+      total: comNota.length,
+    };
+  }, [data, peticoesWeekFilter]);
 
   const tarefasPorTipoData = useMemo(() => {
     if (!data?.tarefas) return [];
@@ -442,29 +571,57 @@ const RadarPrevidenciario = () => {
             )}
           </div>
 
+          {/* Primeira linha: Rankings por Honorários e por Tipo */}
           <div className="grid gap-6 md:grid-cols-2">
-            {/* Petições por Tipo de Benefício */}
+            {/* Ranking por Soma de Honorários de Êxito */}
             <Card>
               <CardHeader>
                 <div className="flex items-center gap-3">
-                  <BarChart3 className="h-5 w-5 text-primary" />
-                  <CardTitle className="text-lg">Por Tipo de Benefício</CardTitle>
+                  <DollarSign className="h-5 w-5 text-green-500" />
+                  <CardTitle className="text-lg">Ranking por Honorários de Êxito</CardTitle>
                 </div>
+                <p className="text-xs text-muted-foreground">Ordenado pela soma de expectativa de honorários</p>
               </CardHeader>
               <CardContent>
-                {peticoesPorBeneficioData.length > 0 ? (
-                  <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <BarChart data={peticoesPorBeneficioData} layout="vertical" margin={{ top: 10, right: 40, left: 10, bottom: 0 }}>
-                        <XAxis type="number" hide />
-                        <YAxis dataKey="name" type="category" tick={{ fontSize: 10 }} width={120} axisLine={false} tickLine={false} />
-                        <Tooltip formatter={(value: number) => [`${value} petições`, 'Total']} />
-                        <Bar dataKey="value" fill="hsl(var(--primary))" radius={[0, 4, 4, 0]}>
-                          <LabelList dataKey="value" position="right" className="fill-foreground" fontSize={11} />
-                        </Bar>
-                      </BarChart>
-                    </ResponsiveContainer>
-                  </ChartContainer>
+                {rankingHonorariosData.length > 0 ? (
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                    {rankingHonorariosData.map((item, index) => {
+                      const maxValue = rankingHonorariosData[0]?.total || 1;
+                      const barWidth = maxValue > 0 ? (item.total / maxValue) * 100 : 0;
+                      const posicao = index + 1;
+                      
+                      return (
+                        <div key={item.name} className="flex items-center gap-3">
+                          <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                            {posicao === 1 ? (
+                              <span className="text-2xl">🥇</span>
+                            ) : posicao === 2 ? (
+                              <span className="text-2xl">🥈</span>
+                            ) : posicao === 3 ? (
+                              <span className="text-2xl">🥉</span>
+                            ) : (
+                              <span className="text-sm font-bold text-muted-foreground">{posicao}º</span>
+                            )}
+                          </div>
+                          <div className="flex-shrink-0 w-28 text-xs font-medium truncate" title={item.name}>
+                            {item.name}
+                          </div>
+                          <div className="flex-1 relative h-6 bg-muted/30 rounded overflow-hidden">
+                            <div 
+                              className="absolute inset-y-0 left-0 bg-green-600 rounded transition-all duration-300"
+                              style={{ width: `${barWidth}%` }}
+                            />
+                            <span className="absolute inset-0 flex items-center justify-center text-xs font-medium">
+                              {formatCurrency(item.total)}
+                            </span>
+                          </div>
+                          <span className="text-xs text-muted-foreground w-12 text-right">
+                            ({item.count})
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
                 ) : (
                   <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
                     <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
@@ -473,6 +630,63 @@ const RadarPrevidenciario = () => {
               </CardContent>
             </Card>
 
+            {/* Ranking por Tipo de Petição (Quantidade) */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <FileText className="h-5 w-5 text-primary" />
+                  <CardTitle className="text-lg">Ranking por Tipo de Petição</CardTitle>
+                </div>
+                <p className="text-xs text-muted-foreground">Ordenado pela quantidade de petições</p>
+              </CardHeader>
+              <CardContent>
+                {rankingTipoPeticoesData.length > 0 ? (
+                  <div className="space-y-3 max-h-[300px] overflow-y-auto">
+                    {rankingTipoPeticoesData.map((item, index) => {
+                      const maxValue = rankingTipoPeticoesData[0]?.value || 1;
+                      const barWidth = maxValue > 0 ? (item.value / maxValue) * 100 : 0;
+                      const posicao = index + 1;
+                      
+                      return (
+                        <div key={item.name} className="flex items-center gap-3">
+                          <div className="flex-shrink-0 w-8 h-8 flex items-center justify-center">
+                            {posicao === 1 ? (
+                              <span className="text-2xl">🥇</span>
+                            ) : posicao === 2 ? (
+                              <span className="text-2xl">🥈</span>
+                            ) : posicao === 3 ? (
+                              <span className="text-2xl">🥉</span>
+                            ) : (
+                              <span className="text-sm font-bold text-muted-foreground">{posicao}º</span>
+                            )}
+                          </div>
+                          <div className="flex-shrink-0 w-28 text-xs font-medium truncate" title={item.name}>
+                            {item.name}
+                          </div>
+                          <div className="flex-1 relative h-6 bg-muted/30 rounded overflow-hidden">
+                            <div 
+                              className="absolute inset-y-0 left-0 bg-primary rounded transition-all duration-300"
+                              style={{ width: `${barWidth}%` }}
+                            />
+                            <span className="absolute inset-0 flex items-center justify-center text-xs font-medium">
+                              {item.value} petições
+                            </span>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
+                    <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Segunda linha: Ranking por Responsável e Campos Booleanos */}
+          <div className="grid gap-6 md:grid-cols-2">
             {/* Ranking de Petições por Responsável */}
             <Card>
               <CardHeader>
@@ -480,6 +694,7 @@ const RadarPrevidenciario = () => {
                   <Trophy className="h-5 w-5 text-yellow-500" />
                   <CardTitle className="text-lg">Ranking por Responsável</CardTitle>
                 </div>
+                <p className="text-xs text-muted-foreground">Ordenado pela quantidade de petições</p>
               </CardHeader>
               <CardContent>
                 {peticoesPorResponsavelData.length > 0 ? (
@@ -507,7 +722,7 @@ const RadarPrevidenciario = () => {
                           </div>
                           <div className="flex-1 relative h-6 bg-muted/30 rounded overflow-hidden">
                             <div 
-                              className="absolute inset-y-0 left-0 bg-primary rounded transition-all duration-300"
+                              className="absolute inset-y-0 left-0 bg-yellow-500 rounded transition-all duration-300"
                               style={{ width: `${barWidth}%` }}
                             />
                             <span className="absolute inset-0 flex items-center justify-center text-xs font-medium">
@@ -525,36 +740,174 @@ const RadarPrevidenciario = () => {
                 )}
               </CardContent>
             </Card>
+
+            {/* Campos Especiais (EPI, GPS, Autônomo, Rural) */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <Shield className="h-5 w-5 text-blue-500" />
+                  <CardTitle className="text-lg">Campos Especiais nas Ações</CardTitle>
+                </div>
+                <p className="text-xs text-muted-foreground">Percentual de casos marcados como "SIM"</p>
+              </CardHeader>
+              <CardContent>
+                {camposBooleanos ? (
+                  <div className="space-y-4">
+                    {/* EPI Eficaz */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          EPI Eficaz
+                        </span>
+                        <span className="font-medium">{camposBooleanos.epi.sim} ({camposBooleanos.epi.percent}%)</span>
+                      </div>
+                      <Progress value={camposBooleanos.epi.percent} className="h-2" />
+                    </div>
+
+                    {/* Emissão de GPS */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          Emissão de GPS
+                        </span>
+                        <span className="font-medium">{camposBooleanos.gps.sim} ({camposBooleanos.gps.percent}%)</span>
+                      </div>
+                      <Progress value={camposBooleanos.gps.percent} className="h-2" />
+                    </div>
+
+                    {/* Período Especial Autônomo */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          Período Especial Autônomo
+                        </span>
+                        <span className="font-medium">{camposBooleanos.autonomo.sim} ({camposBooleanos.autonomo.percent}%)</span>
+                      </div>
+                      <Progress value={camposBooleanos.autonomo.percent} className="h-2" />
+                    </div>
+
+                    {/* Período Rural &lt; 12 anos */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2">
+                          <CheckCircle2 className="h-4 w-4 text-green-500" />
+                          Período Rural &lt; 12 anos
+                        </span>
+                        <span className="font-medium">{camposBooleanos.rural.sim} ({camposBooleanos.rural.percent}%)</span>
+                      </div>
+                      <Progress value={camposBooleanos.rural.percent} className="h-2" />
+                    </div>
+
+                    {/* Separador */}
+                    <div className="border-t border-border my-2" />
+
+                    {/* Todos marcados como NÃO */}
+                    <div className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2">
+                          <XCircle className="h-4 w-4 text-red-500" />
+                          Todos marcados como NÃO
+                        </span>
+                        <span className="font-medium text-red-600">{camposBooleanos.todosNao.count} ({camposBooleanos.todosNao.percent}%)</span>
+                      </div>
+                      <Progress value={camposBooleanos.todosNao.percent} className="h-2 [&>div]:bg-red-500" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
+                    <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </div>
 
-          {/* Petições por Situação */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-3">
-                <BarChart3 className="h-5 w-5 text-primary" />
-                <CardTitle className="text-lg">Por Situação</CardTitle>
-              </div>
-            </CardHeader>
-            <CardContent>
-              {peticoesPorSituacaoData.length > 0 ? (
-                <ChartContainer config={chartConfig} className="h-[300px] w-full">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={peticoesPorSituacaoData} margin={{ top: 20, right: 10, left: 10, bottom: 60 }}>
-                      <XAxis dataKey="name" tick={<CustomXAxisTick />} axisLine={false} tickLine={false} interval={0} height={80} />
-                      <Tooltip formatter={(value: number) => [`${value} petições`, 'Total']} />
-                      <Bar dataKey="value" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]}>
-                        <LabelList dataKey="value" position="top" className="fill-foreground" fontSize={12} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-              ) : (
-                <div className="h-[300px] flex items-center justify-center bg-muted/30 rounded-lg">
-                  <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+          {/* Terceira linha: Situação das Petições e Nota Média */}
+          <div className="grid gap-6 md:grid-cols-2">
+            {/* Situação das Petições */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <FileCheck className="h-5 w-5 text-chart-2" />
+                  <CardTitle className="text-lg">Situação das Petições</CardTitle>
                 </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent>
+                {peticoesPorSituacaoData.length > 0 ? (
+                  <div className="space-y-3">
+                    {peticoesPorSituacaoData.map((item, index) => (
+                      <div key={item.name} className="space-y-1">
+                        <div className="flex items-center justify-between text-sm">
+                          <span className="truncate" title={item.name}>{item.name}</span>
+                          <span className="font-medium">{item.value} ({item.percent}%)</span>
+                        </div>
+                        <div className="relative h-3 bg-muted/30 rounded overflow-hidden">
+                          <div 
+                            className="absolute inset-y-0 left-0 rounded transition-all duration-300"
+                            style={{ 
+                              width: `${item.percent}%`,
+                              backgroundColor: COLORS[index % COLORS.length]
+                            }}
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
+                    <p className="text-muted-foreground text-sm">Nenhum dado disponível</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Nota Média das Correções */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-3">
+                  <Star className="h-5 w-5 text-yellow-500" />
+                  <CardTitle className="text-lg">Nota Média das Correções</CardTitle>
+                </div>
+                <p className="text-xs text-muted-foreground">Média das notas de revisão das petições corrigidas</p>
+              </CardHeader>
+              <CardContent>
+                {notaMediaCorrecao ? (
+                  <div className="flex flex-col items-center justify-center py-6">
+                    <div className="relative">
+                      <div className="text-6xl font-bold text-primary">
+                        {notaMediaCorrecao.media}
+                      </div>
+                      <div className="absolute -top-2 -right-6">
+                        <Star className="h-8 w-8 text-yellow-500 fill-yellow-500" />
+                      </div>
+                    </div>
+                    <p className="text-muted-foreground mt-4">
+                      Baseado em <span className="font-semibold text-foreground">{notaMediaCorrecao.total}</span> petições corrigidas
+                    </p>
+                    <div className="flex items-center gap-1 mt-4">
+                      {[1, 2, 3, 4, 5].map((star) => (
+                        <Star 
+                          key={star}
+                          className={`h-6 w-6 ${
+                            star <= Math.round(parseFloat(notaMediaCorrecao.media))
+                              ? 'text-yellow-500 fill-yellow-500'
+                              : 'text-muted-foreground'
+                          }`}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
+                    <p className="text-muted-foreground text-sm">Nenhuma petição corrigida com nota</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
         </CollapsibleContent>
       </Collapsible>
 
