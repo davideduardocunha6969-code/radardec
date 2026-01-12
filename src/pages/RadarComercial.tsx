@@ -4101,6 +4101,167 @@ const RadarComercial = () => {
             </CardContent>
           </Card>
 
+          {/* Gráfico de Evolução Acumulada de Indicações vs Meta */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <TrendingUp className="h-5 w-5 text-green-500" />
+                <CardTitle className="text-lg">Evolução Acumulada vs Meta</CardTitle>
+              </div>
+              <p className="text-sm text-muted-foreground">
+                Comparativo entre indicações acumuladas e a meta de 750 indicações no ano
+              </p>
+            </CardHeader>
+            <CardContent>
+              {(() => {
+                const META_INDICACOES = 750;
+                const metaPorSemana = META_INDICACOES / 53; // ~14.15 por semana
+                
+                // Agrupa indicações por semana
+                const indicacoesPorSemana: Record<number, number> = {};
+                
+                indicacoesRecebidasData.forEach(record => {
+                  const semanaStr = record.semana?.trim();
+                  const semana = parseInt(semanaStr) || 0;
+                  if (semana >= 1 && semana <= 53) {
+                    indicacoesPorSemana[semana] = (indicacoesPorSemana[semana] || 0) + 1;
+                  }
+                });
+                
+                // Cria array com TODAS as semanas de 1 a 53 com valores acumulados
+                const chartData = [];
+                let acumulado = 0;
+                
+                for (let semana = 1; semana <= 53; semana++) {
+                  acumulado += indicacoesPorSemana[semana] || 0;
+                  const metaAcumulada = Math.round(metaPorSemana * semana);
+                  
+                  chartData.push({
+                    semana,
+                    acumulado,
+                    meta: metaAcumulada,
+                  });
+                }
+                
+                const totalIndicacoes = indicacoesRecebidasData.length;
+                const percentualMeta = ((totalIndicacoes / META_INDICACOES) * 100).toFixed(1);
+                
+                // Encontra a semana atual
+                const hoje = new Date();
+                const inicioAno = new Date(hoje.getFullYear(), 0, 1);
+                const diffDias = Math.floor((hoje.getTime() - inicioAno.getTime()) / (1000 * 60 * 60 * 24));
+                const semanaAtual = Math.min(Math.ceil((diffDias + inicioAno.getDay() + 1) / 7), 53);
+                
+                // Meta esperada até a semana atual
+                const metaEsperada = Math.round(metaPorSemana * semanaAtual);
+                const diferencaMeta = totalIndicacoes - metaEsperada;
+                
+                return (
+                  <div className="space-y-4">
+                    <div className="flex items-center gap-6 flex-wrap">
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Semana atual: </span>
+                        <span className="font-bold text-foreground">{semanaAtual}</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Total acumulado: </span>
+                        <span className="font-bold text-blue-600">{totalIndicacoes}</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Meta esperada (S{semanaAtual}): </span>
+                        <span className="font-bold text-green-600">{metaEsperada}</span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Diferença: </span>
+                        <span className={`font-bold ${diferencaMeta >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {diferencaMeta >= 0 ? '+' : ''}{diferencaMeta}
+                        </span>
+                      </div>
+                      <div className="text-sm">
+                        <span className="text-muted-foreground">Atingimento: </span>
+                        <span className={`font-bold ${parseFloat(percentualMeta) >= 100 ? 'text-green-600' : 'text-amber-600'}`}>
+                          {percentualMeta}%
+                        </span>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-4 text-xs">
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-1 bg-blue-500 rounded" />
+                        <span className="text-muted-foreground">Indicações Acumuladas</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-4 h-1 bg-green-500 rounded" style={{ opacity: 0.7 }} />
+                        <span className="text-muted-foreground">Meta Sustentável (750/ano)</span>
+                      </div>
+                    </div>
+                    
+                    <ChartContainer config={chartConfig} className="h-[350px] w-full">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={chartData} margin={{ top: 20, right: 30, left: 10, bottom: 20 }}>
+                          <XAxis 
+                            dataKey="semana" 
+                            tick={{ fontSize: 9 }}
+                            interval={3}
+                            className="text-muted-foreground"
+                            axisLine={false}
+                            tickLine={false}
+                          />
+                          <YAxis 
+                            tick={{ fontSize: 10 }}
+                            className="text-muted-foreground"
+                            axisLine={false}
+                            tickLine={false}
+                            domain={[0, 'auto']}
+                          />
+                          <Tooltip 
+                            content={<ChartTooltipContent />}
+                            formatter={(value: number, name: string) => [
+                              value, 
+                              name === 'acumulado' ? 'Indicações' : 'Meta'
+                            ]}
+                            labelFormatter={(label) => `Semana ${label}`}
+                          />
+                          {/* Linha de meta sustentável */}
+                          <Line 
+                            type="monotone"
+                            dataKey="meta" 
+                            stroke="hsl(var(--success))"
+                            strokeWidth={2}
+                            strokeDasharray="8 4"
+                            dot={false}
+                            opacity={0.7}
+                          />
+                          {/* Linha de indicações acumuladas */}
+                          <Line 
+                            type="monotone"
+                            dataKey="acumulado" 
+                            stroke="hsl(var(--chart-1))"
+                            strokeWidth={3}
+                            dot={false}
+                          />
+                          {/* Linha vertical na semana atual */}
+                          <ReferenceLine 
+                            x={semanaAtual} 
+                            stroke="hsl(var(--muted-foreground))"
+                            strokeWidth={1}
+                            strokeDasharray="4 4"
+                            label={{ 
+                              value: 'Hoje', 
+                              position: 'top',
+                              fill: 'hsl(var(--muted-foreground))',
+                              fontSize: 10
+                            }}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </ChartContainer>
+                  </div>
+                );
+              })()}
+            </CardContent>
+          </Card>
+
           {/* Botão para recolher seção */}
           <div className="flex justify-center pt-4">
             <button
