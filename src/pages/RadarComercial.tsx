@@ -22,12 +22,17 @@ import {
   AlertTriangle,
   FileText,
   FolderOpen,
-  CheckCircle2
+  CheckCircle2,
+  Briefcase,
+  HeartPulse,
+  FolderSync,
+  UserPlus
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeekFilter } from "@/components/WeekFilter";
 import { useCommercialData } from "@/hooks/useCommercialData";
 import { AposentadoriasFuturasDialog } from "@/components/AposentadoriasFuturasDialog";
+import { GoalProgressCard } from "@/components/GoalProgressCard";
 import {
   Collapsible,
   CollapsibleContent,
@@ -105,6 +110,92 @@ const RadarComercial = () => {
       r.resultado?.toLowerCase().includes('aposentadoria futura')
     ).length;
   }, [data]);
+
+  // Calcula semana atual do ano
+  const semanaAtualDoAno = useMemo(() => {
+    const now = new Date();
+    const start = new Date(now.getFullYear(), 0, 1);
+    const diff = now.getTime() - start.getTime();
+    const oneWeek = 1000 * 60 * 60 * 24 * 7;
+    return Math.ceil(diff / oneWeek);
+  }, []);
+
+  // ===================== METAS =====================
+  // Meta 1: Contratos High Ticket (500)
+  // Benefícios: aposentadoria (PCD), Aposentadoria (TC), Aposentadoria (idade), 
+  // revisão de aposentadoria, aposentadoria especial, pensão por morte
+  const metaHighTicket = useMemo(() => {
+    const beneficiosHighTicket = [
+      'aposentadoria (pcd)',
+      'aposentadoria (tc)',
+      'aposentadoria (idade)',
+      'revisão de aposentadoria',
+      'aposentadoria especial',
+      'pensão por morte'
+    ];
+    
+    const contratosHighTicket = data.filter(r => {
+      const produto = r.produto?.toLowerCase().trim() || '';
+      const resultado = r.resultado?.toLowerCase().trim() || '';
+      const isHighTicket = beneficiosHighTicket.some(b => produto.includes(b));
+      const isContratoFechado = resultado.includes('contrato fechado');
+      return isHighTicket && isContratoFechado;
+    });
+    
+    return {
+      meta: 500,
+      alcancado: contratosHighTicket.length,
+    };
+  }, [data]);
+
+  // Meta 2: Contratos por Incapacidade (750)
+  // Benefícios: auxílio-acidente, auxílio-doença, BPC
+  const metaIncapacidade = useMemo(() => {
+    const beneficiosIncapacidade = [
+      'auxílio-acidente',
+      'auxilio-acidente',
+      'auxílio-doença',
+      'auxilio-doença',
+      'auxílio doença',
+      'auxilio doenca',
+      'bpc'
+    ];
+    
+    const contratosIncapacidade = data.filter(r => {
+      const produto = r.produto?.toLowerCase().trim() || '';
+      const resultado = r.resultado?.toLowerCase().trim() || '';
+      const isIncapacidade = beneficiosIncapacidade.some(b => produto.includes(b));
+      const isContratoFechado = resultado.includes('contrato fechado');
+      return isIncapacidade && isContratoFechado;
+    });
+    
+    return {
+      meta: 750,
+      alcancado: contratosIncapacidade.length,
+    };
+  }, [data]);
+
+  // Meta 3: Saneamento de Pastas (sanear todas)
+  const metaSaneamento = useMemo(() => {
+    const totalPastas = saneamentoData.length;
+    const pastasSaneadas = saneamentoData.filter(r => {
+      const status = r.colI?.toLowerCase().trim() || '';
+      return status === 'saneado';
+    }).length;
+    
+    return {
+      meta: totalPastas,
+      alcancado: pastasSaneadas,
+    };
+  }, [saneamentoData]);
+
+  // Meta 4: Indicações de Novos Clientes (250)
+  const metaIndicacoes = useMemo(() => {
+    return {
+      meta: 250,
+      alcancado: indicacoesData.length,
+    };
+  }, [indicacoesData]);
 
   // Calcula métricas baseadas nos dados filtrados
   const metrics = useMemo(() => {
@@ -6029,21 +6120,50 @@ const RadarComercial = () => {
             </div>
           </div>
         </CollapsibleTrigger>
-        <CollapsibleContent className="space-y-8 mt-6">
+        <CollapsibleContent className="space-y-6 mt-6">
           
-          {/* Placeholder para conteúdo futuro */}
-          <Card className="border-dashed border-2 border-rose-500/30">
-            <CardContent className="py-12">
-              <div className="flex flex-col items-center justify-center text-center">
-                <Goal className="h-16 w-16 text-rose-500/50 mb-4" />
-                <h3 className="text-lg font-semibold text-foreground mb-2">Radar Metas</h3>
-                <p className="text-muted-foreground max-w-md">
-                  Esta seção exibirá métricas e indicadores relacionados ao acompanhamento de metas.
-                  Configure a fonte de dados para visualizar os gráficos e rankings.
-                </p>
-              </div>
-            </CardContent>
-          </Card>
+          {/* Cards de Metas */}
+          <div className="grid gap-6">
+            {/* Meta 1: Contratos High Ticket */}
+            <GoalProgressCard
+              title="Meta Contratos High Ticket"
+              icon={Briefcase}
+              iconColor="text-amber-500"
+              meta={metaHighTicket.meta}
+              alcancado={metaHighTicket.alcancado}
+              semanaAtual={semanaAtualDoAno}
+            />
+
+            {/* Meta 2: Contratos por Incapacidade */}
+            <GoalProgressCard
+              title="Meta Benefícios por Incapacidade"
+              icon={HeartPulse}
+              iconColor="text-rose-500"
+              meta={metaIncapacidade.meta}
+              alcancado={metaIncapacidade.alcancado}
+              semanaAtual={semanaAtualDoAno}
+            />
+
+            {/* Meta 3: Saneamento de Pastas */}
+            <GoalProgressCard
+              title="Meta Saneamento de Pastas"
+              icon={FolderSync}
+              iconColor="text-blue-500"
+              meta={metaSaneamento.meta}
+              alcancado={metaSaneamento.alcancado}
+              semanaAtual={semanaAtualDoAno}
+            />
+
+            {/* Meta 4: Indicações de Novos Clientes */}
+            <GoalProgressCard
+              title="Meta Indicações de Novos Clientes"
+              icon={UserPlus}
+              iconColor="text-emerald-500"
+              meta={metaIndicacoes.meta}
+              alcancado={metaIndicacoes.alcancado}
+              semanaAtual={semanaAtualDoAno}
+            />
+          </div>
 
           {/* Botão para recolher seção */}
           <div className="flex justify-center pt-4">
