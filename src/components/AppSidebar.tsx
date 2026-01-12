@@ -1,4 +1,4 @@
-import { Home, Radar, TrendingUp, Landmark } from "lucide-react";
+import { Home, Radar, TrendingUp, Landmark, Scale } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import logoEscritorio from "@/assets/logo-escritorio.webp";
@@ -21,6 +21,7 @@ const menuItems = [
   { title: "Radar Controladoria", url: "/radar-controladoria", icon: Radar },
   { title: "Radar Comercial", url: "/radar-comercial", icon: TrendingUp },
   { title: "Radar Bancário", url: "/radar-bancario", icon: Landmark },
+  { title: "Radar Previdenciário", url: "/radar-previdenciario", icon: Scale },
 ];
 
 export function AppSidebar() {
