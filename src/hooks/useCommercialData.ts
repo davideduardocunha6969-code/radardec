@@ -59,6 +59,12 @@ export interface IndicacaoRecord {
   semana: string;
 }
 
+export interface IndicacaoRecebidaRecord {
+  responsavel: string;
+  semana: string;
+  resultado: string;
+}
+
 export interface CommercialDataResponse {
   records: CommercialRecord[];
   weeks: number[];
@@ -71,6 +77,7 @@ export interface CommercialDataResponse {
   sdrMessagesData: SDRMessageRecord[];
   sdrMessagesSdrNames: string[];
   indicacoesData: IndicacaoRecord[];
+  indicacoesRecebidasData: IndicacaoRecebidaRecord[];
   lastUpdated: string;
 }
 
@@ -83,6 +90,7 @@ export const useCommercialData = () => {
   const [sdrMessagesData, setSdrMessagesData] = useState<SDRMessageRecord[]>([]);
   const [sdrMessagesSdrNames, setSdrMessagesSdrNames] = useState<string[]>([]);
   const [indicacoesData, setIndicacoesData] = useState<IndicacaoRecord[]>([]);
+  const [indicacoesRecebidasData, setIndicacoesRecebidasData] = useState<IndicacaoRecebidaRecord[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
@@ -113,6 +121,7 @@ export const useCommercialData = () => {
       console.log(`Loaded ${commercialData.sdrMessagesData?.length || 0} SDR Messages records`);
       console.log(`SDR Messages Names: ${commercialData.sdrMessagesSdrNames?.join(', ') || 'none'}`);
       console.log(`Loaded ${commercialData.indicacoesData?.length || 0} Indicações records`);
+      console.log(`Loaded ${commercialData.indicacoesRecebidasData?.length || 0} Indicações Recebidas records`);
 
       setData(commercialData.records);
       setWeeks(commercialData.weeks);
@@ -122,6 +131,7 @@ export const useCommercialData = () => {
       setSdrMessagesSdrNames(commercialData.sdrMessagesSdrNames || []);
       setSdrWeeks(commercialData.sdrWeeks || []);
       setIndicacoesData(commercialData.indicacoesData || []);
+      setIndicacoesRecebidasData(commercialData.indicacoesRecebidasData || []);
       
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Erro desconhecido';
@@ -154,6 +164,7 @@ export const useCommercialData = () => {
     sdrMessagesData,
     sdrMessagesSdrNames,
     indicacoesData,
+    indicacoesRecebidasData,
     isLoading,
     error,
     refetch: fetchData,
