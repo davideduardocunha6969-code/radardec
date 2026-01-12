@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.fetch-commercial]
 verify_jwt = false
+
+[functions.fetch-previdenciario]
+verify_jwt = false
