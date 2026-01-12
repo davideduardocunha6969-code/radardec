@@ -234,6 +234,60 @@ const RadarBancario = () => {
     return { total, saneadas, pendentes, taxaSaneamento, distribuicaoResultados, rankingRevisores };
   }, [saneamentoData]);
 
+  // ===================== SANEAMENTO - GRÁFICO ACUMULADO VS META =====================
+  const evolucaoAcumuladaSaneamento = useMemo(() => {
+    const metaTotalSaneamento = saneamentoData.length; // Meta é sanear todas as pastas
+    
+    if (metaTotalSaneamento === 0) return { dados: [], metricas: null };
+
+    // Para simular evolução semanal, assumimos distribuição uniforme baseada no status atual
+    // Como não temos semana específica no saneamento, calculamos progresso total vs meta
+    const saneadas = saneamentoData.filter(r => 
+      r.status?.toLowerCase().trim() === 'saneado'
+    ).length;
+
+    const dados = [];
+    const metaPorSemana = metaTotalSaneamento / 52;
+    
+    // Calcula progresso sustentável esperado para cada semana
+    for (let semana = 1; semana <= 52; semana++) {
+      const metaEsperada = Math.round(metaPorSemana * semana);
+      
+      // Progresso acumulado até a semana atual (distribuído proporcionalmente)
+      const progressoEstimado = semana <= semanaAtual 
+        ? Math.round((saneadas / semanaAtual) * semana)
+        : null;
+      
+      dados.push({
+        semana,
+        acumulado: semana <= semanaAtual ? (semana === semanaAtual ? saneadas : progressoEstimado) : null,
+        metaSustentavel: metaEsperada,
+      });
+    }
+
+    // Ajusta o último ponto da semana atual para o valor real
+    const indexSemanaAtual = dados.findIndex(d => d.semana === semanaAtual);
+    if (indexSemanaAtual !== -1) {
+      dados[indexSemanaAtual].acumulado = saneadas;
+    }
+
+    const metaEsperadaSemana = Math.round(metaPorSemana * semanaAtual);
+    const diferenca = saneadas - metaEsperadaSemana;
+    const percentualAtingimento = ((saneadas / metaTotalSaneamento) * 100).toFixed(1);
+
+    return {
+      dados,
+      metricas: {
+        semanaAtual,
+        totalSaneado: saneadas,
+        metaTotal: metaTotalSaneamento,
+        metaEsperadaSemana,
+        diferenca,
+        percentualAtingimento
+      }
+    };
+  }, [saneamentoData, semanaAtual]);
+
   // ===================== TRÂNSITO EM JULGADO - MÉTRICAS =====================
   const transitoMetricas = useMemo(() => {
     const total = transitoData.length;
@@ -942,6 +996,117 @@ const RadarBancario = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Gráfico Evolução Acumulada vs Meta */}
+          {evolucaoAcumuladaSaneamento.metricas && (
+            <Card>
+              <CardHeader>
+                <div className="flex items-center gap-2">
+                  <TrendingUp className="h-5 w-5 text-green-500" />
+                  <CardTitle className="text-lg">Evolução Acumulada vs Meta</CardTitle>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Comparativo entre pastas saneadas e a meta de {evolucaoAcumuladaSaneamento.metricas.metaTotal.toLocaleString('pt-BR')} pastas no ano
+                </p>
+                <div className="flex flex-wrap gap-x-8 gap-y-2 mt-3 text-sm">
+                  <div>
+                    Semana atual: <span className="font-semibold text-foreground">{evolucaoAcumuladaSaneamento.metricas.semanaAtual}</span>
+                  </div>
+                  <div>
+                    Total saneado: <span className="font-semibold text-foreground">{evolucaoAcumuladaSaneamento.metricas.totalSaneado.toLocaleString('pt-BR')}</span>
+                  </div>
+                  <div>
+                    Meta esperada (S{evolucaoAcumuladaSaneamento.metricas.semanaAtual}): <span className="font-semibold text-foreground">{evolucaoAcumuladaSaneamento.metricas.metaEsperadaSemana.toLocaleString('pt-BR')}</span>
+                  </div>
+                  <div>
+                    Diferença: <span className={`font-semibold ${evolucaoAcumuladaSaneamento.metricas.diferenca >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                      {evolucaoAcumuladaSaneamento.metricas.diferenca >= 0 ? '+' : ''}{evolucaoAcumuladaSaneamento.metricas.diferenca.toLocaleString('pt-BR')}
+                    </span>
+                  </div>
+                  <div>
+                    Atingimento: <span className="font-semibold text-foreground">{evolucaoAcumuladaSaneamento.metricas.percentualAtingimento}%</span>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center gap-4 mb-4 text-xs">
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-0.5 bg-[hsl(239,84%,67%)]" />
+                    <span>Pastas Saneadas</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <div className="w-4 h-0.5 bg-[hsl(142,71%,45%)] border-dashed" style={{ borderTopWidth: 2, borderStyle: 'dashed' }} />
+                    <span>Meta Sustentável ({evolucaoAcumuladaSaneamento.metricas.metaTotal.toLocaleString('pt-BR')}/ano)</span>
+                  </div>
+                </div>
+                <ChartContainer config={chartConfig} className="h-[300px] w-full">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={evolucaoAcumuladaSaneamento.dados} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                      <XAxis 
+                        dataKey="semana" 
+                        tick={{ fontSize: 11 }}
+                        tickLine={false}
+                        axisLine={{ stroke: 'hsl(var(--border))' }}
+                        tickFormatter={(value) => value % 4 === 1 ? value : ''}
+                      />
+                      <YAxis 
+                        tick={{ fontSize: 11 }}
+                        tickLine={false}
+                        axisLine={{ stroke: 'hsl(var(--border))' }}
+                        tickFormatter={(value) => value.toLocaleString('pt-BR')}
+                      />
+                      <Tooltip 
+                        content={({ active, payload, label }) => {
+                          if (active && payload && payload.length) {
+                            return (
+                              <div className="bg-popover border border-border rounded-lg p-3 shadow-lg">
+                                <p className="font-medium mb-1">Semana {label}</p>
+                                {payload.map((entry, index) => (
+                                  <p key={index} className="text-sm" style={{ color: entry.color }}>
+                                    {entry.name === 'acumulado' ? 'Saneado' : 'Meta'}: {entry.value?.toLocaleString('pt-BR') || '-'}
+                                  </p>
+                                ))}
+                              </div>
+                            );
+                          }
+                          return null;
+                        }}
+                      />
+                      <ReferenceLine 
+                        x={semanaAtual} 
+                        stroke="hsl(var(--muted-foreground))" 
+                        strokeDasharray="4 4"
+                        label={{ 
+                          value: 'Hoje', 
+                          position: 'top', 
+                          fill: 'hsl(var(--muted-foreground))',
+                          fontSize: 11
+                        }}
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="metaSustentavel" 
+                        stroke="hsl(142, 71%, 45%)" 
+                        strokeWidth={2}
+                        strokeDasharray="6 4"
+                        dot={false}
+                        name="metaSustentavel"
+                      />
+                      <Line 
+                        type="monotone" 
+                        dataKey="acumulado" 
+                        stroke="hsl(239, 84%, 67%)" 
+                        strokeWidth={3}
+                        dot={false}
+                        connectNulls={false}
+                        name="acumulado"
+                      />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              </CardContent>
+            </Card>
+          )}
 
           <div className="flex justify-center pt-4">
             <button
