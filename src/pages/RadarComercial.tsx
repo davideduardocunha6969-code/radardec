@@ -6202,6 +6202,12 @@ const RadarComercial = () => {
         </CollapsibleTrigger>
         <CollapsibleContent className="space-y-6 mt-6">
           
+          {/* Título da seção de Metas Comercial Previdenciário */}
+          <div className="flex items-center gap-3 pb-2 border-b border-border">
+            <Briefcase className="h-5 w-5 text-rose-500" />
+            <h3 className="text-lg font-semibold text-foreground">Metas Comercial Previdenciário</h3>
+          </div>
+
           {/* Cards de Metas */}
           <div className="grid gap-6">
             {/* Meta 1: Contratos High Ticket */}
