@@ -9,6 +9,7 @@ import RadarControladoria from "./pages/RadarControladoria";
 import RadarComercial from "./pages/RadarComercial";
 import RadarBancario from "./pages/RadarBancario";
 import RadarPrevidenciario from "./pages/RadarPrevidenciario";
+import RadarTrabalhista from "./pages/RadarTrabalhista";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -26,6 +27,7 @@ const App = () => (
             <Route path="/radar-comercial" element={<RadarComercial />} />
             <Route path="/radar-bancario" element={<RadarBancario />} />
             <Route path="/radar-previdenciario" element={<RadarPrevidenciario />} />
+            <Route path="/radar-trabalhista" element={<RadarTrabalhista />} />
           </Route>
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
