@@ -108,11 +108,11 @@ const RadarTrabalhista = () => {
       .sort((a, b) => parseInt(a.semana.slice(1)) - parseInt(b.semana.slice(1)));
   }, [filteredIniciais]);
 
-  // Honorários por semana para gráfico de linha
+  // Honorários por semana para gráfico de linha (apenas ações NICHO)
   const honorariosPorSemana = useMemo(() => {
     const sums: Record<string, number> = {};
     filteredIniciais.forEach(i => {
-      if (i.semana) {
+      if (i.semana && i.tipoInicial.toUpperCase() === 'NICHO') {
         sums[i.semana] = (sums[i.semana] || 0) + i.expectativaHonorarios;
       }
     });
