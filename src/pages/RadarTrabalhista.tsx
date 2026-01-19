@@ -30,18 +30,20 @@ const RadarTrabalhista = () => {
   const [mesFilter, setMesFilter] = useState<string>("all");
   const [responsavelFilter, setResponsavelFilter] = useState<string>("all");
   const [semanaFilter, setSemanaFilter] = useState<string>("all");
+  const [tipoFilter, setTipoFilter] = useState<string>("all");
   
   // Section states
   const [iniciaisOpen, setIniciaisOpen] = useState(true);
 
   // Extract unique filter values
   const filterOptions = useMemo(() => {
-    if (!data?.iniciais) return { anos: [], meses: [], responsaveis: [], semanas: [] };
+    if (!data?.iniciais) return { anos: [], meses: [], responsaveis: [], semanas: [], tipos: [] };
     
     const anosSet = new Set<string>();
     const mesesSet = new Set<string>();
     const responsaveisSet = new Set<string>();
     const semanasSet = new Set<string>();
+    const tiposSet = new Set<string>();
     
     data.iniciais.forEach(i => {
       if (i.mesAno) {
@@ -53,6 +55,7 @@ const RadarTrabalhista = () => {
       }
       if (i.responsavel) responsaveisSet.add(i.responsavel);
       if (i.semana) semanasSet.add(i.semana);
+      if (i.tipoInicial) tiposSet.add(i.tipoInicial);
     });
     
     return {
@@ -60,6 +63,7 @@ const RadarTrabalhista = () => {
       meses: Array.from(mesesSet).sort((a, b) => parseInt(a) - parseInt(b)),
       responsaveis: Array.from(responsaveisSet).sort(),
       semanas: Array.from(semanasSet).sort((a, b) => parseInt(a) - parseInt(b)),
+      tipos: Array.from(tiposSet).sort(),
     };
   }, [data?.iniciais]);
 
@@ -86,9 +90,12 @@ const RadarTrabalhista = () => {
       // Filter by semana
       if (semanaFilter !== "all" && i.semana !== semanaFilter) return false;
       
+      // Filter by tipo
+      if (tipoFilter !== "all" && i.tipoInicial !== tipoFilter) return false;
+      
       return true;
     });
-  }, [data?.iniciais, anoFilter, mesFilter, responsavelFilter, semanaFilter]);
+  }, [data?.iniciais, anoFilter, mesFilter, responsavelFilter, semanaFilter, tipoFilter]);
 
   // Ranking por responsável
   const rankingResponsaveis = useMemo(() => {
@@ -289,7 +296,7 @@ const RadarTrabalhista = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
@@ -357,6 +364,24 @@ const RadarTrabalhista = () => {
                   <SelectItem value="all">Todas</SelectItem>
                   {filterOptions.semanas.map(semana => (
                     <SelectItem key={semana} value={semana}>Semana {semana}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <FileText className="h-4 w-4" />
+                Tipo de Inicial
+              </label>
+              <Select value={tipoFilter} onValueChange={setTipoFilter}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Todos os tipos" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos os tipos</SelectItem>
+                  {filterOptions.tipos.map(tipo => (
+                    <SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
