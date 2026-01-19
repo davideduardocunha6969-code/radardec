@@ -5,7 +5,7 @@ export interface InicialTrabalhista {
   responsavel: string;
   tipoInicial: string;
   semana: string;
-  mesAno: string;
+  ano: string;
   cliente: string;
   profissao: string;
   valorCausa: number;
@@ -22,7 +22,7 @@ export interface TrabalhistaStats {
   iniciaisPorResponsavel: Record<string, number>;
   iniciaisPorTipo: Record<string, number>;
   iniciaisPorSemana: Record<string, number>;
-  iniciaisPorMesAno: Record<string, number>;
+  iniciaisPorAno: Record<string, number>;
   iniciaisPorProfissao: Record<string, number>;
   iniciaisPorSituacao: Record<string, number>;
   valorTotalCausasNicho: number;

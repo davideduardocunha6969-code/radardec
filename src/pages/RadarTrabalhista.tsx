@@ -27,7 +27,6 @@ const RadarTrabalhista = () => {
   
   // Filters
   const [anoFilter, setAnoFilter] = useState<string>("all");
-  const [mesFilter, setMesFilter] = useState<string>("all");
   const [responsavelFilter, setResponsavelFilter] = useState<string>("all");
   const [semanaFilter, setSemanaFilter] = useState<string>("all");
   const [tipoFilter, setTipoFilter] = useState<string>("all");
@@ -37,22 +36,15 @@ const RadarTrabalhista = () => {
 
   // Extract unique filter values
   const filterOptions = useMemo(() => {
-    if (!data?.iniciais) return { anos: [], meses: [], responsaveis: [], semanas: [], tipos: [] };
+    if (!data?.iniciais) return { anos: [], responsaveis: [], semanas: [], tipos: [] };
     
     const anosSet = new Set<string>();
-    const mesesSet = new Set<string>();
     const responsaveisSet = new Set<string>();
     const semanasSet = new Set<string>();
     const tiposSet = new Set<string>();
     
     data.iniciais.forEach(i => {
-      if (i.mesAno) {
-        const parts = i.mesAno.split('/');
-        if (parts.length === 2) {
-          mesesSet.add(parts[0]);
-          anosSet.add(parts[1]);
-        }
-      }
+      if (i.ano) anosSet.add(i.ano);
       if (i.responsavel) responsaveisSet.add(i.responsavel);
       if (i.semana) semanasSet.add(i.semana);
       if (i.tipoInicial) tiposSet.add(i.tipoInicial);
@@ -60,7 +52,6 @@ const RadarTrabalhista = () => {
     
     return {
       anos: Array.from(anosSet).sort(),
-      meses: Array.from(mesesSet).sort((a, b) => parseInt(a) - parseInt(b)),
       responsaveis: Array.from(responsaveisSet).sort(),
       semanas: Array.from(semanasSet).sort((a, b) => parseInt(a) - parseInt(b)),
       tipos: Array.from(tiposSet).sort(),
@@ -73,16 +64,7 @@ const RadarTrabalhista = () => {
     
     return data.iniciais.filter(i => {
       // Filter by year
-      if (anoFilter !== "all" && i.mesAno) {
-        const parts = i.mesAno.split('/');
-        if (parts.length === 2 && parts[1] !== anoFilter) return false;
-      }
-      
-      // Filter by month
-      if (mesFilter !== "all" && i.mesAno) {
-        const parts = i.mesAno.split('/');
-        if (parts.length === 2 && parts[0] !== mesFilter) return false;
-      }
+      if (anoFilter !== "all" && i.ano !== anoFilter) return false;
       
       // Filter by responsavel
       if (responsavelFilter !== "all" && i.responsavel !== responsavelFilter) return false;
@@ -95,7 +77,7 @@ const RadarTrabalhista = () => {
       
       return true;
     });
-  }, [data?.iniciais, anoFilter, mesFilter, responsavelFilter, semanaFilter, tipoFilter]);
+  }, [data?.iniciais, anoFilter, responsavelFilter, semanaFilter, tipoFilter]);
 
   // Ranking por responsável
   const rankingResponsaveis = useMemo(() => {
@@ -296,7 +278,7 @@ const RadarTrabalhista = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             <div className="space-y-2">
               <label className="text-sm font-medium flex items-center gap-2">
                 <Calendar className="h-4 w-4" />
@@ -310,24 +292,6 @@ const RadarTrabalhista = () => {
                   <SelectItem value="all">Todos os anos</SelectItem>
                   {filterOptions.anos.map(ano => (
                     <SelectItem key={ano} value={ano}>{ano}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Mês
-              </label>
-              <Select value={mesFilter} onValueChange={setMesFilter}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Todos os meses" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos os meses</SelectItem>
-                  {filterOptions.meses.map(mes => (
-                    <SelectItem key={mes} value={mes}>{mes}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
