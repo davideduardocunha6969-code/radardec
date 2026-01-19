@@ -18,6 +18,16 @@ export interface InicialTrabalhista {
   nota: number;
 }
 
+export interface AtividadeTrabalhista {
+  dataTarefa: string;
+  dataConclusao: string;
+  prazoFatal: string;
+  tipoTarefa: string;
+  responsavel: string;
+  cliente: string;
+  numeroProcesso: string;
+}
+
 export interface TrabalhistaStats {
   totalIniciais: number;
   iniciaisPorResponsavel: Record<string, number>;
@@ -39,6 +49,7 @@ export interface TrabalhistaStats {
 
 export interface TrabalhistaData {
   iniciais: InicialTrabalhista[];
+  atividades: AtividadeTrabalhista[];
   stats: TrabalhistaStats;
 }
 

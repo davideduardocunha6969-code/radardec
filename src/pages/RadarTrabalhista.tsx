@@ -12,7 +12,10 @@ import {
   Filter,
   Calendar,
   User,
-  Star
+  Star,
+  ClipboardList,
+  Clock,
+  Target
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -23,6 +26,9 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LabelList, Cell, LineChart, Line } from "recharts";
 import { useTrabalhistaData } from "@/hooks/useTrabalhistaData";
+import { Button } from "@/components/ui/button";
+import { DateRangeFilter } from "@/components/DateRangeFilter";
+import { AtividadesPrazoDialog } from "@/components/AtividadesPrazoDialog";
 
 const RadarTrabalhista = () => {
   const { data, isLoading, error } = useTrabalhistaData();
@@ -36,10 +42,21 @@ const RadarTrabalhista = () => {
   
   // Section states
   const [iniciaisOpen, setIniciaisOpen] = useState(true);
+  const [atividadesOpen, setAtividadesOpen] = useState(true);
   
   // Modal state for week details
   const [selectedSemana, setSelectedSemana] = useState<string | null>(null);
   const [semanaModalOpen, setSemanaModalOpen] = useState(false);
+  
+  // Modal state for prazo analysis
+  const [prazoModalOpen, setPrazoModalOpen] = useState(false);
+  
+  // Atividades specific filters
+  const [atividadesResponsavelFilter, setAtividadesResponsavelFilter] = useState<string>("all");
+  const [atividadesTipoFilter, setAtividadesTipoFilter] = useState<string>("all");
+  const [atividadesStartDate, setAtividadesStartDate] = useState<Date | undefined>(undefined);
+  const [atividadesEndDate, setAtividadesEndDate] = useState<Date | undefined>(undefined);
+  const [atividadesQuickFilter, setAtividadesQuickFilter] = useState<string>("all");
 
   // Extract unique filter values
   const filterOptions = useMemo(() => {
@@ -64,6 +81,24 @@ const RadarTrabalhista = () => {
       tipos: Array.from(tiposSet).sort(),
     };
   }, [data?.iniciais]);
+
+  // Extract unique filter values for Atividades
+  const atividadesFilterOptions = useMemo(() => {
+    if (!data?.atividades) return { responsaveis: [], tipos: [] };
+    
+    const responsaveisSet = new Set<string>();
+    const tiposSet = new Set<string>();
+    
+    data.atividades.forEach(a => {
+      if (a.responsavel) responsaveisSet.add(a.responsavel);
+      if (a.tipoTarefa) tiposSet.add(a.tipoTarefa);
+    });
+    
+    return {
+      responsaveis: Array.from(responsaveisSet).sort(),
+      tipos: Array.from(tiposSet).sort(),
+    };
+  }, [data?.atividades]);
 
   // Filtered data
   const filteredIniciais = useMemo(() => {
@@ -266,6 +301,158 @@ const RadarTrabalhista = () => {
       honorariosTotal,
     };
   }, [selectedSemana, filteredIniciais]);
+
+  // Helper function to parse date strings
+  const parseDate = (dateStr: string): Date | null => {
+    if (!dateStr) return null;
+    
+    // Try DD/MM/YYYY format
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      const day = parseInt(parts[0], 10);
+      const month = parseInt(parts[1], 10) - 1;
+      const year = parseInt(parts[2], 10);
+      const date = new Date(year, month, day);
+      if (!isNaN(date.getTime())) return date;
+    }
+    
+    // Try ISO format
+    const isoDate = new Date(dateStr);
+    if (!isNaN(isoDate.getTime())) return isoDate;
+    
+    return null;
+  };
+
+  // Apply quick filter dates
+  const getQuickFilterDates = (filter: string) => {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    
+    if (filter === "7d") {
+      const start = new Date();
+      start.setDate(today.getDate() - 7);
+      start.setHours(0, 0, 0, 0);
+      return { start, end: today };
+    } else if (filter === "30d") {
+      const start = new Date();
+      start.setDate(today.getDate() - 30);
+      start.setHours(0, 0, 0, 0);
+      return { start, end: today };
+    }
+    return { start: undefined, end: undefined };
+  };
+
+  // Filtered atividades
+  const filteredAtividades = useMemo(() => {
+    if (!data?.atividades) return [];
+    
+    const quickDates = getQuickFilterDates(atividadesQuickFilter);
+    const effectiveStartDate = atividadesQuickFilter !== "all" ? quickDates.start : atividadesStartDate;
+    const effectiveEndDate = atividadesQuickFilter !== "all" ? quickDates.end : atividadesEndDate;
+    
+    return data.atividades.filter(a => {
+      // Filter by responsavel
+      if (atividadesResponsavelFilter !== "all" && a.responsavel !== atividadesResponsavelFilter) return false;
+      
+      // Filter by tipo
+      if (atividadesTipoFilter !== "all" && a.tipoTarefa !== atividadesTipoFilter) return false;
+      
+      // Filter by date range (dataTarefa)
+      if (effectiveStartDate || effectiveEndDate) {
+        const dataTarefa = parseDate(a.dataTarefa);
+        if (!dataTarefa) return false;
+        
+        if (effectiveStartDate && dataTarefa < effectiveStartDate) return false;
+        if (effectiveEndDate && dataTarefa > effectiveEndDate) return false;
+      }
+      
+      return true;
+    });
+  }, [data?.atividades, atividadesResponsavelFilter, atividadesTipoFilter, atividadesStartDate, atividadesEndDate, atividadesQuickFilter]);
+
+  // Atividades por dia (para gráfico de linha)
+  const atividadesPorDia = useMemo(() => {
+    const counts: Record<string, number> = {};
+    
+    filteredAtividades.forEach(a => {
+      if (a.dataTarefa) {
+        const date = parseDate(a.dataTarefa);
+        if (date) {
+          const key = date.toISOString().split('T')[0];
+          counts[key] = (counts[key] || 0) + 1;
+        }
+      }
+    });
+    
+    return Object.entries(counts)
+      .map(([data, total]) => ({ 
+        data, 
+        total,
+        dataFormatada: new Date(data).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })
+      }))
+      .sort((a, b) => a.data.localeCompare(b.data));
+  }, [filteredAtividades]);
+
+  // Ranking de tipos de tarefa
+  const rankingTiposTarefa = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredAtividades.forEach(a => {
+      if (a.tipoTarefa) {
+        counts[a.tipoTarefa] = (counts[a.tipoTarefa] || 0) + 1;
+      }
+    });
+    
+    return Object.entries(counts)
+      .map(([tipo, quantidade]) => ({ tipo, quantidade, percentual: (quantidade / filteredAtividades.length) * 100 }))
+      .sort((a, b) => b.quantidade - a.quantidade);
+  }, [filteredAtividades]);
+
+  // Ranking de responsáveis por tarefas concluídas
+  const rankingResponsaveisAtividades = useMemo(() => {
+    const counts: Record<string, number> = {};
+    filteredAtividades.forEach(a => {
+      if (a.responsavel && a.dataConclusao) {
+        counts[a.responsavel] = (counts[a.responsavel] || 0) + 1;
+      }
+    });
+    
+    const totalConcluidas = Object.values(counts).reduce((sum, c) => sum + c, 0);
+    
+    return Object.entries(counts)
+      .map(([nome, quantidade]) => ({ nome, quantidade, percentual: totalConcluidas > 0 ? (quantidade / totalConcluidas) * 100 : 0 }))
+      .sort((a, b) => b.quantidade - a.quantidade);
+  }, [filteredAtividades]);
+
+  // Análise de cumprimento de prazo
+  const analisePrazo = useMemo(() => {
+    let noPrazo = 0;
+    let foraPrazo = 0;
+    
+    filteredAtividades.forEach(a => {
+      if (a.dataConclusao && a.prazoFatal) {
+        const dataConclusao = parseDate(a.dataConclusao);
+        const prazoFatal = parseDate(a.prazoFatal);
+        
+        if (dataConclusao && prazoFatal) {
+          if (dataConclusao <= prazoFatal) {
+            noPrazo++;
+          } else {
+            foraPrazo++;
+          }
+        }
+      }
+    });
+    
+    const total = noPrazo + foraPrazo;
+    
+    return {
+      noPrazo,
+      foraPrazo,
+      total,
+      taxaNoPrazo: total > 0 ? (noPrazo / total) * 100 : 0,
+      taxaForaPrazo: total > 0 ? (foraPrazo / total) * 100 : 0,
+    };
+  }, [filteredAtividades]);
 
   const handleBarClick = (data: any) => {
     if (data && data.activePayload && data.activePayload[0]) {
@@ -821,6 +1008,142 @@ const RadarTrabalhista = () => {
           </Card>
         </CollapsibleContent>
       </Collapsible>
+
+      {/* Seção Radar Atividades */}
+      <Collapsible open={atividadesOpen} onOpenChange={setAtividadesOpen}>
+        <CollapsibleTrigger className="flex items-center justify-between w-full p-4 bg-gradient-to-r from-blue-500/10 to-blue-600/5 rounded-lg border border-blue-500/20 hover:from-blue-500/15 hover:to-blue-600/10 transition-all">
+          <div className="flex items-center gap-3">
+            <ClipboardList className="h-6 w-6 text-blue-600" />
+            <div className="text-left">
+              <h2 className="text-xl font-semibold text-foreground">Radar Atividades</h2>
+              <p className="text-sm text-muted-foreground">Análise das atividades da equipe trabalhista</p>
+            </div>
+          </div>
+          <div className="text-sm text-muted-foreground">{atividadesOpen ? "▼" : "▶"}</div>
+        </CollapsibleTrigger>
+        
+        <CollapsibleContent className="mt-4 space-y-4">
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-lg"><Filter className="h-5 w-5" />Filtros</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2"><User className="h-4 w-4" />Responsável</label>
+                  <Select value={atividadesResponsavelFilter} onValueChange={setAtividadesResponsavelFilter}>
+                    <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {atividadesFilterOptions.responsaveis.map(resp => (<SelectItem key={resp} value={resp}>{resp}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2"><FileText className="h-4 w-4" />Tipo de Tarefa</label>
+                  <Select value={atividadesTipoFilter} onValueChange={setAtividadesTipoFilter}>
+                    <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      {atividadesFilterOptions.tipos.map(tipo => (<SelectItem key={tipo} value={tipo}>{tipo}</SelectItem>))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2"><Calendar className="h-4 w-4" />Período</label>
+                  <Select value={atividadesQuickFilter} onValueChange={(v) => { setAtividadesQuickFilter(v); if (v !== "all") { setAtividadesStartDate(undefined); setAtividadesEndDate(undefined); } }}>
+                    <SelectTrigger><SelectValue placeholder="Todos" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Todos</SelectItem>
+                      <SelectItem value="7d">Últimos 7 dias</SelectItem>
+                      <SelectItem value="30d">Últimos 30 dias</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium flex items-center gap-2"><Calendar className="h-4 w-4" />Personalizado</label>
+                  <DateRangeFilter startDate={atividadesStartDate} endDate={atividadesEndDate} onStartDateChange={(d) => { setAtividadesStartDate(d); setAtividadesQuickFilter("all"); }} onEndDateChange={(d) => { setAtividadesEndDate(d); setAtividadesQuickFilter("all"); }} />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader><CardTitle className="flex items-center gap-2"><BarChart3 className="h-5 w-5 text-blue-500" />Tarefas por Dia</CardTitle></CardHeader>
+            <CardContent>
+              {atividadesPorDia.length > 0 ? (
+                <ChartContainer config={chartConfig} className="h-[300px]">
+                  <ResponsiveContainer width="100%" height="100%">
+                    <LineChart data={atividadesPorDia}>
+                      <XAxis dataKey="dataFormatada" tick={{ fontSize: 10 }} interval="preserveStartEnd" angle={-45} textAnchor="end" height={60} />
+                      <YAxis tick={{ fontSize: 10 }} />
+                      <ChartTooltip content={<ChartTooltipContent />} />
+                      <Line type="monotone" dataKey="total" stroke="hsl(217, 91%, 60%)" strokeWidth={2} dot={{ fill: "hsl(217, 91%, 60%)", strokeWidth: 2 }} activeDot={{ r: 6 }} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </ChartContainer>
+              ) : (<div className="text-center text-muted-foreground py-8">Nenhuma tarefa encontrada</div>)}
+            </CardContent>
+          </Card>
+
+          <div className="grid gap-4 md:grid-cols-3">
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-yellow-500" />Ranking Tipos</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                {rankingTiposTarefa.slice(0, 10).map((item, index) => (
+                  <div key={item.tipo} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2 truncate flex-1 mr-2">{getMedalIcon(index) && <span className="text-lg">{getMedalIcon(index)}</span>}<span className={index < 3 ? "font-semibold truncate" : "truncate"}>{item.tipo}</span></span>
+                      <span className="font-medium whitespace-nowrap">{item.quantidade} ({item.percentual.toFixed(1)}%)</span>
+                    </div>
+                    <Progress value={(item.quantidade / (rankingTiposTarefa[0]?.quantidade || 1)) * 100} className="h-2" />
+                  </div>
+                ))}
+                {rankingTiposTarefa.length === 0 && <div className="text-center text-muted-foreground py-4">Nenhum dado</div>}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-blue-500" />Ranking Resolvedores</CardTitle></CardHeader>
+              <CardContent className="space-y-3">
+                {rankingResponsaveisAtividades.slice(0, 10).map((item, index) => (
+                  <div key={item.nome} className="space-y-1">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="flex items-center gap-2">{getMedalIcon(index) && <span className="text-lg">{getMedalIcon(index)}</span>}<span className={index < 3 ? "font-semibold" : ""}>{item.nome}</span></span>
+                      <span className="font-medium">{item.quantidade} ({item.percentual.toFixed(1)}%)</span>
+                    </div>
+                    <Progress value={(item.quantidade / (rankingResponsaveisAtividades[0]?.quantidade || 1)) * 100} className="h-2" />
+                  </div>
+                ))}
+                {rankingResponsaveisAtividades.length === 0 && <div className="text-center text-muted-foreground py-4">Nenhum dado</div>}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader><CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-green-500" />Cumprimento de Prazo</CardTitle></CardHeader>
+              <CardContent className="space-y-4">
+                {analisePrazo.total > 0 ? (
+                  <>
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-sm"><span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" />No prazo</span><span className="font-medium text-green-600">{analisePrazo.noPrazo} ({analisePrazo.taxaNoPrazo.toFixed(1)}%)</span></div>
+                      <Progress value={analisePrazo.taxaNoPrazo} className="h-3 bg-muted [&>div]:bg-green-500" />
+                    </div>
+                    <div className="space-y-2 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" onClick={() => setPrazoModalOpen(true)}>
+                      <div className="flex items-center justify-between text-sm"><span className="flex items-center gap-2"><XCircle className="h-4 w-4 text-red-500" />Fora do prazo</span><span className="font-medium text-red-600">{analisePrazo.foraPrazo} ({analisePrazo.taxaForaPrazo.toFixed(1)}%)</span></div>
+                      <Progress value={analisePrazo.taxaForaPrazo} className="h-3 bg-muted [&>div]:bg-red-500" />
+                      <p className="text-xs text-muted-foreground text-center">Clique para ver análise por responsável</p>
+                    </div>
+                    <div className="pt-2 border-t"><div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Total:</span><span className="font-bold">{analisePrazo.total} tarefas</span></div></div>
+                  </>
+                ) : (<div className="text-center text-muted-foreground py-4">Nenhuma tarefa com prazo</div>)}
+              </CardContent>
+            </Card>
+          </div>
+        </CollapsibleContent>
+      </Collapsible>
+
+      {/* Modal de Prazo por Responsável */}
+      <AtividadesPrazoDialog open={prazoModalOpen} onOpenChange={setPrazoModalOpen} atividades={filteredAtividades} />
 
       {/* Modal de Detalhes da Semana */}
       <Dialog open={semanaModalOpen} onOpenChange={setSemanaModalOpen}>
