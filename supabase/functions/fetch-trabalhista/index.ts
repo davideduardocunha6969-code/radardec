@@ -104,7 +104,7 @@ serve(async (req) => {
       responsavel: row[0] || '',
       tipoInicial: row[1] || '',
       semana: row[2] || '',
-      mesAno: row[3] || '',
+      ano: row[3] || '',
       cliente: row[4] || '',
       profissao: row[5] || '',
       valorCausa: parseBrazilianCurrency(row[6] || ''),
@@ -122,7 +122,7 @@ serve(async (req) => {
       iniciaisPorResponsavel: {} as Record<string, number>,
       iniciaisPorTipo: {} as Record<string, number>,
       iniciaisPorSemana: {} as Record<string, number>,
-      iniciaisPorMesAno: {} as Record<string, number>,
+      iniciaisPorAno: {} as Record<string, number>,
       iniciaisPorProfissao: {} as Record<string, number>,
       iniciaisPorSituacao: {} as Record<string, number>,
       valorTotalCausasNicho: 0,
@@ -147,8 +147,8 @@ serve(async (req) => {
       if (i.semana) {
         stats.iniciaisPorSemana[i.semana] = (stats.iniciaisPorSemana[i.semana] || 0) + 1;
       }
-      if (i.mesAno) {
-        stats.iniciaisPorMesAno[i.mesAno] = (stats.iniciaisPorMesAno[i.mesAno] || 0) + 1;
+      if (i.ano) {
+        stats.iniciaisPorAno[i.ano] = (stats.iniciaisPorAno[i.ano] || 0) + 1;
       }
       if (i.profissao) {
         stats.iniciaisPorProfissao[i.profissao] = (stats.iniciaisPorProfissao[i.profissao] || 0) + 1;
