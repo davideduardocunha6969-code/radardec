@@ -29,6 +29,8 @@ import { useTrabalhistaData } from "@/hooks/useTrabalhistaData";
 import { Button } from "@/components/ui/button";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { AtividadesPrazoDialog } from "@/components/AtividadesPrazoDialog";
+import { TipoTarefaDetailDialog } from "@/components/TipoTarefaDetailDialog";
+import { ResponsavelDetailDialog } from "@/components/ResponsavelDetailDialog";
 
 const RadarTrabalhista = () => {
   const { data, isLoading, error } = useTrabalhistaData();
@@ -50,6 +52,14 @@ const RadarTrabalhista = () => {
   
   // Modal state for prazo analysis
   const [prazoModalOpen, setPrazoModalOpen] = useState(false);
+  
+  // Modal state for tipo tarefa detail
+  const [selectedTipoTarefa, setSelectedTipoTarefa] = useState<string | null>(null);
+  const [tipoTarefaModalOpen, setTipoTarefaModalOpen] = useState(false);
+  
+  // Modal state for responsavel detail
+  const [selectedResponsavelAtividade, setSelectedResponsavelAtividade] = useState<string | null>(null);
+  const [responsavelAtividadeModalOpen, setResponsavelAtividadeModalOpen] = useState(false);
   
   // Atividades specific filters
   const [atividadesResponsavelFilter, setAtividadesResponsavelFilter] = useState<string>("all");
@@ -1086,12 +1096,16 @@ const RadarTrabalhista = () => {
             </CardContent>
           </Card>
 
-          <div className="grid gap-4 md:grid-cols-3">
+          <div className="grid gap-4 md:grid-cols-2">
             <Card>
               <CardHeader><CardTitle className="flex items-center gap-2"><Trophy className="h-5 w-5 text-yellow-500" />Ranking Tipos</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 {rankingTiposTarefa.slice(0, 10).map((item, index) => (
-                  <div key={item.tipo} className="space-y-1">
+                  <div 
+                    key={item.tipo} 
+                    className="space-y-1 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors"
+                    onClick={() => { setSelectedTipoTarefa(item.tipo); setTipoTarefaModalOpen(true); }}
+                  >
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-2 truncate flex-1 mr-2">{getMedalIcon(index) && <span className="text-lg">{getMedalIcon(index)}</span>}<span className={index < 3 ? "font-semibold truncate" : "truncate"}>{item.tipo}</span></span>
                       <span className="font-medium whitespace-nowrap">{item.quantidade} ({item.percentual.toFixed(1)}%)</span>
@@ -1107,7 +1121,11 @@ const RadarTrabalhista = () => {
               <CardHeader><CardTitle className="flex items-center gap-2"><Users className="h-5 w-5 text-blue-500" />Ranking Resolvedores</CardTitle></CardHeader>
               <CardContent className="space-y-3">
                 {rankingResponsaveisAtividades.slice(0, 10).map((item, index) => (
-                  <div key={item.nome} className="space-y-1">
+                  <div 
+                    key={item.nome} 
+                    className="space-y-1 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors"
+                    onClick={() => { setSelectedResponsavelAtividade(item.nome); setResponsavelAtividadeModalOpen(true); }}
+                  >
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-2">{getMedalIcon(index) && <span className="text-lg">{getMedalIcon(index)}</span>}<span className={index < 3 ? "font-semibold" : ""}>{item.nome}</span></span>
                       <span className="font-medium">{item.quantidade} ({item.percentual.toFixed(1)}%)</span>
@@ -1118,32 +1136,48 @@ const RadarTrabalhista = () => {
                 {rankingResponsaveisAtividades.length === 0 && <div className="text-center text-muted-foreground py-4">Nenhum dado</div>}
               </CardContent>
             </Card>
-
-            <Card>
-              <CardHeader><CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-green-500" />Cumprimento de Prazo</CardTitle></CardHeader>
-              <CardContent className="space-y-4">
-                {analisePrazo.total > 0 ? (
-                  <>
-                    <div className="space-y-2">
-                      <div className="flex items-center justify-between text-sm"><span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" />No prazo</span><span className="font-medium text-green-600">{analisePrazo.noPrazo} ({analisePrazo.taxaNoPrazo.toFixed(1)}%)</span></div>
-                      <Progress value={analisePrazo.taxaNoPrazo} className="h-3 bg-muted [&>div]:bg-green-500" />
-                    </div>
-                    <div className="space-y-2 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" onClick={() => setPrazoModalOpen(true)}>
-                      <div className="flex items-center justify-between text-sm"><span className="flex items-center gap-2"><XCircle className="h-4 w-4 text-red-500" />Fora do prazo</span><span className="font-medium text-red-600">{analisePrazo.foraPrazo} ({analisePrazo.taxaForaPrazo.toFixed(1)}%)</span></div>
-                      <Progress value={analisePrazo.taxaForaPrazo} className="h-3 bg-muted [&>div]:bg-red-500" />
-                      <p className="text-xs text-muted-foreground text-center">Clique para ver análise por responsável</p>
-                    </div>
-                    <div className="pt-2 border-t"><div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Total:</span><span className="font-bold">{analisePrazo.total} tarefas</span></div></div>
-                  </>
-                ) : (<div className="text-center text-muted-foreground py-4">Nenhuma tarefa com prazo</div>)}
-              </CardContent>
-            </Card>
           </div>
+
+          <Card>
+            <CardHeader><CardTitle className="flex items-center gap-2"><Target className="h-5 w-5 text-green-500" />Cumprimento de Prazo</CardTitle></CardHeader>
+            <CardContent className="space-y-4">
+              {analisePrazo.total > 0 ? (
+                <>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-sm"><span className="flex items-center gap-2"><CheckCircle2 className="h-4 w-4 text-green-500" />No prazo</span><span className="font-medium text-green-600">{analisePrazo.noPrazo} ({analisePrazo.taxaNoPrazo.toFixed(1)}%)</span></div>
+                    <Progress value={analisePrazo.taxaNoPrazo} className="h-3 bg-muted [&>div]:bg-green-500" />
+                  </div>
+                  <div className="space-y-2 cursor-pointer hover:bg-muted/50 rounded-lg p-2 -mx-2 transition-colors" onClick={() => setPrazoModalOpen(true)}>
+                    <div className="flex items-center justify-between text-sm"><span className="flex items-center gap-2"><XCircle className="h-4 w-4 text-red-500" />Fora do prazo</span><span className="font-medium text-red-600">{analisePrazo.foraPrazo} ({analisePrazo.taxaForaPrazo.toFixed(1)}%)</span></div>
+                    <Progress value={analisePrazo.taxaForaPrazo} className="h-3 bg-muted [&>div]:bg-red-500" />
+                    <p className="text-xs text-muted-foreground text-center">Clique para ver análise por responsável</p>
+                  </div>
+                  <div className="pt-2 border-t"><div className="flex items-center justify-between text-sm"><span className="text-muted-foreground">Total:</span><span className="font-bold">{analisePrazo.total} tarefas</span></div></div>
+                </>
+              ) : (<div className="text-center text-muted-foreground py-4">Nenhuma tarefa com prazo</div>)}
+            </CardContent>
+          </Card>
         </CollapsibleContent>
       </Collapsible>
 
       {/* Modal de Prazo por Responsável */}
       <AtividadesPrazoDialog open={prazoModalOpen} onOpenChange={setPrazoModalOpen} atividades={filteredAtividades} />
+
+      {/* Modal de Detalhamento por Tipo de Tarefa */}
+      <TipoTarefaDetailDialog 
+        open={tipoTarefaModalOpen} 
+        onOpenChange={setTipoTarefaModalOpen} 
+        tipoTarefa={selectedTipoTarefa || ""} 
+        atividades={filteredAtividades} 
+      />
+
+      {/* Modal de Detalhamento por Responsável */}
+      <ResponsavelDetailDialog 
+        open={responsavelAtividadeModalOpen} 
+        onOpenChange={setResponsavelAtividadeModalOpen} 
+        responsavel={selectedResponsavelAtividade || ""} 
+        atividades={filteredAtividades} 
+      />
 
       {/* Modal de Detalhes da Semana */}
       <Dialog open={semanaModalOpen} onOpenChange={setSemanaModalOpen}>
