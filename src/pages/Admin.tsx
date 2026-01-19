@@ -1,0 +1,471 @@
+import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuthContext } from '@/contexts/AuthContext';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { useToast } from '@/hooks/use-toast';
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
+import { Badge } from '@/components/ui/badge';
+import { UserPlus, Trash2, Shield, ShieldCheck, Edit } from 'lucide-react';
+import { Navigate } from 'react-router-dom';
+
+interface UserWithDetails {
+  user_id: string;
+  display_name: string;
+  email: string;
+  role: 'admin' | 'user';
+  permissions: string[];
+}
+
+const AVAILABLE_PAGES = [
+  { key: 'gestao-geral', label: 'Gestão Geral' },
+  { key: 'radar-controladoria', label: 'Radar Controladoria' },
+  { key: 'radar-comercial', label: 'Radar Comercial' },
+  { key: 'radar-bancario', label: 'Radar Bancário' },
+  { key: 'radar-previdenciario', label: 'Radar Previdenciário' },
+  { key: 'radar-trabalhista', label: 'Radar Trabalhista' },
+];
+
+export default function Admin() {
+  const { isAdmin, loading } = useAuthContext();
+  const { toast } = useToast();
+  const [users, setUsers] = useState<UserWithDetails[]>([]);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(true);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [selectedUser, setSelectedUser] = useState<UserWithDetails | null>(null);
+
+  // Create user form
+  const [newEmail, setNewEmail] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [newDisplayName, setNewDisplayName] = useState('');
+  const [newIsAdmin, setNewIsAdmin] = useState(false);
+  const [newPermissions, setNewPermissions] = useState<string[]>([]);
+  const [isCreating, setIsCreating] = useState(false);
+
+  // Edit permissions form
+  const [editPermissions, setEditPermissions] = useState<string[]>([]);
+  const [isSaving, setIsSaving] = useState(false);
+
+  const fetchUsers = async () => {
+    setIsLoadingUsers(true);
+    try {
+      // Fetch all profiles
+      const { data: profiles, error: profilesError } = await supabase
+        .from('profiles')
+        .select('*');
+
+      if (profilesError) throw profilesError;
+
+      // Fetch all roles
+      const { data: roles, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('*');
+
+      if (rolesError) throw rolesError;
+
+      // Fetch all permissions
+      const { data: permissions, error: permsError } = await supabase
+        .from('user_permissions')
+        .select('*');
+
+      if (permsError) throw permsError;
+
+      // Combine data
+      const usersData: UserWithDetails[] = profiles?.map(profile => {
+        const role = roles?.find(r => r.user_id === profile.user_id);
+        const userPerms = permissions?.filter(p => p.user_id === profile.user_id).map(p => p.page_key) || [];
+        
+        return {
+          user_id: profile.user_id,
+          display_name: profile.display_name,
+          email: profile.display_name, // We'll use display_name as identifier since we can't access auth.users
+          role: (role?.role as 'admin' | 'user') || 'user',
+          permissions: userPerms,
+        };
+      }) || [];
+
+      setUsers(usersData);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível carregar os usuários.',
+        variant: 'destructive',
+      });
+    }
+    setIsLoadingUsers(false);
+  };
+
+  useEffect(() => {
+    if (isAdmin) {
+      fetchUsers();
+    }
+  }, [isAdmin]);
+
+  const handleCreateUser = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsCreating(true);
+
+    try {
+      // Create user via Supabase Auth Admin API (using edge function)
+      const { data, error } = await supabase.functions.invoke('create-user', {
+        body: {
+          email: newEmail,
+          password: newPassword,
+          displayName: newDisplayName,
+          isAdmin: newIsAdmin,
+          permissions: newPermissions,
+        },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sucesso!',
+        description: 'Usuário criado com sucesso.',
+      });
+
+      setCreateDialogOpen(false);
+      setNewEmail('');
+      setNewPassword('');
+      setNewDisplayName('');
+      setNewIsAdmin(false);
+      setNewPermissions([]);
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error creating user:', error);
+      toast({
+        title: 'Erro',
+        description: error.message || 'Não foi possível criar o usuário.',
+        variant: 'destructive',
+      });
+    }
+
+    setIsCreating(false);
+  };
+
+  const handleEditUser = (user: UserWithDetails) => {
+    setSelectedUser(user);
+    setEditPermissions(user.permissions);
+    setEditDialogOpen(true);
+  };
+
+  const handleSavePermissions = async () => {
+    if (!selectedUser) return;
+    setIsSaving(true);
+
+    try {
+      // Delete existing permissions
+      await supabase
+        .from('user_permissions')
+        .delete()
+        .eq('user_id', selectedUser.user_id);
+
+      // Insert new permissions
+      if (editPermissions.length > 0) {
+        const { error } = await supabase
+          .from('user_permissions')
+          .insert(
+            editPermissions.map(pageKey => ({
+              user_id: selectedUser.user_id,
+              page_key: pageKey,
+            }))
+          );
+
+        if (error) throw error;
+      }
+
+      toast({
+        title: 'Sucesso!',
+        description: 'Permissões atualizadas com sucesso.',
+      });
+
+      setEditDialogOpen(false);
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error updating permissions:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível atualizar as permissões.',
+        variant: 'destructive',
+      });
+    }
+
+    setIsSaving(false);
+  };
+
+  const handleDeleteUser = async (userId: string) => {
+    if (!confirm('Tem certeza que deseja excluir este usuário?')) return;
+
+    try {
+      const { error } = await supabase.functions.invoke('delete-user', {
+        body: { userId },
+      });
+
+      if (error) throw error;
+
+      toast({
+        title: 'Sucesso!',
+        description: 'Usuário excluído com sucesso.',
+      });
+
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error deleting user:', error);
+      toast({
+        title: 'Erro',
+        description: 'Não foi possível excluir o usuário.',
+        variant: 'destructive',
+      });
+    }
+  };
+
+  const togglePermission = (pageKey: string, isEdit = false) => {
+    if (isEdit) {
+      setEditPermissions(prev =>
+        prev.includes(pageKey)
+          ? prev.filter(p => p !== pageKey)
+          : [...prev, pageKey]
+      );
+    } else {
+      setNewPermissions(prev =>
+        prev.includes(pageKey)
+          ? prev.filter(p => p !== pageKey)
+          : [...prev, pageKey]
+      );
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    return <Navigate to="/" replace />;
+  }
+
+  return (
+    <div className="p-6 space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Administração</h1>
+          <p className="text-muted-foreground">Gerencie usuários e permissões do sistema</p>
+        </div>
+        <Dialog open={createDialogOpen} onOpenChange={setCreateDialogOpen}>
+          <DialogTrigger asChild>
+            <Button>
+              <UserPlus className="h-4 w-4 mr-2" />
+              Novo Usuário
+            </Button>
+          </DialogTrigger>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle>Criar Novo Usuário</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleCreateUser} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="displayName">Nome de Exibição</Label>
+                <Input
+                  id="displayName"
+                  value={newDisplayName}
+                  onChange={(e) => setNewDisplayName(e.target.value)}
+                  placeholder="Nome do usuário"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="newEmail">Email (Login)</Label>
+                <Input
+                  id="newEmail"
+                  type="email"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  placeholder="usuario@email.com"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">Senha</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Mínimo 6 caracteres"
+                  minLength={6}
+                  required
+                />
+              </div>
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isAdmin"
+                  checked={newIsAdmin}
+                  onCheckedChange={(checked) => setNewIsAdmin(checked === true)}
+                />
+                <Label htmlFor="isAdmin" className="flex items-center gap-2">
+                  <ShieldCheck className="h-4 w-4" />
+                  Administrador (acesso total)
+                </Label>
+              </div>
+              {!newIsAdmin && (
+                <div className="space-y-2">
+                  <Label>Páginas Permitidas</Label>
+                  <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto border rounded-md p-3">
+                    {AVAILABLE_PAGES.map(page => (
+                      <div key={page.key} className="flex items-center space-x-2">
+                        <Checkbox
+                          id={`new-${page.key}`}
+                          checked={newPermissions.includes(page.key)}
+                          onCheckedChange={() => togglePermission(page.key)}
+                        />
+                        <Label htmlFor={`new-${page.key}`} className="text-sm">
+                          {page.label}
+                        </Label>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+              <Button type="submit" className="w-full" disabled={isCreating}>
+                {isCreating ? 'Criando...' : 'Criar Usuário'}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Usuários do Sistema</CardTitle>
+          <CardDescription>Lista de todos os usuários cadastrados</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {isLoadingUsers ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+            </div>
+          ) : users.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              Nenhum usuário cadastrado ainda.
+            </div>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Nome</TableHead>
+                  <TableHead>Tipo</TableHead>
+                  <TableHead>Permissões</TableHead>
+                  <TableHead className="text-right">Ações</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {users.map(user => (
+                  <TableRow key={user.user_id}>
+                    <TableCell className="font-medium">{user.display_name}</TableCell>
+                    <TableCell>
+                      {user.role === 'admin' ? (
+                        <Badge className="bg-amber-500">
+                          <ShieldCheck className="h-3 w-3 mr-1" />
+                          Admin
+                        </Badge>
+                      ) : (
+                        <Badge variant="secondary">
+                          <Shield className="h-3 w-3 mr-1" />
+                          Usuário
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell>
+                      {user.role === 'admin' ? (
+                        <span className="text-sm text-muted-foreground">Acesso total</span>
+                      ) : user.permissions.length === 0 ? (
+                        <span className="text-sm text-muted-foreground">Nenhuma</span>
+                      ) : (
+                        <div className="flex flex-wrap gap-1">
+                          {user.permissions.map(perm => (
+                            <Badge key={perm} variant="outline" className="text-xs">
+                              {AVAILABLE_PAGES.find(p => p.key === perm)?.label || perm}
+                            </Badge>
+                          ))}
+                        </div>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleEditUser(user)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive"
+                          onClick={() => handleDeleteUser(user.user_id)}
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Edit Permissions Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Editar Permissões - {selectedUser?.display_name}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label>Páginas Permitidas</Label>
+              <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto border rounded-md p-3">
+                {AVAILABLE_PAGES.map(page => (
+                  <div key={page.key} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={`edit-${page.key}`}
+                      checked={editPermissions.includes(page.key)}
+                      onCheckedChange={() => togglePermission(page.key, true)}
+                      disabled={selectedUser?.role === 'admin'}
+                    />
+                    <Label htmlFor={`edit-${page.key}`} className="text-sm">
+                      {page.label}
+                    </Label>
+                  </div>
+                ))}
+              </div>
+              {selectedUser?.role === 'admin' && (
+                <p className="text-sm text-muted-foreground">
+                  Administradores têm acesso a todas as páginas.
+                </p>
+              )}
+            </div>
+            <Button
+              onClick={handleSavePermissions}
+              className="w-full"
+              disabled={isSaving || selectedUser?.role === 'admin'}
+            >
+              {isSaving ? 'Salvando...' : 'Salvar Permissões'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
