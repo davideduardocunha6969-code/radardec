@@ -15,6 +15,7 @@ export interface InicialTrabalhista {
   acidenteTrabalho: string;
   insalubridadePericulosidade: string;
   situacao: string;
+  nota: number;
 }
 
 export interface TrabalhistaStats {

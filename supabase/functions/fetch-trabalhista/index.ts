@@ -114,6 +114,7 @@ serve(async (req) => {
       acidenteTrabalho: (row[10] || '').toLowerCase(),
       insalubridadePericulosidade: (row[11] || '').toLowerCase(),
       situacao: row[12] || '',
+      nota: parseFloat(row[13]?.replace(',', '.') || '0') || 0,
     }));
 
     // Calculate statistics

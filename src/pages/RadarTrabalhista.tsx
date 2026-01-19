@@ -11,7 +11,8 @@ import {
   BarChart3,
   Filter,
   Calendar,
-  User
+  User,
+  Star
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -157,6 +158,18 @@ const RadarTrabalhista = () => {
     });
     
     return { valorTotal, honorariosTotal, count, percentual: (count / filteredIniciais.length) * 100 };
+  }, [filteredIniciais]);
+
+  // Nota média das petições
+  const notaMedia = useMemo(() => {
+    const petitionsComNota = filteredIniciais.filter(i => i.nota > 0);
+    if (petitionsComNota.length === 0) return { media: 0, total: 0 };
+    
+    const somaNotas = petitionsComNota.reduce((sum, i) => sum + i.nota, 0);
+    return { 
+      media: somaNotas / petitionsComNota.length, 
+      total: petitionsComNota.length 
+    };
   }, [filteredIniciais]);
 
   // Análise de temas
@@ -657,7 +670,7 @@ const RadarTrabalhista = () => {
           </div>
 
           {/* Terceira linha: Situação e Honorários */}
-          <div className="grid gap-4 md:grid-cols-2">
+          <div className="grid gap-4 md:grid-cols-3">
             {/* Situação das Ações */}
             <Card>
               <CardHeader>
@@ -720,6 +733,38 @@ const RadarTrabalhista = () => {
                     <span className="text-sm text-muted-foreground">Expectativa Honorários:</span>
                     <span className="font-bold text-lg text-green-600">{formatCurrency(valoresNicho.honorariosTotal)}</span>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Nota Média das Petições */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-amber-500" />
+                  Nota Média das Petições
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex flex-col items-center justify-center py-4">
+                  <div className="flex items-center gap-1 mb-2">
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className={`h-6 w-6 ${
+                          star <= Math.round(notaMedia.media)
+                            ? "text-amber-500 fill-amber-500"
+                            : "text-muted-foreground"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <div className="text-3xl font-bold text-amber-600">
+                    {notaMedia.media.toFixed(2)}
+                  </div>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    de {notaMedia.total} petições avaliadas
+                  </p>
                 </div>
               </CardContent>
             </Card>
