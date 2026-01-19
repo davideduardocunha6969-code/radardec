@@ -11,6 +11,7 @@ const SPREADSHEET_ID = '1c3yi6NQL4Jw6X0EVpHFwnbbExBl-9MLV08GmWdiu-9U';
 // GIDs das abas
 const GIDS = {
   iniciais: 1523237863,    // Aba Iniciais
+  atividades: 52177345,    // Aba Atividades
 };
 
 function parseCSV(text: string): string[][] {
@@ -96,8 +97,11 @@ serve(async (req) => {
 
     // Fetch iniciais sheet
     const iniciaisData = await fetchSheetData(GIDS.iniciais);
+    
+    // Fetch atividades sheet
+    const atividadesData = await fetchSheetData(GIDS.atividades);
 
-    console.log(`Fetched: ${iniciaisData.length} iniciais`);
+    console.log(`Fetched: ${iniciaisData.length} iniciais, ${atividadesData.length} atividades`);
 
     // Process Iniciais (skip header)
     const iniciais = iniciaisData.slice(1).map(row => ({
@@ -117,7 +121,19 @@ serve(async (req) => {
       nota: parseFloat(row[13]?.replace(',', '.') || '0') || 0,
     }));
 
-    // Calculate statistics
+    // Process Atividades (skip header)
+    // Coluna B: data da tarefa, D: data conclusão, F: prazo fatal, H: tipo, K: responsável, L: cliente, M: número do processo
+    const atividades = atividadesData.slice(1).map(row => ({
+      dataTarefa: row[1] || '',       // Coluna B (índice 1)
+      dataConclusao: row[3] || '',    // Coluna D (índice 3)
+      prazoFatal: row[5] || '',       // Coluna F (índice 5)
+      tipoTarefa: row[7] || '',       // Coluna H (índice 7)
+      responsavel: row[10] || '',     // Coluna K (índice 10)
+      cliente: row[11] || '',         // Coluna L (índice 11)
+      numeroProcesso: row[12] || '',  // Coluna M (índice 12)
+    })).filter(a => a.tipoTarefa); // Exclui tarefas sem tipo preenchido
+
+    // Calculate statistics for Iniciais
     const stats = {
       totalIniciais: iniciais.length,
       iniciaisPorResponsavel: {} as Record<string, number>,
@@ -182,6 +198,7 @@ serve(async (req) => {
 
     const responseData = {
       iniciais,
+      atividades,
       stats,
     };
 
