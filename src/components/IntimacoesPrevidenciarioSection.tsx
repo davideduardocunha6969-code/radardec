@@ -128,29 +128,67 @@ export function IntimacoesPrevidenciarioSection({
                   <p>Nenhuma intimação em atraso encontrada</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
-                  {colaboradoresAtraso.map((colaborador, index) => (
-                    <Card
-                      key={colaborador.nome}
-                      className="cursor-pointer hover:shadow-md transition-all hover:border-primary/50 bg-card"
-                      onClick={() => handleColaboradorClick(colaborador)}
-                    >
-                      <CardContent className="p-4 text-center">
-                        {getMedalha(index) && (
-                          <span className="text-2xl mb-1 block">
-                            {getMedalha(index)}
-                          </span>
-                        )}
-                        <p className="font-medium text-sm truncate" title={colaborador.nome}>
-                          {colaborador.nome}
-                        </p>
-                        <p className="text-2xl font-bold text-destructive mt-1">
-                          {colaborador.quantidade}
-                        </p>
-                        <p className="text-xs text-muted-foreground">em atraso</p>
-                      </CardContent>
-                    </Card>
-                  ))}
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                  {colaboradoresAtraso.map((colaborador, index) => {
+                    const top3Intimacoes = [...colaborador.intimacoes]
+                      .sort((a, b) => {
+                        const dateA = a.prazoFatal ? new Date(a.prazoFatal).getTime() : 0;
+                        const dateB = b.prazoFatal ? new Date(b.prazoFatal).getTime() : 0;
+                        return dateA - dateB;
+                      })
+                      .slice(0, 3);
+
+                    const calcDiasAtraso = (prazoFatal: Date) => {
+                      const hoje = new Date();
+                      hoje.setHours(0, 0, 0, 0);
+                      const prazo = new Date(prazoFatal);
+                      prazo.setHours(0, 0, 0, 0);
+                      return Math.floor((hoje.getTime() - prazo.getTime()) / (1000 * 60 * 60 * 24));
+                    };
+
+                    return (
+                      <Card
+                        key={colaborador.nome}
+                        className="cursor-pointer hover:shadow-md transition-all hover:border-primary/50 bg-card"
+                        onClick={() => handleColaboradorClick(colaborador)}
+                      >
+                        <CardContent className="p-4">
+                          <div className="flex items-center gap-3 mb-3">
+                            {getMedalha(index) && (
+                              <span className="text-2xl">{getMedalha(index)}</span>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <p className="font-semibold text-base">{colaborador.nome}</p>
+                              <p className="text-sm text-muted-foreground">
+                                <span className="text-destructive font-bold">{colaborador.quantidade}</span> {colaborador.quantidade === 1 ? 'tarefa em atraso' : 'tarefas em atraso'}
+                              </p>
+                            </div>
+                          </div>
+                          
+                          <div className="space-y-2 border-t pt-3">
+                            <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">
+                              Principais pendências:
+                            </p>
+                            {top3Intimacoes.map((int, i) => (
+                              <div key={i} className="text-sm bg-muted/50 rounded-md p-2">
+                                <div className="flex items-center justify-between gap-2">
+                                  <span className="font-mono text-xs truncate flex-1" title={int.numeroProcesso}>
+                                    {int.numeroProcesso || "Sem nº"}
+                                  </span>
+                                  <Badge variant="destructive" className="text-xs shrink-0">
+                                    {calcDiasAtraso(int.prazoFatal!)}d
+                                  </Badge>
+                                </div>
+                                <p className="text-xs text-muted-foreground truncate mt-1" title={int.tipoCompromisso}>
+                                  {int.tipoCompromisso}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
                 </div>
               )}
             </CardContent>
