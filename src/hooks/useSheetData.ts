@@ -38,15 +38,26 @@ export interface DeadlineError {
   rawRow: string[];
 }
 
+export interface IntimacaoPrevidenciario {
+  dataCumprimento: Date | null;
+  prazoFatal: Date | null;
+  tipoCompromisso: string;
+  destinatario: string;
+  numeroProcesso: string;
+  rawRow: string[];
+}
+
 export interface SheetResponse {
   sheets: SheetData[];
   sectorMapping: SectorMapping[];
   conformityErrors: { date: string; recipient: string; rawRow: string[] }[];
   deadlineErrors: { date: string; controller: string; processNumber: string; rawRow: string[] }[];
+  intimacoesPrevidenciario: { dataCumprimento: string; prazoFatal: string; tipoCompromisso: string; destinatario: string; numeroProcesso: string; rawRow: string[] }[];
   totalSheets: number;
   totalTasks: number;
   totalConformityErrors: number;
   totalDeadlineErrors: number;
+  totalIntimacoesPrevidenciario: number;
   lastUpdated: string;
 }
 
@@ -76,6 +87,7 @@ export function useSheetData() {
   const [tasks, setTasks] = useState<TaskData[]>([]);
   const [conformityErrors, setConformityErrors] = useState<ConformityError[]>([]);
   const [deadlineErrors, setDeadlineErrors] = useState<DeadlineError[]>([]);
+  const [intimacoesPrevidenciario, setIntimacoesPrevidenciario] = useState<IntimacaoPrevidenciario[]>([]);
   const [sectorMapping, setSectorMapping] = useState<SectorMapping[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -176,6 +188,7 @@ export function useSheetData() {
       const mappings = data.data.sectorMapping || [];
       const rawConformityErrors = data.data.conformityErrors || [];
       const rawDeadlineErrors = data.data.deadlineErrors || [];
+      const rawIntimacoesPrevidenciario = data.data.intimacoesPrevidenciario || [];
       
       // Processa erros de conformidade
       const processedConformityErrors: ConformityError[] = rawConformityErrors.map((err: { date: string; recipient: string; rawRow: string[] }) => ({
@@ -192,14 +205,26 @@ export function useSheetData() {
         rawRow: err.rawRow
       }));
       
+      // Processa intimações previdenciário
+      const processedIntimacoesPrevidenciario: IntimacaoPrevidenciario[] = rawIntimacoesPrevidenciario.map((item: { dataCumprimento: string; prazoFatal: string; tipoCompromisso: string; destinatario: string; numeroProcesso: string; rawRow: string[] }) => ({
+        dataCumprimento: parseDate(item.dataCumprimento),
+        prazoFatal: parseDate(item.prazoFatal),
+        tipoCompromisso: item.tipoCompromisso || '',
+        destinatario: item.destinatario || 'Não identificado',
+        numeroProcesso: item.numeroProcesso || '',
+        rawRow: item.rawRow
+      }));
+      
       console.log('Processed conformity errors:', processedConformityErrors);
       console.log('Processed deadline errors:', processedDeadlineErrors);
+      console.log('Processed intimações previdenciário:', processedIntimacoesPrevidenciario);
       
       setSheets(data.data.sheets);
       setSectorMapping(mappings);
       setTasks(processSheets(data.data.sheets, mappings));
       setConformityErrors(processedConformityErrors);
       setDeadlineErrors(processedDeadlineErrors);
+      setIntimacoesPrevidenciario(processedIntimacoesPrevidenciario);
       setLastUpdated(new Date(data.data.lastUpdated));
       setError(null);
       
@@ -226,6 +251,7 @@ export function useSheetData() {
     tasks,
     conformityErrors,
     deadlineErrors,
+    intimacoesPrevidenciario,
     sectorMapping,
     isLoading,
     error,

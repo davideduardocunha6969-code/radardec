@@ -19,6 +19,9 @@ const CONFORMITY_ERRORS_GID = 1590941680;
 // Aba de erros de prazo (GID 1397357779)
 const DEADLINE_ERRORS_GID = 1397357779;
 
+// Aba de intimações previdenciário (GID 154449292)
+const INTIMACOES_PREVIDENCIARIO_GID = 154449292;
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -146,6 +149,48 @@ serve(async (req) => {
       console.log('Error fetching deadline errors:', err);
     }
     
+    // Busca a aba de intimações previdenciário
+    let intimacoesPrevidenciario: { 
+      dataCumprimento: string; 
+      prazoFatal: string; 
+      tipoCompromisso: string; 
+      destinatario: string; 
+      numeroProcesso: string; 
+      rawRow: string[] 
+    }[] = [];
+    try {
+      const intimacoesUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${INTIMACOES_PREVIDENCIARIO_GID}`;
+      console.log(`Fetching intimações previdenciário (gid=${INTIMACOES_PREVIDENCIARIO_GID})...`);
+      
+      const intimacoesResponse = await fetch(intimacoesUrl);
+      
+      if (intimacoesResponse.ok) {
+        const csvText = await intimacoesResponse.text();
+        const rows = parseCSV(csvText);
+        
+        // Pula o header
+        // Coluna D (3) = Data de cumprimento
+        // Coluna F (5) = Data do prazo fatal
+        // Coluna H (7) = Tipo de compromisso
+        // Coluna K (10) = Destinatário
+        // Coluna M (12) = Número do processo
+        intimacoesPrevidenciario = rows.slice(1)
+          .filter(row => row.some(cell => cell.trim() !== ''))
+          .map(row => ({
+            dataCumprimento: (row[3] || '').trim(),
+            prazoFatal: (row[5] || '').trim(),
+            tipoCompromisso: (row[7] || '').trim(),
+            destinatario: (row[10] || '').trim(),
+            numeroProcesso: (row[12] || '').trim(),
+            rawRow: row
+          }));
+        
+        console.log(`Found ${intimacoesPrevidenciario.length} intimações previdenciário`);
+      }
+    } catch (err) {
+      console.log('Error fetching intimações previdenciário:', err);
+    }
+    
     // Calcula estatísticas agregadas
     const totalTasks = mainSheet.rows.length;
     
@@ -157,10 +202,12 @@ serve(async (req) => {
           sectorMapping,
           conformityErrors,
           deadlineErrors,
+          intimacoesPrevidenciario,
           totalSheets: 1,
           totalTasks,
           totalConformityErrors: conformityErrors.length,
           totalDeadlineErrors: deadlineErrors.length,
+          totalIntimacoesPrevidenciario: intimacoesPrevidenciario.length,
           lastUpdated: new Date().toISOString()
         }
       }),

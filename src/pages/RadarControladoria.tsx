@@ -5,11 +5,12 @@ import { TaskDashboard } from "@/components/TaskDashboard";
 import { DateRangeFilter } from "@/components/DateRangeFilter";
 import { HolidayManager } from "@/components/HolidayManager";
 import { ControllerFilter } from "@/components/ControllerFilter";
+import { IntimacoesPrevidenciarioSection } from "@/components/IntimacoesPrevidenciarioSection";
 import { useSheetData } from "@/hooks/useSheetData";
 import { useHolidays } from "@/hooks/useHolidays";
 
 const RadarControladoria = () => {
-  const { sheets, tasks, conformityErrors, deadlineErrors, isLoading, error, lastUpdated, refetch } = useSheetData();
+  const { sheets, tasks, conformityErrors, deadlineErrors, intimacoesPrevidenciario, isLoading, error, lastUpdated, refetch } = useSheetData();
   const { 
     holidays, 
     loading: holidaysLoading, 
@@ -145,6 +146,11 @@ const RadarControladoria = () => {
         endDate={endDate}
         selectedControllers={selectedControllers}
       />
+
+      {/* Seção de Intimações Previdenciário */}
+      <div className="mt-8">
+        <IntimacoesPrevidenciarioSection intimacoes={intimacoesPrevidenciario} />
+      </div>
     </div>
   );
 };
