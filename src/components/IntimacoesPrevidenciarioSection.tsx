@@ -28,7 +28,7 @@ export function IntimacoesPrevidenciarioSection({
   const [dialogOpen, setDialogOpen] = useState(false);
 
   // Filtra intimações em atraso: sem data de cumprimento E prazo fatal ultrapassado
-  // Só considera se tiver tipo de compromisso cadastrado
+  // Só considera se tiver tipo de compromisso e número de processo cadastrados
   const intimacoesEmAtraso = useMemo(() => {
     const hoje = new Date();
     hoje.setHours(0, 0, 0, 0);
@@ -36,6 +36,10 @@ export function IntimacoesPrevidenciarioSection({
     return intimacoes.filter((int) => {
       // Deve ter tipo de compromisso
       if (!int.tipoCompromisso || int.tipoCompromisso.trim() === "") {
+        return false;
+      }
+      // Deve ter número de processo
+      if (!int.numeroProcesso || int.numeroProcesso.trim() === "") {
         return false;
       }
       // Não pode ter data de cumprimento
