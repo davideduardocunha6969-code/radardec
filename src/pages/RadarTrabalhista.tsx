@@ -14,6 +14,7 @@ import {
   User
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -34,6 +35,10 @@ const RadarTrabalhista = () => {
   
   // Section states
   const [iniciaisOpen, setIniciaisOpen] = useState(true);
+  
+  // Modal state for week details
+  const [selectedSemana, setSelectedSemana] = useState<string | null>(null);
+  const [semanaModalOpen, setSemanaModalOpen] = useState(false);
 
   // Extract unique filter values
   const filterOptions = useMemo(() => {
@@ -209,6 +214,53 @@ const RadarTrabalhista = () => {
       }))
       .sort((a, b) => b.quantidade - a.quantidade);
   }, [filteredIniciais]);
+
+  // Dados detalhados da semana selecionada
+  const semanaDetailData = useMemo(() => {
+    if (!selectedSemana) return null;
+    
+    // Remove o prefixo "S" para comparar
+    const semanaNum = selectedSemana.startsWith('S') ? selectedSemana.slice(1) : selectedSemana;
+    
+    const iniciaisDaSemana = filteredIniciais.filter(i => i.semana === semanaNum);
+    
+    // Ranking de responsáveis
+    const responsaveisCount: Record<string, number> = {};
+    let valorTotalCausa = 0;
+    let honorariosTotal = 0;
+    
+    iniciaisDaSemana.forEach(i => {
+      if (i.responsavel) {
+        responsaveisCount[i.responsavel] = (responsaveisCount[i.responsavel] || 0) + 1;
+      }
+      valorTotalCausa += i.valorCausa;
+      honorariosTotal += i.expectativaHonorarios;
+    });
+    
+    const ranking = Object.entries(responsaveisCount)
+      .map(([nome, quantidade]) => ({ 
+        nome, 
+        quantidade, 
+        percentual: (quantidade / iniciaisDaSemana.length) * 100 
+      }))
+      .sort((a, b) => b.quantidade - a.quantidade);
+    
+    return {
+      semana: semanaNum,
+      totalIniciais: iniciaisDaSemana.length,
+      ranking,
+      valorTotalCausa,
+      honorariosTotal,
+    };
+  }, [selectedSemana, filteredIniciais]);
+
+  const handleBarClick = (data: any) => {
+    if (data && data.activePayload && data.activePayload[0]) {
+      const semana = data.activePayload[0].payload.semana;
+      setSelectedSemana(semana);
+      setSemanaModalOpen(true);
+    }
+  };
 
   const formatCurrency = (value: number) => {
     return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
@@ -453,7 +505,7 @@ const RadarTrabalhista = () => {
             <CardContent>
               <ChartContainer config={chartConfig} className="h-[300px]">
                 <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={dadosPorSemana}>
+                  <BarChart data={dadosPorSemana} onClick={handleBarClick} className="cursor-pointer">
                     <XAxis 
                       dataKey="semana" 
                       tick={{ fontSize: 10 }}
@@ -470,6 +522,7 @@ const RadarTrabalhista = () => {
                   </BarChart>
                 </ResponsiveContainer>
               </ChartContainer>
+              <p className="text-xs text-muted-foreground text-center mt-2">Clique em uma coluna para ver detalhes</p>
             </CardContent>
           </Card>
 
@@ -716,6 +769,70 @@ const RadarTrabalhista = () => {
           </Card>
         </CollapsibleContent>
       </Collapsible>
+
+      {/* Modal de Detalhes da Semana */}
+      <Dialog open={semanaModalOpen} onOpenChange={setSemanaModalOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              Detalhes da Semana {semanaDetailData?.semana}
+            </DialogTitle>
+          </DialogHeader>
+          
+          {semanaDetailData && (
+            <div className="space-y-6">
+              {/* Resumo de valores */}
+              <div className="grid grid-cols-2 gap-4">
+                <Card>
+                  <CardContent className="pt-4">
+                    <p className="text-sm text-muted-foreground">Total de Iniciais</p>
+                    <p className="text-2xl font-bold">{semanaDetailData.totalIniciais}</p>
+                  </CardContent>
+                </Card>
+                <Card>
+                  <CardContent className="pt-4">
+                    <p className="text-sm text-muted-foreground">Valor Total da Causa</p>
+                    <p className="text-lg font-bold">{formatCurrency(semanaDetailData.valorTotalCausa)}</p>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <Card>
+                <CardContent className="pt-4">
+                  <p className="text-sm text-muted-foreground">Expectativa de Honorários</p>
+                  <p className="text-2xl font-bold text-green-600">{formatCurrency(semanaDetailData.honorariosTotal)}</p>
+                </CardContent>
+              </Card>
+
+              {/* Ranking de responsáveis */}
+              <div>
+                <h4 className="text-sm font-medium flex items-center gap-2 mb-3">
+                  <Trophy className="h-4 w-4 text-yellow-500" />
+                  Ranking de Responsáveis
+                </h4>
+                <div className="space-y-2">
+                  {semanaDetailData.ranking.map((item, index) => (
+                    <div key={item.nome} className="space-y-1">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="flex items-center gap-2">
+                          {getMedalIcon(index) && <span className="text-lg">{getMedalIcon(index)}</span>}
+                          <span className={index < 3 ? "font-semibold" : ""}>{item.nome}</span>
+                        </span>
+                        <span className="font-medium">{item.quantidade} ({item.percentual.toFixed(1)}%)</span>
+                      </div>
+                      <Progress 
+                        value={(item.quantidade / (semanaDetailData.ranking[0]?.quantidade || 1)) * 100} 
+                        className="h-2"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
