@@ -414,9 +414,41 @@ const RadarTrabalhista = () => {
         </CollapsibleTrigger>
         
         <CollapsibleContent className="mt-4 space-y-4">
+          {/* Gráfico de Iniciais por Semana - Full Width */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                Iniciais por Semana
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={dadosPorSemana}>
+                    <XAxis 
+                      dataKey="semana" 
+                      tick={{ fontSize: 10 }}
+                      interval={0}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis hide />
+                    <ChartTooltip content={<ChartTooltipContent />} />
+                    <Bar dataKey="total" fill="hsl(239, 84%, 67%)" radius={[4, 4, 0, 0]}>
+                      <LabelList dataKey="total" position="top" fontSize={10} />
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
+
+          {/* Segunda linha: Ranking, Top 10 Profissões, Análise de Temas */}
           <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {/* Ranking de Responsáveis */}
-            <Card className="lg:col-span-1">
+            <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Trophy className="h-5 w-5 text-yellow-500" />
@@ -442,37 +474,6 @@ const RadarTrabalhista = () => {
               </CardContent>
             </Card>
 
-            {/* Gráfico de Iniciais por Semana */}
-            <Card className="lg:col-span-2">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <BarChart3 className="h-5 w-5 text-primary" />
-                  Iniciais por Semana
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <ChartContainer config={chartConfig} className="h-[300px]">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={dadosPorSemana}>
-                      <XAxis 
-                        dataKey="semana" 
-                        tick={{ fontSize: 10 }}
-                        interval={0}
-                        angle={-45}
-                        textAnchor="end"
-                        height={60}
-                      />
-                      <YAxis hide />
-                      <ChartTooltip content={<ChartTooltipContent />} />
-                      <Bar dataKey="total" fill="hsl(239, 84%, 67%)" radius={[4, 4, 0, 0]}>
-                        <LabelList dataKey="total" position="top" fontSize={10} />
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </ChartContainer>
-              </CardContent>
-            </Card>
-
             {/* Top 10 Profissões */}
             <Card>
               <CardHeader>
@@ -494,36 +495,6 @@ const RadarTrabalhista = () => {
                     />
                   </div>
                 ))}
-              </CardContent>
-            </Card>
-
-            {/* Valores Ações de Nicho */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <DollarSign className="h-5 w-5 text-green-500" />
-                  Ações de Nicho
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Quantidade:</span>
-                    <span className="font-bold">{valoresNicho.count} ({valoresNicho.percentual.toFixed(1)}%)</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Valor Total da Causa:</span>
-                    <span className="font-bold text-lg">{formatCurrency(valoresNicho.valorTotal)}</span>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <div className="flex justify-between items-center">
-                    <span className="text-sm text-muted-foreground">Expectativa Honorários:</span>
-                    <span className="font-bold text-lg text-green-600">{formatCurrency(valoresNicho.honorariosTotal)}</span>
-                  </div>
-                </div>
               </CardContent>
             </Card>
 
@@ -602,7 +573,10 @@ const RadarTrabalhista = () => {
                 )}
               </CardContent>
             </Card>
+          </div>
 
+          {/* Terceira linha: Situação e Honorários */}
+          <div className="grid gap-4 md:grid-cols-2">
             {/* Situação das Ações */}
             <Card>
               <CardHeader>
@@ -636,6 +610,36 @@ const RadarTrabalhista = () => {
                     </div>
                   );
                 })}
+              </CardContent>
+            </Card>
+
+            {/* Valores Ações de Nicho */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <DollarSign className="h-5 w-5 text-green-500" />
+                  Ações de Nicho
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Quantidade:</span>
+                    <span className="font-bold">{valoresNicho.count} ({valoresNicho.percentual.toFixed(1)}%)</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Valor Total da Causa:</span>
+                    <span className="font-bold text-lg">{formatCurrency(valoresNicho.valorTotal)}</span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Expectativa Honorários:</span>
+                    <span className="font-bold text-lg text-green-600">{formatCurrency(valoresNicho.honorariosTotal)}</span>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>
