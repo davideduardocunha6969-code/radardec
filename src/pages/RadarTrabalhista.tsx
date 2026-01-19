@@ -748,16 +748,23 @@ const RadarTrabalhista = () => {
               <CardContent className="space-y-4">
                 <div className="flex flex-col items-center justify-center py-4">
                   <div className="flex items-center gap-0.5 mb-2">
-                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
-                      <Star
-                        key={star}
-                        className={`h-5 w-5 ${
-                          star <= Math.round(notaMedia.media)
-                            ? "text-yellow-400 fill-yellow-400"
-                            : "text-muted-foreground"
-                        }`}
-                      />
-                    ))}
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => {
+                      const fillPercentage = Math.min(Math.max(notaMedia.media - (star - 1), 0), 1) * 100;
+                      
+                      return (
+                        <div key={star} className="relative h-5 w-5">
+                          {/* Background star (empty) */}
+                          <Star className="absolute h-5 w-5 text-muted-foreground" />
+                          {/* Filled star with clip */}
+                          <div 
+                            className="absolute overflow-hidden" 
+                            style={{ width: `${fillPercentage}%`, height: '100%' }}
+                          >
+                            <Star className="h-5 w-5 text-yellow-400 fill-yellow-400" />
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                   <div className="text-3xl font-bold text-amber-600">
                     {notaMedia.media.toFixed(2)}
