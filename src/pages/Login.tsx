@@ -43,12 +43,12 @@ export default function Login() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted p-4">
       <Card className="w-full max-w-md shadow-2xl">
-        <CardHeader className="text-center space-y-4">
+        <CardHeader className="text-center space-y-4 bg-primary rounded-t-lg py-6">
           <div className="flex justify-center">
             <img src={logoEscritorio} alt="Logo" className="h-16 w-auto" />
           </div>
-          <CardTitle className="text-2xl font-bold">Radar DEC</CardTitle>
-          <CardDescription>Entre com suas credenciais para acessar o sistema</CardDescription>
+          <CardTitle className="text-2xl font-bold text-primary-foreground">Radar DEC</CardTitle>
+          <CardDescription className="text-primary-foreground/70">Entre com suas credenciais para acessar o sistema</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
