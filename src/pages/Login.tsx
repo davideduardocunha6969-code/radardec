@@ -43,7 +43,7 @@ export default function Login() {
     { icon: Scale, value: '+10', label: 'Anos de Atuação' },
     { icon: FileCheck, value: '+20.000', label: 'Processos Ativos' },
     { icon: Users, value: '+11.000', label: 'Clientes Atendidos' },
-    { icon: Shield, value: '+60', label: 'Profissionais' },
+    { icon: Shield, value: '+80', label: 'Profissionais' },
   ];
 
   return (
@@ -55,14 +55,11 @@ export default function Login() {
         </div>
         
         <div className="space-y-8">
-          <div className="space-y-4">
+          <div>
             <h1 className="text-4xl font-bold text-primary-foreground leading-tight">
               Sistema de Gestão<br />
               <span className="text-accent">Radar DEC</span>
             </h1>
-            <p className="text-primary-foreground/70 text-lg max-w-md leading-relaxed">
-              Proporcionar à classe trabalhadora atendimento jurídico especializado, garantindo que direitos sociais sejam reconhecidos nas áreas Previdenciária, Trabalhista e Bancária.
-            </p>
           </div>
 
           <div className="grid grid-cols-2 gap-6">
