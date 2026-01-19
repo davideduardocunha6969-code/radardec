@@ -19,7 +19,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart";
-import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LabelList, Cell } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, LabelList, Cell, LineChart, Line } from "recharts";
 import { useTrabalhistaData } from "@/hooks/useTrabalhistaData";
 
 const RadarTrabalhista = () => {
@@ -105,6 +105,20 @@ const RadarTrabalhista = () => {
     
     return Object.entries(counts)
       .map(([semana, total]) => ({ semana: `S${semana}`, total }))
+      .sort((a, b) => parseInt(a.semana.slice(1)) - parseInt(b.semana.slice(1)));
+  }, [filteredIniciais]);
+
+  // Honorários por semana para gráfico de linha
+  const honorariosPorSemana = useMemo(() => {
+    const sums: Record<string, number> = {};
+    filteredIniciais.forEach(i => {
+      if (i.semana) {
+        sums[i.semana] = (sums[i.semana] || 0) + i.expectativaHonorarios;
+      }
+    });
+    
+    return Object.entries(sums)
+      .map(([semana, honorarios]) => ({ semana: `S${semana}`, honorarios }))
       .sort((a, b) => parseInt(a.semana.slice(1)) - parseInt(b.semana.slice(1)));
   }, [filteredIniciais]);
 
@@ -212,6 +226,20 @@ const RadarTrabalhista = () => {
       label: "Total",
       color: "hsl(239, 84%, 67%)",
     },
+    honorarios: {
+      label: "Honorários",
+      color: "hsl(142, 76%, 36%)",
+    },
+  };
+
+  const formatCurrencyShort = (value: number) => {
+    if (value >= 1000000) {
+      return `R$ ${(value / 1000000).toFixed(1)}M`;
+    }
+    if (value >= 1000) {
+      return `R$ ${(value / 1000).toFixed(0)}k`;
+    }
+    return `R$ ${value.toFixed(0)}`;
   };
 
   if (isLoading) {
@@ -643,6 +671,49 @@ const RadarTrabalhista = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Gráfico de Honorários por Semana - Full Width */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <DollarSign className="h-5 w-5 text-green-500" />
+                Evolução de Honorários por Semana
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <ChartContainer config={chartConfig} className="h-[300px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <LineChart data={honorariosPorSemana}>
+                    <XAxis 
+                      dataKey="semana" 
+                      tick={{ fontSize: 10 }}
+                      interval={0}
+                      angle={-45}
+                      textAnchor="end"
+                      height={60}
+                    />
+                    <YAxis 
+                      tickFormatter={formatCurrencyShort}
+                      tick={{ fontSize: 10 }}
+                      width={80}
+                    />
+                    <ChartTooltip 
+                      content={<ChartTooltipContent />}
+                      formatter={(value: number) => formatCurrency(value)}
+                    />
+                    <Line 
+                      type="monotone" 
+                      dataKey="honorarios" 
+                      stroke="hsl(142, 76%, 36%)" 
+                      strokeWidth={2}
+                      dot={{ fill: "hsl(142, 76%, 36%)", strokeWidth: 2 }}
+                      activeDot={{ r: 6 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </ChartContainer>
+            </CardContent>
+          </Card>
         </CollapsibleContent>
       </Collapsible>
     </div>
