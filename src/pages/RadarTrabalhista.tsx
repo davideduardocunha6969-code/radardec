@@ -30,7 +30,7 @@ const RadarTrabalhista = () => {
   const [anoFilter, setAnoFilter] = useState<string>(currentYear);
   const [responsavelFilter, setResponsavelFilter] = useState<string>("all");
   const [semanaFilter, setSemanaFilter] = useState<string>("all");
-  const [tipoFilter, setTipoFilter] = useState<string>("Nicho");
+  const [tipoFilter, setTipoFilter] = useState<string>("NICHO");
   
   // Section states
   const [iniciaisOpen, setIniciaisOpen] = useState(true);
