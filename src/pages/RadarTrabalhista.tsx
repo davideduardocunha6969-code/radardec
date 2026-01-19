@@ -747,13 +747,13 @@ const RadarTrabalhista = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex flex-col items-center justify-center py-4">
-                  <div className="flex items-center gap-1 mb-2">
-                    {[1, 2, 3, 4, 5].map((star) => (
+                  <div className="flex items-center gap-0.5 mb-2">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => (
                       <Star
                         key={star}
-                        className={`h-6 w-6 ${
+                        className={`h-5 w-5 ${
                           star <= Math.round(notaMedia.media)
-                            ? "text-amber-500 fill-amber-500"
+                            ? "text-yellow-400 fill-yellow-400"
                             : "text-muted-foreground"
                         }`}
                       />
