@@ -25,11 +25,12 @@ import { useTrabalhistaData } from "@/hooks/useTrabalhistaData";
 const RadarTrabalhista = () => {
   const { data, isLoading, error } = useTrabalhistaData();
   
-  // Filters
-  const [anoFilter, setAnoFilter] = useState<string>("all");
+  // Filters - default to current year and "Nicho" type
+  const currentYear = new Date().getFullYear().toString();
+  const [anoFilter, setAnoFilter] = useState<string>(currentYear);
   const [responsavelFilter, setResponsavelFilter] = useState<string>("all");
   const [semanaFilter, setSemanaFilter] = useState<string>("all");
-  const [tipoFilter, setTipoFilter] = useState<string>("all");
+  const [tipoFilter, setTipoFilter] = useState<string>("Nicho");
   
   // Section states
   const [iniciaisOpen, setIniciaisOpen] = useState(true);
