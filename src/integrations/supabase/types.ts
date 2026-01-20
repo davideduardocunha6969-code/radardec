@@ -143,6 +143,7 @@ export type Database = {
           id: string
           ordem: number
           prazo_fatal: string | null
+          prioridade: string
           responsavel_id: string | null
           updated_at: string
           user_id: string
@@ -154,6 +155,7 @@ export type Database = {
           id?: string
           ordem?: number
           prazo_fatal?: string | null
+          prioridade?: string
           responsavel_id?: string | null
           updated_at?: string
           user_id: string
@@ -165,6 +167,7 @@ export type Database = {
           id?: string
           ordem?: number
           prazo_fatal?: string | null
+          prioridade?: string
           responsavel_id?: string | null
           updated_at?: string
           user_id?: string
@@ -181,28 +184,10 @@ export type Database = {
             foreignKeyName: "atividades_marketing_responsavel_id_fkey"
             columns: ["responsavel_id"]
             isOneToOne: false
-            referencedRelation: "atividades_responsaveis"
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
-      }
-      atividades_responsaveis: {
-        Row: {
-          created_at: string
-          id: string
-          nome: string
-        }
-        Insert: {
-          created_at?: string
-          id?: string
-          nome: string
-        }
-        Update: {
-          created_at?: string
-          id?: string
-          nome?: string
-        }
-        Relationships: []
       }
       conteudos_midia: {
         Row: {

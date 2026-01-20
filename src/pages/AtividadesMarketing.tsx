@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Plus, Loader2 } from "lucide-react";
-import { useAtividadesMarketing, type Atividade, type Comentario, type Anexo } from "@/hooks/useAtividadesMarketing";
+import { useAtividadesMarketing, type Atividade } from "@/hooks/useAtividadesMarketing";
 import { KanbanBoard } from "@/components/atividades/KanbanBoard";
 import { AtividadeFormDialog } from "@/components/atividades/AtividadeFormDialog";
 import { AtividadeDetailDialog } from "@/components/atividades/AtividadeDetailDialog";
@@ -9,7 +9,7 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 
 export default function AtividadesMarketing() {
   const {
-    responsaveis,
+    profiles,
     colunas,
     atividades,
     isLoading,
@@ -17,7 +17,6 @@ export default function AtividadesMarketing() {
     updateAtividade,
     deleteAtividade,
     moveAtividade,
-    addResponsavel,
     addColuna,
     deleteColuna,
     addComentario,
@@ -75,63 +74,60 @@ export default function AtividadesMarketing() {
 
   if (isLoading) {
     return (
-      <>
-        <div className="flex items-center justify-center h-64">
-          <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
-        </div>
-      </>
+      <div className="flex items-center justify-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
     );
   }
 
   return (
     <div className="space-y-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold">Atividades</h1>
-            <p className="text-muted-foreground">
-              Gerencie as atividades da equipe de marketing
-            </p>
-          </div>
-          <Button onClick={() => setShowFormDialog(true)}>
-            <Plus className="h-4 w-4 mr-2" />
-            Adicionar Atividade
-          </Button>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Atividades</h1>
+          <p className="text-muted-foreground">
+            Gerencie as atividades da equipe de marketing
+          </p>
         </div>
+        <Button onClick={() => setShowFormDialog(true)}>
+          <Plus className="h-4 w-4 mr-2" />
+          Adicionar Atividade
+        </Button>
+      </div>
 
-        <KanbanBoard
-          colunas={colunas}
-          atividades={atividades}
-          onMoveAtividade={(id, coluna_id) => moveAtividade.mutate({ id, coluna_id })}
-          onClickAtividade={handleClickAtividade}
-          onAddColuna={(nome) => addColuna.mutate(nome)}
-          onDeleteColuna={(id) => deleteColuna.mutate(id)}
-        />
+      <KanbanBoard
+        colunas={colunas}
+        atividades={atividades}
+        onMoveAtividade={(id, coluna_id) => moveAtividade.mutate({ id, coluna_id })}
+        onClickAtividade={handleClickAtividade}
+        onAddColuna={(nome) => addColuna.mutate(nome)}
+        onDeleteColuna={(id) => deleteColuna.mutate(id)}
+      />
 
-        <AtividadeFormDialog
-          open={showFormDialog}
-          onOpenChange={setShowFormDialog}
-          responsaveis={responsaveis}
-          colunas={colunas}
-          onSubmit={(data) => createAtividade.mutate(data)}
-          onAddResponsavel={(nome) => addResponsavel.mutate(nome)}
-          isSubmitting={createAtividade.isPending}
-        />
+      <AtividadeFormDialog
+        open={showFormDialog}
+        onOpenChange={setShowFormDialog}
+        profiles={profiles}
+        colunas={colunas}
+        onSubmit={(data) => createAtividade.mutate(data)}
+        isSubmitting={createAtividade.isPending}
+      />
 
-        <AtividadeDetailDialog
-          open={showDetailDialog}
-          onOpenChange={setShowDetailDialog}
-          atividade={selectedAtividade}
-          responsaveis={responsaveis}
-          colunas={colunas}
-          comentarios={comentarios}
-          anexos={anexos}
-          onUpdate={(data) => updateAtividade.mutate(data)}
-          onDelete={(id) => deleteAtividade.mutate(id)}
-          onAddComentario={handleAddComentario}
-          onAddAnexo={handleAddAnexo}
-          onDeleteAnexo={(id) => deleteAnexo.mutate(id)}
-          isUpdating={updateAtividade.isPending}
-        />
+      <AtividadeDetailDialog
+        open={showDetailDialog}
+        onOpenChange={setShowDetailDialog}
+        atividade={selectedAtividade}
+        profiles={profiles}
+        colunas={colunas}
+        comentarios={comentarios}
+        anexos={anexos}
+        onUpdate={(data) => updateAtividade.mutate(data)}
+        onDelete={(id) => deleteAtividade.mutate(id)}
+        onAddComentario={handleAddComentario}
+        onAddAnexo={handleAddAnexo}
+        onDeleteAnexo={(id) => deleteAnexo.mutate(id)}
+        isUpdating={updateAtividade.isPending}
+      />
     </div>
   );
 }

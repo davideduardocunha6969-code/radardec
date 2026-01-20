@@ -3,9 +3,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
-export interface Responsavel {
+export type Prioridade = "emergencia" | "urgente" | "importante" | "util";
+
+export const PRIORIDADE_LABELS: Record<Prioridade, string> = {
+  emergencia: "Emergência",
+  urgente: "Urgente",
+  importante: "Importante",
+  util: "Útil",
+};
+
+export const PRIORIDADE_COLORS: Record<Prioridade, string> = {
+  emergencia: "bg-red-500 text-white",
+  urgente: "bg-orange-500 text-white",
+  importante: "bg-yellow-500 text-black",
+  util: "bg-blue-500 text-white",
+};
+
+export interface Profile {
   id: string;
-  nome: string;
+  user_id: string;
+  display_name: string;
 }
 
 export interface Coluna {
@@ -39,10 +56,11 @@ export interface Atividade {
   coluna_id: string | null;
   atividade: string;
   prazo_fatal: string | null;
+  prioridade: Prioridade;
   ordem: number;
   created_at: string;
   updated_at: string;
-  responsavel?: Responsavel | null;
+  responsavel?: Profile | null;
   comentarios?: Comentario[];
   anexos?: Anexo[];
 }
@@ -52,22 +70,23 @@ export interface AtividadeInsert {
   coluna_id: string;
   atividade: string;
   prazo_fatal?: string | null;
+  prioridade: Prioridade;
 }
 
 export function useAtividadesMarketing() {
   const { user } = useAuth();
   const queryClient = useQueryClient();
 
-  // Fetch responsaveis
-  const { data: responsaveis = [], isLoading: loadingResponsaveis } = useQuery({
-    queryKey: ["atividades-responsaveis"],
+  // Fetch profiles (users) as responsaveis
+  const { data: profiles = [], isLoading: loadingProfiles } = useQuery({
+    queryKey: ["profiles-list"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("atividades_responsaveis")
-        .select("*")
-        .order("nome");
+        .from("profiles")
+        .select("id, user_id, display_name")
+        .order("display_name");
       if (error) throw error;
-      return data as Responsavel[];
+      return data as Profile[];
     },
   });
 
@@ -92,7 +111,7 @@ export function useAtividadesMarketing() {
         .from("atividades_marketing")
         .select(`
           *,
-          responsavel:atividades_responsaveis(id, nome)
+          responsavel:profiles!atividades_marketing_responsavel_id_fkey(id, user_id, display_name)
         `)
         .order("ordem");
       if (error) throw error;
@@ -128,9 +147,12 @@ export function useAtividadesMarketing() {
   // Update atividade
   const updateAtividade = useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Atividade> & { id: string }) => {
+      // Remove the nested responsavel object before updating
+      const { responsavel, comentarios, anexos, ...cleanUpdates } = updates as any;
+      
       const { data, error } = await supabase
         .from("atividades_marketing")
-        .update(updates)
+        .update(cleanUpdates)
         .eq("id", id)
         .select()
         .single();
@@ -139,6 +161,7 @@ export function useAtividadesMarketing() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["atividades-marketing"] });
+      toast.success("Atividade atualizada!");
     },
     onError: (error) => {
       toast.error("Erro ao atualizar atividade: " + error.message);
@@ -177,26 +200,6 @@ export function useAtividadesMarketing() {
     },
     onError: (error) => {
       toast.error("Erro ao mover atividade: " + error.message);
-    },
-  });
-
-  // Add responsavel
-  const addResponsavel = useMutation({
-    mutationFn: async (nome: string) => {
-      const { data, error } = await supabase
-        .from("atividades_responsaveis")
-        .insert({ nome })
-        .select()
-        .single();
-      if (error) throw error;
-      return data;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["atividades-responsaveis"] });
-      toast.success("Responsável adicionado!");
-    },
-    onError: (error) => {
-      toast.error("Erro ao adicionar responsável: " + error.message);
     },
   });
 
@@ -339,15 +342,14 @@ export function useAtividadesMarketing() {
   });
 
   return {
-    responsaveis,
+    profiles,
     colunas,
     atividades,
-    isLoading: loadingResponsaveis || loadingColunas || loadingAtividades,
+    isLoading: loadingProfiles || loadingColunas || loadingAtividades,
     createAtividade,
     updateAtividade,
     deleteAtividade,
     moveAtividade,
-    addResponsavel,
     addColuna,
     deleteColuna,
     addComentario,
