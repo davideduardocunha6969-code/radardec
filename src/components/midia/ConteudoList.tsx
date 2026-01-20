@@ -24,7 +24,7 @@ import {
 } from "@/hooks/useConteudosMidia";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Video, Image, FileText, Play } from "lucide-react";
+import { Video, Image, FileText, Play, CalendarDays } from "lucide-react";
 
 const FORMATO_ICONS: Record<string, React.ReactNode> = {
   video: <Play className="h-3.5 w-3.5" />,
@@ -70,6 +70,7 @@ export function ConteudoList({
             <TableHead className="w-[130px] font-semibold">Setor</TableHead>
             <TableHead className="w-[130px] font-semibold">Formato</TableHead>
             <TableHead className="font-semibold">Título</TableHead>
+            <TableHead className="w-[100px] font-semibold text-center">Semana</TableHead>
             <TableHead className="w-[160px] font-semibold">Status</TableHead>
             <TableHead className="w-[90px] font-semibold text-right">Data</TableHead>
           </TableRow>
@@ -99,6 +100,16 @@ export function ConteudoList({
                 <span className="font-medium text-foreground line-clamp-1">
                   {conteudo.titulo}
                 </span>
+              </TableCell>
+              <TableCell className="py-3 text-center">
+                {conteudo.semana_publicacao ? (
+                  <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+                    <CalendarDays className="h-3.5 w-3.5" />
+                    <span>{conteudo.semana_publicacao}</span>
+                  </div>
+                ) : (
+                  <span className="text-muted-foreground/50">—</span>
+                )}
               </TableCell>
               <TableCell className="py-3" onClick={(e) => e.stopPropagation()}>
                 <Select

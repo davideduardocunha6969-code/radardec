@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ExternalLink, Trash2, Video, Link2 } from "lucide-react";
+import { ExternalLink, Trash2, Video, Link2, CalendarDays } from "lucide-react";
 import {
   ConteudoMidia,
   Setor,
@@ -58,7 +58,7 @@ export function ConteudoDetailDialog({
 }: ConteudoDetailDialogProps) {
   const [editedData, setEditedData] = useState(conteudo);
 
-  const handleFieldChange = (field: keyof ConteudoMidia, value: string) => {
+  const handleFieldChange = (field: keyof ConteudoMidia, value: string | number | null) => {
     setEditedData({ ...editedData, [field]: value });
   };
 
@@ -72,6 +72,7 @@ export function ConteudoDetailDialog({
       copy_completa: editedData.copy_completa,
       link_inspiracao: editedData.link_inspiracao,
       link_video_drive: editedData.link_video_drive,
+      semana_publicacao: editedData.semana_publicacao,
       status: editedData.status,
     });
   };
@@ -112,7 +113,7 @@ export function ConteudoDetailDialog({
 
         <div className="space-y-6 py-4">
           {/* Basic Info Section */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Setor</Label>
               <Select
@@ -149,6 +150,31 @@ export function ConteudoDetailDialog({
                   {Object.entries(FORMATO_LABELS).map(([value, label]) => (
                     <SelectItem key={value} value={value}>
                       {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1">
+                <CalendarDays className="h-3.5 w-3.5" />
+                Semana
+              </Label>
+              <Select
+                value={editedData.semana_publicacao?.toString() || ""}
+                onValueChange={(value) =>
+                  handleFieldChange("semana_publicacao", value ? parseInt(value) : null)
+                }
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue placeholder="—" />
+                </SelectTrigger>
+                <SelectContent className="max-h-60">
+                  <SelectItem value="">—</SelectItem>
+                  {Array.from({ length: 52 }, (_, i) => i + 1).map((week) => (
+                    <SelectItem key={week} value={week.toString()}>
+                      Semana {week}
                     </SelectItem>
                   ))}
                 </SelectContent>
