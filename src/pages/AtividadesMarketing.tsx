@@ -44,6 +44,7 @@ export default function AtividadesMarketing() {
   // Filter states
   const [filterResponsavel, setFilterResponsavel] = useState<string>("all");
   const [filterPrioridade, setFilterPrioridade] = useState<string>("all");
+  const [filterDeadlineStatus, setFilterDeadlineStatus] = useState<string>("all");
 
   // Fetch comentarios for selected atividade
   const { data: comentarios = [] } = useQuery({
@@ -90,20 +91,45 @@ export default function AtividadesMarketing() {
     return atividades.filter((a) => {
       const matchResponsavel = filterResponsavel === "all" || a.responsavel_id === filterResponsavel;
       const matchPrioridade = filterPrioridade === "all" || a.prioridade === filterPrioridade;
-      return matchResponsavel && matchPrioridade;
+      
+      // Deadline status filter
+      let matchDeadlineStatus = true;
+      if (filterDeadlineStatus === "overdue") {
+        matchDeadlineStatus = a.prazo_fatal ? isPast(new Date(a.prazo_fatal)) : false;
+      } else if (filterDeadlineStatus === "dueSoon") {
+        if (!a.prazo_fatal) {
+          matchDeadlineStatus = false;
+        } else {
+          const diff = differenceInDays(new Date(a.prazo_fatal), new Date());
+          matchDeadlineStatus = diff >= 0 && diff <= 2;
+        }
+      }
+      
+      return matchResponsavel && matchPrioridade && matchDeadlineStatus;
     });
-  }, [atividades, filterResponsavel, filterPrioridade]);
+  }, [atividades, filterResponsavel, filterPrioridade, filterDeadlineStatus]);
 
-  const hasActiveFilters = filterResponsavel !== "all" || filterPrioridade !== "all";
+  const hasActiveFilters = filterResponsavel !== "all" || filterPrioridade !== "all" || filterDeadlineStatus !== "all";
 
   const clearFilters = () => {
     setFilterResponsavel("all");
     setFilterPrioridade("all");
+    setFilterDeadlineStatus("all");
   };
 
   const handleClickAtividade = (atividade: Atividade) => {
     setSelectedAtividade(atividade);
     setShowDetailDialog(true);
+  };
+
+  // Alert card click handlers
+  const handleAlertClick = (type: "overdue" | "dueSoon" | "emergency" | "urgent") => {
+    clearFilters();
+    if (type === "overdue" || type === "dueSoon") {
+      setFilterDeadlineStatus(type);
+    } else {
+      setFilterPrioridade(type === "emergency" ? "emergencia" : "urgente");
+    }
   };
 
   const handleAddComentario = (atividade_id: string, texto: string) => {
@@ -155,12 +181,15 @@ export default function AtividadesMarketing() {
       {/* Alert Cards */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {/* Overdue */}
-        <div 
+        <button 
+          onClick={() => handleAlertClick("overdue")}
+          disabled={alertCounts.overdue === 0}
           className={cn(
-            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all",
+            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left",
             alertCounts.overdue > 0 
-              ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800" 
-              : "bg-muted/30 border-transparent"
+              ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 cursor-pointer hover:border-red-400 dark:hover:border-red-600 hover:shadow-md" 
+              : "bg-muted/30 border-transparent cursor-default",
+            filterDeadlineStatus === "overdue" && "ring-2 ring-red-500 ring-offset-2"
           )}
         >
           <div className={cn(
@@ -185,15 +214,18 @@ export default function AtividadesMarketing() {
             </p>
             <p className="text-xs text-muted-foreground">Atrasadas</p>
           </div>
-        </div>
+        </button>
 
         {/* Due Soon */}
-        <div 
+        <button 
+          onClick={() => handleAlertClick("dueSoon")}
+          disabled={alertCounts.dueSoon === 0}
           className={cn(
-            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all",
+            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left",
             alertCounts.dueSoon > 0 
-              ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800" 
-              : "bg-muted/30 border-transparent"
+              ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 cursor-pointer hover:border-amber-400 dark:hover:border-amber-600 hover:shadow-md" 
+              : "bg-muted/30 border-transparent cursor-default",
+            filterDeadlineStatus === "dueSoon" && "ring-2 ring-amber-500 ring-offset-2"
           )}
         >
           <div className={cn(
@@ -218,15 +250,18 @@ export default function AtividadesMarketing() {
             </p>
             <p className="text-xs text-muted-foreground">Vencendo em breve</p>
           </div>
-        </div>
+        </button>
 
         {/* Emergency */}
-        <div 
+        <button 
+          onClick={() => handleAlertClick("emergency")}
+          disabled={alertCounts.emergency === 0}
           className={cn(
-            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all",
+            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left",
             alertCounts.emergency > 0 
-              ? "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800" 
-              : "bg-muted/30 border-transparent"
+              ? "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800 cursor-pointer hover:border-rose-400 dark:hover:border-rose-600 hover:shadow-md" 
+              : "bg-muted/30 border-transparent cursor-default",
+            filterPrioridade === "emergencia" && "ring-2 ring-rose-500 ring-offset-2"
           )}
         >
           <div className={cn(
@@ -251,15 +286,18 @@ export default function AtividadesMarketing() {
             </p>
             <p className="text-xs text-muted-foreground">Emergências</p>
           </div>
-        </div>
+        </button>
 
         {/* Urgent */}
-        <div 
+        <button 
+          onClick={() => handleAlertClick("urgent")}
+          disabled={alertCounts.urgent === 0}
           className={cn(
-            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all",
+            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left",
             alertCounts.urgent > 0 
-              ? "bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800" 
-              : "bg-muted/30 border-transparent"
+              ? "bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800 cursor-pointer hover:border-orange-400 dark:hover:border-orange-600 hover:shadow-md" 
+              : "bg-muted/30 border-transparent cursor-default",
+            filterPrioridade === "urgente" && "ring-2 ring-orange-500 ring-offset-2"
           )}
         >
           <div className={cn(
@@ -284,7 +322,7 @@ export default function AtividadesMarketing() {
             </p>
             <p className="text-xs text-muted-foreground">Urgentes</p>
           </div>
-        </div>
+        </button>
       </div>
 
       {/* Filters Bar */}
