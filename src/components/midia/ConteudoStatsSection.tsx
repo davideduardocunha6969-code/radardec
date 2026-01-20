@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { ChevronDown } from "lucide-react";
+import { useMemo, useState } from "react";
+import { ChevronDown, Filter } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Collapsible,
@@ -7,6 +7,13 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import {
   BarChart,
   Bar,
@@ -100,8 +107,15 @@ export function ConteudoStatsSection({
   isOpen,
   onOpenChange,
 }: ConteudoStatsSectionProps) {
+  const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
+
+  const filteredConteudos = useMemo(() => {
+    if (statusFilter === "all") return conteudos;
+    return conteudos.filter((c) => c.status === statusFilter);
+  }, [conteudos, statusFilter]);
+
   const stats = useMemo(() => {
-    const total = conteudos.length;
+    const total = filteredConteudos.length;
     if (total === 0) {
       return {
         byFormato: [],
@@ -130,7 +144,7 @@ export function ConteudoStatsSection({
       postado: 0,
     };
 
-    conteudos.forEach((c) => {
+    filteredConteudos.forEach((c) => {
       formatoCount[c.formato]++;
       setorCount[c.setor]++;
       statusCount[c.status]++;
@@ -164,7 +178,7 @@ export function ConteudoStatsSection({
       .sort((a, b) => b.count - a.count);
 
     return { byFormato, bySetor, byStatus };
-  }, [conteudos]);
+  }, [filteredConteudos]);
 
   // Calculate weekly data for previdenciario sector with status "postado"
   const weeklyData = useMemo(() => {
@@ -214,6 +228,27 @@ export function ConteudoStatsSection({
         </Card>
       </CollapsibleTrigger>
       <CollapsibleContent>
+        {/* Status Filter */}
+        <div className="flex items-center gap-2 mt-4 mb-2">
+          <Filter className="h-4 w-4 text-muted-foreground" />
+          <Select
+            value={statusFilter}
+            onValueChange={(value) => setStatusFilter(value as Status | "all")}
+          >
+            <SelectTrigger className="w-[180px] h-9">
+              <SelectValue placeholder="Filtrar por status" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Todos os status</SelectItem>
+              {Object.entries(STATUS_LABELS).map(([key, label]) => (
+                <SelectItem key={key} value={key}>
+                  {label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+
         {/* Weekly Goal Chart */}
         <Card className="mt-4 bg-card/50 backdrop-blur-sm border-border/50">
           <CardHeader className="pb-2">
