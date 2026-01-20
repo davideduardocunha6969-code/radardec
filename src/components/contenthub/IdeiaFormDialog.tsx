@@ -49,7 +49,7 @@ export function IdeiaFormDialog({
     link_inspiracao: "",
     link_video_drive: "",
     semana_publicacao: null,
-    prioridade: "util",
+    prioridade: "planejado",
   });
 
   const resetForm = () => {
@@ -63,7 +63,7 @@ export function IdeiaFormDialog({
       link_inspiracao: "",
       link_video_drive: "",
       semana_publicacao: null,
-      prioridade: "util",
+      prioridade: "planejado",
     });
   };
 
@@ -124,7 +124,7 @@ export function IdeiaFormDialog({
             <div className="space-y-2">
               <Label>Prioridade</Label>
               <Select
-                value={formData.prioridade || "util"}
+                value={formData.prioridade || "planejado"}
                 onValueChange={(v) => setFormData({ ...formData, prioridade: v as Prioridade })}
               >
                 <SelectTrigger>

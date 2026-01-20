@@ -27,7 +27,7 @@ import {
 } from "@/hooks/useConteudosMidia";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Video, Image, FileText, Play, CalendarDays } from "lucide-react";
+import { Video, Image, FileText, Play, CalendarDays, Flame } from "lucide-react";
 
 const FORMATO_ICONS: Record<string, React.ReactNode> = {
   video: <Play className="h-3.5 w-3.5" />,
@@ -54,7 +54,14 @@ export function ConteudoList({
   onSelectConteudo,
   onStatusChange,
 }: ConteudoListProps) {
-  if (conteudos.length === 0) {
+  // Sort conteudos with "hot" first
+  const sortedConteudos = [...conteudos].sort((a, b) => {
+    if (a.prioridade === "hot" && b.prioridade !== "hot") return -1;
+    if (a.prioridade !== "hot" && b.prioridade === "hot") return 1;
+    return 0;
+  });
+
+  if (sortedConteudos.length === 0) {
     return (
       <div className="text-center py-16 text-muted-foreground border rounded-lg bg-card/50">
         <p className="text-lg">Nenhum conteúdo encontrado.</p>
@@ -80,79 +87,88 @@ export function ConteudoList({
           </TableRow>
         </TableHeader>
         <TableBody>
-          {conteudos.map((conteudo) => (
-            <TableRow
-              key={conteudo.id}
-              className="cursor-pointer transition-colors hover:bg-accent/40"
-              onClick={() => onSelectConteudo(conteudo)}
-            >
-              <TableCell className="py-3">
-                <Badge 
-                  variant="outline" 
-                  className={`font-medium text-xs ${SETOR_COLORS[conteudo.setor]}`}
-                >
-                  {SETOR_LABELS[conteudo.setor]}
-                </Badge>
-              </TableCell>
-              <TableCell className="py-3">
-                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
-                  {FORMATO_ICONS[conteudo.formato]}
-                  <span>{FORMATO_LABELS[conteudo.formato]}</span>
-                </div>
-              </TableCell>
-              <TableCell className="py-3">
-                <span className="font-medium text-foreground line-clamp-1">
-                  {conteudo.titulo}
-                </span>
-              </TableCell>
-              <TableCell className="py-3 text-center">
-                {conteudo.semana_publicacao ? (
-                  <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
-                    <CalendarDays className="h-3.5 w-3.5" />
-                    <span>{conteudo.semana_publicacao}</span>
-                  </div>
-                ) : (
-                  <span className="text-muted-foreground/50">—</span>
-                )}
-              </TableCell>
-              <TableCell className="py-3">
-                <Badge
-                  variant="outline"
-                  className={`text-xs font-medium ${PRIORIDADE_COLORS[conteudo.prioridade]}`}
-                >
-                  {PRIORIDADE_LABELS[conteudo.prioridade]}
-                </Badge>
-              </TableCell>
-              <TableCell className="py-3" onClick={(e) => e.stopPropagation()}>
-                <Select
-                  value={conteudo.status}
-                  onValueChange={(value: Status) =>
-                    onStatusChange(conteudo.id, value)
-                  }
-                >
-                  <SelectTrigger
-                    className={`w-[140px] h-8 text-xs font-medium border ${
-                      STATUS_COLORS[conteudo.status]
-                    }`}
+          {sortedConteudos.map((conteudo) => {
+            const isHot = conteudo.prioridade === "hot";
+            return (
+              <TableRow
+                key={conteudo.id}
+                className={`cursor-pointer transition-colors ${
+                  isHot 
+                    ? "bg-red-500/10 hover:bg-red-500/20 border-l-4 border-l-red-500" 
+                    : "hover:bg-accent/40"
+                }`}
+                onClick={() => onSelectConteudo(conteudo)}
+              >
+                <TableCell className="py-3">
+                  <Badge 
+                    variant="outline" 
+                    className={`font-medium text-xs ${SETOR_COLORS[conteudo.setor]}`}
                   >
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                      <SelectItem key={value} value={value}>
-                        {label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </TableCell>
-              <TableCell className="py-3 text-muted-foreground text-sm text-right">
-                {format(new Date(conteudo.created_at), "dd/MM/yy", {
-                  locale: ptBR,
-                })}
-              </TableCell>
-            </TableRow>
-          ))}
+                    {SETOR_LABELS[conteudo.setor]}
+                  </Badge>
+                </TableCell>
+                <TableCell className="py-3">
+                  <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                    {FORMATO_ICONS[conteudo.formato]}
+                    <span>{FORMATO_LABELS[conteudo.formato]}</span>
+                  </div>
+                </TableCell>
+                <TableCell className="py-3">
+                  <span className={`font-medium text-foreground line-clamp-1 ${isHot ? "text-red-400" : ""}`}>
+                    {isHot && <Flame className="inline h-4 w-4 mr-1 text-red-500" />}
+                    {conteudo.titulo}
+                  </span>
+                </TableCell>
+                <TableCell className="py-3 text-center">
+                  {conteudo.semana_publicacao ? (
+                    <div className="flex items-center justify-center gap-1 text-sm text-muted-foreground">
+                      <CalendarDays className="h-3.5 w-3.5" />
+                      <span>{conteudo.semana_publicacao}</span>
+                    </div>
+                  ) : (
+                    <span className="text-muted-foreground/50">—</span>
+                  )}
+                </TableCell>
+                <TableCell className="py-3">
+                  <Badge
+                    variant="outline"
+                    className={`text-xs font-semibold ${PRIORIDADE_COLORS[conteudo.prioridade]}`}
+                  >
+                    {isHot && <Flame className="h-3 w-3 mr-1" />}
+                    {PRIORIDADE_LABELS[conteudo.prioridade]}
+                  </Badge>
+                </TableCell>
+                <TableCell className="py-3" onClick={(e) => e.stopPropagation()}>
+                  <Select
+                    value={conteudo.status}
+                    onValueChange={(value: Status) =>
+                      onStatusChange(conteudo.id, value)
+                    }
+                  >
+                    <SelectTrigger
+                      className={`w-[140px] h-8 text-xs font-medium border ${
+                        STATUS_COLORS[conteudo.status]
+                      }`}
+                    >
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </TableCell>
+                <TableCell className="py-3 text-muted-foreground text-sm text-right">
+                  {format(new Date(conteudo.created_at), "dd/MM/yy", {
+                    locale: ptBR,
+                  })}
+                </TableCell>
+              </TableRow>
+            );
+          })}
         </TableBody>
       </Table>
     </div>
