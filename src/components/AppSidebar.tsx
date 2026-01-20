@@ -24,11 +24,9 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 
-// Item principal (não é radar)
-const mainItem = { title: "Gestão Geral", url: "/", icon: Home, pageKey: "gestao-geral" };
-
-// Radares agrupados
+// Radares agrupados (incluindo Radar Geral)
 const radarItems = [
+  { title: "Radar Geral", url: "/", icon: Home, pageKey: "gestao-geral" },
   { title: "Radar Controladoria", url: "/radar-controladoria", icon: Radar, pageKey: "radar-controladoria" },
   { title: "Radar Comercial", url: "/radar-comercial", icon: TrendingUp, pageKey: "radar-comercial" },
   { title: "Radar Bancário", url: "/radar-bancario", icon: Landmark, pageKey: "radar-bancario" },
@@ -47,7 +45,6 @@ export function AppSidebar() {
 
   // Filtra radares visíveis baseado em permissões
   const visibleRadarItems = radarItems.filter(item => hasPageAccess(item.pageKey));
-  const hasGestaoAccess = hasPageAccess(mainItem.pageKey);
 
   // Verifica se algum radar está ativo para manter o menu aberto
   const isAnyRadarActive = useMemo(() => {
@@ -117,26 +114,6 @@ export function AppSidebar() {
                 </Collapsible>
               )}
 
-              {/* Gestão Geral */}
-              {hasGestaoAccess && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton 
-                    asChild 
-                    isActive={isActive(mainItem.url)}
-                    tooltip={mainItem.title}
-                  >
-                    <NavLink 
-                      to={mainItem.url} 
-                      end 
-                      className="flex items-center gap-3 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
-                      activeClassName="bg-accent text-primary font-medium"
-                    >
-                      <mainItem.icon className="h-4 w-4" />
-                      <span>{mainItem.title}</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              )}
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
