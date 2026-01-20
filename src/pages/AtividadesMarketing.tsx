@@ -163,16 +163,16 @@ export default function AtividadesMarketing() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-full">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Atividades</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-3xl font-bold tracking-tight">Atividades</h1>
+          <p className="text-muted-foreground mt-1">
             Gerencie as atividades da equipe de marketing
           </p>
         </div>
-        <Button onClick={() => setShowFormDialog(true)}>
+        <Button onClick={() => setShowFormDialog(true)} className="shrink-0">
           <Plus className="h-4 w-4 mr-2" />
           Adicionar Atividade
         </Button>
