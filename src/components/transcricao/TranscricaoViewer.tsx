@@ -1,5 +1,5 @@
-import { useState, useRef, useEffect } from "react";
-import { Play, Pause, Copy, Download, Edit2, Check, X } from "lucide-react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { Play, Copy, Download, Edit2, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -9,6 +9,8 @@ import { useToast } from "@/hooks/use-toast";
 import type { Segmento } from "@/hooks/useTranscricao";
 import { cn } from "@/lib/utils";
 import { AiAnalysisSection } from "./AiAnalysisSection";
+import { SectionNavigation } from "./SectionNavigation";
+
 interface TranscricaoViewerProps {
   segmentos: Segmento[];
   textoCompleto: string;
@@ -47,6 +49,8 @@ export function TranscricaoViewer({
   const [speakerNames, setSpeakerNames] = useState<Record<string, string>>(initialSpeakerNames);
   const [editingSpeaker, setEditingSpeaker] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
+  const [showTranscription, setShowTranscription] = useState(false);
+  const [analysisCount, setAnalysisCount] = useState(0);
 
   // Get unique speakers
   const uniqueSpeakers = [...new Set(segmentos.map((s) => s.falante))];
@@ -81,12 +85,6 @@ export function TranscricaoViewer({
     return `${hours.toString().padStart(2, "0")}h ${mins.toString().padStart(2, "0")}m ${secs.toString().padStart(2, "0")}s`;
   };
 
-  const formatTimeShort = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = Math.floor(seconds % 60);
-    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
-  };
-
   const formatDuration = (seconds: number) => {
     const hours = Math.floor(seconds / 3600);
     const mins = Math.floor((seconds % 3600) / 60);
@@ -102,16 +100,6 @@ export function TranscricaoViewer({
     if (videoRef.current) {
       videoRef.current.currentTime = inicio;
       videoRef.current.play();
-    }
-  };
-
-  const togglePlayPause = () => {
-    if (videoRef.current) {
-      if (isPlaying) {
-        videoRef.current.pause();
-      } else {
-        videoRef.current.play();
-      }
     }
   };
 
@@ -140,14 +128,14 @@ export function TranscricaoViewer({
     setEditValue("");
   };
 
-  const getFormattedText = () => {
+  const getFormattedText = useCallback(() => {
     return segmentos
       .map(
         (s) =>
           `${getSpeakerDisplayName(s.falante)} (${formatTime(s.inicio)}):\n${s.texto}`
       )
       .join("\n\n");
-  };
+  }, [segmentos, speakerNames]);
 
   const copyToClipboard = () => {
     navigator.clipboard.writeText(getFormattedText());
@@ -177,9 +165,23 @@ export function TranscricaoViewer({
     return currentTime >= segmento.inicio && currentTime <= segmento.fim;
   };
 
+  const handleAnalysisCountChange = useCallback((count: number) => {
+    setAnalysisCount(count);
+  }, []);
+
+  const handleTranscriptionGenerated = useCallback(() => {
+    setShowTranscription(true);
+  }, []);
+
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      {/* Section Navigation */}
+      <SectionNavigation 
+        showTranscription={showTranscription} 
+        analysisCount={analysisCount} 
+      />
+
+      <div id="segmentos" className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         {/* Video Player (if available) */}
         {videoUrl && (
           <Card className="lg:col-span-1">
@@ -328,7 +330,10 @@ export function TranscricaoViewer({
       </div>
 
       {/* AI Analysis Section */}
-      <AiAnalysisSection transcricaoTexto={getFormattedText()} />
+      <AiAnalysisSection 
+        transcricaoTexto={getFormattedText()} 
+        onAnalysisCountChange={handleAnalysisCountChange}
+      />
     </div>
   );
 }

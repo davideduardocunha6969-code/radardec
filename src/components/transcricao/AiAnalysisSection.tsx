@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { Sparkles, Copy, Loader2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { cn } from "@/lib/utils";
 
 interface AiAnalysisSectionProps {
   transcricaoTexto: string;
+  onAnalysisCountChange?: (count: number) => void;
 }
 
 interface AnalysisResult {
@@ -18,7 +19,10 @@ interface AnalysisResult {
   isLoading: boolean;
 }
 
-export function AiAnalysisSection({ transcricaoTexto }: AiAnalysisSectionProps) {
+export function AiAnalysisSection({ 
+  transcricaoTexto,
+  onAnalysisCountChange 
+}: AiAnalysisSectionProps) {
   const { prompts, fetchPrompts, isLoading: loadingPrompts } = useAiPrompts();
   const { toast } = useToast();
   
@@ -29,12 +33,29 @@ export function AiAnalysisSection({ transcricaoTexto }: AiAnalysisSectionProps) 
     fetchPrompts();
   }, [fetchPrompts]);
 
+  // Notify parent of analysis count changes
+  useEffect(() => {
+    onAnalysisCountChange?.(analysisResults.length);
+  }, [analysisResults.length, onAnalysisCountChange]);
+
   const handleGenerateTranscription = () => {
     setShowFormattedTranscription(true);
     toast({
       title: "Transcrição gerada",
       description: "A transcrição formatada foi exibida abaixo.",
     });
+    
+    // Scroll to transcription section after a brief delay
+    setTimeout(() => {
+      const element = document.getElementById("transcricao-completa");
+      const scrollContainer = document.querySelector('[data-scroll-container="transcricao"]');
+      if (element && scrollContainer) {
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const offset = elementRect.top - containerRect.top + scrollContainer.scrollTop - 20;
+        scrollContainer.scrollTo({ top: offset, behavior: "smooth" });
+      }
+    }, 100);
   };
 
   const copyTranscription = () => {
@@ -45,12 +66,14 @@ export function AiAnalysisSection({ transcricaoTexto }: AiAnalysisSectionProps) 
     });
   };
 
-  const analyzeWithPrompt = async (prompt: AiPrompt) => {
+  const analyzeWithPrompt = useCallback(async (prompt: AiPrompt) => {
     // Check if already analyzing this prompt
     const existingIndex = analysisResults.findIndex(r => r.promptId === prompt.id);
     if (existingIndex !== -1 && analysisResults[existingIndex].isLoading) {
       return;
     }
+
+    const newIndex = existingIndex !== -1 ? existingIndex : analysisResults.length;
 
     // Add or update the result entry
     if (existingIndex !== -1) {
@@ -65,6 +88,18 @@ export function AiAnalysisSection({ transcricaoTexto }: AiAnalysisSectionProps) 
         isLoading: true,
       }]);
     }
+
+    // Scroll to the analysis section after a brief delay
+    setTimeout(() => {
+      const element = document.getElementById(`analise-${newIndex}`);
+      const scrollContainer = document.querySelector('[data-scroll-container="transcricao"]');
+      if (element && scrollContainer) {
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const offset = elementRect.top - containerRect.top + scrollContainer.scrollTop - 20;
+        scrollContainer.scrollTo({ top: offset, behavior: "smooth" });
+      }
+    }, 100);
 
     try {
       const resp = await fetch(
@@ -161,7 +196,7 @@ export function AiAnalysisSection({ transcricaoTexto }: AiAnalysisSectionProps) 
         r.promptId === prompt.id ? { ...r, isLoading: false } : r
       ));
     }
-  };
+  }, [analysisResults, transcricaoTexto, toast]);
 
   const copyResponse = (response: string) => {
     navigator.clipboard.writeText(response);
@@ -192,7 +227,7 @@ export function AiAnalysisSection({ transcricaoTexto }: AiAnalysisSectionProps) 
 
       {/* Formatted Transcription Card */}
       {showFormattedTranscription && (
-        <Card>
+        <Card id="transcricao-completa">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-lg flex items-center gap-2">
@@ -217,7 +252,7 @@ export function AiAnalysisSection({ transcricaoTexto }: AiAnalysisSectionProps) 
 
       {/* AI Prompts Section */}
       {showFormattedTranscription && (
-        <Card>
+        <Card id="prompts-ia">
           <CardHeader className="pb-3">
             <div className="flex items-center gap-2">
               <Sparkles className="h-5 w-5 text-primary" />
@@ -269,8 +304,8 @@ export function AiAnalysisSection({ transcricaoTexto }: AiAnalysisSectionProps) 
       )}
 
       {/* Analysis Results */}
-      {analysisResults.map((result) => (
-        <Card key={result.promptId} className="border-primary/20">
+      {analysisResults.map((result, index) => (
+        <Card key={result.promptId} id={`analise-${index}`} className="border-primary/20">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base flex items-center gap-2">
