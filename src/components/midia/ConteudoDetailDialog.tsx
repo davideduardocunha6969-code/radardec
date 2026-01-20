@@ -162,16 +162,16 @@ export function ConteudoDetailDialog({
                 Semana
               </Label>
               <Select
-                value={editedData.semana_publicacao?.toString() || ""}
+                value={editedData.semana_publicacao?.toString() || "none"}
                 onValueChange={(value) =>
-                  handleFieldChange("semana_publicacao", value ? parseInt(value) : null)
+                  handleFieldChange("semana_publicacao", value === "none" ? null : parseInt(value))
                 }
               >
                 <SelectTrigger className="h-9">
                   <SelectValue placeholder="—" />
                 </SelectTrigger>
                 <SelectContent className="max-h-60">
-                  <SelectItem value="">—</SelectItem>
+                  <SelectItem value="none">—</SelectItem>
                   {Array.from({ length: 52 }, (_, i) => i + 1).map((week) => (
                     <SelectItem key={week} value={week.toString()}>
                       Semana {week}
