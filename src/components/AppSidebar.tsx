@@ -1,4 +1,4 @@
-import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, CalendarDays, Megaphone, Lightbulb } from "lucide-react";
+import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, CalendarDays, Megaphone, Lightbulb, Wand2, Package } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import logoEscritorio from "@/assets/logo-escritorio.webp";
@@ -38,12 +38,14 @@ const radarItems = [
 const robosItems = [
   { title: "Transcritor de Audiências", url: "/robos/transcricao", icon: Mic, pageKey: "robos-transcricao" },
   { title: "Prompts de IA", url: "/robos/prompts", icon: FileText, pageKey: "robos-prompts" },
+  { title: "Tipos de Produtos", url: "/robos/produtos", icon: Package, pageKey: "robos-produtos" },
 ];
 
 // Marketing subitems
 const marketingItems = [
   { title: "Content Hub", url: "/content-hub", icon: Lightbulb, pageKey: "content-hub" },
   { title: "Calendário de Conteúdo", url: "/midia-social", icon: CalendarDays, pageKey: "midia-social" },
+  { title: "Modelador de Conteúdo", url: "/marketing/modelador", icon: Wand2, pageKey: "marketing-modelador" },
 ];
 
 export function AppSidebar() {

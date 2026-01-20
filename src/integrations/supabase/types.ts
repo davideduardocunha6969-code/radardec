@@ -179,6 +179,72 @@ export type Database = {
         }
         Relationships: []
       }
+      modelagens_conteudo: {
+        Row: {
+          analise_estrategia: string | null
+          analise_filmagem: string | null
+          analise_performance: string | null
+          created_at: string
+          gancho_original: string | null
+          id: string
+          ideia_conteudo_id: string | null
+          legenda_original: string | null
+          link_original: string
+          status: string
+          tipo: string
+          tipo_produto_id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          analise_estrategia?: string | null
+          analise_filmagem?: string | null
+          analise_performance?: string | null
+          created_at?: string
+          gancho_original?: string | null
+          id?: string
+          ideia_conteudo_id?: string | null
+          legenda_original?: string | null
+          link_original: string
+          status?: string
+          tipo: string
+          tipo_produto_id: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          analise_estrategia?: string | null
+          analise_filmagem?: string | null
+          analise_performance?: string | null
+          created_at?: string
+          gancho_original?: string | null
+          id?: string
+          ideia_conteudo_id?: string | null
+          legenda_original?: string | null
+          link_original?: string
+          status?: string
+          tipo?: string
+          tipo_produto_id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "modelagens_conteudo_ideia_conteudo_id_fkey"
+            columns: ["ideia_conteudo_id"]
+            isOneToOne: false
+            referencedRelation: "ideias_conteudo"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "modelagens_conteudo_tipo_produto_id_fkey"
+            columns: ["tipo_produto_id"]
+            isOneToOne: false
+            referencedRelation: "tipos_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           created_at: string
@@ -198,6 +264,42 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      tipos_produtos: {
+        Row: {
+          caracteristicas: string | null
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          perfil_cliente_ideal: string | null
+          setor: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          caracteristicas?: string | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          perfil_cliente_ideal?: string | null
+          setor: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          caracteristicas?: string | null
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          perfil_cliente_ideal?: string | null
+          setor?: string
           updated_at?: string
           user_id?: string
         }
