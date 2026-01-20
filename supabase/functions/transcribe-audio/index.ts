@@ -116,12 +116,14 @@ serve(async (req) => {
       console.log("Resposta contém 'utterances':", transcriptionResult.utterances.length);
     }
     
-    // Log speaker information for debugging
+    // Log speaker information for debugging - check both speaker and speaker_id
     const uniqueSpeakers = new Set<string>();
     if (transcriptionResult.words) {
       for (const word of transcriptionResult.words) {
-        if (word.speaker) {
-          uniqueSpeakers.add(word.speaker);
+        // ElevenLabs uses speaker_id, not speaker
+        const speakerId = word.speaker_id || word.speaker;
+        if (speakerId) {
+          uniqueSpeakers.add(speakerId);
         }
       }
     }
@@ -192,6 +194,9 @@ interface Word {
   start: number;
   end: number;
   speaker?: string;
+  speaker_id?: string;
+  type?: string;
+  logprob?: number;
 }
 
 interface Segment {
@@ -207,13 +212,19 @@ function processTranscription(result: { words?: Word[]; text?: string }): Segmen
   }
 
   const segments: Segment[] = [];
-  let currentSpeaker = result.words[0].speaker || "Falante 1";
+  // ElevenLabs uses speaker_id, not speaker
+  let currentSpeaker = result.words[0].speaker_id || result.words[0].speaker || "speaker_0";
   let currentText = "";
   let segmentStart = result.words[0].start;
   let segmentEnd = result.words[0].end;
 
   for (const word of result.words) {
-    const speaker = word.speaker || "Falante 1";
+    // Skip non-word types (like audio events)
+    if (word.type && word.type !== "word") {
+      continue;
+    }
+    
+    const speaker = word.speaker_id || word.speaker || "speaker_0";
     
     if (speaker !== currentSpeaker) {
       // Save current segment
