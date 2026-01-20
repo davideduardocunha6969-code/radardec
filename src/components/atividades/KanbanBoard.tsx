@@ -116,7 +116,7 @@ export function KanbanBoard({
   };
 
   return (
-    <div className="flex gap-5 overflow-x-auto pb-6 min-h-[calc(100vh-220px)] scrollbar-thin">
+    <div className="flex gap-5 overflow-x-auto pb-4 -mx-1 px-1 min-h-[500px]">
       {colunas.map((coluna) => {
         const colAtividades = getAtividadesByColuna(coluna.id);
         const colors = getColunaColors(coluna.nome);

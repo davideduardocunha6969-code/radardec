@@ -15,7 +15,7 @@ export function MainLayout() {
               Sistema de Gestão Jurídica
             </span>
           </header>
-          <main className="flex-1 flex flex-col overflow-hidden">
+          <main className="flex-1 overflow-auto p-6">
             <Outlet />
           </main>
         </SidebarInset>
