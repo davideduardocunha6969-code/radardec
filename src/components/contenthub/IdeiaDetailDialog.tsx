@@ -189,7 +189,7 @@ export function IdeiaDetailDialog({
             <div className="space-y-2">
               <Label>Prioridade</Label>
               <Select
-                value={editedData.prioridade || "util"}
+                value={editedData.prioridade || "planejado"}
                 onValueChange={(v) => handleFieldChange("prioridade", v as Prioridade)}
               >
                 <SelectTrigger>

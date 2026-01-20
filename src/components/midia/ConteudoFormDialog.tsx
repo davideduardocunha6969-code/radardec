@@ -53,7 +53,7 @@ export function ConteudoFormDialog({
     copy_completa: "",
     link_inspiracao: "",
     status: "a_gravar",
-    prioridade: "util",
+    prioridade: "planejado",
   });
 
   useEffect(() => {
@@ -79,7 +79,7 @@ export function ConteudoFormDialog({
         copy_completa: "",
         link_inspiracao: "",
         status: "a_gravar",
-        prioridade: "util",
+        prioridade: "planejado",
       });
     }
   }, [initialData, open]);
@@ -144,7 +144,7 @@ export function ConteudoFormDialog({
             <div className="space-y-2">
               <Label htmlFor="prioridade">Prioridade</Label>
               <Select
-                value={formData.prioridade || "util"}
+                value={formData.prioridade || "planejado"}
                 onValueChange={(value: Prioridade) =>
                   setFormData({ ...formData, prioridade: value })
                 }

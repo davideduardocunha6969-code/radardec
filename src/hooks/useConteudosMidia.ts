@@ -6,7 +6,7 @@ import { toast } from "sonner";
 export type Setor = "trabalhista" | "previdenciario" | "civel" | "bancario";
 export type Formato = "video" | "video_longo" | "carrossel" | "estatico";
 export type Status = "a_gravar" | "gravado" | "em_edicao" | "editado" | "postado";
-export type Prioridade = "urgente" | "importante" | "util";
+export type Prioridade = "planejado" | "hot";
 
 export interface ConteudoMidia {
   id: string;
@@ -71,15 +71,13 @@ export const STATUS_COLORS: Record<Status, string> = {
 };
 
 export const PRIORIDADE_LABELS: Record<Prioridade, string> = {
-  urgente: "Urgente",
-  importante: "Importante",
-  util: "Útil",
+  planejado: "Planejado",
+  hot: "Hot",
 };
 
 export const PRIORIDADE_COLORS: Record<Prioridade, string> = {
-  urgente: "bg-red-500/20 text-red-400 border-red-500/30",
-  importante: "bg-orange-500/20 text-orange-400 border-orange-500/30",
-  util: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  planejado: "bg-blue-500/20 text-blue-400 border-blue-500/30",
+  hot: "bg-red-500/20 text-red-400 border-red-500/30 animate-pulse",
 };
 
 export function useConteudosMidia() {
