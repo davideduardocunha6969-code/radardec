@@ -11,13 +11,15 @@ import { Badge } from "@/components/ui/badge";
 import { Calendar, MessageSquare, Paperclip, Trash2, Upload, User } from "lucide-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import type { Atividade, Responsavel, Coluna, Comentario, Anexo } from "@/hooks/useAtividadesMarketing";
+import type { Atividade, Profile, Coluna, Comentario, Anexo, Prioridade } from "@/hooks/useAtividadesMarketing";
+import { PRIORIDADE_LABELS, PRIORIDADE_COLORS } from "@/hooks/useAtividadesMarketing";
+import { cn } from "@/lib/utils";
 
 interface AtividadeDetailDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   atividade: Atividade | null;
-  responsaveis: Responsavel[];
+  profiles: Profile[];
   colunas: Coluna[];
   comentarios: Comentario[];
   anexos: Anexo[];
@@ -33,7 +35,7 @@ export function AtividadeDetailDialog({
   open,
   onOpenChange,
   atividade,
-  responsaveis,
+  profiles,
   colunas,
   comentarios,
   anexos,
@@ -49,6 +51,7 @@ export function AtividadeDetailDialog({
   const [responsavelId, setResponsavelId] = useState<string>("");
   const [prazoFatal, setPrazoFatal] = useState("");
   const [colunaId, setColunaId] = useState("");
+  const [prioridade, setPrioridade] = useState<Prioridade>("util");
   const [novoComentario, setNovoComentario] = useState("");
 
   useEffect(() => {
@@ -57,6 +60,7 @@ export function AtividadeDetailDialog({
       setResponsavelId(atividade.responsavel_id || "");
       setPrazoFatal(atividade.prazo_fatal || "");
       setColunaId(atividade.coluna_id || "");
+      setPrioridade(atividade.prioridade || "util");
     }
   }, [atividade]);
 
@@ -69,6 +73,7 @@ export function AtividadeDetailDialog({
       responsavel_id: responsavelId || null,
       prazo_fatal: prazoFatal || null,
       coluna_id: colunaId || null,
+      prioridade,
     });
     setEditMode(false);
   };
@@ -98,6 +103,9 @@ export function AtividadeDetailDialog({
           <div className="flex items-center justify-between">
             <DialogTitle className="text-lg">Detalhes da Atividade</DialogTitle>
             <div className="flex gap-2">
+              <Badge className={cn(PRIORIDADE_COLORS[atividade.prioridade])}>
+                {PRIORIDADE_LABELS[atividade.prioridade]}
+              </Badge>
               {currentColuna && (
                 <Badge variant="outline">{currentColuna.nome}</Badge>
               )}
@@ -113,6 +121,21 @@ export function AtividadeDetailDialog({
               {editMode ? (
                 <>
                   <div className="space-y-2">
+                    <Label>Prioridade</Label>
+                    <Select value={prioridade} onValueChange={(v) => setPrioridade(v as Prioridade)}>
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {(Object.keys(PRIORIDADE_LABELS) as Prioridade[]).map((key) => (
+                          <SelectItem key={key} value={key}>
+                            {PRIORIDADE_LABELS[key]}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
                     <Label>Atividade</Label>
                     <Textarea
                       value={atividadeText}
@@ -127,9 +150,9 @@ export function AtividadeDetailDialog({
                         <SelectValue placeholder="Selecione" />
                       </SelectTrigger>
                       <SelectContent>
-                        {responsaveis.map((r) => (
-                          <SelectItem key={r.id} value={r.id}>
-                            {r.nome}
+                        {profiles.map((p) => (
+                          <SelectItem key={p.id} value={p.id}>
+                            {p.display_name}
                           </SelectItem>
                         ))}
                       </SelectContent>
@@ -174,7 +197,7 @@ export function AtividadeDetailDialog({
                     {atividade.responsavel && (
                       <div className="flex items-center gap-1">
                         <User className="h-4 w-4" />
-                        {atividade.responsavel.nome}
+                        {atividade.responsavel.display_name}
                       </div>
                     )}
                     {atividade.prazo_fatal && (

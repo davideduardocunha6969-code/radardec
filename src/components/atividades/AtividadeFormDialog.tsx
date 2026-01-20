@@ -5,34 +5,31 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Plus } from "lucide-react";
-import type { Responsavel, Coluna, AtividadeInsert } from "@/hooks/useAtividadesMarketing";
+import type { Profile, Coluna, AtividadeInsert, Prioridade } from "@/hooks/useAtividadesMarketing";
+import { PRIORIDADE_LABELS } from "@/hooks/useAtividadesMarketing";
 
 interface AtividadeFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  responsaveis: Responsavel[];
+  profiles: Profile[];
   colunas: Coluna[];
   onSubmit: (data: AtividadeInsert) => void;
-  onAddResponsavel: (nome: string) => void;
   isSubmitting?: boolean;
 }
 
 export function AtividadeFormDialog({
   open,
   onOpenChange,
-  responsaveis,
+  profiles,
   colunas,
   onSubmit,
-  onAddResponsavel,
   isSubmitting,
 }: AtividadeFormDialogProps) {
   const [responsavelId, setResponsavelId] = useState<string>("");
   const [atividade, setAtividade] = useState("");
   const [prazoFatal, setPrazoFatal] = useState("");
   const [colunaId, setColunaId] = useState("");
-  const [novoResponsavel, setNovoResponsavel] = useState("");
-  const [showAddResponsavel, setShowAddResponsavel] = useState(false);
+  const [prioridade, setPrioridade] = useState<Prioridade>("util");
 
   const pendentesColuna = colunas.find((c) => c.nome === "Pendentes");
 
@@ -45,6 +42,7 @@ export function AtividadeFormDialog({
       coluna_id: colunaId || pendentesColuna?.id || colunas[0]?.id,
       atividade: atividade.trim(),
       prazo_fatal: prazoFatal || null,
+      prioridade,
     });
 
     // Reset form
@@ -52,15 +50,8 @@ export function AtividadeFormDialog({
     setAtividade("");
     setPrazoFatal("");
     setColunaId("");
+    setPrioridade("util");
     onOpenChange(false);
-  };
-
-  const handleAddResponsavel = () => {
-    if (novoResponsavel.trim()) {
-      onAddResponsavel(novoResponsavel.trim());
-      setNovoResponsavel("");
-      setShowAddResponsavel(false);
-    }
   };
 
   return (
@@ -71,41 +62,35 @@ export function AtividadeFormDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
+            <Label htmlFor="prioridade">Prioridade *</Label>
+            <Select value={prioridade} onValueChange={(v) => setPrioridade(v as Prioridade)}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione a prioridade" />
+              </SelectTrigger>
+              <SelectContent>
+                {(Object.keys(PRIORIDADE_LABELS) as Prioridade[]).map((key) => (
+                  <SelectItem key={key} value={key}>
+                    {PRIORIDADE_LABELS[key]}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
             <Label htmlFor="responsavel">Responsável</Label>
-            <div className="flex gap-2">
-              <Select value={responsavelId} onValueChange={setResponsavelId}>
-                <SelectTrigger className="flex-1">
-                  <SelectValue placeholder="Selecione o responsável" />
-                </SelectTrigger>
-                <SelectContent>
-                  {responsaveis.map((r) => (
-                    <SelectItem key={r.id} value={r.id}>
-                      {r.nome}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                onClick={() => setShowAddResponsavel(!showAddResponsavel)}
-              >
-                <Plus className="h-4 w-4" />
-              </Button>
-            </div>
-            {showAddResponsavel && (
-              <div className="flex gap-2 mt-2">
-                <Input
-                  placeholder="Nome do novo responsável"
-                  value={novoResponsavel}
-                  onChange={(e) => setNovoResponsavel(e.target.value)}
-                />
-                <Button type="button" onClick={handleAddResponsavel} size="sm">
-                  Adicionar
-                </Button>
-              </div>
-            )}
+            <Select value={responsavelId} onValueChange={setResponsavelId}>
+              <SelectTrigger>
+                <SelectValue placeholder="Selecione o responsável" />
+              </SelectTrigger>
+              <SelectContent>
+                {profiles.map((p) => (
+                  <SelectItem key={p.id} value={p.id}>
+                    {p.display_name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
 
           <div className="space-y-2">

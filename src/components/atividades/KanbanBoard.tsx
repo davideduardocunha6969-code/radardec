@@ -13,6 +13,7 @@ import {
 import { format, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import type { Atividade, Coluna } from "@/hooks/useAtividadesMarketing";
+import { PRIORIDADE_LABELS, PRIORIDADE_COLORS } from "@/hooks/useAtividadesMarketing";
 import { cn } from "@/lib/utils";
 
 interface KanbanBoardProps {
@@ -121,13 +122,18 @@ export function KanbanBoard({
                       <CardContent className="p-3 space-y-2">
                         <div className="flex items-start gap-2">
                           <GripVertical className="h-4 w-4 text-muted-foreground mt-0.5 cursor-grab" />
-                          <p className="text-sm flex-1 line-clamp-3">{atividade.atividade}</p>
+                          <div className="flex-1 space-y-2">
+                            <Badge className={cn("text-xs", PRIORIDADE_COLORS[atividade.prioridade])}>
+                              {PRIORIDADE_LABELS[atividade.prioridade]}
+                            </Badge>
+                            <p className="text-sm line-clamp-3">{atividade.atividade}</p>
+                          </div>
                         </div>
                         <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
                           {atividade.responsavel && (
                             <div className="flex items-center gap-1">
                               <User className="h-3 w-3" />
-                              {atividade.responsavel.nome}
+                              {atividade.responsavel.display_name}
                             </div>
                           )}
                           {atividade.prazo_fatal && (
