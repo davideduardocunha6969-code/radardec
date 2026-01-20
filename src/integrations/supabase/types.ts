@@ -54,6 +54,7 @@ export type Database = {
           link_inspiracao: string | null
           link_video_drive: string | null
           orientacoes_filmagem: string | null
+          prioridade: string
           semana_publicacao: number | null
           setor: string
           status: string
@@ -70,6 +71,7 @@ export type Database = {
           link_inspiracao?: string | null
           link_video_drive?: string | null
           orientacoes_filmagem?: string | null
+          prioridade?: string
           semana_publicacao?: number | null
           setor: string
           status?: string
@@ -86,6 +88,7 @@ export type Database = {
           link_inspiracao?: string | null
           link_video_drive?: string | null
           orientacoes_filmagem?: string | null
+          prioridade?: string
           semana_publicacao?: number | null
           setor?: string
           status?: string
@@ -126,6 +129,7 @@ export type Database = {
           link_inspiracao: string | null
           link_video_drive: string | null
           orientacoes_filmagem: string | null
+          prioridade: string
           semana_publicacao: number | null
           setor: string
           titulo: string
@@ -144,6 +148,7 @@ export type Database = {
           link_inspiracao?: string | null
           link_video_drive?: string | null
           orientacoes_filmagem?: string | null
+          prioridade?: string
           semana_publicacao?: number | null
           setor: string
           titulo: string
@@ -162,6 +167,7 @@ export type Database = {
           link_inspiracao?: string | null
           link_video_drive?: string | null
           orientacoes_filmagem?: string | null
+          prioridade?: string
           semana_publicacao?: number | null
           setor?: string
           titulo?: string

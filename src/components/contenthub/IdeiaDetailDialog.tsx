@@ -31,8 +31,10 @@ import { ExternalLink, Trash2 } from "lucide-react";
 import {
   Setor,
   Formato,
+  Prioridade,
   SETOR_LABELS,
   FORMATO_LABELS,
+  PRIORIDADE_LABELS,
 } from "@/hooks/useConteudosMidia";
 import { IdeiaConteudo, IdeiaConteudoInput } from "@/hooks/useIdeiasConteudo";
 
@@ -67,6 +69,7 @@ export function IdeiaDetailDialog({
         link_inspiracao: ideia.link_inspiracao || "",
         link_video_drive: ideia.link_video_drive || "",
         semana_publicacao: ideia.semana_publicacao,
+        prioridade: ideia.prioridade,
       });
     }
   }, [ideia]);
@@ -124,7 +127,7 @@ export function IdeiaDetailDialog({
         </DialogHeader>
 
         <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-4 gap-4">
             <div className="space-y-2">
               <Label>Setor</Label>
               <Select
@@ -177,6 +180,25 @@ export function IdeiaDetailDialog({
                   {Array.from({ length: 52 }, (_, i) => i + 1).map((week) => (
                     <SelectItem key={week} value={week.toString()}>
                       Semana {week}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Prioridade</Label>
+              <Select
+                value={editedData.prioridade || "util"}
+                onValueChange={(v) => handleFieldChange("prioridade", v as Prioridade)}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PRIORIDADE_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
                     </SelectItem>
                   ))}
                 </SelectContent>

@@ -22,9 +22,11 @@ import {
   Setor,
   Formato,
   Status,
+  Prioridade,
   SETOR_LABELS,
   FORMATO_LABELS,
   STATUS_LABELS,
+  PRIORIDADE_LABELS,
 } from "@/hooks/useConteudosMidia";
 import {
   AlertDialog,
@@ -73,6 +75,7 @@ export function ConteudoDetailDialog({
       link_inspiracao: editedData.link_inspiracao,
       link_video_drive: editedData.link_video_drive,
       semana_publicacao: editedData.semana_publicacao,
+      prioridade: editedData.prioridade,
       status: editedData.status,
     });
   };
@@ -113,7 +116,7 @@ export function ConteudoDetailDialog({
 
         <div className="space-y-6 py-4">
           {/* Basic Info Section */}
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-5 gap-4">
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground uppercase tracking-wide">Setor</Label>
               <Select
@@ -175,6 +178,27 @@ export function ConteudoDetailDialog({
                   {Array.from({ length: 52 }, (_, i) => i + 1).map((week) => (
                     <SelectItem key={week} value={week.toString()}>
                       Semana {week}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Prioridade</Label>
+              <Select
+                value={editedData.prioridade}
+                onValueChange={(value: Prioridade) =>
+                  handleFieldChange("prioridade", value)
+                }
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PRIORIDADE_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
                     </SelectItem>
                   ))}
                 </SelectContent>
