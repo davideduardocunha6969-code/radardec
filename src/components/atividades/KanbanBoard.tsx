@@ -277,62 +277,6 @@ export function KanbanBoard({
           </div>
         );
       })}
-
-      {/* Add Column */}
-      <div className="flex-shrink-0 w-[280px]">
-        {showAddColuna ? (
-          <div className="rounded-xl border-2 border-dashed border-primary/50 bg-primary/5 p-3">
-            <div className="space-y-3">
-              <Input
-                placeholder="Nome da nova coluna..."
-                value={novaColunaName}
-                onChange={(e) => setNovaColunaName(e.target.value)}
-                autoFocus
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") handleAddColuna();
-                  if (e.key === "Escape") {
-                    setShowAddColuna(false);
-                    setNovaColunaName("");
-                  }
-                }}
-                className="bg-background h-8 text-sm"
-              />
-              <div className="flex gap-2">
-                <Button size="sm" onClick={handleAddColuna} className="flex-1 h-7 text-xs">
-                  <Plus className="h-3.5 w-3.5 mr-1" />
-                  Adicionar
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-7 text-xs"
-                  onClick={() => {
-                    setShowAddColuna(false);
-                    setNovaColunaName("");
-                  }}
-                >
-                  Cancelar
-                </Button>
-              </div>
-            </div>
-          </div>
-        ) : (
-          <button
-            className={cn(
-              "w-full h-20 rounded-xl border-2 border-dashed",
-              "border-muted-foreground/25 hover:border-primary/50",
-              "bg-muted/20 hover:bg-primary/5",
-              "flex items-center justify-center gap-2",
-              "text-muted-foreground hover:text-primary",
-              "transition-all duration-200"
-            )}
-            onClick={() => setShowAddColuna(true)}
-          >
-            <Plus className="h-4 w-4" />
-            <span className="text-sm font-medium">Adicionar Coluna</span>
-          </button>
-        )}
-      </div>
     </div>
   );
 }

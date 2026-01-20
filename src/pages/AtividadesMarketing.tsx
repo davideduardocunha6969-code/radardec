@@ -323,6 +323,18 @@ export default function AtividadesMarketing() {
         <Badge variant="outline" className="text-[10px] font-normal h-5 ml-auto">
           {filteredAtividades.length}/{atividades.length}
         </Badge>
+
+        <div className="h-4 w-px bg-border" />
+
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => addColuna.mutate("Nova Coluna")}
+          className="h-6 text-xs px-2"
+        >
+          <Plus className="h-3 w-3 mr-1" />
+          Coluna
+        </Button>
       </div>
 
       {/* Kanban - Only this scrolls horizontally */}
