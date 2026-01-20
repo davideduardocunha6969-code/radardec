@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus, Loader2, Filter, X } from "lucide-react";
+import { Plus, Loader2, Filter, X, AlertTriangle, Clock, Flame } from "lucide-react";
 import { useAtividadesMarketing, type Atividade, type Prioridade, PRIORIDADE_LABELS } from "@/hooks/useAtividadesMarketing";
 import { KanbanBoard } from "@/components/atividades/KanbanBoard";
 import { AtividadeFormDialog } from "@/components/atividades/AtividadeFormDialog";
@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
+import { isPast, differenceInDays } from "date-fns";
 
 export default function AtividadesMarketing() {
   const {
@@ -57,6 +58,32 @@ export default function AtividadesMarketing() {
     queryFn: () => (selectedAtividade ? fetchAnexos(selectedAtividade.id) : Promise.resolve([])),
     enabled: !!selectedAtividade,
   });
+
+  // Get final column ID (Finalizado)
+  const finalizadoColumnId = useMemo(() => {
+    const finalizadoCol = colunas.find(c => c.nome.toLowerCase() === "finalizado");
+    return finalizadoCol?.id;
+  }, [colunas]);
+
+  // Calculate alert counts (excluding finalized)
+  const alertCounts = useMemo(() => {
+    const activeAtividades = atividades.filter(a => a.coluna_id !== finalizadoColumnId);
+    
+    const overdue = activeAtividades.filter(a => 
+      a.prazo_fatal && isPast(new Date(a.prazo_fatal))
+    ).length;
+
+    const dueSoon = activeAtividades.filter(a => {
+      if (!a.prazo_fatal) return false;
+      const diff = differenceInDays(new Date(a.prazo_fatal), new Date());
+      return diff >= 0 && diff <= 2;
+    }).length;
+
+    const emergency = activeAtividades.filter(a => a.prioridade === "emergencia").length;
+    const urgent = activeAtividades.filter(a => a.prioridade === "urgente").length;
+
+    return { overdue, dueSoon, emergency, urgent };
+  }, [atividades, finalizadoColumnId]);
 
   // Filtered atividades
   const filteredAtividades = useMemo(() => {
@@ -112,7 +139,7 @@ export default function AtividadesMarketing() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
         <div>
           <h1 className="text-2xl font-bold">Atividades</h1>
           <p className="text-muted-foreground">
@@ -123,6 +150,141 @@ export default function AtividadesMarketing() {
           <Plus className="h-4 w-4 mr-2" />
           Adicionar Atividade
         </Button>
+      </div>
+
+      {/* Alert Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {/* Overdue */}
+        <div 
+          className={cn(
+            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all",
+            alertCounts.overdue > 0 
+              ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800" 
+              : "bg-muted/30 border-transparent"
+          )}
+        >
+          <div className={cn(
+            "w-10 h-10 rounded-full flex items-center justify-center",
+            alertCounts.overdue > 0 
+              ? "bg-red-100 dark:bg-red-900/50" 
+              : "bg-muted"
+          )}>
+            <AlertTriangle className={cn(
+              "h-5 w-5",
+              alertCounts.overdue > 0 
+                ? "text-red-600 dark:text-red-400 animate-pulse" 
+                : "text-muted-foreground"
+            )} />
+          </div>
+          <div>
+            <p className={cn(
+              "text-2xl font-bold",
+              alertCounts.overdue > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
+            )}>
+              {alertCounts.overdue}
+            </p>
+            <p className="text-xs text-muted-foreground">Atrasadas</p>
+          </div>
+        </div>
+
+        {/* Due Soon */}
+        <div 
+          className={cn(
+            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all",
+            alertCounts.dueSoon > 0 
+              ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800" 
+              : "bg-muted/30 border-transparent"
+          )}
+        >
+          <div className={cn(
+            "w-10 h-10 rounded-full flex items-center justify-center",
+            alertCounts.dueSoon > 0 
+              ? "bg-amber-100 dark:bg-amber-900/50" 
+              : "bg-muted"
+          )}>
+            <Clock className={cn(
+              "h-5 w-5",
+              alertCounts.dueSoon > 0 
+                ? "text-amber-600 dark:text-amber-400" 
+                : "text-muted-foreground"
+            )} />
+          </div>
+          <div>
+            <p className={cn(
+              "text-2xl font-bold",
+              alertCounts.dueSoon > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"
+            )}>
+              {alertCounts.dueSoon}
+            </p>
+            <p className="text-xs text-muted-foreground">Vencendo em breve</p>
+          </div>
+        </div>
+
+        {/* Emergency */}
+        <div 
+          className={cn(
+            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all",
+            alertCounts.emergency > 0 
+              ? "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800" 
+              : "bg-muted/30 border-transparent"
+          )}
+        >
+          <div className={cn(
+            "w-10 h-10 rounded-full flex items-center justify-center",
+            alertCounts.emergency > 0 
+              ? "bg-rose-100 dark:bg-rose-900/50" 
+              : "bg-muted"
+          )}>
+            <Flame className={cn(
+              "h-5 w-5",
+              alertCounts.emergency > 0 
+                ? "text-rose-600 dark:text-rose-400 animate-pulse" 
+                : "text-muted-foreground"
+            )} />
+          </div>
+          <div>
+            <p className={cn(
+              "text-2xl font-bold",
+              alertCounts.emergency > 0 ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground"
+            )}>
+              {alertCounts.emergency}
+            </p>
+            <p className="text-xs text-muted-foreground">Emergências</p>
+          </div>
+        </div>
+
+        {/* Urgent */}
+        <div 
+          className={cn(
+            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all",
+            alertCounts.urgent > 0 
+              ? "bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800" 
+              : "bg-muted/30 border-transparent"
+          )}
+        >
+          <div className={cn(
+            "w-10 h-10 rounded-full flex items-center justify-center",
+            alertCounts.urgent > 0 
+              ? "bg-orange-100 dark:bg-orange-900/50" 
+              : "bg-muted"
+          )}>
+            <AlertTriangle className={cn(
+              "h-5 w-5",
+              alertCounts.urgent > 0 
+                ? "text-orange-600 dark:text-orange-400" 
+                : "text-muted-foreground"
+            )} />
+          </div>
+          <div>
+            <p className={cn(
+              "text-2xl font-bold",
+              alertCounts.urgent > 0 ? "text-orange-600 dark:text-orange-400" : "text-muted-foreground"
+            )}>
+              {alertCounts.urgent}
+            </p>
+            <p className="text-xs text-muted-foreground">Urgentes</p>
+          </div>
+        </div>
       </div>
 
       {/* Filters Bar */}
