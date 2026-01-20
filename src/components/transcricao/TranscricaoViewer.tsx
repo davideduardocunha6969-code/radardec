@@ -8,7 +8,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import type { Segmento } from "@/hooks/useTranscricao";
 import { cn } from "@/lib/utils";
-
+import { AiAnalysisSection } from "./AiAnalysisSection";
 interface TranscricaoViewerProps {
   segmentos: Segmento[];
   textoCompleto: string;
@@ -133,8 +133,8 @@ export function TranscricaoViewer({
     setEditValue("");
   };
 
-  const copyToClipboard = () => {
-    const formattedText = segmentos
+  const getFormattedText = () => {
+    return segmentos
       .map(
         (s) =>
           `[${formatTime(s.inicio)}] ${getSpeakerDisplayName(s.falante)}:\n${
@@ -142,8 +142,10 @@ export function TranscricaoViewer({
           }`
       )
       .join("\n\n");
+  };
 
-    navigator.clipboard.writeText(formattedText);
+  const copyToClipboard = () => {
+    navigator.clipboard.writeText(getFormattedText());
     toast({
       title: "Copiado!",
       description: "Transcrição copiada para a área de transferência.",
@@ -153,14 +155,7 @@ export function TranscricaoViewer({
   const downloadAsText = () => {
     const formattedText = `# ${titulo}\n\nDuração: ${
       duracaoSegundos ? formatDuration(duracaoSegundos) : "N/A"
-    }\n\n---\n\n${segmentos
-      .map(
-        (s) =>
-          `[${formatTime(s.inicio)}] ${getSpeakerDisplayName(s.falante)}:\n${
-            s.texto
-          }`
-      )
-      .join("\n\n")}`;
+    }\n\n---\n\n${getFormattedText()}`;
 
     const blob = new Blob([formattedText], { type: "text/plain" });
     const url = URL.createObjectURL(blob);
@@ -178,153 +173,158 @@ export function TranscricaoViewer({
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-      {/* Video Player (if available) */}
-      {videoUrl && (
-        <Card className="lg:col-span-1">
-          <CardHeader className="pb-2">
-            <CardTitle className="text-sm">Vídeo</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <video
-              ref={videoRef}
-              src={videoUrl}
-              className="w-full rounded-lg"
-              controls
-            />
-          </CardContent>
-        </Card>
-      )}
+    <div className="space-y-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        {/* Video Player (if available) */}
+        {videoUrl && (
+          <Card className="lg:col-span-1">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm">Vídeo</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <video
+                ref={videoRef}
+                src={videoUrl}
+                className="w-full rounded-lg"
+                controls
+              />
+            </CardContent>
+          </Card>
+        )}
 
-      {/* Transcription */}
-      <Card className={cn("lg:col-span-2", !videoUrl && "lg:col-span-3")}>
-        <CardHeader className="pb-2">
-          <div className="flex items-center justify-between">
-            <div>
-              <CardTitle className="text-lg">{titulo}</CardTitle>
-              {duracaoSegundos && (
-                <p className="text-sm text-muted-foreground mt-1">
-                  Duração: {formatDuration(duracaoSegundos)}
-                </p>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <Button variant="outline" size="sm" onClick={copyToClipboard}>
-                <Copy className="h-4 w-4 mr-1" />
-                Copiar
-              </Button>
-              <Button variant="outline" size="sm" onClick={downloadAsText}>
-                <Download className="h-4 w-4 mr-1" />
-                Baixar
-              </Button>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent>
-          {/* Speaker Legend */}
-          <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b">
-            {uniqueSpeakers.map((speaker) => (
-              <div key={speaker} className="flex items-center gap-1">
-                {editingSpeaker === speaker ? (
-                  <div className="flex items-center gap-1">
-                    <Input
-                      value={editValue}
-                      onChange={(e) => setEditValue(e.target.value)}
-                      className="h-7 w-32 text-xs"
-                      autoFocus
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") saveSpeakerName();
-                        if (e.key === "Escape") cancelEditingSpeaker();
-                      }}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={saveSpeakerName}
-                    >
-                      <Check className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={cancelEditingSpeaker}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ) : (
-                  <>
-                    <Badge
-                      variant="outline"
-                      className={cn("text-xs", getSpeakerColor(speaker))}
-                    >
-                      {getSpeakerDisplayName(speaker)}
-                    </Badge>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-5 w-5"
-                      onClick={() => startEditingSpeaker(speaker)}
-                    >
-                      <Edit2 className="h-3 w-3" />
-                    </Button>
-                  </>
+        {/* Transcription */}
+        <Card className={cn("lg:col-span-2", !videoUrl && "lg:col-span-3")}>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">{titulo}</CardTitle>
+                {duracaoSegundos && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Duração: {formatDuration(duracaoSegundos)}
+                  </p>
                 )}
               </div>
-            ))}
-          </div>
-
-          {/* Segments */}
-          <ScrollArea className="h-[400px] pr-4">
-            <div className="space-y-3">
-              {segmentos.map((segmento, index) => (
-                <div
-                  key={index}
-                  className={cn(
-                    "p-3 rounded-lg border cursor-pointer transition-all",
-                    isSegmentActive(segmento)
-                      ? "bg-primary/10 border-primary"
-                      : "hover:bg-muted/50"
-                  )}
-                  onClick={() => handleSegmentClick(segmento.inicio)}
-                >
-                  <div className="flex items-center gap-2 mb-1">
-                    <Badge
-                      variant="outline"
-                      className={cn(
-                        "text-xs",
-                        getSpeakerColor(segmento.falante)
-                      )}
-                    >
-                      {getSpeakerDisplayName(segmento.falante)}
-                    </Badge>
-                    <span className="text-xs text-muted-foreground">
-                      {formatTime(segmento.inicio)} -{" "}
-                      {formatTime(segmento.fim)}
-                    </span>
-                    {videoUrl && (
+              <div className="flex items-center gap-2">
+                <Button variant="outline" size="sm" onClick={copyToClipboard}>
+                  <Copy className="h-4 w-4 mr-1" />
+                  Copiar
+                </Button>
+                <Button variant="outline" size="sm" onClick={downloadAsText}>
+                  <Download className="h-4 w-4 mr-1" />
+                  Baixar
+                </Button>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {/* Speaker Legend */}
+            <div className="flex flex-wrap gap-2 mb-4 pb-4 border-b">
+              {uniqueSpeakers.map((speaker) => (
+                <div key={speaker} className="flex items-center gap-1">
+                  {editingSpeaker === speaker ? (
+                    <div className="flex items-center gap-1">
+                      <Input
+                        value={editValue}
+                        onChange={(e) => setEditValue(e.target.value)}
+                        className="h-7 w-32 text-xs"
+                        autoFocus
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") saveSpeakerName();
+                          if (e.key === "Escape") cancelEditingSpeaker();
+                        }}
+                      />
                       <Button
                         variant="ghost"
                         size="icon"
-                        className="h-5 w-5 ml-auto"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleSegmentClick(segmento.inicio);
-                        }}
+                        className="h-6 w-6"
+                        onClick={saveSpeakerName}
                       >
-                        <Play className="h-3 w-3" />
+                        <Check className="h-3 w-3" />
                       </Button>
-                    )}
-                  </div>
-                  <p className="text-sm">{segmento.texto}</p>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6"
+                        onClick={cancelEditingSpeaker}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <>
+                      <Badge
+                        variant="outline"
+                        className={cn("text-xs", getSpeakerColor(speaker))}
+                      >
+                        {getSpeakerDisplayName(speaker)}
+                      </Badge>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-5 w-5"
+                        onClick={() => startEditingSpeaker(speaker)}
+                      >
+                        <Edit2 className="h-3 w-3" />
+                      </Button>
+                    </>
+                  )}
                 </div>
               ))}
             </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
+
+            {/* Segments */}
+            <ScrollArea className="h-[400px] pr-4">
+              <div className="space-y-3">
+                {segmentos.map((segmento, index) => (
+                  <div
+                    key={index}
+                    className={cn(
+                      "p-3 rounded-lg border cursor-pointer transition-all",
+                      isSegmentActive(segmento)
+                        ? "bg-primary/10 border-primary"
+                        : "hover:bg-muted/50"
+                    )}
+                    onClick={() => handleSegmentClick(segmento.inicio)}
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      <Badge
+                        variant="outline"
+                        className={cn(
+                          "text-xs",
+                          getSpeakerColor(segmento.falante)
+                        )}
+                      >
+                        {getSpeakerDisplayName(segmento.falante)}
+                      </Badge>
+                      <span className="text-xs text-muted-foreground">
+                        {formatTime(segmento.inicio)} -{" "}
+                        {formatTime(segmento.fim)}
+                      </span>
+                      {videoUrl && (
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-5 w-5 ml-auto"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSegmentClick(segmento.inicio);
+                          }}
+                        >
+                          <Play className="h-3 w-3" />
+                        </Button>
+                      )}
+                    </div>
+                    <p className="text-sm">{segmento.texto}</p>
+                  </div>
+                ))}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* AI Analysis Section */}
+      <AiAnalysisSection transcricaoTexto={getFormattedText()} />
     </div>
   );
 }
