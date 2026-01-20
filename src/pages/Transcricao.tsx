@@ -8,6 +8,7 @@ import { Progress } from "@/components/ui/progress";
 import { VideoUploader } from "@/components/transcricao/VideoUploader";
 import { TranscricaoViewer } from "@/components/transcricao/TranscricaoViewer";
 import { TranscricaoList } from "@/components/transcricao/TranscricaoList";
+import { SpeakerIdentificationStep } from "@/components/transcricao/SpeakerIdentificationStep";
 import { useTranscricao, Transcricao } from "@/hooks/useTranscricao";
 
 export default function TranscricaoPage() {
@@ -24,7 +25,8 @@ export default function TranscricaoPage() {
   const [selectedVideo, setSelectedVideo] = useState<File | null>(null);
   const [selectedTranscricao, setSelectedTranscricao] =
     useState<Transcricao | null>(null);
-  const [view, setView] = useState<"list" | "new" | "detail">("list");
+  const [view, setView] = useState<"list" | "new" | "identify" | "detail">("list");
+  const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
 
   useEffect(() => {
     fetchTranscricoes();
@@ -47,7 +49,15 @@ export default function TranscricaoPage() {
 
       if (result) {
         setSelectedTranscricao(result);
-        setView("detail");
+        // Check if there are multiple speakers to identify
+        const uniqueSpeakers = [...new Set(result.segmentos.map((s) => s.falante))];
+        if (uniqueSpeakers.length > 1) {
+          setView("identify");
+        } else {
+          // Single speaker, go directly to detail
+          setSpeakerNames({});
+          setView("detail");
+        }
         setTitulo("");
         setSelectedVideo(null);
         fetchTranscricoes();
@@ -58,7 +68,14 @@ export default function TranscricaoPage() {
 
   const handleSelectTranscricao = useCallback((transcricao: Transcricao) => {
     setSelectedTranscricao(transcricao);
-    setView("detail");
+    // Check if there are multiple speakers that need identification
+    const uniqueSpeakers = [...new Set(transcricao.segmentos.map((s) => s.falante))];
+    if (uniqueSpeakers.length > 1) {
+      setView("identify");
+    } else {
+      setSpeakerNames({});
+      setView("detail");
+    }
   }, []);
 
   const handleDelete = useCallback(
@@ -73,8 +90,30 @@ export default function TranscricaoPage() {
   );
 
   const handleBack = useCallback(() => {
+    if (view === "detail" && selectedTranscricao) {
+      // Go back to identification step
+      const uniqueSpeakers = [...new Set(selectedTranscricao.segmentos.map((s) => s.falante))];
+      if (uniqueSpeakers.length > 1) {
+        setView("identify");
+        return;
+      }
+    }
     setView("list");
     setSelectedTranscricao(null);
+    setSpeakerNames({});
+    setTitulo("");
+    setSelectedVideo(null);
+  }, [view, selectedTranscricao]);
+
+  const handleSpeakerIdentificationComplete = useCallback((names: Record<string, string>) => {
+    setSpeakerNames(names);
+    setView("detail");
+  }, []);
+
+  const handleBackToList = useCallback(() => {
+    setView("list");
+    setSelectedTranscricao(null);
+    setSpeakerNames({});
     setTitulo("");
     setSelectedVideo(null);
   }, []);
@@ -150,12 +189,21 @@ export default function TranscricaoPage() {
         </Card>
       )}
 
+      {view === "identify" && selectedTranscricao && (
+        <SpeakerIdentificationStep
+          segmentos={selectedTranscricao.segmentos}
+          onComplete={handleSpeakerIdentificationComplete}
+          onBack={handleBackToList}
+        />
+      )}
+
       {view === "detail" && selectedTranscricao && (
         <TranscricaoViewer
           segmentos={selectedTranscricao.segmentos}
           textoCompleto={selectedTranscricao.texto_completo || ""}
           titulo={selectedTranscricao.titulo}
           duracaoSegundos={selectedTranscricao.duracao_segundos || undefined}
+          speakerNames={speakerNames}
         />
       )}
     </div>

@@ -15,6 +15,7 @@ interface TranscricaoViewerProps {
   titulo: string;
   duracaoSegundos?: number;
   videoUrl?: string;
+  speakerNames?: Record<string, string>;
 }
 
 // Map speakers to colors
@@ -37,12 +38,13 @@ export function TranscricaoViewer({
   titulo,
   duracaoSegundos,
   videoUrl,
+  speakerNames: initialSpeakerNames = {},
 }: TranscricaoViewerProps) {
   const { toast } = useToast();
   const videoRef = useRef<HTMLVideoElement>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const [speakerNames, setSpeakerNames] = useState<Record<string, string>>({});
+  const [speakerNames, setSpeakerNames] = useState<Record<string, string>>(initialSpeakerNames);
   const [editingSpeaker, setEditingSpeaker] = useState<string | null>(null);
   const [editValue, setEditValue] = useState("");
 
@@ -73,11 +75,16 @@ export function TranscricaoViewer({
   }, []);
 
   const formatTime = (seconds: number) => {
+    const hours = Math.floor(seconds / 3600);
+    const mins = Math.floor((seconds % 3600) / 60);
+    const secs = Math.floor(seconds % 60);
+    return `${hours.toString().padStart(2, "0")}h ${mins.toString().padStart(2, "0")}m ${secs.toString().padStart(2, "0")}s`;
+  };
+
+  const formatTimeShort = (seconds: number) => {
     const mins = Math.floor(seconds / 60);
     const secs = Math.floor(seconds % 60);
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
+    return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
   };
 
   const formatDuration = (seconds: number) => {
@@ -137,9 +144,7 @@ export function TranscricaoViewer({
     return segmentos
       .map(
         (s) =>
-          `[${formatTime(s.inicio)}] ${getSpeakerDisplayName(s.falante)}:\n${
-            s.texto
-          }`
+          `${getSpeakerDisplayName(s.falante)} (${formatTime(s.inicio)}):\n${s.texto}`
       )
       .join("\n\n");
   };
@@ -296,9 +301,8 @@ export function TranscricaoViewer({
                       >
                         {getSpeakerDisplayName(segmento.falante)}
                       </Badge>
-                      <span className="text-xs text-muted-foreground">
-                        {formatTime(segmento.inicio)} -{" "}
-                        {formatTime(segmento.fim)}
+                      <span className="text-xs text-muted-foreground font-mono">
+                        ({formatTime(segmento.inicio)})
                       </span>
                       {videoUrl && (
                         <Button
