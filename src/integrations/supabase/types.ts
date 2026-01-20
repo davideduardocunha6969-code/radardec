@@ -44,6 +44,51 @@ export type Database = {
         }
         Relationships: []
       }
+      conteudos_midia: {
+        Row: {
+          copy_completa: string | null
+          created_at: string
+          formato: string
+          gancho: string | null
+          id: string
+          link_inspiracao: string | null
+          orientacoes_filmagem: string | null
+          setor: string
+          status: string
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          copy_completa?: string | null
+          created_at?: string
+          formato: string
+          gancho?: string | null
+          id?: string
+          link_inspiracao?: string | null
+          orientacoes_filmagem?: string | null
+          setor: string
+          status?: string
+          titulo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          copy_completa?: string | null
+          created_at?: string
+          formato?: string
+          gancho?: string | null
+          id?: string
+          link_inspiracao?: string | null
+          orientacoes_filmagem?: string | null
+          setor?: string
+          status?: string
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       holidays: {
         Row: {
           created_at: string
