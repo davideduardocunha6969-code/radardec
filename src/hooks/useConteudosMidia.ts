@@ -17,6 +17,7 @@ export interface ConteudoMidia {
   orientacoes_filmagem: string | null;
   copy_completa: string | null;
   link_inspiracao: string | null;
+  link_video_drive: string | null;
   status: Status;
   created_at: string;
   updated_at: string;
@@ -30,6 +31,7 @@ export interface ConteudoMidiaInput {
   orientacoes_filmagem?: string;
   copy_completa?: string;
   link_inspiracao?: string;
+  link_video_drive?: string;
   status?: Status;
 }
 

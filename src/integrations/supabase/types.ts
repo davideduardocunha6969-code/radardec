@@ -52,6 +52,7 @@ export type Database = {
           gancho: string | null
           id: string
           link_inspiracao: string | null
+          link_video_drive: string | null
           orientacoes_filmagem: string | null
           setor: string
           status: string
@@ -66,6 +67,7 @@ export type Database = {
           gancho?: string | null
           id?: string
           link_inspiracao?: string | null
+          link_video_drive?: string | null
           orientacoes_filmagem?: string | null
           setor: string
           status?: string
@@ -80,6 +82,7 @@ export type Database = {
           gancho?: string | null
           id?: string
           link_inspiracao?: string | null
+          link_video_drive?: string | null
           orientacoes_filmagem?: string | null
           setor?: string
           status?: string
