@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ExternalLink, Trash2 } from "lucide-react";
+import { ExternalLink, Trash2, Video, Link2 } from "lucide-react";
 import {
   ConteudoMidia,
   Setor,
@@ -37,6 +37,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import { Separator } from "@/components/ui/separator";
 
 interface ConteudoDetailDialogProps {
   open: boolean;
@@ -70,16 +71,17 @@ export function ConteudoDetailDialog({
       orientacoes_filmagem: editedData.orientacoes_filmagem,
       copy_completa: editedData.copy_completa,
       link_inspiracao: editedData.link_inspiracao,
+      link_video_drive: editedData.link_video_drive,
       status: editedData.status,
     });
   };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-        <DialogHeader>
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+        <DialogHeader className="pb-4 border-b">
           <DialogTitle className="flex items-center justify-between pr-8">
-            <span>Detalhes do Conteúdo</span>
+            <span className="text-xl">Detalhes do Conteúdo</span>
             {isAdmin && (
               <AlertDialog>
                 <AlertDialogTrigger asChild>
@@ -108,17 +110,18 @@ export function ConteudoDetailDialog({
           </DialogTitle>
         </DialogHeader>
 
-        <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+        <div className="space-y-6 py-4">
+          {/* Basic Info Section */}
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
-              <Label>Setor</Label>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Setor</Label>
               <Select
                 value={editedData.setor}
                 onValueChange={(value: Setor) =>
                   handleFieldChange("setor", value)
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -132,14 +135,14 @@ export function ConteudoDetailDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>Formato</Label>
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Formato</Label>
               <Select
                 value={editedData.formato}
                 onValueChange={(value: Formato) =>
                   handleFieldChange("formato", value)
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger className="h-9">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -151,93 +154,148 @@ export function ConteudoDetailDialog({
                 </SelectContent>
               </Select>
             </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Status</Label>
+              <Select
+                value={editedData.status}
+                onValueChange={(value: Status) =>
+                  handleFieldChange("status", value)
+                }
+              >
+                <SelectTrigger className="h-9">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
+          <Separator />
+
+          {/* Title */}
           <div className="space-y-2">
-            <Label>Título da Postagem</Label>
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Título da Postagem</Label>
             <Input
               value={editedData.titulo}
               onChange={(e) => handleFieldChange("titulo", e.target.value)}
+              className="text-base font-medium"
             />
           </div>
 
+          {/* Hook */}
           <div className="space-y-2">
-            <Label>Gancho</Label>
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Gancho</Label>
             <Textarea
               value={editedData.gancho || ""}
               onChange={(e) => handleFieldChange("gancho", e.target.value)}
               rows={2}
+              placeholder="Gancho para chamar atenção..."
+              className="resize-none"
             />
           </div>
 
+          {/* Filming Instructions */}
           <div className="space-y-2">
-            <Label>Orientações para Filmagem</Label>
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Orientações para Filmagem</Label>
             <Textarea
               value={editedData.orientacoes_filmagem || ""}
               onChange={(e) =>
                 handleFieldChange("orientacoes_filmagem", e.target.value)
               }
               rows={3}
+              placeholder="Instruções detalhadas para gravação..."
+              className="resize-none"
             />
           </div>
 
+          {/* Full Copy */}
           <div className="space-y-2">
-            <Label>Copy Completa</Label>
+            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Copy Completa</Label>
             <Textarea
               value={editedData.copy_completa || ""}
               onChange={(e) =>
                 handleFieldChange("copy_completa", e.target.value)
               }
-              rows={4}
+              rows={5}
+              placeholder="Texto completo da postagem..."
+              className="resize-none"
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Link do Modelo de Inspiração</Label>
-            <div className="flex gap-2">
-              <Input
-                value={editedData.link_inspiracao || ""}
-                onChange={(e) =>
-                  handleFieldChange("link_inspiracao", e.target.value)
-                }
-                type="url"
-              />
-              {editedData.link_inspiracao && (
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() =>
-                    window.open(editedData.link_inspiracao!, "_blank")
+          <Separator />
+
+          {/* Links Section */}
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <Link2 className="h-3.5 w-3.5" />
+                Link de Inspiração
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  value={editedData.link_inspiracao || ""}
+                  onChange={(e) =>
+                    handleFieldChange("link_inspiracao", e.target.value)
                   }
-                >
-                  <ExternalLink className="h-4 w-4" />
-                </Button>
-              )}
+                  type="url"
+                  placeholder="https://..."
+                  className="flex-1"
+                />
+                {editedData.link_inspiracao && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() =>
+                      window.open(editedData.link_inspiracao!, "_blank")
+                    }
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
+                <Video className="h-3.5 w-3.5" />
+                Link do Vídeo no Drive
+              </Label>
+              <div className="flex gap-2">
+                <Input
+                  value={editedData.link_video_drive || ""}
+                  onChange={(e) =>
+                    handleFieldChange("link_video_drive", e.target.value)
+                  }
+                  type="url"
+                  placeholder="https://drive.google.com/..."
+                  className="flex-1"
+                />
+                {editedData.link_video_drive && (
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() =>
+                      window.open(editedData.link_video_drive!, "_blank")
+                    }
+                  >
+                    <ExternalLink className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Status</Label>
-            <Select
-              value={editedData.status}
-              onValueChange={(value: Status) =>
-                handleFieldChange("status", value)
-              }
-            >
-              <SelectTrigger>
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                {Object.entries(STATUS_LABELS).map(([value, label]) => (
-                  <SelectItem key={value} value={value}>
-                    {label}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
+          <Separator />
 
-          <div className="flex justify-end gap-2 pt-4">
+          {/* Actions */}
+          <div className="flex justify-end gap-3 pt-2">
             <Button variant="outline" onClick={() => onOpenChange(false)}>
               Cancelar
             </Button>

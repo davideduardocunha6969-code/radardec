@@ -24,6 +24,21 @@ import {
 } from "@/hooks/useConteudosMidia";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { Video, Image, FileText, Play } from "lucide-react";
+
+const FORMATO_ICONS: Record<string, React.ReactNode> = {
+  video: <Play className="h-3.5 w-3.5" />,
+  video_longo: <Video className="h-3.5 w-3.5" />,
+  carrossel: <FileText className="h-3.5 w-3.5" />,
+  estatico: <Image className="h-3.5 w-3.5" />,
+};
+
+const SETOR_COLORS: Record<string, string> = {
+  trabalhista: "bg-amber-500/15 text-amber-500 border-amber-500/30",
+  previdenciario: "bg-emerald-500/15 text-emerald-500 border-emerald-500/30",
+  civel: "bg-sky-500/15 text-sky-500 border-sky-500/30",
+  bancario: "bg-violet-500/15 text-violet-500 border-violet-500/30",
+};
 
 interface ConteudoListProps {
   conteudos: ConteudoMidia[];
@@ -38,8 +53,8 @@ export function ConteudoList({
 }: ConteudoListProps) {
   if (conteudos.length === 0) {
     return (
-      <div className="text-center py-12 text-muted-foreground">
-        <p>Nenhum conteúdo encontrado.</p>
+      <div className="text-center py-16 text-muted-foreground border rounded-lg bg-card/50">
+        <p className="text-lg">Nenhum conteúdo encontrado.</p>
         <p className="text-sm mt-1">
           Clique em "Novo Conteúdo" para adicionar o primeiro.
         </p>
@@ -48,38 +63,44 @@ export function ConteudoList({
   }
 
   return (
-    <div className="rounded-md border">
+    <div className="rounded-lg border bg-card overflow-hidden">
       <Table>
         <TableHeader>
-          <TableRow>
-            <TableHead className="w-[120px]">Setor</TableHead>
-            <TableHead className="w-[120px]">Formato</TableHead>
-            <TableHead>Título</TableHead>
-            <TableHead className="w-[150px]">Status</TableHead>
-            <TableHead className="w-[100px]">Data</TableHead>
+          <TableRow className="bg-muted/50 hover:bg-muted/50">
+            <TableHead className="w-[130px] font-semibold">Setor</TableHead>
+            <TableHead className="w-[130px] font-semibold">Formato</TableHead>
+            <TableHead className="font-semibold">Título</TableHead>
+            <TableHead className="w-[160px] font-semibold">Status</TableHead>
+            <TableHead className="w-[90px] font-semibold text-right">Data</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {conteudos.map((conteudo) => (
             <TableRow
               key={conteudo.id}
-              className="cursor-pointer hover:bg-accent/50"
+              className="cursor-pointer transition-colors hover:bg-accent/40"
               onClick={() => onSelectConteudo(conteudo)}
             >
-              <TableCell>
-                <Badge variant="outline" className="font-normal">
+              <TableCell className="py-3">
+                <Badge 
+                  variant="outline" 
+                  className={`font-medium text-xs ${SETOR_COLORS[conteudo.setor]}`}
+                >
                   {SETOR_LABELS[conteudo.setor]}
                 </Badge>
               </TableCell>
-              <TableCell>
-                <Badge variant="secondary" className="font-normal">
-                  {FORMATO_LABELS[conteudo.formato]}
-                </Badge>
+              <TableCell className="py-3">
+                <div className="flex items-center gap-1.5 text-sm text-muted-foreground">
+                  {FORMATO_ICONS[conteudo.formato]}
+                  <span>{FORMATO_LABELS[conteudo.formato]}</span>
+                </div>
               </TableCell>
-              <TableCell className="font-medium max-w-[300px] truncate">
-                {conteudo.titulo}
+              <TableCell className="py-3">
+                <span className="font-medium text-foreground line-clamp-1">
+                  {conteudo.titulo}
+                </span>
               </TableCell>
-              <TableCell onClick={(e) => e.stopPropagation()}>
+              <TableCell className="py-3" onClick={(e) => e.stopPropagation()}>
                 <Select
                   value={conteudo.status}
                   onValueChange={(value: Status) =>
@@ -87,7 +108,7 @@ export function ConteudoList({
                   }
                 >
                   <SelectTrigger
-                    className={`w-[130px] h-8 text-xs border ${
+                    className={`w-[140px] h-8 text-xs font-medium border ${
                       STATUS_COLORS[conteudo.status]
                     }`}
                   >
@@ -102,7 +123,7 @@ export function ConteudoList({
                   </SelectContent>
                 </Select>
               </TableCell>
-              <TableCell className="text-muted-foreground text-sm">
+              <TableCell className="py-3 text-muted-foreground text-sm text-right">
                 {format(new Date(conteudo.created_at), "dd/MM/yy", {
                   locale: ptBR,
                 })}
