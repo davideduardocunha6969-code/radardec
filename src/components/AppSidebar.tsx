@@ -1,4 +1,4 @@
-import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic } from "lucide-react";
+import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import logoEscritorio from "@/assets/logo-escritorio.webp";
@@ -37,6 +37,7 @@ const radarItems = [
 // Robôs subitems
 const robosItems = [
   { title: "Transcritor de Audiências", url: "/robos/transcricao", icon: Mic, pageKey: "robos-transcricao" },
+  { title: "Prompts de IA", url: "/robos/prompts", icon: FileText, pageKey: "robos-prompts" },
 ];
 
 export function AppSidebar() {
