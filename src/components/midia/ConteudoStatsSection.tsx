@@ -8,6 +8,18 @@ import {
 } from "@/components/ui/collapsible";
 import { Progress } from "@/components/ui/progress";
 import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  ReferenceLine,
+  Cell,
+  LabelList,
+} from "recharts";
+import {
   ConteudoMidia,
   SETOR_LABELS,
   FORMATO_LABELS,
@@ -16,6 +28,8 @@ import {
   Formato,
   Status,
 } from "@/hooks/useConteudosMidia";
+
+const WEEKLY_GOAL = 21;
 
 interface ConteudoStatsSectionProps {
   conteudos: ConteudoMidia[];
@@ -28,6 +42,11 @@ interface RankingItem {
   label: string;
   count: number;
   percentage: number;
+}
+
+interface WeeklyData {
+  semana: number;
+  quantidade: number;
 }
 
 function RankingCard({
@@ -147,13 +166,42 @@ export function ConteudoStatsSection({
     return { byFormato, bySetor, byStatus };
   }, [conteudos]);
 
+  // Calculate weekly data for previdenciario sector with status "postado"
+  const weeklyData = useMemo(() => {
+    const previdenciarioPostados = conteudos.filter(
+      (c) => c.setor === "previdenciario" && c.status === "postado"
+    );
+
+    const weekCounts: Record<number, number> = {};
+    
+    previdenciarioPostados.forEach((c) => {
+      const week = c.semana_publicacao;
+      if (week && week >= 1 && week <= 53) {
+        weekCounts[week] = (weekCounts[week] || 0) + 1;
+      }
+    });
+
+    // Create array for weeks 1-53
+    const data: WeeklyData[] = [];
+    for (let i = 1; i <= 53; i++) {
+      if (weekCounts[i] !== undefined) {
+        data.push({
+          semana: i,
+          quantidade: weekCounts[i],
+        });
+      }
+    }
+
+    return data.sort((a, b) => a.semana - b.semana);
+  }, [conteudos]);
+
   return (
     <Collapsible open={isOpen} onOpenChange={onOpenChange}>
       <CollapsibleTrigger asChild>
         <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
           <CardHeader className="py-3">
             <div className="flex items-center justify-between">
-            <CardTitle className="text-base font-medium">
+              <CardTitle className="text-base font-medium">
                 📊 Estatísticas de Conteúdo - Previdenciário
               </CardTitle>
               <ChevronDown
@@ -166,6 +214,76 @@ export function ConteudoStatsSection({
         </Card>
       </CollapsibleTrigger>
       <CollapsibleContent>
+        {/* Weekly Goal Chart */}
+        <Card className="mt-4 bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium">
+              📈 Evolução Semanal de Conteúdos Postados (Meta: {WEEKLY_GOAL}/semana)
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {weeklyData.length > 0 ? (
+              <ResponsiveContainer width="100%" height={300}>
+                <BarChart
+                  data={weeklyData}
+                  margin={{ top: 20, right: 30, left: 0, bottom: 5 }}
+                >
+                  <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                  <XAxis
+                    dataKey="semana"
+                    tick={{ fontSize: 12 }}
+                    tickFormatter={(value) => `S${value}`}
+                  />
+                  <YAxis tick={{ fontSize: 12 }} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                    }}
+                    formatter={(value: number) => [value, "Conteúdos"]}
+                    labelFormatter={(label) => `Semana ${label}`}
+                  />
+                  <ReferenceLine
+                    y={WEEKLY_GOAL}
+                    stroke="hsl(var(--primary))"
+                    strokeWidth={2}
+                    strokeDasharray="5 5"
+                    label={{
+                      value: `Meta: ${WEEKLY_GOAL}`,
+                      position: "right",
+                      fill: "hsl(var(--primary))",
+                      fontSize: 12,
+                    }}
+                  />
+                  <Bar dataKey="quantidade" radius={[4, 4, 0, 0]}>
+                    {weeklyData.map((entry, index) => (
+                      <Cell
+                        key={`cell-${index}`}
+                        fill={
+                          entry.quantidade >= WEEKLY_GOAL
+                            ? "hsl(221, 83%, 53%)"
+                            : "hsl(0, 84%, 60%)"
+                        }
+                      />
+                    ))}
+                    <LabelList
+                      dataKey="quantidade"
+                      position="top"
+                      fill="hsl(var(--foreground))"
+                      fontSize={11}
+                    />
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            ) : (
+              <div className="flex items-center justify-center h-[300px] text-muted-foreground">
+                <p>Nenhum conteúdo postado com semana de publicação definida</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         <div className="grid gap-4 md:grid-cols-2 mt-4">
           <RankingCard title="📹 Ranking por Formato" items={stats.byFormato} />
           <RankingCard title="📌 Ranking por Status" items={stats.byStatus} />
