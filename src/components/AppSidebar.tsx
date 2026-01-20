@@ -1,4 +1,4 @@
-import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, Megaphone } from "lucide-react";
+import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, CalendarDays } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import logoEscritorio from "@/assets/logo-escritorio.webp";
@@ -173,13 +173,13 @@ export function AppSidebar() {
                 </Collapsible>
               )}
 
-              {/* Mídias Sociais - Item avulso */}
+              {/* Calendário de Conteúdo - Item avulso */}
               {hasPageAccess("midia-social") && (
                 <SidebarMenuItem>
                   <SidebarMenuButton
                     asChild
                     isActive={isActive("/midia-social")}
-                    tooltip="Mídias Sociais"
+                    tooltip="Calendário de Conteúdo"
                   >
                     <NavLink
                       to="/midia-social"
@@ -187,8 +187,8 @@ export function AppSidebar() {
                       className="flex items-center gap-3 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
                       activeClassName="bg-accent text-primary font-medium"
                     >
-                      <Megaphone className="h-4 w-4" />
-                      <span>Mídias Sociais</span>
+                      <CalendarDays className="h-4 w-4" />
+                      <span>Calendário de Conteúdo</span>
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
