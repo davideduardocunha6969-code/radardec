@@ -21,14 +21,39 @@ interface UserWithDetails {
   permissions: string[];
 }
 
-const AVAILABLE_PAGES = [
-  { key: 'gestao-geral', label: 'Gestão Geral' },
-  { key: 'radar-controladoria', label: 'Radar Controladoria' },
-  { key: 'radar-comercial', label: 'Radar Comercial' },
-  { key: 'radar-bancario', label: 'Radar Bancário' },
-  { key: 'radar-previdenciario', label: 'Radar Previdenciário' },
-  { key: 'radar-trabalhista', label: 'Radar Trabalhista' },
+const AVAILABLE_PAGES_GROUPED = [
+  {
+    group: 'Radares',
+    pages: [
+      { key: 'gestao-geral', label: 'Radar Geral' },
+      { key: 'radar-controladoria', label: 'Radar Controladoria' },
+      { key: 'radar-comercial', label: 'Radar Comercial' },
+      { key: 'radar-bancario', label: 'Radar Bancário' },
+      { key: 'radar-previdenciario', label: 'Radar Previdenciário' },
+      { key: 'radar-trabalhista', label: 'Radar Trabalhista' },
+    ],
+  },
+  {
+    group: 'Marketing',
+    pages: [
+      { key: 'marketing-atividades', label: 'Atividades' },
+      { key: 'content-hub', label: 'Content Hub' },
+      { key: 'midia-social', label: 'Calendário de Conteúdo' },
+      { key: 'marketing-modelador', label: 'Modelador de Conteúdo' },
+    ],
+  },
+  {
+    group: 'Robôs',
+    pages: [
+      { key: 'robos-transcricao', label: 'Transcritor de Audiências' },
+      { key: 'robos-prompts', label: 'Prompts de IA' },
+      { key: 'robos-produtos', label: 'Tipos de Produtos' },
+    ],
+  },
 ];
+
+// Flat list for lookups
+const ALL_PAGES = AVAILABLE_PAGES_GROUPED.flatMap(g => g.pages);
 
 export default function Admin() {
   const { isAdmin, loading } = useAuthContext();
@@ -317,19 +342,28 @@ export default function Admin() {
                 </Label>
               </div>
               {!newIsAdmin && (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   <Label>Páginas Permitidas</Label>
-                  <div className="grid grid-cols-1 gap-2 max-h-48 overflow-y-auto border rounded-md p-3">
-                    {AVAILABLE_PAGES.map(page => (
-                      <div key={page.key} className="flex items-center space-x-2">
-                        <Checkbox
-                          id={`new-${page.key}`}
-                          checked={newPermissions.includes(page.key)}
-                          onCheckedChange={() => togglePermission(page.key)}
-                        />
-                        <Label htmlFor={`new-${page.key}`} className="text-sm">
-                          {page.label}
-                        </Label>
+                  <div className="max-h-64 overflow-y-auto border rounded-md p-3 space-y-4">
+                    {AVAILABLE_PAGES_GROUPED.map(group => (
+                      <div key={group.group} className="space-y-2">
+                        <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                          {group.group}
+                        </p>
+                        <div className="space-y-1.5 pl-2">
+                          {group.pages.map(page => (
+                            <div key={page.key} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`new-${page.key}`}
+                                checked={newPermissions.includes(page.key)}
+                                onCheckedChange={() => togglePermission(page.key)}
+                              />
+                              <Label htmlFor={`new-${page.key}`} className="text-sm font-normal">
+                                {page.label}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -393,7 +427,7 @@ export default function Admin() {
                         <div className="flex flex-wrap gap-1">
                           {user.permissions.map(perm => (
                             <Badge key={perm} variant="outline" className="text-xs">
-                              {AVAILABLE_PAGES.find(p => p.key === perm)?.label || perm}
+                              {ALL_PAGES.find(p => p.key === perm)?.label || perm}
                             </Badge>
                           ))}
                         </div>
@@ -433,20 +467,29 @@ export default function Admin() {
             <DialogTitle>Editar Permissões - {selectedUser?.display_name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label>Páginas Permitidas</Label>
-              <div className="grid grid-cols-1 gap-2 max-h-64 overflow-y-auto border rounded-md p-3">
-                {AVAILABLE_PAGES.map(page => (
-                  <div key={page.key} className="flex items-center space-x-2">
-                    <Checkbox
-                      id={`edit-${page.key}`}
-                      checked={editPermissions.includes(page.key)}
-                      onCheckedChange={() => togglePermission(page.key, true)}
-                      disabled={selectedUser?.role === 'admin'}
-                    />
-                    <Label htmlFor={`edit-${page.key}`} className="text-sm">
-                      {page.label}
-                    </Label>
+              <div className="max-h-72 overflow-y-auto border rounded-md p-3 space-y-4">
+                {AVAILABLE_PAGES_GROUPED.map(group => (
+                  <div key={group.group} className="space-y-2">
+                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                      {group.group}
+                    </p>
+                    <div className="space-y-1.5 pl-2">
+                      {group.pages.map(page => (
+                        <div key={page.key} className="flex items-center space-x-2">
+                          <Checkbox
+                            id={`edit-${page.key}`}
+                            checked={editPermissions.includes(page.key)}
+                            onCheckedChange={() => togglePermission(page.key, true)}
+                            disabled={selectedUser?.role === 'admin'}
+                          />
+                          <Label htmlFor={`edit-${page.key}`} className="text-sm font-normal">
+                            {page.label}
+                          </Label>
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 ))}
               </div>
