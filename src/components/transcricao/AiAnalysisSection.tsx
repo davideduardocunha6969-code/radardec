@@ -1,37 +1,70 @@
 import { useState, useEffect } from "react";
-import { Sparkles, ChevronDown, Copy, Loader2 } from "lucide-react";
+import { Sparkles, Copy, Loader2, FileText } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAiPrompts, AiPrompt } from "@/hooks/useAiPrompts";
 import { useToast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
 
 interface AiAnalysisSectionProps {
   transcricaoTexto: string;
+}
+
+interface AnalysisResult {
+  promptId: string;
+  promptName: string;
+  response: string;
+  isLoading: boolean;
 }
 
 export function AiAnalysisSection({ transcricaoTexto }: AiAnalysisSectionProps) {
   const { prompts, fetchPrompts, isLoading: loadingPrompts } = useAiPrompts();
   const { toast } = useToast();
   
-  const [selectedPrompt, setSelectedPrompt] = useState<AiPrompt | null>(null);
-  const [aiResponse, setAiResponse] = useState("");
-  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showFormattedTranscription, setShowFormattedTranscription] = useState(false);
+  const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
 
   useEffect(() => {
     fetchPrompts();
   }, [fetchPrompts]);
 
+  const handleGenerateTranscription = () => {
+    setShowFormattedTranscription(true);
+    toast({
+      title: "Transcrição gerada",
+      description: "A transcrição formatada foi exibida abaixo.",
+    });
+  };
+
+  const copyTranscription = () => {
+    navigator.clipboard.writeText(transcricaoTexto);
+    toast({
+      title: "Copiado!",
+      description: "Transcrição copiada para a área de transferência.",
+    });
+  };
+
   const analyzeWithPrompt = async (prompt: AiPrompt) => {
-    setSelectedPrompt(prompt);
-    setAiResponse("");
-    setIsAnalyzing(true);
+    // Check if already analyzing this prompt
+    const existingIndex = analysisResults.findIndex(r => r.promptId === prompt.id);
+    if (existingIndex !== -1 && analysisResults[existingIndex].isLoading) {
+      return;
+    }
+
+    // Add or update the result entry
+    if (existingIndex !== -1) {
+      setAnalysisResults(prev => prev.map((r, i) => 
+        i === existingIndex ? { ...r, response: "", isLoading: true } : r
+      ));
+    } else {
+      setAnalysisResults(prev => [...prev, {
+        promptId: prompt.id,
+        promptName: prompt.nome,
+        response: "",
+        isLoading: true,
+      }]);
+    }
 
     try {
       const resp = await fetch(
@@ -84,7 +117,9 @@ export function AiAnalysisSection({ transcricaoTexto }: AiAnalysisSectionProps) 
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) {
               responseSoFar += content;
-              setAiResponse(responseSoFar);
+              setAnalysisResults(prev => prev.map(r => 
+                r.promptId === prompt.id ? { ...r, response: responseSoFar } : r
+              ));
             }
           } catch {
             textBuffer = line + "\n" + textBuffer;
@@ -107,7 +142,9 @@ export function AiAnalysisSection({ transcricaoTexto }: AiAnalysisSectionProps) 
             const content = parsed.choices?.[0]?.delta?.content as string | undefined;
             if (content) {
               responseSoFar += content;
-              setAiResponse(responseSoFar);
+              setAnalysisResults(prev => prev.map(r => 
+                r.promptId === prompt.id ? { ...r, response: responseSoFar } : r
+              ));
             }
           } catch {}
         }
@@ -120,101 +157,157 @@ export function AiAnalysisSection({ transcricaoTexto }: AiAnalysisSectionProps) 
         variant: "destructive",
       });
     } finally {
-      setIsAnalyzing(false);
+      setAnalysisResults(prev => prev.map(r => 
+        r.promptId === prompt.id ? { ...r, isLoading: false } : r
+      ));
     }
   };
 
-  const copyResponse = () => {
-    navigator.clipboard.writeText(aiResponse);
+  const copyResponse = (response: string) => {
+    navigator.clipboard.writeText(response);
     toast({
       title: "Copiado!",
       description: "Resposta copiada para a área de transferência.",
     });
   };
 
+  const isPromptLoading = (promptId: string) => {
+    return analysisResults.find(r => r.promptId === promptId)?.isLoading || false;
+  };
+
   return (
-    <Card className="mt-6">
-      <CardHeader className="pb-3">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Análise com IA</CardTitle>
-          </div>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" disabled={loadingPrompts || prompts.length === 0}>
-                {loadingPrompts ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Carregando...
-                  </>
-                ) : prompts.length === 0 ? (
-                  "Nenhum prompt disponível"
-                ) : (
-                  <>
-                    Selecionar Prompt
-                    <ChevronDown className="h-4 w-4 ml-2" />
-                  </>
-                )}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-64">
-              {prompts.map((p) => (
-                <DropdownMenuItem
-                  key={p.id}
-                  onClick={() => analyzeWithPrompt(p)}
-                  className="flex flex-col items-start"
-                >
-                  <span className="font-medium">{p.nome}</span>
-                  {p.descricao && (
-                    <span className="text-xs text-muted-foreground">{p.descricao}</span>
-                  )}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {!selectedPrompt && !aiResponse && (
-          <p className="text-sm text-muted-foreground text-center py-8">
-            Selecione um prompt para analisar a transcrição com IA.
-            <br />
-            <span className="text-xs">
-              Crie prompts em <strong>Robôs &gt; Prompts de IA</strong>
-            </span>
-          </p>
-        )}
+    <div className="space-y-4 mt-6">
+      {/* Generate Transcription Button */}
+      <div className="flex justify-center">
+        <Button 
+          size="lg" 
+          onClick={handleGenerateTranscription}
+          className="gap-2"
+          disabled={showFormattedTranscription}
+        >
+          <FileText className="h-5 w-5" />
+          Gerar Transcrição Formatada
+        </Button>
+      </div>
 
-        {isAnalyzing && !aiResponse && (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
-            <span className="text-muted-foreground">Analisando transcrição...</span>
-          </div>
-        )}
-
-        {aiResponse && (
-          <div className="space-y-3">
+      {/* Formatted Transcription Card */}
+      {showFormattedTranscription && (
+        <Card>
+          <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <span className="text-sm font-medium text-muted-foreground">
-                {selectedPrompt?.nome}
-              </span>
-              <Button variant="ghost" size="sm" onClick={copyResponse}>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <FileText className="h-5 w-5 text-primary" />
+                Transcrição Completa
+              </CardTitle>
+              <Button variant="outline" size="sm" onClick={copyTranscription}>
                 <Copy className="h-4 w-4 mr-1" />
                 Copiar
               </Button>
             </div>
-            <ScrollArea className="h-[300px] rounded-md border p-4">
-              <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap">
-                {aiResponse}
-                {isAnalyzing && (
-                  <span className="inline-block w-2 h-4 bg-primary animate-pulse ml-1" />
-                )}
+          </CardHeader>
+          <CardContent>
+            <ScrollArea className="h-[400px] rounded-md border bg-muted/30 p-4">
+              <div className="whitespace-pre-wrap text-sm leading-relaxed font-mono">
+                {transcricaoTexto}
               </div>
             </ScrollArea>
-          </div>
-        )}
-      </CardContent>
-    </Card>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* AI Prompts Section */}
+      {showFormattedTranscription && (
+        <Card>
+          <CardHeader className="pb-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Análise com IA</CardTitle>
+            </div>
+            <p className="text-sm text-muted-foreground mt-1">
+              Clique em um dos prompts abaixo para analisar a transcrição
+            </p>
+          </CardHeader>
+          <CardContent>
+            {loadingPrompts ? (
+              <div className="flex items-center justify-center py-6">
+                <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-2" />
+                <span className="text-muted-foreground">Carregando prompts...</span>
+              </div>
+            ) : prompts.length === 0 ? (
+              <p className="text-sm text-muted-foreground text-center py-6">
+                Nenhum prompt disponível.
+                <br />
+                <span className="text-xs">
+                  Crie prompts em <strong>Robôs &gt; Prompts de IA</strong>
+                </span>
+              </p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {prompts.map((prompt) => (
+                  <Button
+                    key={prompt.id}
+                    variant="outline"
+                    size="sm"
+                    onClick={() => analyzeWithPrompt(prompt)}
+                    disabled={isPromptLoading(prompt.id)}
+                    className={cn(
+                      "transition-all",
+                      analysisResults.find(r => r.promptId === prompt.id)?.response && 
+                        "border-primary text-primary"
+                    )}
+                  >
+                    {isPromptLoading(prompt.id) && (
+                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                    )}
+                    {prompt.nome}
+                  </Button>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Analysis Results */}
+      {analysisResults.map((result) => (
+        <Card key={result.promptId} className="border-primary/20">
+          <CardHeader className="pb-3">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-primary" />
+                {result.promptName}
+              </CardTitle>
+              {result.response && (
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => copyResponse(result.response)}
+                >
+                  <Copy className="h-4 w-4 mr-1" />
+                  Copiar
+                </Button>
+              )}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {result.isLoading && !result.response ? (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="h-6 w-6 animate-spin text-primary mr-2" />
+                <span className="text-muted-foreground">Analisando transcrição...</span>
+              </div>
+            ) : (
+              <ScrollArea className="h-[300px] rounded-md border bg-muted/30 p-4">
+                <div className="prose prose-sm max-w-none dark:prose-invert whitespace-pre-wrap">
+                  {result.response}
+                  {result.isLoading && (
+                    <span className="inline-block w-2 h-4 bg-primary animate-pulse ml-1" />
+                  )}
+                </div>
+              </ScrollArea>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 }
