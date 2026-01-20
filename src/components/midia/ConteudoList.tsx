@@ -17,10 +17,13 @@ import { Badge } from "@/components/ui/badge";
 import {
   ConteudoMidia,
   Status,
+  Prioridade,
   SETOR_LABELS,
   FORMATO_LABELS,
   STATUS_LABELS,
   STATUS_COLORS,
+  PRIORIDADE_LABELS,
+  PRIORIDADE_COLORS,
 } from "@/hooks/useConteudosMidia";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -71,6 +74,7 @@ export function ConteudoList({
             <TableHead className="w-[130px] font-semibold">Formato</TableHead>
             <TableHead className="font-semibold">Título</TableHead>
             <TableHead className="w-[100px] font-semibold text-center">Semana</TableHead>
+            <TableHead className="w-[110px] font-semibold">Prioridade</TableHead>
             <TableHead className="w-[160px] font-semibold">Status</TableHead>
             <TableHead className="w-[90px] font-semibold text-right">Data</TableHead>
           </TableRow>
@@ -110,6 +114,14 @@ export function ConteudoList({
                 ) : (
                   <span className="text-muted-foreground/50">—</span>
                 )}
+              </TableCell>
+              <TableCell className="py-3">
+                <Badge
+                  variant="outline"
+                  className={`text-xs font-medium ${PRIORIDADE_COLORS[conteudo.prioridade]}`}
+                >
+                  {PRIORIDADE_LABELS[conteudo.prioridade]}
+                </Badge>
               </TableCell>
               <TableCell className="py-3" onClick={(e) => e.stopPropagation()}>
                 <Select

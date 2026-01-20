@@ -2,7 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "sonner";
-import { Setor, Formato, ConteudoMidiaInput } from "./useConteudosMidia";
+import { Setor, Formato, Prioridade, ConteudoMidiaInput } from "./useConteudosMidia";
 
 export type SituacaoIdeia = "pendente" | "validado";
 
@@ -18,6 +18,7 @@ export interface IdeiaConteudo {
   link_inspiracao: string | null;
   link_video_drive: string | null;
   semana_publicacao: number | null;
+  prioridade: Prioridade;
   validado: boolean;
   validado_por: string | null;
   validado_em: string | null;
@@ -35,6 +36,7 @@ export interface IdeiaConteudoInput {
   link_inspiracao?: string;
   link_video_drive?: string;
   semana_publicacao?: number | null;
+  prioridade?: Prioridade;
 }
 
 export const SITUACAO_LABELS: Record<SituacaoIdeia, string> = {
@@ -147,6 +149,7 @@ export function useIdeiasConteudo() {
         link_inspiracao: ideia.link_inspiracao || undefined,
         link_video_drive: ideia.link_video_drive || undefined,
         semana_publicacao: ideia.semana_publicacao,
+        prioridade: ideia.prioridade,
         status: "a_gravar",
       };
 

@@ -6,6 +6,7 @@ import { toast } from "sonner";
 export type Setor = "trabalhista" | "previdenciario" | "civel" | "bancario";
 export type Formato = "video" | "video_longo" | "carrossel" | "estatico";
 export type Status = "a_gravar" | "gravado" | "em_edicao" | "editado" | "postado";
+export type Prioridade = "urgente" | "importante" | "util";
 
 export interface ConteudoMidia {
   id: string;
@@ -20,6 +21,7 @@ export interface ConteudoMidia {
   link_video_drive: string | null;
   semana_publicacao: number | null;
   status: Status;
+  prioridade: Prioridade;
   created_at: string;
   updated_at: string;
 }
@@ -35,6 +37,7 @@ export interface ConteudoMidiaInput {
   link_video_drive?: string;
   semana_publicacao?: number | null;
   status?: Status;
+  prioridade?: Prioridade;
 }
 
 export const SETOR_LABELS: Record<Setor, string> = {
@@ -65,6 +68,18 @@ export const STATUS_COLORS: Record<Status, string> = {
   em_edicao: "bg-orange-500/20 text-orange-400 border-orange-500/30",
   editado: "bg-purple-500/20 text-purple-400 border-purple-500/30",
   postado: "bg-green-500/20 text-green-400 border-green-500/30",
+};
+
+export const PRIORIDADE_LABELS: Record<Prioridade, string> = {
+  urgente: "Urgente",
+  importante: "Importante",
+  util: "Útil",
+};
+
+export const PRIORIDADE_COLORS: Record<Prioridade, string> = {
+  urgente: "bg-red-500/20 text-red-400 border-red-500/30",
+  importante: "bg-orange-500/20 text-orange-400 border-orange-500/30",
+  util: "bg-blue-500/20 text-blue-400 border-blue-500/30",
 };
 
 export function useConteudosMidia() {

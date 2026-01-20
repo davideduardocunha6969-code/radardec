@@ -6,8 +6,11 @@ import { CheckCircle } from "lucide-react";
 import {
   SETOR_LABELS,
   FORMATO_LABELS,
+  PRIORIDADE_LABELS,
+  PRIORIDADE_COLORS,
   Setor,
   Formato,
+  Prioridade,
 } from "@/hooks/useConteudosMidia";
 import { IdeiaConteudo, SITUACAO_COLORS } from "@/hooks/useIdeiasConteudo";
 
@@ -36,6 +39,7 @@ export function IdeiaList({ ideias, onItemClick, onValidar, isAdmin }: IdeiaList
             <th className="text-left p-3 text-sm font-medium text-muted-foreground">Formato</th>
             <th className="text-left p-3 text-sm font-medium text-muted-foreground">Título</th>
             <th className="text-left p-3 text-sm font-medium text-muted-foreground">Semana</th>
+            <th className="text-left p-3 text-sm font-medium text-muted-foreground">Prioridade</th>
             <th className="text-left p-3 text-sm font-medium text-muted-foreground">Data</th>
             <th className="text-left p-3 text-sm font-medium text-muted-foreground">Situação</th>
             {isAdmin && <th className="text-left p-3 text-sm font-medium text-muted-foreground">Ação</th>}
@@ -65,6 +69,14 @@ export function IdeiaList({ ideias, onItemClick, onValidar, isAdmin }: IdeiaList
               </td>
               <td className="p-3 text-sm text-muted-foreground">
                 {ideia.semana_publicacao ? `Semana ${ideia.semana_publicacao}` : "—"}
+              </td>
+              <td className="p-3">
+                <Badge
+                  variant="outline"
+                  className={`text-xs ${PRIORIDADE_COLORS[ideia.prioridade as Prioridade]}`}
+                >
+                  {PRIORIDADE_LABELS[ideia.prioridade as Prioridade]}
+                </Badge>
               </td>
               <td className="p-3 text-sm text-muted-foreground">
                 {format(new Date(ideia.created_at), "dd/MM/yyyy", { locale: ptBR })}

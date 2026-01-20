@@ -22,9 +22,11 @@ import {
   Setor,
   Formato,
   Status,
+  Prioridade,
   SETOR_LABELS,
   FORMATO_LABELS,
   STATUS_LABELS,
+  PRIORIDADE_LABELS,
 } from "@/hooks/useConteudosMidia";
 
 interface ConteudoFormDialogProps {
@@ -51,6 +53,7 @@ export function ConteudoFormDialog({
     copy_completa: "",
     link_inspiracao: "",
     status: "a_gravar",
+    prioridade: "util",
   });
 
   useEffect(() => {
@@ -64,6 +67,7 @@ export function ConteudoFormDialog({
         copy_completa: initialData.copy_completa || "",
         link_inspiracao: initialData.link_inspiracao || "",
         status: initialData.status,
+        prioridade: initialData.prioridade,
       });
     } else {
       setFormData({
@@ -75,6 +79,7 @@ export function ConteudoFormDialog({
         copy_completa: "",
         link_inspiracao: "",
         status: "a_gravar",
+        prioridade: "util",
       });
     }
   }, [initialData, open]);
@@ -93,7 +98,7 @@ export function ConteudoFormDialog({
           </DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <div className="space-y-2">
               <Label htmlFor="setor">Setor</Label>
               <Select
@@ -128,6 +133,27 @@ export function ConteudoFormDialog({
                 </SelectTrigger>
                 <SelectContent>
                   {Object.entries(FORMATO_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="prioridade">Prioridade</Label>
+              <Select
+                value={formData.prioridade || "util"}
+                onValueChange={(value: Prioridade) =>
+                  setFormData({ ...formData, prioridade: value })
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(PRIORIDADE_LABELS).map(([value, label]) => (
                     <SelectItem key={value} value={value}>
                       {label}
                     </SelectItem>
