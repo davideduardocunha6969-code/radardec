@@ -66,9 +66,13 @@ serve(async (req) => {
     const elevenLabsFormData = new FormData();
     elevenLabsFormData.append("file", audioFile);
     elevenLabsFormData.append("model_id", "scribe_v2");
+    // IMPORTANT: num_speakers helps with diarization accuracy
+    elevenLabsFormData.append("num_speakers", "10"); // Allow up to 10 speakers to be detected
     elevenLabsFormData.append("diarize", "true");
     elevenLabsFormData.append("tag_audio_events", "true");
     elevenLabsFormData.append("language_code", "por");
+
+    console.log("Enviando para ElevenLabs com diarize=true e num_speakers=10");
 
     const response = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
       method: "POST",
@@ -99,6 +103,19 @@ serve(async (req) => {
     const transcriptionResult = await response.json();
     console.log("Transcrição recebida com sucesso");
     
+    // Log raw response structure for debugging
+    console.log("Resposta contém 'words':", !!transcriptionResult.words);
+    console.log("Quantidade de words:", transcriptionResult.words?.length || 0);
+    if (transcriptionResult.words && transcriptionResult.words.length > 0) {
+      console.log("Primeira word:", JSON.stringify(transcriptionResult.words[0]));
+      console.log("Última word:", JSON.stringify(transcriptionResult.words[transcriptionResult.words.length - 1]));
+    }
+    
+    // Check if response has utterances (alternative diarization format)
+    if (transcriptionResult.utterances) {
+      console.log("Resposta contém 'utterances':", transcriptionResult.utterances.length);
+    }
+    
     // Log speaker information for debugging
     const uniqueSpeakers = new Set<string>();
     if (transcriptionResult.words) {
@@ -108,7 +125,7 @@ serve(async (req) => {
         }
       }
     }
-    console.log(`Falantes únicos detectados: ${uniqueSpeakers.size}`, Array.from(uniqueSpeakers));
+    console.log(`Falantes únicos detectados nas words: ${uniqueSpeakers.size}`, Array.from(uniqueSpeakers));
 
     // Process the response to extract segments with speakers
     const segmentos = processTranscription(transcriptionResult);
