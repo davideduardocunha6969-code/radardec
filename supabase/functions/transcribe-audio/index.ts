@@ -98,10 +98,25 @@ serve(async (req) => {
 
     const transcriptionResult = await response.json();
     console.log("Transcrição recebida com sucesso");
+    
+    // Log speaker information for debugging
+    const uniqueSpeakers = new Set<string>();
+    if (transcriptionResult.words) {
+      for (const word of transcriptionResult.words) {
+        if (word.speaker) {
+          uniqueSpeakers.add(word.speaker);
+        }
+      }
+    }
+    console.log(`Falantes únicos detectados: ${uniqueSpeakers.size}`, Array.from(uniqueSpeakers));
 
     // Process the response to extract segments with speakers
     const segmentos = processTranscription(transcriptionResult);
     const textoCompleto = transcriptionResult.text || "";
+    
+    console.log(`Total de segmentos processados: ${segmentos.length}`);
+    const uniqueProcessedSpeakers = [...new Set(segmentos.map(s => s.falante))];
+    console.log(`Falantes nos segmentos: ${uniqueProcessedSpeakers.length}`, uniqueProcessedSpeakers);
 
     // Calculate duration from the last word's end time
     let duracaoSegundos = 0;
