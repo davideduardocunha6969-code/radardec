@@ -63,11 +63,11 @@ export const STATUS_LABELS: Record<Status, string> = {
 };
 
 export const STATUS_COLORS: Record<Status, string> = {
-  a_gravar: "bg-yellow-500/20 text-black border-yellow-500/30",
-  gravado: "bg-blue-500/20 text-black border-blue-500/30",
-  em_edicao: "bg-orange-500/20 text-black border-orange-500/30",
-  editado: "bg-purple-500/20 text-black border-purple-500/30",
-  postado: "bg-green-500/20 text-black border-green-500/30",
+  a_gravar: "bg-yellow-100 text-yellow-800 border-yellow-300",
+  gravado: "bg-blue-100 text-blue-800 border-blue-300",
+  em_edicao: "bg-orange-100 text-orange-800 border-orange-300",
+  editado: "bg-purple-100 text-purple-800 border-purple-300",
+  postado: "bg-green-100 text-green-800 border-green-300",
 };
 
 export const PRIORIDADE_LABELS: Record<Prioridade, string> = {
