@@ -153,8 +153,8 @@ export function ConteudoStatsSection({
         <Card className="cursor-pointer hover:bg-accent/50 transition-colors">
           <CardHeader className="py-3">
             <div className="flex items-center justify-between">
-              <CardTitle className="text-base font-medium">
-                📊 Estatísticas de Conteúdo
+            <CardTitle className="text-base font-medium">
+                📊 Estatísticas de Conteúdo - Previdenciário
               </CardTitle>
               <ChevronDown
                 className={`h-5 w-5 transition-transform ${
@@ -166,9 +166,8 @@ export function ConteudoStatsSection({
         </Card>
       </CollapsibleTrigger>
       <CollapsibleContent>
-        <div className="grid gap-4 md:grid-cols-3 mt-4">
+        <div className="grid gap-4 md:grid-cols-2 mt-4">
           <RankingCard title="📹 Ranking por Formato" items={stats.byFormato} />
-          <RankingCard title="📁 Ranking por Setor" items={stats.bySetor} />
           <RankingCard title="📌 Ranking por Status" items={stats.byStatus} />
         </div>
       </CollapsibleContent>
