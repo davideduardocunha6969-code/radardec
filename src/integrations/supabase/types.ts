@@ -116,6 +116,63 @@ export type Database = {
         }
         Relationships: []
       }
+      ideias_conteudo: {
+        Row: {
+          copy_completa: string | null
+          created_at: string
+          formato: string
+          gancho: string | null
+          id: string
+          link_inspiracao: string | null
+          link_video_drive: string | null
+          orientacoes_filmagem: string | null
+          semana_publicacao: number | null
+          setor: string
+          titulo: string
+          updated_at: string
+          user_id: string
+          validado: boolean
+          validado_em: string | null
+          validado_por: string | null
+        }
+        Insert: {
+          copy_completa?: string | null
+          created_at?: string
+          formato: string
+          gancho?: string | null
+          id?: string
+          link_inspiracao?: string | null
+          link_video_drive?: string | null
+          orientacoes_filmagem?: string | null
+          semana_publicacao?: number | null
+          setor: string
+          titulo: string
+          updated_at?: string
+          user_id: string
+          validado?: boolean
+          validado_em?: string | null
+          validado_por?: string | null
+        }
+        Update: {
+          copy_completa?: string | null
+          created_at?: string
+          formato?: string
+          gancho?: string | null
+          id?: string
+          link_inspiracao?: string | null
+          link_video_drive?: string | null
+          orientacoes_filmagem?: string | null
+          semana_publicacao?: number | null
+          setor?: string
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+          validado?: boolean
+          validado_em?: string | null
+          validado_por?: string | null
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string

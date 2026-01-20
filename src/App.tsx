@@ -17,6 +17,7 @@ import RadarTrabalhista from "./pages/RadarTrabalhista";
 import Transcricao from "./pages/Transcricao";
 import AiPrompts from "./pages/AiPrompts";
 import MidiaSocial from "./pages/MidiaSocial";
+import ContentHub from "./pages/ContentHub";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -39,6 +40,7 @@ const App = () => (
               <Route path="/radar-trabalhista" element={<ProtectedRoute pageKey="radar-trabalhista"><RadarTrabalhista /></ProtectedRoute>} />
               <Route path="/robos/transcricao" element={<ProtectedRoute pageKey="robos-transcricao"><Transcricao /></ProtectedRoute>} />
               <Route path="/robos/prompts" element={<ProtectedRoute pageKey="robos-prompts"><AiPrompts /></ProtectedRoute>} />
+              <Route path="/content-hub" element={<ProtectedRoute pageKey="content-hub"><ContentHub /></ProtectedRoute>} />
               <Route path="/midia-social" element={<ProtectedRoute pageKey="midia-social"><MidiaSocial /></ProtectedRoute>} />
               <Route path="/admin" element={<Admin />} />
             </Route>
