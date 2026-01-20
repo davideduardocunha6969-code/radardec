@@ -43,10 +43,10 @@ const robosItems = [
 
 // Marketing subitems
 const marketingItems = [
+  { title: "Atividades", url: "/marketing/atividades", icon: ClipboardList, pageKey: "marketing-atividades" },
   { title: "Content Hub", url: "/content-hub", icon: Lightbulb, pageKey: "content-hub" },
   { title: "Calendário de Conteúdo", url: "/midia-social", icon: CalendarDays, pageKey: "midia-social" },
   { title: "Modelador de Conteúdo", url: "/marketing/modelador", icon: Wand2, pageKey: "marketing-modelador" },
-  { title: "Atividades", url: "/marketing/atividades", icon: ClipboardList, pageKey: "marketing-atividades" },
 ];
 
 export function AppSidebar() {
