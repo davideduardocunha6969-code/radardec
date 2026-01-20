@@ -116,7 +116,7 @@ export function KanbanBoard({
   };
 
   return (
-    <div className="flex gap-5 overflow-x-auto pb-4 -mx-1 px-1 min-h-[500px]">
+    <div className="flex gap-4 pb-4 min-h-full">
       {colunas.map((coluna) => {
         const colAtividades = getAtividadesByColuna(coluna.id);
         const colors = getColunaColors(coluna.nome);
@@ -175,7 +175,7 @@ export function KanbanBoard({
               </div>
 
               {/* Cards Container */}
-              <div className="p-3 space-y-3 max-h-[calc(100vh-340px)] overflow-y-auto scrollbar-thin">
+              <div className="p-3 space-y-3 overflow-y-auto flex-1">
                 {colAtividades.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                     <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-2">
