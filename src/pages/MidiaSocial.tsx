@@ -91,9 +91,9 @@ export default function MidiaSocial() {
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Mídias Sociais</h1>
+          <h1 className="text-2xl font-bold">Calendário de Conteúdo</h1>
           <p className="text-muted-foreground">
-            Controle de conteúdo para redes sociais
+            Planejamento e controle de conteúdo para redes sociais
           </p>
         </div>
         <Button onClick={() => setFormDialogOpen(true)}>
