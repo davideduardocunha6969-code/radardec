@@ -38,15 +38,17 @@ export default function MidiaSocial() {
   const [setorFilter, setSetorFilter] = useState<Setor | "all">("all");
   const [formatoFilter, setFormatoFilter] = useState<Formato | "all">("all");
   const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
+  const [semanaFilter, setSemanaFilter] = useState<number | "all">("all");
 
   const filteredConteudos = useMemo(() => {
     return conteudos.filter((c) => {
       if (setorFilter !== "all" && c.setor !== setorFilter) return false;
       if (formatoFilter !== "all" && c.formato !== formatoFilter) return false;
       if (statusFilter !== "all" && c.status !== statusFilter) return false;
+      if (semanaFilter !== "all" && c.semana_publicacao !== semanaFilter) return false;
       return true;
     });
-  }, [conteudos, setorFilter, formatoFilter, statusFilter]);
+  }, [conteudos, setorFilter, formatoFilter, statusFilter, semanaFilter]);
 
   const handleCreateSubmit = (data: ConteudoMidiaInput) => {
     createConteudo.mutate(data, {
@@ -84,6 +86,7 @@ export default function MidiaSocial() {
     setSetorFilter("all");
     setFormatoFilter("all");
     setStatusFilter("all");
+    setSemanaFilter("all");
   };
 
   return (
@@ -114,9 +117,11 @@ export default function MidiaSocial() {
         setorFilter={setorFilter}
         formatoFilter={formatoFilter}
         statusFilter={statusFilter}
+        semanaFilter={semanaFilter}
         onSetorChange={setSetorFilter}
         onFormatoChange={setFormatoFilter}
         onStatusChange={setStatusFilter}
+        onSemanaChange={setSemanaFilter}
         onClearFilters={clearFilters}
       />
 

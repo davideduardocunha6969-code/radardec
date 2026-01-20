@@ -6,7 +6,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
-import { X } from "lucide-react";
+import { X, CalendarDays } from "lucide-react";
 import {
   Setor,
   Formato,
@@ -20,9 +20,11 @@ interface ConteudoFiltersProps {
   setorFilter: Setor | "all";
   formatoFilter: Formato | "all";
   statusFilter: Status | "all";
+  semanaFilter: number | "all";
   onSetorChange: (value: Setor | "all") => void;
   onFormatoChange: (value: Formato | "all") => void;
   onStatusChange: (value: Status | "all") => void;
+  onSemanaChange: (value: number | "all") => void;
   onClearFilters: () => void;
 }
 
@@ -30,16 +32,36 @@ export function ConteudoFilters({
   setorFilter,
   formatoFilter,
   statusFilter,
+  semanaFilter,
   onSetorChange,
   onFormatoChange,
   onStatusChange,
+  onSemanaChange,
   onClearFilters,
 }: ConteudoFiltersProps) {
   const hasFilters =
-    setorFilter !== "all" || formatoFilter !== "all" || statusFilter !== "all";
+    setorFilter !== "all" || formatoFilter !== "all" || statusFilter !== "all" || semanaFilter !== "all";
 
   return (
     <div className="flex flex-wrap gap-3 items-center">
+      <Select 
+        value={semanaFilter === "all" ? "all" : semanaFilter.toString()} 
+        onValueChange={(v) => onSemanaChange(v === "all" ? "all" : parseInt(v))}
+      >
+        <SelectTrigger className="w-[150px]">
+          <CalendarDays className="h-4 w-4 mr-2 text-muted-foreground" />
+          <SelectValue placeholder="Semana" />
+        </SelectTrigger>
+        <SelectContent className="max-h-60">
+          <SelectItem value="all">Todas as Semanas</SelectItem>
+          {Array.from({ length: 52 }, (_, i) => i + 1).map((week) => (
+            <SelectItem key={week} value={week.toString()}>
+              Semana {week}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+
       <Select value={setorFilter} onValueChange={onSetorChange}>
         <SelectTrigger className="w-[160px]">
           <SelectValue placeholder="Setor" />
