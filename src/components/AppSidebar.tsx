@@ -1,4 +1,4 @@
-import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown } from "lucide-react";
+import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import logoEscritorio from "@/assets/logo-escritorio.webp";
@@ -52,6 +52,7 @@ export function AppSidebar() {
   }, [currentPath]);
 
   const [radarOpen, setRadarOpen] = useState(isAnyRadarActive);
+  const [robosOpen, setRobosOpen] = useState(false);
 
   return (
     <Sidebar collapsible="icon" className="border-r border-primary/20 bg-primary">
@@ -113,6 +114,31 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 </Collapsible>
               )}
+
+              {/* Robôs - Segundo item, colapsável */}
+              <Collapsible
+                open={robosOpen}
+                onOpenChange={setRobosOpen}
+                className="group/collapsible-robos"
+              >
+                <SidebarMenuItem>
+                  <CollapsibleTrigger asChild>
+                    <SidebarMenuButton
+                      tooltip="Robôs"
+                      className="flex items-center gap-3 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
+                    >
+                      <Bot className="h-4 w-4" />
+                      <span>Robôs</span>
+                      <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible-robos:rotate-180" />
+                    </SidebarMenuButton>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <SidebarMenuSub>
+                      {/* Subitens de Robôs serão adicionados aqui */}
+                    </SidebarMenuSub>
+                  </CollapsibleContent>
+                </SidebarMenuItem>
+              </Collapsible>
 
             </SidebarMenu>
           </SidebarGroupContent>
