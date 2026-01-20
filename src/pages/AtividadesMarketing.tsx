@@ -163,165 +163,130 @@ export default function AtividadesMarketing() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-theme(spacing.14)-theme(spacing.12))] overflow-hidden">
-      {/* Header */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
-        <div>
-          <h1 className="text-2xl font-bold tracking-tight">Atividades</h1>
-          <p className="text-sm text-muted-foreground">
-            Gerencie as atividades da equipe de marketing
-          </p>
-        </div>
-        <Button onClick={() => setShowFormDialog(true)} size="sm" className="shrink-0">
-          <Plus className="h-4 w-4 mr-2" />
-          Adicionar Atividade
-        </Button>
-      </div>
+    <div className="flex flex-col h-full overflow-hidden p-4">
+      {/* Header Row */}
+      <div className="flex items-center justify-between gap-3 shrink-0 mb-3">
+        <h1 className="text-xl font-bold shrink-0">Atividades</h1>
 
-      {/* Alert Cards - Compact */}
-      <div className="grid grid-cols-4 gap-2 shrink-0 mt-4">
-        {/* Overdue */}
-        <button 
-          onClick={() => handleAlertClick("overdue")}
-          disabled={alertCounts.overdue === 0}
-          className={cn(
-            "flex items-center gap-2 p-2.5 rounded-lg border transition-all text-left",
-            alertCounts.overdue > 0 
-              ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 cursor-pointer hover:border-red-400" 
-              : "bg-muted/30 border-transparent cursor-default",
-            filterDeadlineStatus === "overdue" && "ring-2 ring-red-500 ring-offset-1"
-          )}
-        >
-          <div className={cn(
-            "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-            alertCounts.overdue > 0 ? "bg-red-100 dark:bg-red-900/50" : "bg-muted"
-          )}>
+        {/* Alert Cards - Inline compact */}
+        <div className="flex items-center gap-1.5">
+          {/* Overdue */}
+          <button 
+            onClick={() => handleAlertClick("overdue")}
+            disabled={alertCounts.overdue === 0}
+            className={cn(
+              "flex items-center gap-1.5 px-2 py-1 rounded-md border text-left",
+              alertCounts.overdue > 0 
+                ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 cursor-pointer hover:border-red-400" 
+                : "bg-muted/30 border-transparent cursor-default",
+              filterDeadlineStatus === "overdue" && "ring-2 ring-red-500"
+            )}
+          >
             <AlertTriangle className={cn(
-              "h-4 w-4",
-              alertCounts.overdue > 0 ? "text-red-600 dark:text-red-400 animate-pulse" : "text-muted-foreground"
+              "h-3.5 w-3.5",
+              alertCounts.overdue > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
             )} />
-          </div>
-          <div className="min-w-0">
-            <p className={cn(
-              "text-lg font-bold leading-none",
+            <span className={cn(
+              "text-sm font-bold",
               alertCounts.overdue > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
             )}>
               {alertCounts.overdue}
-            </p>
-            <p className="text-[10px] text-muted-foreground truncate">Atrasadas</p>
-          </div>
-        </button>
+            </span>
+            <span className="text-[10px] text-muted-foreground hidden sm:inline">Atrasadas</span>
+          </button>
 
-        {/* Due Soon */}
-        <button 
-          onClick={() => handleAlertClick("dueSoon")}
-          disabled={alertCounts.dueSoon === 0}
-          className={cn(
-            "flex items-center gap-2 p-2.5 rounded-lg border transition-all text-left",
-            alertCounts.dueSoon > 0 
-              ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 cursor-pointer hover:border-amber-400" 
-              : "bg-muted/30 border-transparent cursor-default",
-            filterDeadlineStatus === "dueSoon" && "ring-2 ring-amber-500 ring-offset-1"
-          )}
-        >
-          <div className={cn(
-            "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-            alertCounts.dueSoon > 0 ? "bg-amber-100 dark:bg-amber-900/50" : "bg-muted"
-          )}>
+          {/* Due Soon */}
+          <button 
+            onClick={() => handleAlertClick("dueSoon")}
+            disabled={alertCounts.dueSoon === 0}
+            className={cn(
+              "flex items-center gap-1.5 px-2 py-1 rounded-md border text-left",
+              alertCounts.dueSoon > 0 
+                ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 cursor-pointer hover:border-amber-400" 
+                : "bg-muted/30 border-transparent cursor-default",
+              filterDeadlineStatus === "dueSoon" && "ring-2 ring-amber-500"
+            )}
+          >
             <Clock className={cn(
-              "h-4 w-4",
+              "h-3.5 w-3.5",
               alertCounts.dueSoon > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"
             )} />
-          </div>
-          <div className="min-w-0">
-            <p className={cn(
-              "text-lg font-bold leading-none",
+            <span className={cn(
+              "text-sm font-bold",
               alertCounts.dueSoon > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"
             )}>
               {alertCounts.dueSoon}
-            </p>
-            <p className="text-[10px] text-muted-foreground truncate">Em breve</p>
-          </div>
-        </button>
+            </span>
+            <span className="text-[10px] text-muted-foreground hidden sm:inline">Em breve</span>
+          </button>
 
-        {/* Emergency */}
-        <button 
-          onClick={() => handleAlertClick("emergency")}
-          disabled={alertCounts.emergency === 0}
-          className={cn(
-            "flex items-center gap-2 p-2.5 rounded-lg border transition-all text-left",
-            alertCounts.emergency > 0 
-              ? "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800 cursor-pointer hover:border-rose-400" 
-              : "bg-muted/30 border-transparent cursor-default",
-            filterPrioridade === "emergencia" && "ring-2 ring-rose-500 ring-offset-1"
-          )}
-        >
-          <div className={cn(
-            "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-            alertCounts.emergency > 0 ? "bg-rose-100 dark:bg-rose-900/50" : "bg-muted"
-          )}>
+          {/* Emergency */}
+          <button 
+            onClick={() => handleAlertClick("emergency")}
+            disabled={alertCounts.emergency === 0}
+            className={cn(
+              "flex items-center gap-1.5 px-2 py-1 rounded-md border text-left",
+              alertCounts.emergency > 0 
+                ? "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800 cursor-pointer hover:border-rose-400" 
+                : "bg-muted/30 border-transparent cursor-default",
+              filterPrioridade === "emergencia" && "ring-2 ring-rose-500"
+            )}
+          >
             <Flame className={cn(
-              "h-4 w-4",
-              alertCounts.emergency > 0 ? "text-rose-600 dark:text-rose-400 animate-pulse" : "text-muted-foreground"
+              "h-3.5 w-3.5",
+              alertCounts.emergency > 0 ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground"
             )} />
-          </div>
-          <div className="min-w-0">
-            <p className={cn(
-              "text-lg font-bold leading-none",
+            <span className={cn(
+              "text-sm font-bold",
               alertCounts.emergency > 0 ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground"
             )}>
               {alertCounts.emergency}
-            </p>
-            <p className="text-[10px] text-muted-foreground truncate">Emergências</p>
-          </div>
-        </button>
+            </span>
+            <span className="text-[10px] text-muted-foreground hidden sm:inline">Emergências</span>
+          </button>
 
-        {/* Urgent */}
-        <button 
-          onClick={() => handleAlertClick("urgent")}
-          disabled={alertCounts.urgent === 0}
-          className={cn(
-            "flex items-center gap-2 p-2.5 rounded-lg border transition-all text-left",
-            alertCounts.urgent > 0 
-              ? "bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800 cursor-pointer hover:border-orange-400" 
-              : "bg-muted/30 border-transparent cursor-default",
-            filterPrioridade === "urgente" && "ring-2 ring-orange-500 ring-offset-1"
-          )}
-        >
-          <div className={cn(
-            "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
-            alertCounts.urgent > 0 ? "bg-orange-100 dark:bg-orange-900/50" : "bg-muted"
-          )}>
+          {/* Urgent */}
+          <button 
+            onClick={() => handleAlertClick("urgent")}
+            disabled={alertCounts.urgent === 0}
+            className={cn(
+              "flex items-center gap-1.5 px-2 py-1 rounded-md border text-left",
+              alertCounts.urgent > 0 
+                ? "bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800 cursor-pointer hover:border-orange-400" 
+                : "bg-muted/30 border-transparent cursor-default",
+              filterPrioridade === "urgente" && "ring-2 ring-orange-500"
+            )}
+          >
             <AlertTriangle className={cn(
-              "h-4 w-4",
+              "h-3.5 w-3.5",
               alertCounts.urgent > 0 ? "text-orange-600 dark:text-orange-400" : "text-muted-foreground"
             )} />
-          </div>
-          <div className="min-w-0">
-            <p className={cn(
-              "text-lg font-bold leading-none",
+            <span className={cn(
+              "text-sm font-bold",
               alertCounts.urgent > 0 ? "text-orange-600 dark:text-orange-400" : "text-muted-foreground"
             )}>
               {alertCounts.urgent}
-            </p>
-            <p className="text-[10px] text-muted-foreground truncate">Urgentes</p>
-          </div>
-        </button>
+            </span>
+            <span className="text-[10px] text-muted-foreground hidden sm:inline">Urgentes</span>
+          </button>
+        </div>
+
+        <Button onClick={() => setShowFormDialog(true)} size="sm" className="shrink-0">
+          <Plus className="h-4 w-4 mr-1" />
+          <span className="hidden sm:inline">Adicionar</span>
+        </Button>
       </div>
 
       {/* Filters Bar - Compact */}
-      <div className="flex flex-wrap items-center gap-2 py-2 px-3 bg-muted/30 rounded-lg border shrink-0 mt-3">
-        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-          <Filter className="h-3.5 w-3.5" />
-          <span className="font-medium">Filtros:</span>
-        </div>
+      <div className="flex items-center gap-2 py-1.5 px-2 bg-muted/30 rounded-md border shrink-0 mb-3">
+        <Filter className="h-3.5 w-3.5 text-muted-foreground" />
 
         <Select value={filterResponsavel} onValueChange={setFilterResponsavel}>
-          <SelectTrigger className="w-[160px] h-8 text-xs bg-background">
+          <SelectTrigger className="w-[140px] h-7 text-xs bg-background">
             <SelectValue placeholder="Responsável" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todos os responsáveis</SelectItem>
+            <SelectItem value="all">Todos</SelectItem>
             {profiles.map((profile) => (
               <SelectItem key={profile.id} value={profile.id}>
                 {profile.display_name}
@@ -331,11 +296,11 @@ export default function AtividadesMarketing() {
         </Select>
 
         <Select value={filterPrioridade} onValueChange={setFilterPrioridade}>
-          <SelectTrigger className="w-[140px] h-8 text-xs bg-background">
+          <SelectTrigger className="w-[120px] h-7 text-xs bg-background">
             <SelectValue placeholder="Prioridade" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">Todas as prioridades</SelectItem>
+            <SelectItem value="all">Todas</SelectItem>
             {(Object.keys(PRIORIDADE_LABELS) as Prioridade[]).map((key) => (
               <SelectItem key={key} value={key}>
                 {PRIORIDADE_LABELS[key]}
@@ -345,29 +310,23 @@ export default function AtividadesMarketing() {
         </Select>
 
         {hasActiveFilters && (
-          <>
-            <div className="h-5 w-px bg-border" />
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={clearFilters}
-              className="h-7 text-xs text-muted-foreground hover:text-foreground px-2"
-            >
-              <X className="h-3 w-3 mr-1" />
-              Limpar
-            </Button>
-          </>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={clearFilters}
+            className="h-6 text-xs text-muted-foreground px-1.5"
+          >
+            <X className="h-3 w-3" />
+          </Button>
         )}
 
-        <div className="ml-auto">
-          <Badge variant="outline" className="text-[10px] font-normal h-6">
-            {filteredAtividades.length}/{atividades.length}
-          </Badge>
-        </div>
+        <Badge variant="outline" className="text-[10px] font-normal h-5 ml-auto">
+          {filteredAtividades.length}/{atividades.length}
+        </Badge>
       </div>
 
-      {/* Kanban - Scrollable area */}
-      <div className="flex-1 overflow-auto mt-3 -mx-1 px-1">
+      {/* Kanban - Only this scrolls horizontally */}
+      <div className="flex-1 overflow-x-auto overflow-y-hidden">
         <KanbanBoard
           colunas={colunas}
           atividades={filteredAtividades}

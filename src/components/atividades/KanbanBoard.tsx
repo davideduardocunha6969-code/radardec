@@ -116,7 +116,7 @@ export function KanbanBoard({
   };
 
   return (
-    <div className="flex gap-4 pb-4 min-h-full">
+    <div className="flex gap-4 h-full">
       {colunas.map((coluna) => {
         const colAtividades = getAtividadesByColuna(coluna.id);
         const colors = getColunaColors(coluna.nome);
@@ -125,28 +125,28 @@ export function KanbanBoard({
         return (
           <div
             key={coluna.id}
-            className="flex-shrink-0 w-[320px]"
+            className="flex-shrink-0 w-[280px] h-full flex flex-col"
             onDragOver={(e) => handleDragOver(e, coluna.id)}
             onDragLeave={handleDragLeave}
             onDrop={(e) => handleDrop(e, coluna.id)}
           >
             <div
               className={cn(
-                "h-full rounded-xl border-2 transition-all duration-200",
+                "flex-1 flex flex-col rounded-xl border-2 transition-all duration-200 overflow-hidden",
                 colors.bg,
                 colors.border,
                 isDropTarget && "ring-2 ring-primary ring-offset-2 border-primary scale-[1.02]"
               )}
             >
               {/* Column Header */}
-              <div className="p-4 border-b border-inherit">
+              <div className="p-3 border-b border-inherit shrink-0">
                 <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <div className={cn("w-3 h-3 rounded-full", colors.dot)} />
-                    <h3 className="font-semibold text-foreground">{coluna.nome}</h3>
+                  <div className="flex items-center gap-2">
+                    <div className={cn("w-2.5 h-2.5 rounded-full", colors.dot)} />
+                    <h3 className="font-semibold text-sm text-foreground">{coluna.nome}</h3>
                     <Badge 
                       variant="secondary" 
-                      className="text-xs font-medium bg-background/80 backdrop-blur-sm"
+                      className="text-[10px] font-medium bg-background/80 h-5"
                     >
                       {colAtividades.length}
                     </Badge>
@@ -156,9 +156,9 @@ export function KanbanBoard({
                       <Button 
                         variant="ghost" 
                         size="icon" 
-                        className="h-8 w-8 hover:bg-background/50"
+                        className="h-6 w-6 hover:bg-background/50"
                       >
-                        <MoreVertical className="h-4 w-4" />
+                        <MoreVertical className="h-3.5 w-3.5" />
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
@@ -175,7 +175,7 @@ export function KanbanBoard({
               </div>
 
               {/* Cards Container */}
-              <div className="p-3 space-y-3 overflow-y-auto flex-1">
+              <div className="p-2 space-y-2 overflow-y-auto flex-1">
                 {colAtividades.length === 0 && (
                   <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
                     <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-2">
@@ -279,10 +279,10 @@ export function KanbanBoard({
       })}
 
       {/* Add Column */}
-      <div className="flex-shrink-0 w-[320px]">
+      <div className="flex-shrink-0 w-[280px]">
         {showAddColuna ? (
-          <div className="h-full rounded-xl border-2 border-dashed border-primary/50 bg-primary/5 p-4">
-            <div className="space-y-4">
+          <div className="rounded-xl border-2 border-dashed border-primary/50 bg-primary/5 p-3">
+            <div className="space-y-3">
               <Input
                 placeholder="Nome da nova coluna..."
                 value={novaColunaName}
@@ -295,16 +295,17 @@ export function KanbanBoard({
                     setNovaColunaName("");
                   }
                 }}
-                className="bg-background"
+                className="bg-background h-8 text-sm"
               />
               <div className="flex gap-2">
-                <Button size="sm" onClick={handleAddColuna} className="flex-1">
-                  <Plus className="h-4 w-4 mr-1" />
+                <Button size="sm" onClick={handleAddColuna} className="flex-1 h-7 text-xs">
+                  <Plus className="h-3.5 w-3.5 mr-1" />
                   Adicionar
                 </Button>
                 <Button
                   size="sm"
                   variant="outline"
+                  className="h-7 text-xs"
                   onClick={() => {
                     setShowAddColuna(false);
                     setNovaColunaName("");
@@ -318,18 +319,16 @@ export function KanbanBoard({
         ) : (
           <button
             className={cn(
-              "w-full h-32 rounded-xl border-2 border-dashed",
+              "w-full h-20 rounded-xl border-2 border-dashed",
               "border-muted-foreground/25 hover:border-primary/50",
               "bg-muted/20 hover:bg-primary/5",
-              "flex flex-col items-center justify-center gap-2",
+              "flex items-center justify-center gap-2",
               "text-muted-foreground hover:text-primary",
-              "transition-all duration-200 group"
+              "transition-all duration-200"
             )}
             onClick={() => setShowAddColuna(true)}
           >
-            <div className="w-10 h-10 rounded-full bg-muted group-hover:bg-primary/10 flex items-center justify-center transition-colors">
-              <Plus className="h-5 w-5" />
-            </div>
+            <Plus className="h-4 w-4" />
             <span className="text-sm font-medium">Adicionar Coluna</span>
           </button>
         )}
