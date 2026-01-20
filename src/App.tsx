@@ -16,10 +16,11 @@ import RadarPrevidenciario from "./pages/RadarPrevidenciario";
 import RadarTrabalhista from "./pages/RadarTrabalhista";
 import Transcricao from "./pages/Transcricao";
 import AiPrompts from "./pages/AiPrompts";
+import TiposProdutos from "./pages/TiposProdutos";
 import MidiaSocial from "./pages/MidiaSocial";
 import ContentHub from "./pages/ContentHub";
+import ModeladorConteudo from "./pages/ModeladorConteudo";
 import NotFound from "./pages/NotFound";
-
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -40,8 +41,10 @@ const App = () => (
               <Route path="/radar-trabalhista" element={<ProtectedRoute pageKey="radar-trabalhista"><RadarTrabalhista /></ProtectedRoute>} />
               <Route path="/robos/transcricao" element={<ProtectedRoute pageKey="robos-transcricao"><Transcricao /></ProtectedRoute>} />
               <Route path="/robos/prompts" element={<ProtectedRoute pageKey="robos-prompts"><AiPrompts /></ProtectedRoute>} />
+              <Route path="/robos/produtos" element={<ProtectedRoute pageKey="robos-produtos"><TiposProdutos /></ProtectedRoute>} />
               <Route path="/content-hub" element={<ProtectedRoute pageKey="content-hub"><ContentHub /></ProtectedRoute>} />
               <Route path="/midia-social" element={<ProtectedRoute pageKey="midia-social"><MidiaSocial /></ProtectedRoute>} />
+              <Route path="/marketing/modelador" element={<ProtectedRoute pageKey="marketing-modelador"><ModeladorConteudo /></ProtectedRoute>} />
               <Route path="/admin" element={<Admin />} />
             </Route>
             <Route path="*" element={<NotFound />} />
