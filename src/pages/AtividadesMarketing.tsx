@@ -163,7 +163,7 @@ export default function AtividadesMarketing() {
   }
 
   return (
-    <div className="flex flex-col h-full overflow-hidden p-4">
+    <div className="flex flex-col h-full overflow-hidden p-4 min-h-0">
       {/* Header Row */}
       <div className="flex items-center justify-between gap-3 shrink-0 mb-3">
         <h1 className="text-xl font-bold shrink-0">Atividades</h1>
@@ -326,7 +326,7 @@ export default function AtividadesMarketing() {
       </div>
 
       {/* Kanban - Only this scrolls horizontally */}
-      <div className="flex-1 overflow-x-auto overflow-y-hidden">
+      <div className="flex-1 min-h-0 overflow-x-auto overflow-y-hidden">
         <KanbanBoard
           colunas={colunas}
           atividades={filteredAtividades}
