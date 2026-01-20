@@ -146,7 +146,7 @@ export function ConteudoList({
                     }
                   >
                     <SelectTrigger
-                      className={`w-[140px] h-8 text-xs font-medium rounded-md ${
+                      className={`w-[140px] h-8 text-xs font-medium rounded-full ${
                         STATUS_COLORS[conteudo.status]
                       }`}
                     >
