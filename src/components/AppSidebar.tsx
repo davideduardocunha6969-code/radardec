@@ -1,4 +1,4 @@
-import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, CalendarDays } from "lucide-react";
+import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, CalendarDays, Megaphone } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import logoEscritorio from "@/assets/logo-escritorio.webp";
@@ -40,6 +40,11 @@ const robosItems = [
   { title: "Prompts de IA", url: "/robos/prompts", icon: FileText, pageKey: "robos-prompts" },
 ];
 
+// Marketing subitems
+const marketingItems = [
+  { title: "Calendário de Conteúdo", url: "/midia-social", icon: CalendarDays, pageKey: "midia-social" },
+];
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -55,6 +60,9 @@ export function AppSidebar() {
   // Filtra robôs visíveis baseado em permissões
   const visibleRobosItems = robosItems.filter(item => hasPageAccess(item.pageKey));
 
+  // Filtra marketing visíveis baseado em permissões
+  const visibleMarketingItems = marketingItems.filter(item => hasPageAccess(item.pageKey));
+
   // Verifica se algum radar está ativo para manter o menu aberto
   const isAnyRadarActive = useMemo(() => {
     return radarItems.some(item => isActive(item.url));
@@ -65,8 +73,14 @@ export function AppSidebar() {
     return robosItems.some(item => isActive(item.url));
   }, [currentPath]);
 
+  // Verifica se algum item de marketing está ativo
+  const isAnyMarketingActive = useMemo(() => {
+    return marketingItems.some(item => isActive(item.url));
+  }, [currentPath]);
+
   const [radarOpen, setRadarOpen] = useState(isAnyRadarActive);
   const [robosOpen, setRobosOpen] = useState(isAnyRobosActive);
+  const [marketingOpen, setMarketingOpen] = useState(isAnyMarketingActive);
 
   return (
     <Sidebar collapsible="icon" className="border-r border-primary/20 bg-primary">
@@ -173,25 +187,48 @@ export function AppSidebar() {
                 </Collapsible>
               )}
 
-              {/* Calendário de Conteúdo - Item avulso */}
-              {hasPageAccess("midia-social") && (
-                <SidebarMenuItem>
-                  <SidebarMenuButton
-                    asChild
-                    isActive={isActive("/midia-social")}
-                    tooltip="Calendário de Conteúdo"
-                  >
-                    <NavLink
-                      to="/midia-social"
-                      end
-                      className="flex items-center gap-3 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
-                      activeClassName="bg-accent text-primary font-medium"
-                    >
-                      <CalendarDays className="h-4 w-4" />
-                      <span>Calendário de Conteúdo</span>
-                    </NavLink>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
+              {/* Marketing - Terceiro item, colapsável */}
+              {visibleMarketingItems.length > 0 && (
+                <Collapsible
+                  open={marketingOpen}
+                  onOpenChange={setMarketingOpen}
+                  className="group/collapsible-marketing"
+                >
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton
+                        tooltip="Marketing"
+                        className="flex items-center gap-3 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
+                      >
+                        <Megaphone className="h-4 w-4" />
+                        <span>Marketing</span>
+                        <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible-marketing:rotate-180" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        {visibleMarketingItems.map((item) => (
+                          <SidebarMenuSubItem key={item.title}>
+                            <SidebarMenuSubButton
+                              asChild
+                              isActive={isActive(item.url)}
+                            >
+                              <NavLink 
+                                to={item.url} 
+                                end 
+                                className="flex items-center gap-3 text-primary-foreground/70 hover:text-primary-foreground"
+                                activeClassName="bg-accent text-primary font-medium"
+                              >
+                                <item.icon className="h-3.5 w-3.5" />
+                                <span>{item.title}</span>
+                              </NavLink>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
               )}
 
             </SidebarMenu>
