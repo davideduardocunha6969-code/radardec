@@ -20,6 +20,7 @@ import TiposProdutos from "./pages/TiposProdutos";
 import MidiaSocial from "./pages/MidiaSocial";
 import ContentHub from "./pages/ContentHub";
 import ModeladorConteudo from "./pages/ModeladorConteudo";
+import AtividadesMarketing from "./pages/AtividadesMarketing";
 import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
@@ -45,6 +46,7 @@ const App = () => (
               <Route path="/content-hub" element={<ProtectedRoute pageKey="content-hub"><ContentHub /></ProtectedRoute>} />
               <Route path="/midia-social" element={<ProtectedRoute pageKey="midia-social"><MidiaSocial /></ProtectedRoute>} />
               <Route path="/marketing/modelador" element={<ProtectedRoute pageKey="marketing-modelador"><ModeladorConteudo /></ProtectedRoute>} />
+              <Route path="/marketing/atividades" element={<ProtectedRoute pageKey="marketing-atividades"><AtividadesMarketing /></ProtectedRoute>} />
               <Route path="/admin" element={<Admin />} />
             </Route>
             <Route path="*" element={<NotFound />} />
