@@ -1,4 +1,4 @@
-import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot } from "lucide-react";
+import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import logoEscritorio from "@/assets/logo-escritorio.webp";
@@ -34,6 +34,11 @@ const radarItems = [
   { title: "Radar Trabalhista", url: "/radar-trabalhista", icon: Briefcase, pageKey: "radar-trabalhista" },
 ];
 
+// Robôs subitems
+const robosItems = [
+  { title: "Transcritor de Audiências", url: "/robos/transcricao", icon: Mic, pageKey: "robos-transcricao" },
+];
+
 export function AppSidebar() {
   const { state } = useSidebar();
   const collapsed = state === "collapsed";
@@ -46,13 +51,21 @@ export function AppSidebar() {
   // Filtra radares visíveis baseado em permissões
   const visibleRadarItems = radarItems.filter(item => hasPageAccess(item.pageKey));
 
+  // Filtra robôs visíveis baseado em permissões
+  const visibleRobosItems = robosItems.filter(item => hasPageAccess(item.pageKey));
+
   // Verifica se algum radar está ativo para manter o menu aberto
   const isAnyRadarActive = useMemo(() => {
     return radarItems.some(item => isActive(item.url));
   }, [currentPath]);
 
+  // Verifica se algum robô está ativo
+  const isAnyRobosActive = useMemo(() => {
+    return robosItems.some(item => isActive(item.url));
+  }, [currentPath]);
+
   const [radarOpen, setRadarOpen] = useState(isAnyRadarActive);
-  const [robosOpen, setRobosOpen] = useState(false);
+  const [robosOpen, setRobosOpen] = useState(isAnyRobosActive);
 
   return (
     <Sidebar collapsible="icon" className="border-r border-primary/20 bg-primary">
@@ -116,29 +129,48 @@ export function AppSidebar() {
               )}
 
               {/* Robôs - Segundo item, colapsável */}
-              <Collapsible
-                open={robosOpen}
-                onOpenChange={setRobosOpen}
-                className="group/collapsible-robos"
-              >
-                <SidebarMenuItem>
-                  <CollapsibleTrigger asChild>
-                    <SidebarMenuButton
-                      tooltip="Robôs"
-                      className="flex items-center gap-3 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
-                    >
-                      <Bot className="h-4 w-4" />
-                      <span>Robôs</span>
-                      <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible-robos:rotate-180" />
-                    </SidebarMenuButton>
-                  </CollapsibleTrigger>
-                  <CollapsibleContent>
-                    <SidebarMenuSub>
-                      {/* Subitens de Robôs serão adicionados aqui */}
-                    </SidebarMenuSub>
-                  </CollapsibleContent>
-                </SidebarMenuItem>
-              </Collapsible>
+              {visibleRobosItems.length > 0 && (
+                <Collapsible
+                  open={robosOpen}
+                  onOpenChange={setRobosOpen}
+                  className="group/collapsible-robos"
+                >
+                  <SidebarMenuItem>
+                    <CollapsibleTrigger asChild>
+                      <SidebarMenuButton
+                        tooltip="Robôs"
+                        className="flex items-center gap-3 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
+                      >
+                        <Bot className="h-4 w-4" />
+                        <span>Robôs</span>
+                        <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible-robos:rotate-180" />
+                      </SidebarMenuButton>
+                    </CollapsibleTrigger>
+                    <CollapsibleContent>
+                      <SidebarMenuSub>
+                        {visibleRobosItems.map((item) => (
+                          <SidebarMenuSubItem key={item.title}>
+                            <SidebarMenuSubButton
+                              asChild
+                              isActive={isActive(item.url)}
+                            >
+                              <NavLink 
+                                to={item.url} 
+                                end 
+                                className="flex items-center gap-3 text-primary-foreground/70 hover:text-primary-foreground"
+                                activeClassName="bg-accent text-primary font-medium"
+                              >
+                                <item.icon className="h-3.5 w-3.5" />
+                                <span>{item.title}</span>
+                              </NavLink>
+                            </SidebarMenuSubButton>
+                          </SidebarMenuSubItem>
+                        ))}
+                      </SidebarMenuSub>
+                    </CollapsibleContent>
+                  </SidebarMenuItem>
+                </Collapsible>
+              )}
 
             </SidebarMenu>
           </SidebarGroupContent>

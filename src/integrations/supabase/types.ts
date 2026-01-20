@@ -59,6 +59,48 @@ export type Database = {
         }
         Relationships: []
       }
+      transcricoes: {
+        Row: {
+          arquivo_nome: string
+          created_at: string
+          duracao_segundos: number | null
+          erro_mensagem: string | null
+          id: string
+          segmentos: Json | null
+          status: string
+          texto_completo: string | null
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          arquivo_nome: string
+          created_at?: string
+          duracao_segundos?: number | null
+          erro_mensagem?: string | null
+          id?: string
+          segmentos?: Json | null
+          status?: string
+          texto_completo?: string | null
+          titulo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          arquivo_nome?: string
+          created_at?: string
+          duracao_segundos?: number | null
+          erro_mensagem?: string | null
+          id?: string
+          segmentos?: Json | null
+          status?: string
+          texto_completo?: string | null
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_permissions: {
         Row: {
           created_at: string
