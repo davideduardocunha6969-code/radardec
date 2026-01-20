@@ -44,6 +44,166 @@ export type Database = {
         }
         Relationships: []
       }
+      atividades_anexos: {
+        Row: {
+          atividade_id: string
+          created_at: string
+          id: string
+          nome_arquivo: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          atividade_id: string
+          created_at?: string
+          id?: string
+          nome_arquivo: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          atividade_id?: string
+          created_at?: string
+          id?: string
+          nome_arquivo?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atividades_anexos_atividade_id_fkey"
+            columns: ["atividade_id"]
+            isOneToOne: false
+            referencedRelation: "atividades_marketing"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atividades_colunas: {
+        Row: {
+          cor: string | null
+          created_at: string
+          id: string
+          nome: string
+          ordem: number
+        }
+        Insert: {
+          cor?: string | null
+          created_at?: string
+          id?: string
+          nome: string
+          ordem?: number
+        }
+        Update: {
+          cor?: string | null
+          created_at?: string
+          id?: string
+          nome?: string
+          ordem?: number
+        }
+        Relationships: []
+      }
+      atividades_comentarios: {
+        Row: {
+          atividade_id: string
+          created_at: string
+          id: string
+          texto: string
+          user_id: string
+        }
+        Insert: {
+          atividade_id: string
+          created_at?: string
+          id?: string
+          texto: string
+          user_id: string
+        }
+        Update: {
+          atividade_id?: string
+          created_at?: string
+          id?: string
+          texto?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atividades_comentarios_atividade_id_fkey"
+            columns: ["atividade_id"]
+            isOneToOne: false
+            referencedRelation: "atividades_marketing"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atividades_marketing: {
+        Row: {
+          atividade: string
+          coluna_id: string | null
+          created_at: string
+          id: string
+          ordem: number
+          prazo_fatal: string | null
+          responsavel_id: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          atividade: string
+          coluna_id?: string | null
+          created_at?: string
+          id?: string
+          ordem?: number
+          prazo_fatal?: string | null
+          responsavel_id?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          atividade?: string
+          coluna_id?: string | null
+          created_at?: string
+          id?: string
+          ordem?: number
+          prazo_fatal?: string | null
+          responsavel_id?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "atividades_marketing_coluna_id_fkey"
+            columns: ["coluna_id"]
+            isOneToOne: false
+            referencedRelation: "atividades_colunas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "atividades_marketing_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "atividades_responsaveis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      atividades_responsaveis: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+        }
+        Relationships: []
+      }
       conteudos_midia: {
         Row: {
           copy_completa: string | null
