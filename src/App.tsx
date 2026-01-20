@@ -14,6 +14,7 @@ import RadarComercial from "./pages/RadarComercial";
 import RadarBancario from "./pages/RadarBancario";
 import RadarPrevidenciario from "./pages/RadarPrevidenciario";
 import RadarTrabalhista from "./pages/RadarTrabalhista";
+import Transcricao from "./pages/Transcricao";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/radar-bancario" element={<ProtectedRoute pageKey="radar-bancario"><RadarBancario /></ProtectedRoute>} />
               <Route path="/radar-previdenciario" element={<ProtectedRoute pageKey="radar-previdenciario"><RadarPrevidenciario /></ProtectedRoute>} />
               <Route path="/radar-trabalhista" element={<ProtectedRoute pageKey="radar-trabalhista"><RadarTrabalhista /></ProtectedRoute>} />
+              <Route path="/robos/transcricao" element={<ProtectedRoute pageKey="robos-transcricao"><Transcricao /></ProtectedRoute>} />
               <Route path="/admin" element={<Admin />} />
             </Route>
             <Route path="*" element={<NotFound />} />
