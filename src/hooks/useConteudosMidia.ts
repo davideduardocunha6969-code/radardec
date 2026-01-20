@@ -18,6 +18,7 @@ export interface ConteudoMidia {
   copy_completa: string | null;
   link_inspiracao: string | null;
   link_video_drive: string | null;
+  semana_publicacao: number | null;
   status: Status;
   created_at: string;
   updated_at: string;
@@ -32,6 +33,7 @@ export interface ConteudoMidiaInput {
   copy_completa?: string;
   link_inspiracao?: string;
   link_video_drive?: string;
+  semana_publicacao?: number | null;
   status?: Status;
 }
 
