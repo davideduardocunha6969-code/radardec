@@ -163,56 +163,52 @@ export default function AtividadesMarketing() {
   }
 
   return (
-    <div className="space-y-6 max-w-full">
+    <div className="flex flex-col h-[calc(100vh-theme(spacing.14)-theme(spacing.12))] overflow-hidden">
       {/* Header */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between shrink-0">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Atividades</h1>
-          <p className="text-muted-foreground mt-1">
+          <h1 className="text-2xl font-bold tracking-tight">Atividades</h1>
+          <p className="text-sm text-muted-foreground">
             Gerencie as atividades da equipe de marketing
           </p>
         </div>
-        <Button onClick={() => setShowFormDialog(true)} className="shrink-0">
+        <Button onClick={() => setShowFormDialog(true)} size="sm" className="shrink-0">
           <Plus className="h-4 w-4 mr-2" />
           Adicionar Atividade
         </Button>
       </div>
 
-      {/* Alert Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      {/* Alert Cards - Compact */}
+      <div className="grid grid-cols-4 gap-2 shrink-0 mt-4">
         {/* Overdue */}
         <button 
           onClick={() => handleAlertClick("overdue")}
           disabled={alertCounts.overdue === 0}
           className={cn(
-            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left",
+            "flex items-center gap-2 p-2.5 rounded-lg border transition-all text-left",
             alertCounts.overdue > 0 
-              ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 cursor-pointer hover:border-red-400 dark:hover:border-red-600 hover:shadow-md" 
+              ? "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 cursor-pointer hover:border-red-400" 
               : "bg-muted/30 border-transparent cursor-default",
-            filterDeadlineStatus === "overdue" && "ring-2 ring-red-500 ring-offset-2"
+            filterDeadlineStatus === "overdue" && "ring-2 ring-red-500 ring-offset-1"
           )}
         >
           <div className={cn(
-            "w-10 h-10 rounded-full flex items-center justify-center",
-            alertCounts.overdue > 0 
-              ? "bg-red-100 dark:bg-red-900/50" 
-              : "bg-muted"
+            "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+            alertCounts.overdue > 0 ? "bg-red-100 dark:bg-red-900/50" : "bg-muted"
           )}>
             <AlertTriangle className={cn(
-              "h-5 w-5",
-              alertCounts.overdue > 0 
-                ? "text-red-600 dark:text-red-400 animate-pulse" 
-                : "text-muted-foreground"
+              "h-4 w-4",
+              alertCounts.overdue > 0 ? "text-red-600 dark:text-red-400 animate-pulse" : "text-muted-foreground"
             )} />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className={cn(
-              "text-2xl font-bold",
+              "text-lg font-bold leading-none",
               alertCounts.overdue > 0 ? "text-red-600 dark:text-red-400" : "text-muted-foreground"
             )}>
               {alertCounts.overdue}
             </p>
-            <p className="text-xs text-muted-foreground">Atrasadas</p>
+            <p className="text-[10px] text-muted-foreground truncate">Atrasadas</p>
           </div>
         </button>
 
@@ -221,34 +217,30 @@ export default function AtividadesMarketing() {
           onClick={() => handleAlertClick("dueSoon")}
           disabled={alertCounts.dueSoon === 0}
           className={cn(
-            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left",
+            "flex items-center gap-2 p-2.5 rounded-lg border transition-all text-left",
             alertCounts.dueSoon > 0 
-              ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 cursor-pointer hover:border-amber-400 dark:hover:border-amber-600 hover:shadow-md" 
+              ? "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 cursor-pointer hover:border-amber-400" 
               : "bg-muted/30 border-transparent cursor-default",
-            filterDeadlineStatus === "dueSoon" && "ring-2 ring-amber-500 ring-offset-2"
+            filterDeadlineStatus === "dueSoon" && "ring-2 ring-amber-500 ring-offset-1"
           )}
         >
           <div className={cn(
-            "w-10 h-10 rounded-full flex items-center justify-center",
-            alertCounts.dueSoon > 0 
-              ? "bg-amber-100 dark:bg-amber-900/50" 
-              : "bg-muted"
+            "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+            alertCounts.dueSoon > 0 ? "bg-amber-100 dark:bg-amber-900/50" : "bg-muted"
           )}>
             <Clock className={cn(
-              "h-5 w-5",
-              alertCounts.dueSoon > 0 
-                ? "text-amber-600 dark:text-amber-400" 
-                : "text-muted-foreground"
+              "h-4 w-4",
+              alertCounts.dueSoon > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"
             )} />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className={cn(
-              "text-2xl font-bold",
+              "text-lg font-bold leading-none",
               alertCounts.dueSoon > 0 ? "text-amber-600 dark:text-amber-400" : "text-muted-foreground"
             )}>
               {alertCounts.dueSoon}
             </p>
-            <p className="text-xs text-muted-foreground">Vencendo em breve</p>
+            <p className="text-[10px] text-muted-foreground truncate">Em breve</p>
           </div>
         </button>
 
@@ -257,34 +249,30 @@ export default function AtividadesMarketing() {
           onClick={() => handleAlertClick("emergency")}
           disabled={alertCounts.emergency === 0}
           className={cn(
-            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left",
+            "flex items-center gap-2 p-2.5 rounded-lg border transition-all text-left",
             alertCounts.emergency > 0 
-              ? "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800 cursor-pointer hover:border-rose-400 dark:hover:border-rose-600 hover:shadow-md" 
+              ? "bg-rose-50 dark:bg-rose-950/30 border-rose-200 dark:border-rose-800 cursor-pointer hover:border-rose-400" 
               : "bg-muted/30 border-transparent cursor-default",
-            filterPrioridade === "emergencia" && "ring-2 ring-rose-500 ring-offset-2"
+            filterPrioridade === "emergencia" && "ring-2 ring-rose-500 ring-offset-1"
           )}
         >
           <div className={cn(
-            "w-10 h-10 rounded-full flex items-center justify-center",
-            alertCounts.emergency > 0 
-              ? "bg-rose-100 dark:bg-rose-900/50" 
-              : "bg-muted"
+            "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+            alertCounts.emergency > 0 ? "bg-rose-100 dark:bg-rose-900/50" : "bg-muted"
           )}>
             <Flame className={cn(
-              "h-5 w-5",
-              alertCounts.emergency > 0 
-                ? "text-rose-600 dark:text-rose-400 animate-pulse" 
-                : "text-muted-foreground"
+              "h-4 w-4",
+              alertCounts.emergency > 0 ? "text-rose-600 dark:text-rose-400 animate-pulse" : "text-muted-foreground"
             )} />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className={cn(
-              "text-2xl font-bold",
+              "text-lg font-bold leading-none",
               alertCounts.emergency > 0 ? "text-rose-600 dark:text-rose-400" : "text-muted-foreground"
             )}>
               {alertCounts.emergency}
             </p>
-            <p className="text-xs text-muted-foreground">Emergências</p>
+            <p className="text-[10px] text-muted-foreground truncate">Emergências</p>
           </div>
         </button>
 
@@ -293,47 +281,43 @@ export default function AtividadesMarketing() {
           onClick={() => handleAlertClick("urgent")}
           disabled={alertCounts.urgent === 0}
           className={cn(
-            "flex items-center gap-3 p-4 rounded-lg border-2 transition-all text-left",
+            "flex items-center gap-2 p-2.5 rounded-lg border transition-all text-left",
             alertCounts.urgent > 0 
-              ? "bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800 cursor-pointer hover:border-orange-400 dark:hover:border-orange-600 hover:shadow-md" 
+              ? "bg-orange-50 dark:bg-orange-950/30 border-orange-200 dark:border-orange-800 cursor-pointer hover:border-orange-400" 
               : "bg-muted/30 border-transparent cursor-default",
-            filterPrioridade === "urgente" && "ring-2 ring-orange-500 ring-offset-2"
+            filterPrioridade === "urgente" && "ring-2 ring-orange-500 ring-offset-1"
           )}
         >
           <div className={cn(
-            "w-10 h-10 rounded-full flex items-center justify-center",
-            alertCounts.urgent > 0 
-              ? "bg-orange-100 dark:bg-orange-900/50" 
-              : "bg-muted"
+            "w-8 h-8 rounded-full flex items-center justify-center shrink-0",
+            alertCounts.urgent > 0 ? "bg-orange-100 dark:bg-orange-900/50" : "bg-muted"
           )}>
             <AlertTriangle className={cn(
-              "h-5 w-5",
-              alertCounts.urgent > 0 
-                ? "text-orange-600 dark:text-orange-400" 
-                : "text-muted-foreground"
+              "h-4 w-4",
+              alertCounts.urgent > 0 ? "text-orange-600 dark:text-orange-400" : "text-muted-foreground"
             )} />
           </div>
-          <div>
+          <div className="min-w-0">
             <p className={cn(
-              "text-2xl font-bold",
+              "text-lg font-bold leading-none",
               alertCounts.urgent > 0 ? "text-orange-600 dark:text-orange-400" : "text-muted-foreground"
             )}>
               {alertCounts.urgent}
             </p>
-            <p className="text-xs text-muted-foreground">Urgentes</p>
+            <p className="text-[10px] text-muted-foreground truncate">Urgentes</p>
           </div>
         </button>
       </div>
 
-      {/* Filters Bar */}
-      <div className="flex flex-wrap items-center gap-3 p-4 bg-muted/30 rounded-lg border">
-        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-          <Filter className="h-4 w-4" />
+      {/* Filters Bar - Compact */}
+      <div className="flex flex-wrap items-center gap-2 py-2 px-3 bg-muted/30 rounded-lg border shrink-0 mt-3">
+        <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Filter className="h-3.5 w-3.5" />
           <span className="font-medium">Filtros:</span>
         </div>
 
         <Select value={filterResponsavel} onValueChange={setFilterResponsavel}>
-          <SelectTrigger className="w-[180px] bg-background">
+          <SelectTrigger className="w-[160px] h-8 text-xs bg-background">
             <SelectValue placeholder="Responsável" />
           </SelectTrigger>
           <SelectContent>
@@ -347,7 +331,7 @@ export default function AtividadesMarketing() {
         </Select>
 
         <Select value={filterPrioridade} onValueChange={setFilterPrioridade}>
-          <SelectTrigger className="w-[160px] bg-background">
+          <SelectTrigger className="w-[140px] h-8 text-xs bg-background">
             <SelectValue placeholder="Prioridade" />
           </SelectTrigger>
           <SelectContent>
@@ -362,34 +346,37 @@ export default function AtividadesMarketing() {
 
         {hasActiveFilters && (
           <>
-            <div className="h-6 w-px bg-border" />
+            <div className="h-5 w-px bg-border" />
             <Button
               variant="ghost"
               size="sm"
               onClick={clearFilters}
-              className="text-muted-foreground hover:text-foreground"
+              className="h-7 text-xs text-muted-foreground hover:text-foreground px-2"
             >
-              <X className="h-4 w-4 mr-1" />
-              Limpar filtros
+              <X className="h-3 w-3 mr-1" />
+              Limpar
             </Button>
           </>
         )}
 
-        <div className="ml-auto flex items-center gap-2">
-          <Badge variant="outline" className="font-normal">
-            {filteredAtividades.length} de {atividades.length} atividades
+        <div className="ml-auto">
+          <Badge variant="outline" className="text-[10px] font-normal h-6">
+            {filteredAtividades.length}/{atividades.length}
           </Badge>
         </div>
       </div>
 
-      <KanbanBoard
-        colunas={colunas}
-        atividades={filteredAtividades}
-        onMoveAtividade={(id, coluna_id) => moveAtividade.mutate({ id, coluna_id })}
-        onClickAtividade={handleClickAtividade}
-        onAddColuna={(nome) => addColuna.mutate(nome)}
-        onDeleteColuna={(id) => deleteColuna.mutate(id)}
-      />
+      {/* Kanban - Scrollable area */}
+      <div className="flex-1 overflow-auto mt-3 -mx-1 px-1">
+        <KanbanBoard
+          colunas={colunas}
+          atividades={filteredAtividades}
+          onMoveAtividade={(id, coluna_id) => moveAtividade.mutate({ id, coluna_id })}
+          onClickAtividade={handleClickAtividade}
+          onAddColuna={(nome) => addColuna.mutate(nome)}
+          onDeleteColuna={(id) => deleteColuna.mutate(id)}
+        />
+      </div>
 
       <AtividadeFormDialog
         open={showFormDialog}
