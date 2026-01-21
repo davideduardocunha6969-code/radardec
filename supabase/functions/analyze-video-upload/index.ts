@@ -94,8 +94,15 @@ async function analyzeVideoVisually(
   }
 
   try {
-    // Convert video to base64 for Gemini
-    const base64Video = btoa(String.fromCharCode(...videoData));
+    // Convert video to base64 for Gemini (chunked to avoid stack overflow)
+    let base64Video = '';
+    const chunkSize = 32768; // 32KB chunks
+    for (let i = 0; i < videoData.length; i += chunkSize) {
+      const chunk = videoData.slice(i, i + chunkSize);
+      base64Video += String.fromCharCode.apply(null, Array.from(chunk));
+    }
+    base64Video = btoa(base64Video);
+    
     const ext = fileName.split('.').pop()?.toLowerCase() || 'mp4';
     const mimeType = ext === 'webm' ? 'video/webm' :
                      ext === 'mov' ? 'video/quicktime' :
