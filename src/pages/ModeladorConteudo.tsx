@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Wand2, Video, FileText, Image, Loader2, ExternalLink, ArrowRight, Send, AlertCircle, Mic, Film, ChevronDown, Upload, X, FileVideo } from "lucide-react";
+import { Wand2, Video, FileText, Image, Loader2, ExternalLink, ArrowRight, Send, AlertCircle, Mic, Film, ChevronDown, Upload, X, FileVideo, SquareStack, ImageIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,27 +11,38 @@ import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useTiposProdutos, TipoProduto, SETOR_LABELS, SETOR_COLORS } from "@/hooks/useTiposProdutos";
 import { useModelagemConteudo, ModelagemResult } from "@/hooks/useModelagemConteudo";
+import { Formato, FORMATO_LABELS } from "@/hooks/useConteudosMidia";
 import { ModelagemIdeiaFormDialog } from "@/components/modelador/ModelagemIdeiaFormDialog";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { isFieldVisibleForFormato } from "@/utils/formatoFields";
 
 type TipoModelagem = "video" | "blog_post" | "publicacao";
 
 interface PendingIdeia {
   produto: TipoProduto;
+  formato: Formato;
   result: ModelagemResult;
   link: string;
 }
 
+const FORMATO_OPTIONS: { value: Formato; label: string; icon: React.ReactNode; description: string }[] = [
+  { value: "video", label: "Vídeo Curto", icon: <Video className="h-5 w-5" />, description: "Reels, Shorts (30-90s)" },
+  { value: "video_longo", label: "Vídeo Longo", icon: <Film className="h-5 w-5" />, description: "YouTube (5-15min)" },
+  { value: "carrossel", label: "Carrossel", icon: <SquareStack className="h-5 w-5" />, description: "5-10 slides" },
+  { value: "estatico", label: "Estático", icon: <ImageIcon className="h-5 w-5" />, description: "Imagem única" },
+];
+
 export default function ModeladorConteudo() {
   const { produtos, isLoading: loadingProdutos } = useTiposProdutos();
-  const { isAnalyzing, analyzeVideoUpload, resetState: resetModelagem } = useModelagemConteudo();
+  const { isAnalyzing, analyzeVideoUploadMultiFormato, resetState: resetModelagem } = useModelagemConteudo();
 
-  const [step, setStep] = useState<"select-type" | "input-link" | "upload-video" | "select-products" | "analyzing" | "results">("select-type");
+  const [step, setStep] = useState<"select-type" | "input-link" | "upload-video" | "select-formats" | "select-products" | "analyzing" | "results">("select-type");
   const [tipoSelecionado, setTipoSelecionado] = useState<TipoModelagem | null>(null);
   const [link, setLink] = useState("");
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
+  const [formatosSelecionados, setFormatosSelecionados] = useState<Formato[]>([]);
   const [produtosSelecionados, setProdutosSelecionados] = useState<string[]>([]);
   const [pendingIdeias, setPendingIdeias] = useState<PendingIdeia[]>([]);
   const [currentIdeiaIndex, setCurrentIdeiaIndex] = useState(0);
@@ -64,6 +75,14 @@ export default function ModeladorConteudo() {
     }
     setTipoSelecionado(tipo);
     setStep("input-link");
+  };
+
+  const handleFormatoToggle = (formato: Formato) => {
+    setFormatosSelecionados((prev) =>
+      prev.includes(formato)
+        ? prev.filter((f) => f !== formato)
+        : [...prev, formato]
+    );
   };
 
   const handleProdutoToggle = (produtoId: string) => {
@@ -120,7 +139,7 @@ export default function ModeladorConteudo() {
     }
   };
 
-  const handleContinueToProducts = () => {
+  const handleContinueToFormats = () => {
     if (!videoFile) {
       toast.error("Faça upload do vídeo");
       return;
@@ -129,11 +148,19 @@ export default function ModeladorConteudo() {
       toast.error("Cole a legenda do vídeo");
       return;
     }
+    setStep("select-formats");
+  };
+
+  const handleContinueToProducts = () => {
+    if (formatosSelecionados.length === 0) {
+      toast.error("Selecione pelo menos um formato de conteúdo");
+      return;
+    }
     setStep("select-products");
   };
 
   const handleAnalyze = async () => {
-    if (!tipoSelecionado || !link || !videoFile || !caption || produtosSelecionados.length === 0) {
+    if (!tipoSelecionado || !link || !videoFile || !caption || formatosSelecionados.length === 0 || produtosSelecionados.length === 0) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -144,13 +171,23 @@ export default function ModeladorConteudo() {
       produtosSelecionados.includes(p.id)
     );
 
-    // Analyze for each selected product
+    // Analyze for each selected product with all formats
     const ideias: PendingIdeia[] = [];
 
     for (const produto of selectedProducts) {
-      const result = await analyzeVideoUpload(videoFile, caption, [produto]);
-      if (result) {
-        ideias.push({ produto, result, link });
+      const response = await analyzeVideoUploadMultiFormato(videoFile, caption, [produto], formatosSelecionados);
+      
+      if (response && response.formatos) {
+        // Create pending ideias for each format in the order selected
+        for (const formato of formatosSelecionados) {
+          const result = response.formatos[formato];
+          if (result) {
+            // Add transcription and visual analysis to each result
+            result.transcricao_audio = response.transcricao;
+            result.analise_visual_detalhada = response.analise_visual;
+            ideias.push({ produto, formato, result, link });
+          }
+        }
       }
     }
 
@@ -173,9 +210,19 @@ export default function ModeladorConteudo() {
     
     if (currentIdeiaIndex < pendingIdeias.length - 1) {
       setCurrentIdeiaIndex((prev) => prev + 1);
-      toast.success("Ideia enviada! Próximo produto...");
+      toast.success("Ideia enviada! Próximo formato/produto...");
     } else {
       toast.success("Todas as ideias foram enviadas ao Content Hub!");
+      resetState();
+    }
+  };
+
+  const handleSkipIdeia = () => {
+    if (currentIdeiaIndex < pendingIdeias.length - 1) {
+      setCurrentIdeiaIndex((prev) => prev + 1);
+      toast.info("Pulando para o próximo formato/produto...");
+    } else {
+      toast.success("Modelagem concluída!");
       resetState();
     }
   };
@@ -186,6 +233,7 @@ export default function ModeladorConteudo() {
     setLink("");
     setVideoFile(null);
     setCaption("");
+    setFormatosSelecionados([]);
     setProdutosSelecionados([]);
     setPendingIdeias([]);
     setCurrentIdeiaIndex(0);
@@ -201,6 +249,7 @@ export default function ModeladorConteudo() {
   };
 
   const currentIdeia = pendingIdeias[currentIdeiaIndex];
+  const showFilmingInstructions = currentIdeia && isFieldVisibleForFormato("orientacoes_filmagem", currentIdeia.formato);
 
   return (
     <div className="space-y-6">
@@ -393,7 +442,86 @@ export default function ModeladorConteudo() {
               <Button variant="outline" onClick={() => setStep("input-link")}>
                 Voltar
               </Button>
-              <Button onClick={handleContinueToProducts} disabled={!videoFile || !caption.trim()}>
+              <Button onClick={handleContinueToFormats} disabled={!videoFile || !caption.trim()}>
+                Continuar
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === "select-formats" && (
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <SquareStack className="h-5 w-5" />
+              Formatos de Conteúdo
+            </CardTitle>
+            <CardDescription>
+              Selecione os formatos para os quais deseja adaptar o conteúdo. A IA gerará uma modelagem específica para cada formato.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Video info summary */}
+            <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+              <div className="flex items-center gap-2">
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                <a href={link} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate">
+                  {link}
+                </a>
+              </div>
+              {videoFile && (
+                <div className="flex items-center gap-2">
+                  <FileVideo className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">{videoFile.name} ({formatFileSize(videoFile.size)})</span>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <Label>Selecione os Formatos Desejados *</Label>
+              <p className="text-sm text-muted-foreground">
+                Você pode selecionar mais de um formato. Para cada formato selecionado, a IA gerará uma modelagem adaptada.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {FORMATO_OPTIONS.map((option) => (
+                  <div
+                    key={option.value}
+                    className={`flex items-start gap-3 p-4 rounded-lg border transition-colors cursor-pointer ${
+                      formatosSelecionados.includes(option.value)
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    }`}
+                    onClick={() => handleFormatoToggle(option.value)}
+                  >
+                    <Checkbox
+                      checked={formatosSelecionados.includes(option.value)}
+                      onCheckedChange={() => handleFormatoToggle(option.value)}
+                    />
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className={`p-2 rounded-lg ${formatosSelecionados.includes(option.value) ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>
+                        {option.icon}
+                      </div>
+                      <div>
+                        <span className="font-medium text-foreground">
+                          {option.label}
+                        </span>
+                        <p className="text-xs text-muted-foreground">
+                          {option.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex justify-between pt-4">
+              <Button variant="outline" onClick={() => setStep("upload-video")}>
+                Voltar
+              </Button>
+              <Button onClick={handleContinueToProducts} disabled={formatosSelecionados.length === 0}>
                 Continuar
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
@@ -428,6 +556,14 @@ export default function ModeladorConteudo() {
                   <span className="text-sm text-muted-foreground">{videoFile.name} ({formatFileSize(videoFile.size)})</span>
                 </div>
               )}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-muted-foreground">Formatos:</span>
+                {formatosSelecionados.map((f) => (
+                  <Badge key={f} variant="secondary" className="text-xs">
+                    {FORMATO_LABELS[f]}
+                  </Badge>
+                ))}
+              </div>
             </div>
 
             <div className="space-y-3">
@@ -475,8 +611,15 @@ export default function ModeladorConteudo() {
               )}
             </div>
 
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                <AlertCircle className="h-4 w-4 inline mr-2" />
+                <strong>Nota:</strong> Serão geradas {formatosSelecionados.length * produtosSelecionados.length} ideias ({formatosSelecionados.length} formato(s) × {produtosSelecionados.length} produto(s))
+              </p>
+            </div>
+
             <div className="flex justify-between pt-4">
-              <Button variant="outline" onClick={() => setStep("upload-video")}>
+              <Button variant="outline" onClick={() => setStep("select-formats")}>
                 Voltar
               </Button>
               <Button
@@ -499,10 +642,10 @@ export default function ModeladorConteudo() {
               Analisando Conteúdo
             </h3>
             <p className="text-muted-foreground text-center max-w-md">
-              A IA está processando o vídeo: transcrevendo o áudio, analisando visualmente e gerando a modelagem para seus produtos...
+              A IA está processando o vídeo: transcrevendo o áudio, analisando visualmente e gerando modelagens para {formatosSelecionados.length} formato(s)...
             </p>
             <p className="text-xs text-muted-foreground mt-4">
-              Isso pode levar alguns segundos dependendo da duração do vídeo.
+              Isso pode levar alguns segundos dependendo da quantidade de formatos selecionados.
             </p>
           </CardContent>
         </Card>
@@ -510,26 +653,31 @@ export default function ModeladorConteudo() {
 
       {step === "results" && currentIdeia && (
         <div className="space-y-6">
-          {pendingIdeias.length > 1 && (
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 flex-wrap">
               <Badge variant="outline">
-                Produto {currentIdeiaIndex + 1} de {pendingIdeias.length}
+                {currentIdeiaIndex + 1} de {pendingIdeias.length}
               </Badge>
-              <span className="text-sm text-muted-foreground">
+              <Badge className={SETOR_COLORS[currentIdeia.produto.setor]}>
                 {currentIdeia.produto.nome}
-              </span>
+              </Badge>
+              <Badge variant="secondary">
+                {FORMATO_LABELS[currentIdeia.formato]}
+              </Badge>
             </div>
-          )}
+            {pendingIdeias.length > 1 && (
+              <Button variant="ghost" size="sm" onClick={handleSkipIdeia}>
+                Pular
+              </Button>
+            )}
+          </div>
 
           <Card className="bg-card/50 backdrop-blur-sm border-border/50">
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    Análise do Conteúdo
-                    <Badge className={SETOR_COLORS[currentIdeia.produto.setor]}>
-                      {currentIdeia.produto.nome}
-                    </Badge>
+                    Modelagem: {FORMATO_LABELS[currentIdeia.formato]}
                   </CardTitle>
                   <CardDescription className="flex items-center gap-1 mt-1">
                     <ExternalLink className="h-3 w-3" />
@@ -551,7 +699,7 @@ export default function ModeladorConteudo() {
                 <div className="space-y-4">
                   {/* Audio Transcription */}
                   {currentIdeia.result.transcricao_audio && (
-                    <Collapsible defaultOpen>
+                    <Collapsible>
                       <CollapsibleTrigger asChild>
                         <Button variant="ghost" className="w-full justify-between p-3 h-auto bg-blue-500/10 border border-blue-500/30 rounded-lg hover:bg-blue-500/20">
                           <div className="flex items-center gap-2">
@@ -573,7 +721,7 @@ export default function ModeladorConteudo() {
 
                   {/* Visual Analysis */}
                   {currentIdeia.result.analise_visual_detalhada && (
-                    <Collapsible defaultOpen>
+                    <Collapsible>
                       <CollapsibleTrigger asChild>
                         <Button variant="ghost" className="w-full justify-between p-3 h-auto bg-purple-500/10 border border-purple-500/30 rounded-lg hover:bg-purple-500/20">
                           <div className="flex items-center gap-2">
@@ -622,7 +770,16 @@ export default function ModeladorConteudo() {
                 <div className="space-y-4">
                   <div>
                     <h4 className="text-sm font-medium text-primary mb-2">
-                      Gancho Utilizado
+                      Título Sugerido ({FORMATO_LABELS[currentIdeia.formato]})
+                    </h4>
+                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg font-medium">
+                      {currentIdeia.result.titulo_sugerido}
+                    </p>
+                  </div>
+
+                  <div>
+                    <h4 className="text-sm font-medium text-primary mb-2">
+                      Gancho
                     </h4>
                     <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg">
                       {currentIdeia.result.gancho_original}
@@ -637,35 +794,39 @@ export default function ModeladorConteudo() {
                       {currentIdeia.result.analise_estrategia}
                     </p>
                   </div>
-
-                  <div>
-                    <h4 className="text-sm font-medium text-primary mb-2">
-                      Motivos da Performance
-                    </h4>
-                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg whitespace-pre-wrap">
-                      {currentIdeia.result.analise_performance}
-                    </p>
-                  </div>
                 </div>
 
                 <div className="space-y-4">
                   <div>
                     <h4 className="text-sm font-medium text-primary mb-2">
-                      Legenda Original
+                      Copy Completa
                     </h4>
-                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg whitespace-pre-wrap">
-                      {currentIdeia.result.legenda_original}
+                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg whitespace-pre-wrap max-h-60 overflow-y-auto">
+                      {currentIdeia.result.copy_completa}
                     </p>
                   </div>
 
-                  <div>
-                    <h4 className="text-sm font-medium text-primary mb-2">
-                      Análise de Filmagem/Edição
-                    </h4>
-                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg whitespace-pre-wrap">
-                      {currentIdeia.result.analise_filmagem}
-                    </p>
-                  </div>
+                  {showFilmingInstructions && currentIdeia.result.orientacoes_filmagem && (
+                    <div>
+                      <h4 className="text-sm font-medium text-primary mb-2">
+                        Orientações para Filmagem
+                      </h4>
+                      <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg whitespace-pre-wrap">
+                        {currentIdeia.result.orientacoes_filmagem}
+                      </p>
+                    </div>
+                  )}
+
+                  {!showFilmingInstructions && currentIdeia.result.orientacoes_filmagem && (
+                    <div>
+                      <h4 className="text-sm font-medium text-primary mb-2">
+                        Orientações de Design
+                      </h4>
+                      <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg whitespace-pre-wrap">
+                        {currentIdeia.result.orientacoes_filmagem}
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -677,7 +838,7 @@ export default function ModeladorConteudo() {
                 </Button>
                 <Button onClick={handleOpenIdeiaForm}>
                   <Send className="h-4 w-4 mr-2" />
-                  Criar Ideia para Content Hub
+                  Enviar para o Content Hub
                 </Button>
               </div>
             </CardContent>
@@ -692,6 +853,7 @@ export default function ModeladorConteudo() {
           produto={currentIdeia.produto}
           result={currentIdeia.result}
           linkOriginal={currentIdeia.link}
+          formato={currentIdeia.formato}
           onSuccess={handleIdeiaEnviada}
         />
       )}

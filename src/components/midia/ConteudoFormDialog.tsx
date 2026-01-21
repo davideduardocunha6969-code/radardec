@@ -189,18 +189,20 @@ export function ConteudoFormDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="orientacoes_filmagem">Orientações para Filmagem</Label>
-            <Textarea
-              id="orientacoes_filmagem"
-              value={formData.orientacoes_filmagem}
-              onChange={(e) =>
-                setFormData({ ...formData, orientacoes_filmagem: e.target.value })
-              }
-              placeholder="Descreva as orientações..."
-              rows={3}
-            />
-          </div>
+          {(formData.formato === "video" || formData.formato === "video_longo") && (
+            <div className="space-y-2">
+              <Label htmlFor="orientacoes_filmagem">Orientações para Filmagem</Label>
+              <Textarea
+                id="orientacoes_filmagem"
+                value={formData.orientacoes_filmagem}
+                onChange={(e) =>
+                  setFormData({ ...formData, orientacoes_filmagem: e.target.value })
+                }
+                placeholder="Descreva as orientações..."
+                rows={3}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="copy_completa">Copy Completa</Label>

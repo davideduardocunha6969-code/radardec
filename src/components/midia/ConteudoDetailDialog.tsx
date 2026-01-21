@@ -251,19 +251,21 @@ export function ConteudoDetailDialog({
             />
           </div>
 
-          {/* Filming Instructions */}
-          <div className="space-y-2">
-            <Label className="text-xs text-muted-foreground uppercase tracking-wide">Orientações para Filmagem</Label>
-            <Textarea
-              value={editedData.orientacoes_filmagem || ""}
-              onChange={(e) =>
-                handleFieldChange("orientacoes_filmagem", e.target.value)
-              }
-              rows={3}
-              placeholder="Instruções detalhadas para gravação..."
-              className="resize-none"
-            />
-          </div>
+          {/* Filming Instructions - Only for video formats */}
+          {(editedData.formato === "video" || editedData.formato === "video_longo") && (
+            <div className="space-y-2">
+              <Label className="text-xs text-muted-foreground uppercase tracking-wide">Orientações para Filmagem</Label>
+              <Textarea
+                value={editedData.orientacoes_filmagem || ""}
+                onChange={(e) =>
+                  handleFieldChange("orientacoes_filmagem", e.target.value)
+                }
+                rows={3}
+                placeholder="Instruções detalhadas para gravação..."
+                className="resize-none"
+              />
+            </div>
+          )}
 
           {/* Full Copy */}
           <div className="space-y-2">
@@ -314,8 +316,8 @@ export function ConteudoDetailDialog({
 
             <div className="space-y-2">
               <Label className="text-xs text-muted-foreground uppercase tracking-wide flex items-center gap-1.5">
-                <Video className="h-3.5 w-3.5" />
-                Link do Vídeo no Drive
+                <Link2 className="h-3.5 w-3.5" />
+                Link do Conteúdo (Drive)
               </Label>
               <div className="flex gap-2">
                 <Input

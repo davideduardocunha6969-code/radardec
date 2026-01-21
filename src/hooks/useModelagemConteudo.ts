@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { TipoProduto } from "./useTiposProdutos";
+import { Formato } from "./useConteudosMidia";
 
 export interface AnaliseVisualDetalhada {
   cenario: string;
@@ -27,25 +27,36 @@ export interface ModelagemResult {
   analise_visual_detalhada?: AnaliseVisualDetalhada | null;
 }
 
+export interface MultiFormatoResponse {
+  formatos: Record<string, ModelagemResult>;
+  transcricao: string | null;
+  analise_visual: AnaliseVisualDetalhada | null;
+}
+
 export interface ModelagemState {
   isAnalyzing: boolean;
-  result: ModelagemResult | null;
+  results: Record<string, ModelagemResult>;
+  transcricao: string | null;
+  analiseVisual: AnaliseVisualDetalhada | null;
   error: string | null;
 }
 
 export function useModelagemConteudo() {
   const [state, setState] = useState<ModelagemState>({
     isAnalyzing: false,
-    result: null,
+    results: {},
+    transcricao: null,
+    analiseVisual: null,
     error: null,
   });
 
-  const analyzeVideoUpload = async (
+  const analyzeVideoUploadMultiFormato = async (
     videoFile: File,
     caption: string,
-    produtos: TipoProduto[]
-  ): Promise<ModelagemResult | null> => {
-    setState((prev) => ({ ...prev, isAnalyzing: true, result: null, error: null }));
+    produtos: TipoProduto[],
+    formatos: Formato[]
+  ): Promise<MultiFormatoResponse | null> => {
+    setState((prev) => ({ ...prev, isAnalyzing: true, results: {}, error: null }));
 
     try {
       const produtosInfo = produtos
@@ -60,6 +71,7 @@ export function useModelagemConteudo() {
       formData.append("video", videoFile);
       formData.append("caption", caption);
       formData.append("produtos", produtosInfo);
+      formData.append("formatos", JSON.stringify(formatos));
 
       // Get the Supabase URL and key for the edge function call
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
@@ -78,8 +90,16 @@ export function useModelagemConteudo() {
         throw new Error(errorData.error || "Erro ao analisar vídeo");
       }
 
-      const result = await response.json() as ModelagemResult;
-      setState((prev) => ({ ...prev, isAnalyzing: false, result }));
+      const result = await response.json() as MultiFormatoResponse;
+      
+      setState((prev) => ({ 
+        ...prev, 
+        isAnalyzing: false, 
+        results: result.formatos,
+        transcricao: result.transcricao,
+        analiseVisual: result.analise_visual,
+      }));
+      
       return result;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro desconhecido";
@@ -89,10 +109,22 @@ export function useModelagemConteudo() {
     }
   };
 
+  // Legacy function for backward compatibility
+  const analyzeVideoUpload = async (
+    videoFile: File,
+    caption: string,
+    produtos: TipoProduto[]
+  ): Promise<ModelagemResult | null> => {
+    const result = await analyzeVideoUploadMultiFormato(videoFile, caption, produtos, ["video"]);
+    return result?.formatos?.video || null;
+  };
+
   const resetState = () => {
     setState({
       isAnalyzing: false,
-      result: null,
+      results: {},
+      transcricao: null,
+      analiseVisual: null,
       error: null,
     });
   };
@@ -100,6 +132,7 @@ export function useModelagemConteudo() {
   return {
     ...state,
     analyzeVideoUpload,
+    analyzeVideoUploadMultiFormato,
     resetState,
   };
 }
