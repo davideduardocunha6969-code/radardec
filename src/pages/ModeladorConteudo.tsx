@@ -169,15 +169,12 @@ export default function ModeladorConteudo() {
       toast.error("Faça upload do vídeo");
       return;
     }
-    if (!caption.trim()) {
-      toast.error("Cole a legenda do vídeo");
-      return;
-    }
+    // Caption is now optional
     setStep("select-products");
   };
 
   const handleAnalyze = async () => {
-    if (!formatoOrigem || !link || !videoFile || !caption || formatosSaida.length === 0 || produtosSelecionados.length === 0) {
+    if (!formatoOrigem || !link || !videoFile || formatosSaida.length === 0 || produtosSelecionados.length === 0) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -614,18 +611,18 @@ export default function ModeladorConteudo() {
               />
             </div>
 
-            {/* Caption */}
+            {/* Caption - Optional */}
             <div className="space-y-2">
-              <Label htmlFor="caption">Legenda/Descrição do Conteúdo *</Label>
+              <Label htmlFor="caption">Legenda/Descrição do Conteúdo (opcional)</Label>
               <Textarea
                 id="caption"
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
                 placeholder="Cole aqui a legenda completa do conteúdo original, incluindo hashtags e menções..."
-                className="min-h-[150px]"
+                className="min-h-[120px]"
               />
               <p className="text-xs text-muted-foreground">
-                Copie a legenda diretamente do Instagram/YouTube para uma análise mais precisa
+                A legenda ajuda a IA a entender melhor o contexto, mas não é obrigatória
               </p>
             </div>
 
@@ -642,7 +639,7 @@ export default function ModeladorConteudo() {
               <Button variant="outline" onClick={() => setStep("input-link")}>
                 Voltar
               </Button>
-              <Button onClick={handleContinueToProducts} disabled={!videoFile || !caption.trim()}>
+              <Button onClick={handleContinueToProducts} disabled={!videoFile}>
                 Continuar
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
