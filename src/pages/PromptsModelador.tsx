@@ -1,11 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
-import { Wand2, Video, LayoutGrid, Image, Play, Save, RotateCcw } from "lucide-react";
+import { Wand2, Video, LayoutGrid, Image, Play, Save, RotateCcw, ArrowRight, BookOpen, Newspaper, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAiPrompts, AiPrompt } from "@/hooks/useAiPrompts";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 type FormatoConfig = {
   id: string;
@@ -13,62 +17,123 @@ type FormatoConfig = {
   descricao: string;
   icon: React.ComponentType<{ className?: string }>;
   color: string;
-  promptPrefixes: string[];
+  bgColor: string;
 };
 
-const FORMATOS: FormatoConfig[] = [
+// Formatos de ORIGEM (conteúdo original)
+const FORMATOS_ORIGEM: FormatoConfig[] = [
   {
     id: "video",
     nome: "Vídeo Curto",
-    descricao: "Reels/Shorts de 30-90 segundos",
+    descricao: "Reels/Shorts/TikTok",
     icon: Play,
     color: "text-red-500",
-    promptPrefixes: ["Modelagem de Conteúdo - Vídeo Curto", "Vídeo Curto"],
+    bgColor: "bg-red-500/10",
   },
   {
     id: "video_longo",
     nome: "Vídeo Longo",
-    descricao: "YouTube de 5-15 minutos",
+    descricao: "YouTube 5-15min",
     icon: Video,
     color: "text-blue-500",
-    promptPrefixes: ["Modelagem de Conteúdo - Vídeo Longo", "Vídeo Longo"],
+    bgColor: "bg-blue-500/10",
   },
   {
     id: "carrossel",
     nome: "Carrossel",
-    descricao: "5-10 slides para Instagram",
+    descricao: "5-10 slides",
     icon: LayoutGrid,
     color: "text-purple-500",
-    promptPrefixes: ["Modelagem de Conteúdo - Carrossel", "Carrossel"],
+    bgColor: "bg-purple-500/10",
+  },
+  {
+    id: "estatico",
+    nome: "Post Estático",
+    descricao: "Imagem única",
+    icon: Image,
+    color: "text-green-500",
+    bgColor: "bg-green-500/10",
+  },
+  {
+    id: "blog_post",
+    nome: "Blog Post",
+    descricao: "Artigo de blog",
+    icon: BookOpen,
+    color: "text-amber-500",
+    bgColor: "bg-amber-500/10",
+  },
+  {
+    id: "publicacao",
+    nome: "Publicação",
+    descricao: "Post de texto",
+    icon: Newspaper,
+    color: "text-cyan-500",
+    bgColor: "bg-cyan-500/10",
+  },
+];
+
+// Formatos de SAÍDA (conteúdo modelado)
+const FORMATOS_SAIDA: FormatoConfig[] = [
+  {
+    id: "video",
+    nome: "Vídeo Curto",
+    descricao: "30-90 segundos",
+    icon: Play,
+    color: "text-red-500",
+    bgColor: "bg-red-500/10",
+  },
+  {
+    id: "video_longo",
+    nome: "Vídeo Longo",
+    descricao: "5-15 minutos",
+    icon: Video,
+    color: "text-blue-500",
+    bgColor: "bg-blue-500/10",
+  },
+  {
+    id: "carrossel",
+    nome: "Carrossel",
+    descricao: "5-10 slides",
+    icon: LayoutGrid,
+    color: "text-purple-500",
+    bgColor: "bg-purple-500/10",
   },
   {
     id: "estatico",
     nome: "Estático",
-    descricao: "Imagem única para feed/stories",
+    descricao: "Imagem única",
     icon: Image,
     color: "text-green-500",
-    promptPrefixes: ["Modelagem de Conteúdo - Estático", "Estático"],
+    bgColor: "bg-green-500/10",
   },
 ];
 
-function FormatoCard({
-  formato,
-  prompt,
-  onSave,
-  isSaving,
-}: {
-  formato: FormatoConfig;
+interface CombinationDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  formatoOrigem: FormatoConfig | null;
+  formatoSaida: FormatoConfig | null;
   prompt: AiPrompt | null;
   onSave: (promptText: string) => Promise<void>;
   isSaving: boolean;
-}) {
+}
+
+function CombinationDialog({
+  open,
+  onOpenChange,
+  formatoOrigem,
+  formatoSaida,
+  prompt,
+  onSave,
+  isSaving,
+}: CombinationDialogProps) {
   const [editedPrompt, setEditedPrompt] = useState(prompt?.prompt || "");
   const [hasChanges, setHasChanges] = useState(false);
 
   useEffect(() => {
     setEditedPrompt(prompt?.prompt || "");
     setHasChanges(false);
-  }, [prompt]);
+  }, [prompt, open]);
 
   const handleChange = (value: string) => {
     setEditedPrompt(value);
@@ -85,41 +150,58 @@ function FormatoCard({
     setHasChanges(false);
   };
 
-  const Icon = formato.icon;
+  if (!formatoOrigem || !formatoSaida) return null;
+
+  const OrigemIcon = formatoOrigem.icon;
+  const SaidaIcon = formatoSaida.icon;
 
   return (
-    <Card className="flex flex-col h-full">
-      <CardHeader className="pb-3">
-        <div className="flex items-center gap-3">
-          <div className={`p-2 rounded-lg bg-muted ${formato.color}`}>
-            <Icon className="h-5 w-5" />
-          </div>
-          <div>
-            <CardTitle className="text-lg">{formato.nome}</CardTitle>
-            <CardDescription>{formato.descricao}</CardDescription>
-          </div>
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
+            <span>Prompt:</span>
+            <div className="flex items-center gap-2">
+              <Badge variant="outline" className={cn("gap-1", formatoOrigem.color)}>
+                <OrigemIcon className="h-3 w-3" />
+                {formatoOrigem.nome}
+              </Badge>
+              <ArrowRight className="h-4 w-4 text-muted-foreground" />
+              <Badge variant="outline" className={cn("gap-1", formatoSaida.color)}>
+                <SaidaIcon className="h-3 w-3" />
+                {formatoSaida.nome}
+              </Badge>
+            </div>
+          </DialogTitle>
+          <DialogDescription>
+            Configure as instruções específicas para transformar um {formatoOrigem.nome} em {formatoSaida.nome}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex-1 flex flex-col gap-3 min-h-0">
+          <Label htmlFor="prompt-edit">Instruções para a IA</Label>
+          <ScrollArea className="flex-1 border rounded-md">
+            <Textarea
+              id="prompt-edit"
+              value={editedPrompt}
+              onChange={(e) => handleChange(e.target.value)}
+              placeholder={`Insira as instruções que a IA deve seguir ao transformar um ${formatoOrigem.nome} em ${formatoSaida.nome}...`}
+              className="min-h-[400px] border-0 font-mono text-sm resize-none"
+            />
+          </ScrollArea>
         </div>
-      </CardHeader>
-      <CardContent className="flex-1 flex flex-col gap-3">
-        <div className="flex-1 flex flex-col gap-2">
-          <Label htmlFor={`prompt-${formato.id}`}>Instruções para a IA</Label>
-          <Textarea
-            id={`prompt-${formato.id}`}
-            value={editedPrompt}
-            onChange={(e) => handleChange(e.target.value)}
-            placeholder="Insira as instruções que a IA deve seguir ao modelar conteúdo para este formato..."
-            className="flex-1 min-h-[300px] font-mono text-sm"
-          />
-        </div>
-        <div className="flex gap-2 justify-end">
+
+        <DialogFooter className="flex gap-2">
           {hasChanges && (
-            <Button variant="outline" size="sm" onClick={handleReset}>
+            <Button variant="outline" onClick={handleReset}>
               <RotateCcw className="h-4 w-4 mr-2" />
               Descartar
             </Button>
           )}
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
           <Button 
-            size="sm" 
             onClick={handleSave} 
             disabled={isSaving || !editedPrompt.trim()}
           >
@@ -135,61 +217,96 @@ function FormatoCard({
               </>
             )}
           </Button>
-        </div>
-      </CardContent>
-    </Card>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
 export default function PromptsModeladorPage() {
-  const { prompts, isLoading, fetchPrompts, createPrompt, updatePrompt } = useAiPrompts("modelador");
-  const [savingFormat, setSavingFormat] = useState<string | null>(null);
+  const { prompts, isLoading, fetchPrompts, createPromptWithFormats, updatePromptWithFormats } = useAiPrompts("modelador");
+  const [isSaving, setIsSaving] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedOrigem, setSelectedOrigem] = useState<FormatoConfig | null>(null);
+  const [selectedSaida, setSelectedSaida] = useState<FormatoConfig | null>(null);
 
   useEffect(() => {
     fetchPrompts();
   }, [fetchPrompts]);
 
-  // Map prompts to formats
-  const promptsByFormat = useMemo(() => {
+  // Map prompts by combination key (origem_saida)
+  const promptsByCombination = useMemo(() => {
     const map: Record<string, AiPrompt | null> = {};
     
-    FORMATOS.forEach((formato) => {
-      const found = prompts.find((p) =>
-        formato.promptPrefixes.some((prefix) => 
-          p.nome.toLowerCase().includes(prefix.toLowerCase())
-        )
-      );
-      map[formato.id] = found || null;
+    FORMATOS_ORIGEM.forEach((origem) => {
+      FORMATOS_SAIDA.forEach((saida) => {
+        const key = `${origem.id}_${saida.id}`;
+        const found = prompts.find(
+          (p) => p.formato_origem === origem.id && p.formato_saida === saida.id
+        );
+        map[key] = found || null;
+      });
     });
     
     return map;
   }, [prompts]);
 
-  const handleSaveForFormat = async (formatoId: string, promptText: string) => {
-    const formato = FORMATOS.find((f) => f.id === formatoId);
-    if (!formato) return;
+  const handleOpenDialog = (origem: FormatoConfig, saida: FormatoConfig) => {
+    setSelectedOrigem(origem);
+    setSelectedSaida(saida);
+    setDialogOpen(true);
+  };
 
-    setSavingFormat(formatoId);
+  const handleSavePrompt = async (promptText: string) => {
+    if (!selectedOrigem || !selectedSaida) return;
+
+    const key = `${selectedOrigem.id}_${selectedSaida.id}`;
+    const existingPrompt = promptsByCombination[key];
+
+    setIsSaving(true);
     try {
-      const existingPrompt = promptsByFormat[formatoId];
-      
+      const nome = `${selectedOrigem.nome} → ${selectedSaida.nome}`;
+      const descricao = `Transforma ${selectedOrigem.nome} em ${selectedSaida.nome}`;
+
       if (existingPrompt) {
-        await updatePrompt(existingPrompt.id, existingPrompt.nome, promptText, existingPrompt.descricao || "");
+        await updatePromptWithFormats({
+          id: existingPrompt.id,
+          nome,
+          prompt: promptText,
+          descricao,
+          formato_origem: selectedOrigem.id,
+          formato_saida: selectedSaida.id,
+        });
       } else {
-        await createPrompt(
-          `Modelagem de Conteúdo - ${formato.nome}`,
-          promptText,
-          `Instruções para modelar conteúdo no formato ${formato.nome}`
-        );
+        await createPromptWithFormats({
+          nome,
+          prompt: promptText,
+          descricao,
+          formato_origem: selectedOrigem.id,
+          formato_saida: selectedSaida.id,
+        });
       }
-      
-      toast.success(`Prompt de ${formato.nome} salvo com sucesso!`);
+
+      toast.success(`Prompt "${nome}" salvo com sucesso!`);
+      setDialogOpen(false);
     } catch (error) {
       toast.error("Erro ao salvar prompt");
     } finally {
-      setSavingFormat(null);
+      setIsSaving(false);
     }
   };
+
+  const selectedPrompt = useMemo(() => {
+    if (!selectedOrigem || !selectedSaida) return null;
+    const key = `${selectedOrigem.id}_${selectedSaida.id}`;
+    return promptsByCombination[key];
+  }, [selectedOrigem, selectedSaida, promptsByCombination]);
+
+  const configuredCount = useMemo(() => {
+    return Object.values(promptsByCombination).filter(Boolean).length;
+  }, [promptsByCombination]);
+
+  const totalCombinations = FORMATOS_ORIGEM.length * FORMATOS_SAIDA.length;
 
   if (isLoading) {
     return (
@@ -204,27 +321,129 @@ export default function PromptsModeladorPage() {
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center gap-2">
-        <Wand2 className="h-6 w-6 text-primary" />
-        <h1 className="text-2xl font-bold">Prompts Modelador</h1>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div className="flex items-center gap-2">
+          <Wand2 className="h-6 w-6 text-primary" />
+          <h1 className="text-2xl font-bold">Prompts Modelador</h1>
+        </div>
+        <Badge variant="outline" className="text-sm">
+          {configuredCount} de {totalCombinations} configurados
+        </Badge>
       </div>
 
       <p className="text-muted-foreground">
-        Configure as instruções completas que a IA deve seguir ao modelar conteúdos para cada formato. 
-        Cada prompt já inclui as etapas de análise visual e modelagem específica.
+        Configure instruções específicas para cada combinação de formato origem → saída. 
+        Clique em uma célula da matriz para editar o prompt correspondente.
       </p>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {FORMATOS.map((formato) => (
-          <FormatoCard
-            key={formato.id}
-            formato={formato}
-            prompt={promptsByFormat[formato.id]}
-            onSave={(promptText) => handleSaveForFormat(formato.id, promptText)}
-            isSaving={savingFormat === formato.id}
-          />
-        ))}
-      </div>
+      {/* Matrix Card */}
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg">Matriz de Combinações</CardTitle>
+          <CardDescription>
+            Linhas = Formato do conteúdo original | Colunas = Formato de saída
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse">
+              <thead>
+                <tr>
+                  <th className="p-2 text-left border-b border-r bg-muted/50">
+                    <span className="text-xs text-muted-foreground">Origem ↓ / Saída →</span>
+                  </th>
+                  {FORMATOS_SAIDA.map((saida) => {
+                    const Icon = saida.icon;
+                    return (
+                      <th key={saida.id} className="p-2 border-b bg-muted/50 min-w-[120px]">
+                        <div className="flex flex-col items-center gap-1">
+                          <div className={cn("p-1.5 rounded", saida.bgColor, saida.color)}>
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          <span className="text-xs font-medium">{saida.nome}</span>
+                        </div>
+                      </th>
+                    );
+                  })}
+                </tr>
+              </thead>
+              <tbody>
+                {FORMATOS_ORIGEM.map((origem) => {
+                  const OrigemIcon = origem.icon;
+                  return (
+                    <tr key={origem.id}>
+                      <td className="p-2 border-r bg-muted/50">
+                        <div className="flex items-center gap-2">
+                          <div className={cn("p-1.5 rounded", origem.bgColor, origem.color)}>
+                            <OrigemIcon className="h-4 w-4" />
+                          </div>
+                          <div>
+                            <span className="text-sm font-medium">{origem.nome}</span>
+                            <p className="text-xs text-muted-foreground">{origem.descricao}</p>
+                          </div>
+                        </div>
+                      </td>
+                      {FORMATOS_SAIDA.map((saida) => {
+                        const key = `${origem.id}_${saida.id}`;
+                        const hasPrompt = !!promptsByCombination[key];
+                        
+                        return (
+                          <td key={saida.id} className="p-2 border-b">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className={cn(
+                                "w-full h-12 transition-all",
+                                hasPrompt 
+                                  ? "bg-green-500/10 hover:bg-green-500/20 border border-green-500/30" 
+                                  : "bg-muted/30 hover:bg-muted/50 border border-dashed border-muted-foreground/30"
+                              )}
+                              onClick={() => handleOpenDialog(origem, saida)}
+                            >
+                              {hasPrompt ? (
+                                <Check className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <span className="text-xs text-muted-foreground">Configurar</span>
+                              )}
+                            </Button>
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Legend */}
+          <div className="flex items-center gap-6 mt-4 pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded bg-green-500/10 border border-green-500/30 flex items-center justify-center">
+                <Check className="h-3 w-3 text-green-500" />
+              </div>
+              <span className="text-sm text-muted-foreground">Prompt configurado</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded bg-muted/30 border border-dashed border-muted-foreground/30 flex items-center justify-center">
+                <X className="h-3 w-3 text-muted-foreground/50" />
+              </div>
+              <span className="text-sm text-muted-foreground">Sem prompt (usará padrão)</span>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Dialog for editing prompts */}
+      <CombinationDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        formatoOrigem={selectedOrigem}
+        formatoSaida={selectedSaida}
+        prompt={selectedPrompt}
+        onSave={handleSavePrompt}
+        isSaving={isSaving}
+      />
     </div>
   );
 }

@@ -18,6 +18,8 @@ export type Database = {
         Row: {
           created_at: string
           descricao: string | null
+          formato_origem: string | null
+          formato_saida: string | null
           id: string
           nome: string
           prompt: string
@@ -28,6 +30,8 @@ export type Database = {
         Insert: {
           created_at?: string
           descricao?: string | null
+          formato_origem?: string | null
+          formato_saida?: string | null
           id?: string
           nome: string
           prompt: string
@@ -38,6 +42,8 @@ export type Database = {
         Update: {
           created_at?: string
           descricao?: string | null
+          formato_origem?: string | null
+          formato_saida?: string | null
           id?: string
           nome?: string
           prompt?: string
