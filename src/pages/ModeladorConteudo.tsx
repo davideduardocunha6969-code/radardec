@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Wand2, Video, FileText, Image, Loader2, ExternalLink, ArrowRight, Send, CheckCircle2, AlertCircle, Eye, ClipboardPaste, Mic, Film, ChevronDown, ChevronUp } from "lucide-react";
+import { useState, useRef, useCallback } from "react";
+import { Wand2, Video, FileText, Image, Loader2, ExternalLink, ArrowRight, Send, AlertCircle, Mic, Film, ChevronDown, Upload, X, FileVideo } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -10,9 +10,10 @@ import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useTiposProdutos, TipoProduto, SETOR_LABELS, SETOR_COLORS } from "@/hooks/useTiposProdutos";
-import { useModelagemConteudo, ModelagemResult, ScrapedPreview } from "@/hooks/useModelagemConteudo";
+import { useModelagemConteudo, ModelagemResult } from "@/hooks/useModelagemConteudo";
 import { ModelagemIdeiaFormDialog } from "@/components/modelador/ModelagemIdeiaFormDialog";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 
 type TipoModelagem = "video" | "blog_post" | "publicacao";
 
@@ -24,22 +25,25 @@ interface PendingIdeia {
 
 export default function ModeladorConteudo() {
   const { produtos, isLoading: loadingProdutos } = useTiposProdutos();
-  const { isAnalyzing, isScraping, scrapedPreview, scrapePreview, analyzeContent, resetState: resetModelagem } = useModelagemConteudo();
+  const { isAnalyzing, analyzeVideoUpload, resetState: resetModelagem } = useModelagemConteudo();
 
-  const [step, setStep] = useState<"select-type" | "input-link" | "preview" | "manual-input" | "select-products" | "analyzing" | "results">("select-type");
+  const [step, setStep] = useState<"select-type" | "input-link" | "upload-video" | "select-products" | "analyzing" | "results">("select-type");
   const [tipoSelecionado, setTipoSelecionado] = useState<TipoModelagem | null>(null);
   const [link, setLink] = useState("");
-  const [manualCaption, setManualCaption] = useState("");
+  const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [caption, setCaption] = useState("");
   const [produtosSelecionados, setProdutosSelecionados] = useState<string[]>([]);
   const [pendingIdeias, setPendingIdeias] = useState<PendingIdeia[]>([]);
   const [currentIdeiaIndex, setCurrentIdeiaIndex] = useState(0);
   const [ideiaFormOpen, setIdeiaFormOpen] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const tipoLabels: Record<TipoModelagem, { label: string; icon: React.ReactNode; description: string }> = {
     video: {
       label: "Modelar Vídeo",
       icon: <Video className="h-6 w-6" />,
-      description: "Analise vídeos do YouTube ou Instagram",
+      description: "Faça upload de um vídeo para análise completa",
     },
     blog_post: {
       label: "Modelar Blog Post",
@@ -70,32 +74,66 @@ export default function ModeladorConteudo() {
     );
   };
 
-  const handleScrapeLink = async () => {
+  const handleContinueToUpload = () => {
     if (!link) {
-      toast.error("Cole um link válido");
+      toast.error("Cole o link do vídeo original");
       return;
     }
-
-    const preview = await scrapePreview(link);
-    if (preview) {
-      setStep("preview");
-    } else {
-      // If scraping fails, go to manual input
-      setStep("manual-input");
-      toast.info("Extração automática não disponível. Por favor, cole a legenda manualmente.");
-    }
+    setStep("upload-video");
   };
 
-  const handleSkipToManual = () => {
-    setStep("manual-input");
+  const handleDrag = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  }, []);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+
+    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+      const file = e.dataTransfer.files[0];
+      if (file.type.startsWith("video/") || file.type.startsWith("audio/")) {
+        setVideoFile(file);
+      } else {
+        toast.error("Por favor, selecione um arquivo de vídeo ou áudio");
+      }
+    }
+  }, []);
+
+  const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      setVideoFile(e.target.files[0]);
+    }
+  }, []);
+
+  const clearVideoFile = () => {
+    setVideoFile(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
   };
 
   const handleContinueToProducts = () => {
+    if (!videoFile) {
+      toast.error("Faça upload do vídeo");
+      return;
+    }
+    if (!caption.trim()) {
+      toast.error("Cole a legenda do vídeo");
+      return;
+    }
     setStep("select-products");
   };
 
   const handleAnalyze = async () => {
-    if (!tipoSelecionado || !link || produtosSelecionados.length === 0) {
+    if (!tipoSelecionado || !link || !videoFile || !caption || produtosSelecionados.length === 0) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -106,11 +144,11 @@ export default function ModeladorConteudo() {
       produtosSelecionados.includes(p.id)
     );
 
-    // Analyze for each selected product, passing manual caption if available
+    // Analyze for each selected product
     const ideias: PendingIdeia[] = [];
 
     for (const produto of selectedProducts) {
-      const result = await analyzeContent(link, tipoSelecionado, [produto], manualCaption || undefined);
+      const result = await analyzeVideoUpload(videoFile, caption, [produto]);
       if (result) {
         ideias.push({ produto, result, link });
       }
@@ -121,6 +159,7 @@ export default function ModeladorConteudo() {
       setCurrentIdeiaIndex(0);
       setStep("results");
     } else {
+      toast.error("Não foi possível analisar o vídeo");
       setStep("select-products");
     }
   };
@@ -145,11 +184,20 @@ export default function ModeladorConteudo() {
     setStep("select-type");
     setTipoSelecionado(null);
     setLink("");
-    setManualCaption("");
+    setVideoFile(null);
+    setCaption("");
     setProdutosSelecionados([]);
     setPendingIdeias([]);
     setCurrentIdeiaIndex(0);
     resetModelagem();
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return "0 Bytes";
+    const k = 1024;
+    const sizes = ["Bytes", "KB", "MB", "GB"];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
   const currentIdeia = pendingIdeias[currentIdeiaIndex];
@@ -197,10 +245,10 @@ export default function ModeladorConteudo() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Video className="h-5 w-5" />
-              Modelar Vídeo
+              Link do Vídeo Original
             </CardTitle>
             <CardDescription>
-              Cole o link do vídeo para extrair o conteúdo
+              Cole o link do vídeo que você quer modelar. Este link será salvo para referência futura no Content Hub.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -212,149 +260,16 @@ export default function ModeladorConteudo() {
                 onChange={(e) => setLink(e.target.value)}
                 placeholder="https://www.youtube.com/watch?v=... ou https://www.instagram.com/reel/..."
               />
+              <p className="text-xs text-muted-foreground">
+                O link será usado como referência quando a ideia for enviada ao Content Hub
+              </p>
             </div>
 
             <div className="flex justify-between pt-4">
               <Button variant="outline" onClick={resetState}>
                 Voltar
               </Button>
-              <Button
-                onClick={handleScrapeLink}
-                disabled={!link || isScraping}
-              >
-                {isScraping ? (
-                  <>
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                    Extraindo Conteúdo...
-                  </>
-                ) : (
-                  <>
-                    <Eye className="h-4 w-4 mr-2" />
-                    Extrair e Visualizar
-                  </>
-                )}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {step === "preview" && scrapedPreview && (
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-          <CardHeader>
-            <div className="flex items-center gap-2">
-              <CheckCircle2 className="h-5 w-5 text-green-500" />
-              <CardTitle>Conteúdo Extraído com Sucesso</CardTitle>
-            </div>
-            <CardDescription className="flex items-center gap-1">
-              <ExternalLink className="h-3 w-3" />
-              <a href={link} target="_blank" rel="noopener noreferrer" className="hover:underline">
-                {link.slice(0, 60)}...
-              </a>
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Instagram metrics */}
-            {scrapedPreview.metrics && (
-              <div className="flex gap-4 p-3 bg-primary/5 rounded-lg">
-                {scrapedPreview.metrics.views && (
-                  <div className="text-center">
-                    <p className="text-lg font-semibold text-foreground">
-                      {scrapedPreview.metrics.views.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Visualizações</p>
-                  </div>
-                )}
-                {scrapedPreview.metrics.likes && (
-                  <div className="text-center">
-                    <p className="text-lg font-semibold text-foreground">
-                      {scrapedPreview.metrics.likes.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Curtidas</p>
-                  </div>
-                )}
-                {scrapedPreview.metrics.comments && (
-                  <div className="text-center">
-                    <p className="text-lg font-semibold text-foreground">
-                      {scrapedPreview.metrics.comments.toLocaleString()}
-                    </p>
-                    <p className="text-xs text-muted-foreground">Comentários</p>
-                  </div>
-                )}
-              </div>
-            )}
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              {/* Left: Text content */}
-              <div className="space-y-4">
-                {scrapedPreview.author && (
-                  <div>
-                    <h4 className="text-sm font-medium text-primary mb-1">Autor</h4>
-                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg">
-                      {scrapedPreview.author}
-                    </p>
-                  </div>
-                )}
-
-                {scrapedPreview.title && (
-                  <div>
-                    <h4 className="text-sm font-medium text-primary mb-1">Título</h4>
-                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg">
-                      {scrapedPreview.title}
-                    </p>
-                  </div>
-                )}
-
-                {scrapedPreview.description && (
-                  <div>
-                    <h4 className="text-sm font-medium text-primary mb-1">Legenda</h4>
-                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg whitespace-pre-wrap max-h-48 overflow-y-auto">
-                      {scrapedPreview.description}
-                    </p>
-                  </div>
-                )}
-
-                {scrapedPreview.video_url && (
-                  <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
-                    <p className="text-sm text-green-700 dark:text-green-300">
-                      <CheckCircle2 className="h-4 w-4 inline mr-2" />
-                      <strong>Vídeo detectado!</strong> A análise incluirá transcrição do áudio e análise visual.
-                    </p>
-                  </div>
-                )}
-              </div>
-
-              {/* Right: Screenshot/Thumbnail */}
-              <div>
-                {scrapedPreview.screenshot ? (
-                  <div>
-                    <h4 className="text-sm font-medium text-primary mb-1">Thumbnail</h4>
-                    <div className="rounded-lg overflow-hidden border border-border">
-                      <img
-                        src={scrapedPreview.screenshot}
-                        alt="Thumbnail do vídeo"
-                        className="w-full h-auto"
-                      />
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-full bg-muted/30 rounded-lg p-8">
-                    <div className="text-center text-muted-foreground">
-                      <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-                      <p className="text-sm">Thumbnail não disponível</p>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <Separator />
-
-            <div className="flex justify-between pt-2">
-              <Button variant="outline" onClick={() => setStep("input-link")}>
-                Alterar Link
-              </Button>
-              <Button onClick={handleContinueToProducts}>
+              <Button onClick={handleContinueToUpload} disabled={!link}>
                 Continuar
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
@@ -363,27 +278,21 @@ export default function ModeladorConteudo() {
         </Card>
       )}
 
-      {step === "manual-input" && (
+      {step === "upload-video" && (
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardHeader>
-            <div className="flex items-center gap-2">
-              <ClipboardPaste className="h-5 w-5 text-amber-500" />
-              <CardTitle>Entrada Manual</CardTitle>
-            </div>
+            <CardTitle className="flex items-center gap-2">
+              <Upload className="h-5 w-5" />
+              Upload do Vídeo e Legenda
+            </CardTitle>
             <CardDescription>
-              A extração automática não está disponível para este link. Cole a legenda/descrição do conteúdo abaixo.
+              Faça upload do vídeo baixado e cole a legenda original para análise completa
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-              <p className="text-sm text-amber-700 dark:text-amber-300">
-                <strong>Dica:</strong> Abra o vídeo no Instagram/YouTube, copie a legenda completa e cole abaixo. Isso ajudará a IA a fazer uma análise mais precisa.
-              </p>
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="link-display">Link do Conteúdo</Label>
-              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+            {/* Link display */}
+            <div className="p-3 bg-muted/50 rounded-lg">
+              <div className="flex items-center gap-2">
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
                 <a 
                   href={link} 
@@ -396,17 +305,85 @@ export default function ModeladorConteudo() {
               </div>
             </div>
 
+            {/* Video Upload */}
             <div className="space-y-2">
-              <Label htmlFor="manual-caption">Legenda/Descrição do Conteúdo *</Label>
+              <Label>Arquivo de Vídeo *</Label>
+              <Card
+                className={cn(
+                  "border-2 border-dashed transition-colors cursor-pointer",
+                  dragActive && "border-primary bg-primary/5",
+                  videoFile && "border-green-500 bg-green-50 dark:bg-green-950/20"
+                )}
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                onClick={() => !videoFile && fileInputRef.current?.click()}
+              >
+                <CardContent className="p-6">
+                  {videoFile ? (
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <FileVideo className="h-10 w-10 text-green-600" />
+                        <div>
+                          <p className="font-medium text-sm">{videoFile.name}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatFileSize(videoFile.size)}
+                          </p>
+                        </div>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          clearVideoFile();
+                        }}
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <div className="text-center">
+                      <Upload className="h-10 w-10 mx-auto text-muted-foreground mb-3" />
+                      <p className="text-sm font-medium">
+                        Arraste o vídeo ou clique para selecionar
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        MP4, WebM, MOV, AVI (máx. 50MB)
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+              <Input
+                ref={fileInputRef}
+                type="file"
+                accept="video/*,audio/*"
+                className="hidden"
+                onChange={handleFileChange}
+              />
+            </div>
+
+            {/* Caption */}
+            <div className="space-y-2">
+              <Label htmlFor="caption">Legenda/Descrição do Vídeo *</Label>
               <Textarea
-                id="manual-caption"
-                value={manualCaption}
-                onChange={(e) => setManualCaption(e.target.value)}
-                placeholder="Cole aqui a legenda completa do vídeo, incluindo hashtags e menções..."
-                className="min-h-[200px]"
+                id="caption"
+                value={caption}
+                onChange={(e) => setCaption(e.target.value)}
+                placeholder="Cole aqui a legenda completa do vídeo original, incluindo hashtags e menções..."
+                className="min-h-[150px]"
               />
               <p className="text-xs text-muted-foreground">
-                Inclua a legenda completa para uma análise mais precisa
+                Copie a legenda diretamente do Instagram/YouTube para uma análise mais precisa
+              </p>
+            </div>
+
+            <div className="p-3 bg-primary/10 border border-primary/30 rounded-lg">
+              <p className="text-sm text-primary">
+                <AlertCircle className="h-4 w-4 inline mr-2" />
+                <strong>Dica:</strong> A IA irá transcrever o áudio do vídeo e analisar visualmente o conteúdo para gerar uma modelagem completa.
               </p>
             </div>
 
@@ -414,9 +391,9 @@ export default function ModeladorConteudo() {
 
             <div className="flex justify-between pt-2">
               <Button variant="outline" onClick={() => setStep("input-link")}>
-                Alterar Link
+                Voltar
               </Button>
-              <Button onClick={handleContinueToProducts} disabled={!manualCaption.trim()}>
+              <Button onClick={handleContinueToProducts} disabled={!videoFile || !caption.trim()}>
                 Continuar
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
@@ -437,6 +414,22 @@ export default function ModeladorConteudo() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Video info summary */}
+            <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+              <div className="flex items-center gap-2">
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                <a href={link} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate">
+                  {link}
+                </a>
+              </div>
+              {videoFile && (
+                <div className="flex items-center gap-2">
+                  <FileVideo className="h-4 w-4 text-muted-foreground" />
+                  <span className="text-sm text-muted-foreground">{videoFile.name} ({formatFileSize(videoFile.size)})</span>
+                </div>
+              )}
+            </div>
+
             <div className="space-y-3">
               <Label>Selecione os Produtos para Modelagem *</Label>
               {loadingProdutos ? (
@@ -483,7 +476,7 @@ export default function ModeladorConteudo() {
             </div>
 
             <div className="flex justify-between pt-4">
-              <Button variant="outline" onClick={() => setStep("preview")}>
+              <Button variant="outline" onClick={() => setStep("upload-video")}>
                 Voltar
               </Button>
               <Button
@@ -506,7 +499,7 @@ export default function ModeladorConteudo() {
               Analisando Conteúdo
             </h3>
             <p className="text-muted-foreground text-center max-w-md">
-              A IA está processando o vídeo: baixando, transcrevendo o áudio, analisando visualmente e gerando a modelagem para seus produtos...
+              A IA está processando o vídeo: transcrevendo o áudio, analisando visualmente e gerando a modelagem para seus produtos...
             </p>
             <p className="text-xs text-muted-foreground mt-4">
               Isso pode levar alguns segundos dependendo da duração do vídeo.

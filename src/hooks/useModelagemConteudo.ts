@@ -22,106 +22,28 @@ export interface ModelagemResult {
   copy_completa: string;
   orientacoes_filmagem: string;
   formato_sugerido: string;
-  // Extended fields from Instagram analysis
+  // Extended fields from video analysis
   transcricao_audio?: string | null;
   analise_visual_detalhada?: AnaliseVisualDetalhada | null;
 }
 
-export interface ScrapedPreview {
-  title: string | null;
-  description: string | null;
-  author: string | null;
-  markdown: string | null;
-  hasScreenshot: boolean;
-  screenshot: string | null;
-  video_url?: string | null;
-  metrics?: {
-    views?: number;
-    likes?: number;
-    comments?: number;
-  };
-}
-
 export interface ModelagemState {
   isAnalyzing: boolean;
-  isScraping: boolean;
-  scrapedPreview: ScrapedPreview | null;
   result: ModelagemResult | null;
   error: string | null;
-}
-
-// Check if URL is an Instagram URL
-function isInstagramUrl(url: string): boolean {
-  return url.includes("instagram.com") || url.includes("instagr.am");
 }
 
 export function useModelagemConteudo() {
   const [state, setState] = useState<ModelagemState>({
     isAnalyzing: false,
-    isScraping: false,
-    scrapedPreview: null,
     result: null,
     error: null,
   });
 
-  const scrapePreview = async (link: string): Promise<ScrapedPreview | null> => {
-    setState((prev) => ({ ...prev, isScraping: true, scrapedPreview: null, error: null }));
-
-    try {
-      // Use Instagram-specific function for Instagram URLs
-      if (isInstagramUrl(link)) {
-        const response = await supabase.functions.invoke("analyze-instagram-video", {
-          body: {
-            action: "extract",
-            link,
-          },
-        });
-
-        if (response.error) {
-          throw new Error(response.error.message || "Erro ao extrair conteúdo do Instagram");
-        }
-
-        if (!response.data.success) {
-          throw new Error(response.data.error || "Não foi possível extrair o conteúdo");
-        }
-
-        const preview = response.data.data as ScrapedPreview;
-        setState((prev) => ({ ...prev, isScraping: false, scrapedPreview: preview }));
-        return preview;
-      }
-
-      // Fallback to original function for other URLs
-      const response = await supabase.functions.invoke("analyze-content", {
-        body: {
-          action: "scrape",
-          link,
-        },
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message || "Erro ao extrair conteúdo");
-      }
-
-      if (!response.data.success) {
-        throw new Error(response.data.error || "Não foi possível extrair o conteúdo");
-      }
-
-      const preview = response.data.data as ScrapedPreview;
-      setState((prev) => ({ ...prev, isScraping: false, scrapedPreview: preview }));
-      return preview;
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Erro desconhecido";
-      setState((prev) => ({ ...prev, isScraping: false, error: message }));
-      toast.error("Erro ao extrair conteúdo: " + message);
-      return null;
-    }
-  };
-
-  const analyzeContent = async (
-    link: string,
-    tipo: "video" | "blog_post" | "publicacao",
-    produtos: TipoProduto[],
-    manualCaption?: string
+  const analyzeVideoUpload = async (
+    videoFile: File,
+    caption: string,
+    produtos: TipoProduto[]
   ): Promise<ModelagemResult | null> => {
     setState((prev) => ({ ...prev, isAnalyzing: true, result: null, error: null }));
 
@@ -133,51 +55,36 @@ export function useModelagemConteudo() {
         )
         .join("\n\n");
 
-      // Use Instagram-specific function for Instagram URLs (and no manual caption)
-      if (isInstagramUrl(link) && !manualCaption) {
-        const response = await supabase.functions.invoke("analyze-instagram-video", {
-          body: {
-            link,
-            tipo,
-            produtos: produtosInfo,
-          },
-        });
+      // Create FormData for video upload
+      const formData = new FormData();
+      formData.append("video", videoFile);
+      formData.append("caption", caption);
+      formData.append("produtos", produtosInfo);
 
-        if (response.error) {
-          throw new Error(response.error.message || "Erro ao analisar conteúdo");
-        }
+      // Get the Supabase URL and key for the edge function call
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const supabaseKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
 
-        // Check if there's an error in the response body
-        if (response.data?.error) {
-          throw new Error(response.data.error);
-        }
-
-        const result = response.data as ModelagemResult;
-        setState((prev) => ({ ...prev, isAnalyzing: false, result }));
-        return result;
-      }
-
-      // Fallback to original function
-      const response = await supabase.functions.invoke("analyze-content", {
-        body: {
-          link,
-          tipo,
-          produtos: produtosInfo,
-          manualCaption,
+      const response = await fetch(`${supabaseUrl}/functions/v1/analyze-video-upload`, {
+        method: "POST",
+        headers: {
+          "Authorization": `Bearer ${supabaseKey}`,
         },
+        body: formData,
       });
 
-      if (response.error) {
-        throw new Error(response.error.message || "Erro ao analisar conteúdo");
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || "Erro ao analisar vídeo");
       }
 
-      const result = response.data as ModelagemResult;
+      const result = await response.json() as ModelagemResult;
       setState((prev) => ({ ...prev, isAnalyzing: false, result }));
       return result;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro desconhecido";
       setState((prev) => ({ ...prev, isAnalyzing: false, error: message }));
-      toast.error("Erro ao analisar conteúdo: " + message);
+      toast.error("Erro ao analisar vídeo: " + message);
       return null;
     }
   };
@@ -185,8 +92,6 @@ export function useModelagemConteudo() {
   const resetState = () => {
     setState({
       isAnalyzing: false,
-      isScraping: false,
-      scrapedPreview: null,
       result: null,
       error: null,
     });
@@ -194,8 +99,7 @@ export function useModelagemConteudo() {
 
   return {
     ...state,
-    scrapePreview,
-    analyzeContent,
+    analyzeVideoUpload,
     resetState,
   };
 }
