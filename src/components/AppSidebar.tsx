@@ -38,6 +38,7 @@ const radarItems = [
 const robosItems = [
   { title: "Transcritor de Audiências", url: "/robos/transcricao", icon: Mic, pageKey: "robos-transcricao" },
   { title: "Prompts Transcrições", url: "/robos/prompts", icon: FileText, pageKey: "robos-prompts" },
+  { title: "Prompts Modelador", url: "/robos/prompts-modelador", icon: Wand2, pageKey: "robos-prompts-modelador" },
   { title: "Tipos de Produtos", url: "/robos/produtos", icon: Package, pageKey: "robos-produtos" },
 ];
 

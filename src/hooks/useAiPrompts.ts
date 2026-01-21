@@ -2,17 +2,20 @@ import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 
+export type PromptTipo = "transcricao" | "modelador";
+
 export interface AiPrompt {
   id: string;
   nome: string;
   prompt: string;
   descricao: string | null;
+  tipo: PromptTipo;
   created_at: string;
   updated_at: string;
   user_id: string;
 }
 
-export function useAiPrompts() {
+export function useAiPrompts(tipo: PromptTipo = "transcricao") {
   const [prompts, setPrompts] = useState<AiPrompt[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
@@ -23,10 +26,11 @@ export function useAiPrompts() {
       const { data, error } = await supabase
         .from("ai_prompts")
         .select("*")
+        .eq("tipo", tipo)
         .order("nome");
 
       if (error) throw error;
-      setPrompts(data || []);
+      setPrompts((data as AiPrompt[]) || []);
     } catch (error: any) {
       console.error("Error fetching prompts:", error);
       toast({
@@ -37,7 +41,7 @@ export function useAiPrompts() {
     } finally {
       setIsLoading(false);
     }
-  }, [toast]);
+  }, [toast, tipo]);
 
   const createPrompt = useCallback(
     async (nome: string, prompt: string, descricao?: string) => {
@@ -51,6 +55,7 @@ export function useAiPrompts() {
             nome,
             prompt,
             descricao: descricao || null,
+            tipo,
             user_id: userData.user.id,
           })
           .select()
@@ -75,7 +80,7 @@ export function useAiPrompts() {
         return null;
       }
     },
-    [toast, fetchPrompts]
+    [toast, fetchPrompts, tipo]
   );
 
   const updatePrompt = useCallback(
