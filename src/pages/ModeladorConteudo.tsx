@@ -227,9 +227,8 @@ export default function ModeladorConteudo() {
     const ideias: PendingIdeia[] = [];
 
     for (const produto of selectedProducts) {
-      // Analyze video for this product with all output formats
-      // Note: formatoOrigem is stored for reference but the hook currently doesn't use it
-      const response = await analyzeVideoUploadMultiFormato(videoFile, caption, [produto], formatosSaida);
+      // Analyze video for this product with all output formats, passing formatoOrigem for correct prompt lookup
+      const response = await analyzeVideoUploadMultiFormato(videoFile, caption, [produto], formatosSaida, formatoOrigem || undefined);
       
       if (response && response.formatos) {
         // Create pending ideias for each format in the order selected
