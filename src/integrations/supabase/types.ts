@@ -21,6 +21,7 @@ export type Database = {
           id: string
           nome: string
           prompt: string
+          tipo: string
           updated_at: string
           user_id: string
         }
@@ -30,6 +31,7 @@ export type Database = {
           id?: string
           nome: string
           prompt: string
+          tipo?: string
           updated_at?: string
           user_id: string
         }
@@ -39,6 +41,7 @@ export type Database = {
           id?: string
           nome?: string
           prompt?: string
+          tipo?: string
           updated_at?: string
           user_id?: string
         }
