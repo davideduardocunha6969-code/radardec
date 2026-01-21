@@ -54,6 +54,7 @@ export default function ModeladorConteudo() {
   const [formatosSaida, setFormatosSaida] = useState<Formato[]>([]);
   const [link, setLink] = useState("");
   const [videoFile, setVideoFile] = useState<File | null>(null);
+  const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
   const [caption, setCaption] = useState("");
   const [produtosSelecionados, setProdutosSelecionados] = useState<string[]>([]);
   const [pendingIdeias, setPendingIdeias] = useState<PendingIdeia[]>([]);
@@ -61,6 +62,7 @@ export default function ModeladorConteudo() {
   const [ideiaFormOpen, setIdeiaFormOpen] = useState(false);
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
   const handleOrigemSelect = (formato: FormatoCompleto) => {
     const option = FORMATO_ORIGEM_OPTIONS.find(o => o.value === formato);
@@ -123,6 +125,13 @@ export default function ModeladorConteudo() {
       const file = e.dataTransfer.files[0];
       if (file.type.startsWith("video/") || file.type.startsWith("audio/")) {
         setVideoFile(file);
+        // Create preview URL for video
+        if (file.type.startsWith("video/")) {
+          const url = URL.createObjectURL(file);
+          setVideoPreviewUrl(url);
+        } else {
+          setVideoPreviewUrl(null);
+        }
       } else {
         toast.error("Por favor, selecione um arquivo de vídeo ou áudio");
       }
@@ -131,11 +140,24 @@ export default function ModeladorConteudo() {
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      setVideoFile(e.target.files[0]);
+      const file = e.target.files[0];
+      setVideoFile(file);
+      // Create preview URL for video
+      if (file.type.startsWith("video/")) {
+        const url = URL.createObjectURL(file);
+        setVideoPreviewUrl(url);
+      } else {
+        setVideoPreviewUrl(null);
+      }
     }
   }, []);
 
   const clearVideoFile = () => {
+    // Revoke the old preview URL to free memory
+    if (videoPreviewUrl) {
+      URL.revokeObjectURL(videoPreviewUrl);
+      setVideoPreviewUrl(null);
+    }
     setVideoFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -225,6 +247,11 @@ export default function ModeladorConteudo() {
   };
 
   const resetState = () => {
+    // Revoke old preview URL to free memory
+    if (videoPreviewUrl) {
+      URL.revokeObjectURL(videoPreviewUrl);
+      setVideoPreviewUrl(null);
+    }
     setStep("select-origem");
     setFormatoOrigem(null);
     setFormatosSaida([]);
@@ -502,11 +529,12 @@ export default function ModeladorConteudo() {
             </div>
 
             {/* Video Upload */}
-            <div className="space-y-2">
+            <div className="space-y-3">
               <Label>Arquivo de Vídeo *</Label>
               <Card
                 className={cn(
-                  "border-2 border-dashed transition-colors cursor-pointer",
+                  "border-2 border-dashed transition-colors",
+                  !videoFile && "cursor-pointer",
                   dragActive && "border-primary bg-primary/5",
                   videoFile && "border-green-500 bg-green-50 dark:bg-green-950/20"
                 )}
@@ -518,26 +546,51 @@ export default function ModeladorConteudo() {
               >
                 <CardContent className="p-6">
                   {videoFile ? (
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <FileVideo className="h-10 w-10 text-green-600" />
-                        <div>
-                          <p className="font-medium text-sm">{videoFile.name}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {formatFileSize(videoFile.size)}
-                          </p>
+                    <div className="space-y-4">
+                      {/* File info header */}
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <FileVideo className="h-8 w-8 text-green-600" />
+                          <div>
+                            <p className="font-medium text-sm">{videoFile.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {formatFileSize(videoFile.size)}
+                            </p>
+                          </div>
                         </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            clearVideoFile();
+                          }}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          clearVideoFile();
-                        }}
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+                      
+                      {/* Video Preview Player */}
+                      {videoPreviewUrl && (
+                        <div className="relative rounded-lg overflow-hidden bg-black">
+                          <video
+                            ref={videoRef}
+                            src={videoPreviewUrl}
+                            controls
+                            className="w-full max-h-[400px] object-contain"
+                            preload="metadata"
+                          >
+                            Seu navegador não suporta a reprodução de vídeos.
+                          </video>
+                          <div className="absolute top-2 right-2 bg-black/70 text-white text-xs px-2 py-1 rounded">
+                            Pré-visualização
+                          </div>
+                        </div>
+                      )}
+                      
+                      <p className="text-xs text-green-600 text-center">
+                        ✓ Verifique se este é o vídeo correto antes de continuar
+                      </p>
                     </div>
                   ) : (
                     <div className="text-center">
