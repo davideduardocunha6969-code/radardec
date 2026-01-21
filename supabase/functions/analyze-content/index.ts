@@ -90,7 +90,7 @@ serve(async (req) => {
     }
 
     // Original analyze logic
-    const { link, tipo, produtos } = body;
+    const { link, tipo, produtos, manualCaption } = body;
 
     if (!link || !tipo || !produtos) {
       return new Response(
@@ -104,14 +104,20 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY não configurada");
     }
 
-    // Scrape the content from the link
-    const scrapedContent = await scrapeContent(link);
+    // Try to scrape the content from the link (only if no manual caption provided)
+    const scrapedContent = manualCaption ? null : await scrapeContent(link);
     
     const tipoLabel = tipo === "video" ? "vídeo" : tipo === "blog_post" ? "blog post" : "publicação";
 
-    // Build context from scraped content
+    // Build context from scraped content or manual input
     let contentContext = "";
-    if (scrapedContent) {
+    
+    if (manualCaption) {
+      contentContext = `
+LEGENDA/DESCRIÇÃO DO CONTEÚDO (fornecida manualmente):
+${manualCaption}
+`;
+    } else if (scrapedContent) {
       contentContext = `
 CONTEÚDO EXTRAÍDO DA PÁGINA:
 ${scrapedContent.markdown}

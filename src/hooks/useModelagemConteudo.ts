@@ -74,7 +74,8 @@ export function useModelagemConteudo() {
   const analyzeContent = async (
     link: string,
     tipo: "video" | "blog_post" | "publicacao",
-    produtos: TipoProduto[]
+    produtos: TipoProduto[],
+    manualCaption?: string
   ): Promise<ModelagemResult | null> => {
     setState((prev) => ({ ...prev, isAnalyzing: true, result: null, error: null }));
 
@@ -91,6 +92,7 @@ export function useModelagemConteudo() {
           link,
           tipo,
           produtos: produtosInfo,
+          manualCaption,
         },
       });
 
