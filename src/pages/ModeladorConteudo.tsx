@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { Wand2, Video, Loader2, ExternalLink, ArrowRight, Send, AlertCircle, Film, Upload, X, FileVideo, SquareStack, ImageIcon, BookOpen, Newspaper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -64,6 +64,62 @@ export default function ModeladorConteudo() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  const clearVideoPreview = useCallback(() => {
+    // Stop and fully reset the video element (some browsers keep the previous buffer otherwise)
+    if (videoRef.current) {
+      try {
+        videoRef.current.pause();
+        videoRef.current.removeAttribute("src");
+        videoRef.current.load();
+      } catch {
+        // ignore
+      }
+    }
+
+    if (videoPreviewUrl) {
+      try {
+        URL.revokeObjectURL(videoPreviewUrl);
+      } catch {
+        // ignore
+      }
+    }
+
+    setVideoPreviewUrl(null);
+  }, [videoPreviewUrl]);
+
+  const selectMediaFile = useCallback(
+    (file: File) => {
+      clearVideoPreview();
+      setVideoFile(file);
+    },
+    [clearVideoPreview]
+  );
+
+  // Single source of truth for preview URL lifecycle
+  useEffect(() => {
+    if (!videoFile || !videoFile.type.startsWith("video/")) return;
+
+    const url = URL.createObjectURL(videoFile);
+    setVideoPreviewUrl(url);
+
+    // Force a reload right after setting the URL
+    if (videoRef.current) {
+      try {
+        videoRef.current.load();
+      } catch {
+        // ignore
+      }
+    }
+
+    return () => {
+      try {
+        URL.revokeObjectURL(url);
+      } catch {
+        // ignore
+      }
+    };
+  }, [videoFile]);
+
   const handleOrigemSelect = (formato: FormatoCompleto) => {
     const option = FORMATO_ORIGEM_OPTIONS.find(o => o.value === formato);
     if (!option?.disponivel) {
@@ -124,63 +180,22 @@ export default function ModeladorConteudo() {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       if (file.type.startsWith("video/") || file.type.startsWith("audio/")) {
-        // Revoke old URL first to prevent memory leaks and caching issues
-        setVideoPreviewUrl((prevUrl) => {
-          if (prevUrl) URL.revokeObjectURL(prevUrl);
-          return null;
-        });
-        
-        setVideoFile(file);
-        
-        // Create new preview URL for video after a small delay to ensure cleanup
-        if (file.type.startsWith("video/")) {
-          setTimeout(() => {
-            const url = URL.createObjectURL(file);
-            setVideoPreviewUrl(url);
-            // Force video element to reload
-            if (videoRef.current) {
-              videoRef.current.load();
-            }
-          }, 50);
-        }
+        selectMediaFile(file);
       } else {
         toast.error("Por favor, selecione um arquivo de vídeo ou áudio");
       }
     }
-  }, []);
+  }, [selectMediaFile]);
 
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      
-      // Revoke old URL first to prevent memory leaks and caching issues
-      setVideoPreviewUrl((prevUrl) => {
-        if (prevUrl) URL.revokeObjectURL(prevUrl);
-        return null;
-      });
-      
-      setVideoFile(file);
-      
-      // Create new preview URL for video after a small delay to ensure cleanup
-      if (file.type.startsWith("video/")) {
-        setTimeout(() => {
-          const url = URL.createObjectURL(file);
-          setVideoPreviewUrl(url);
-          // Force video element to reload
-          if (videoRef.current) {
-            videoRef.current.load();
-          }
-        }, 50);
-      }
+      selectMediaFile(file);
     }
-  }, []);
+  }, [selectMediaFile]);
 
   const clearVideoFile = () => {
-    // Revoke the old preview URL to free memory
-    if (videoPreviewUrl) {
-      URL.revokeObjectURL(videoPreviewUrl);
-      setVideoPreviewUrl(null);
-    }
+    clearVideoPreview();
     setVideoFile(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = "";
@@ -267,11 +282,7 @@ export default function ModeladorConteudo() {
   };
 
   const resetState = () => {
-    // Revoke old preview URL to free memory
-    if (videoPreviewUrl) {
-      URL.revokeObjectURL(videoPreviewUrl);
-      setVideoPreviewUrl(null);
-    }
+    clearVideoPreview();
     setStep("select-origem");
     setFormatoOrigem(null);
     setFormatosSaida([]);
@@ -594,7 +605,7 @@ export default function ModeladorConteudo() {
                       {videoPreviewUrl && videoFile && (
                         <div className="relative rounded-lg overflow-hidden bg-black">
                           <video
-                            key={`${videoFile.name}-${videoFile.size}-${videoFile.lastModified}`}
+                            key={videoPreviewUrl || "no-preview"}
                             ref={videoRef}
                             src={videoPreviewUrl}
                             controls
