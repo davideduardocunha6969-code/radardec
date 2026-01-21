@@ -8,7 +8,6 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import {
   Select,
@@ -23,6 +22,9 @@ import {
   Setor,
   SETOR_LABELS,
 } from "@/hooks/useTiposProdutos";
+import { CollapsibleRichField } from "./CollapsibleRichField";
+import { ProdutoAnexosSection } from "./ProdutoAnexosSection";
+import { Separator } from "@/components/ui/separator";
 
 interface TipoProdutoFormDialogProps {
   open: boolean;
@@ -74,14 +76,15 @@ export function TipoProdutoFormDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle>
             {initialData ? "Editar Produto" : "Novo Produto"}
           </DialogTitle>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Basic Info */}
           <div className="grid grid-cols-2 gap-4">
             <div className="space-y-2">
               <Label htmlFor="nome">Nome do Produto *</Label>
@@ -118,44 +121,39 @@ export function TipoProdutoFormDialog({
             </div>
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="descricao">Descrição do Produto</Label>
-            <Textarea
+          <Separator />
+
+          {/* Rich Content Fields */}
+          <div className="space-y-4">
+            <CollapsibleRichField
               id="descricao"
-              value={formData.descricao}
-              onChange={(e) =>
-                setFormData({ ...formData, descricao: e.target.value })
-              }
+              label="Descrição do Produto"
+              value={formData.descricao || ""}
+              onChange={(value) => setFormData({ ...formData, descricao: value })}
               placeholder="Descreva o que é este produto jurídico, seus benefícios e aplicações..."
-              rows={3}
             />
-          </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="caracteristicas">Características</Label>
-            <Textarea
+            <CollapsibleRichField
               id="caracteristicas"
-              value={formData.caracteristicas}
-              onChange={(e) =>
-                setFormData({ ...formData, caracteristicas: e.target.value })
-              }
-              placeholder="Descreva as características principais, requisitos, diferenciais..."
-              rows={3}
+              label="Características"
+              value={formData.caracteristicas || ""}
+              onChange={(value) => setFormData({ ...formData, caracteristicas: value })}
+              placeholder="Descreva as características principais, requisitos, diferenciais... Você pode colar imagens!"
+            />
+
+            <CollapsibleRichField
+              id="perfil_cliente_ideal"
+              label="Perfil do Cliente Ideal"
+              value={formData.perfil_cliente_ideal || ""}
+              onChange={(value) => setFormData({ ...formData, perfil_cliente_ideal: value })}
+              placeholder="Descreva quem é o cliente ideal para este produto (idade, profissão, situação, dores, etc.)..."
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="perfil_cliente_ideal">Perfil do Cliente Ideal</Label>
-            <Textarea
-              id="perfil_cliente_ideal"
-              value={formData.perfil_cliente_ideal}
-              onChange={(e) =>
-                setFormData({ ...formData, perfil_cliente_ideal: e.target.value })
-              }
-              placeholder="Descreva quem é o cliente ideal para este produto (idade, profissão, situação, dores, etc.)..."
-              rows={3}
-            />
-          </div>
+          <Separator />
+
+          {/* File Attachments */}
+          <ProdutoAnexosSection tipoProdutoId={initialData?.id || null} />
 
           <DialogFooter>
             <Button
