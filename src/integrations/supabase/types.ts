@@ -428,6 +428,7 @@ export type Database = {
           caracteristicas: string | null
           created_at: string
           descricao: string | null
+          estrutura_editorial: string | null
           id: string
           nome: string
           perfil_cliente_ideal: string | null
@@ -439,6 +440,7 @@ export type Database = {
           caracteristicas?: string | null
           created_at?: string
           descricao?: string | null
+          estrutura_editorial?: string | null
           id?: string
           nome: string
           perfil_cliente_ideal?: string | null
@@ -450,6 +452,7 @@ export type Database = {
           caracteristicas?: string | null
           created_at?: string
           descricao?: string | null
+          estrutura_editorial?: string | null
           id?: string
           nome?: string
           perfil_cliente_ideal?: string | null

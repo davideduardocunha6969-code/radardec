@@ -83,6 +83,17 @@ export function TipoProdutoDetailDialog({
                 defaultExpanded={false}
               />
             )}
+
+            {produto.estrutura_editorial && (
+              <CollapsibleRichField
+                id="estrutura-editorial-view"
+                label="Estrutura de Linha Editorial (SEO + Mídias Sociais)"
+                value={produto.estrutura_editorial}
+                onChange={() => {}}
+                readOnly
+                defaultExpanded={false}
+              />
+            )}
           </div>
 
           <Separator />

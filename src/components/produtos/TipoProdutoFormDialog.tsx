@@ -47,6 +47,7 @@ export function TipoProdutoFormDialog({
     setor: "previdenciario",
     caracteristicas: "",
     perfil_cliente_ideal: "",
+    estrutura_editorial: "",
   });
 
   useEffect(() => {
@@ -57,6 +58,7 @@ export function TipoProdutoFormDialog({
         setor: initialData.setor,
         caracteristicas: initialData.caracteristicas || "",
         perfil_cliente_ideal: initialData.perfil_cliente_ideal || "",
+        estrutura_editorial: initialData.estrutura_editorial || "",
       });
     } else {
       setFormData({
@@ -65,6 +67,7 @@ export function TipoProdutoFormDialog({
         setor: "previdenciario",
         caracteristicas: "",
         perfil_cliente_ideal: "",
+        estrutura_editorial: "",
       });
     }
   }, [initialData, open]);
@@ -147,6 +150,14 @@ export function TipoProdutoFormDialog({
               value={formData.perfil_cliente_ideal || ""}
               onChange={(value) => setFormData({ ...formData, perfil_cliente_ideal: value })}
               placeholder="Descreva quem é o cliente ideal para este produto (idade, profissão, situação, dores, etc.)..."
+            />
+
+            <CollapsibleRichField
+              id="estrutura_editorial"
+              label="Estrutura de Linha Editorial (SEO + Mídias Sociais)"
+              value={formData.estrutura_editorial || ""}
+              onChange={(value) => setFormData({ ...formData, estrutura_editorial: value })}
+              placeholder="Defina a estrutura editorial para SEO e mídias sociais: palavras-chave, tom de voz, formatos preferidos, hashtags, CTAs padrão..."
             />
           </div>
 

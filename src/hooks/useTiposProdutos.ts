@@ -11,6 +11,7 @@ export interface TipoProduto {
   setor: Setor;
   caracteristicas: string | null;
   perfil_cliente_ideal: string | null;
+  estrutura_editorial: string | null;
   user_id: string;
   created_at: string;
   updated_at: string;
@@ -22,6 +23,7 @@ export interface TipoProdutoInput {
   setor: Setor;
   caracteristicas?: string;
   perfil_cliente_ideal?: string;
+  estrutura_editorial?: string;
 }
 
 export const SETOR_LABELS: Record<Setor, string> = {
