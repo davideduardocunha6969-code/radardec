@@ -253,9 +253,48 @@ export default function ModeladorConteudo() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Instagram metrics */}
+            {scrapedPreview.metrics && (
+              <div className="flex gap-4 p-3 bg-primary/5 rounded-lg">
+                {scrapedPreview.metrics.views && (
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-foreground">
+                      {scrapedPreview.metrics.views.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Visualizações</p>
+                  </div>
+                )}
+                {scrapedPreview.metrics.likes && (
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-foreground">
+                      {scrapedPreview.metrics.likes.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Curtidas</p>
+                  </div>
+                )}
+                {scrapedPreview.metrics.comments && (
+                  <div className="text-center">
+                    <p className="text-lg font-semibold text-foreground">
+                      {scrapedPreview.metrics.comments.toLocaleString()}
+                    </p>
+                    <p className="text-xs text-muted-foreground">Comentários</p>
+                  </div>
+                )}
+              </div>
+            )}
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Left: Text content */}
               <div className="space-y-4">
+                {scrapedPreview.author && (
+                  <div>
+                    <h4 className="text-sm font-medium text-primary mb-1">Autor</h4>
+                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg">
+                      {scrapedPreview.author}
+                    </p>
+                  </div>
+                )}
+
                 {scrapedPreview.title && (
                   <div>
                     <h4 className="text-sm font-medium text-primary mb-1">Título</h4>
@@ -267,42 +306,32 @@ export default function ModeladorConteudo() {
 
                 {scrapedPreview.description && (
                   <div>
-                    <h4 className="text-sm font-medium text-primary mb-1">Descrição</h4>
-                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg">
+                    <h4 className="text-sm font-medium text-primary mb-1">Legenda</h4>
+                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg whitespace-pre-wrap max-h-48 overflow-y-auto">
                       {scrapedPreview.description}
                     </p>
                   </div>
                 )}
 
-                {scrapedPreview.author && (
-                  <div>
-                    <h4 className="text-sm font-medium text-primary mb-1">Autor</h4>
-                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg">
-                      {scrapedPreview.author}
-                    </p>
-                  </div>
-                )}
-
-                {scrapedPreview.markdown && (
-                  <div>
-                    <h4 className="text-sm font-medium text-primary mb-1">Conteúdo da Página</h4>
-                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg whitespace-pre-wrap max-h-48 overflow-y-auto">
-                      {scrapedPreview.markdown.slice(0, 1000)}
-                      {scrapedPreview.markdown.length > 1000 && "..."}
+                {scrapedPreview.video_url && (
+                  <div className="p-3 bg-green-500/10 border border-green-500/30 rounded-lg">
+                    <p className="text-sm text-green-700 dark:text-green-300">
+                      <CheckCircle2 className="h-4 w-4 inline mr-2" />
+                      <strong>Vídeo detectado!</strong> A análise incluirá transcrição do áudio e análise visual.
                     </p>
                   </div>
                 )}
               </div>
 
-              {/* Right: Screenshot */}
+              {/* Right: Screenshot/Thumbnail */}
               <div>
                 {scrapedPreview.screenshot ? (
                   <div>
-                    <h4 className="text-sm font-medium text-primary mb-1">Screenshot da Página</h4>
+                    <h4 className="text-sm font-medium text-primary mb-1">Thumbnail</h4>
                     <div className="rounded-lg overflow-hidden border border-border">
                       <img
                         src={scrapedPreview.screenshot}
-                        alt="Screenshot da página"
+                        alt="Thumbnail do vídeo"
                         className="w-full h-auto"
                       />
                     </div>
@@ -311,7 +340,7 @@ export default function ModeladorConteudo() {
                   <div className="flex items-center justify-center h-full bg-muted/30 rounded-lg p-8">
                     <div className="text-center text-muted-foreground">
                       <AlertCircle className="h-8 w-8 mx-auto mb-2" />
-                      <p className="text-sm">Screenshot não disponível</p>
+                      <p className="text-sm">Thumbnail não disponível</p>
                     </div>
                   </div>
                 )}
@@ -475,8 +504,11 @@ export default function ModeladorConteudo() {
             <h3 className="text-lg font-medium text-foreground mb-2">
               Analisando Conteúdo
             </h3>
-            <p className="text-muted-foreground text-center">
-              A IA está analisando o conteúdo e gerando a modelagem para seus produtos...
+            <p className="text-muted-foreground text-center max-w-md">
+              A IA está processando o vídeo: baixando, transcrevendo o áudio, analisando visualmente e gerando a modelagem para seus produtos...
+            </p>
+            <p className="text-xs text-muted-foreground mt-4">
+              Isso pode levar alguns segundos dependendo da duração do vídeo.
             </p>
           </CardContent>
         </Card>

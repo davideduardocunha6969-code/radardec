@@ -22,6 +22,12 @@ export interface ScrapedPreview {
   markdown: string | null;
   hasScreenshot: boolean;
   screenshot: string | null;
+  video_url?: string | null;
+  metrics?: {
+    views?: number;
+    likes?: number;
+    comments?: number;
+  };
 }
 
 export interface ModelagemState {
@@ -30,6 +36,11 @@ export interface ModelagemState {
   scrapedPreview: ScrapedPreview | null;
   result: ModelagemResult | null;
   error: string | null;
+}
+
+// Check if URL is an Instagram URL
+function isInstagramUrl(url: string): boolean {
+  return url.includes("instagram.com") || url.includes("instagr.am");
 }
 
 export function useModelagemConteudo() {
@@ -45,6 +56,29 @@ export function useModelagemConteudo() {
     setState((prev) => ({ ...prev, isScraping: true, scrapedPreview: null, error: null }));
 
     try {
+      // Use Instagram-specific function for Instagram URLs
+      if (isInstagramUrl(link)) {
+        const response = await supabase.functions.invoke("analyze-instagram-video", {
+          body: {
+            action: "extract",
+            link,
+          },
+        });
+
+        if (response.error) {
+          throw new Error(response.error.message || "Erro ao extrair conteúdo do Instagram");
+        }
+
+        if (!response.data.success) {
+          throw new Error(response.data.error || "Não foi possível extrair o conteúdo");
+        }
+
+        const preview = response.data.data as ScrapedPreview;
+        setState((prev) => ({ ...prev, isScraping: false, scrapedPreview: preview }));
+        return preview;
+      }
+
+      // Fallback to original function for other URLs
       const response = await supabase.functions.invoke("analyze-content", {
         body: {
           action: "scrape",
@@ -87,6 +121,31 @@ export function useModelagemConteudo() {
         )
         .join("\n\n");
 
+      // Use Instagram-specific function for Instagram URLs (and no manual caption)
+      if (isInstagramUrl(link) && !manualCaption) {
+        const response = await supabase.functions.invoke("analyze-instagram-video", {
+          body: {
+            link,
+            tipo,
+            produtos: produtosInfo,
+          },
+        });
+
+        if (response.error) {
+          throw new Error(response.error.message || "Erro ao analisar conteúdo");
+        }
+
+        // Check if there's an error in the response body
+        if (response.data?.error) {
+          throw new Error(response.data.error);
+        }
+
+        const result = response.data as ModelagemResult;
+        setState((prev) => ({ ...prev, isAnalyzing: false, result }));
+        return result;
+      }
+
+      // Fallback to original function
       const response = await supabase.functions.invoke("analyze-content", {
         body: {
           link,
