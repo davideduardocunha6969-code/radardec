@@ -17,13 +17,14 @@ import { Badge } from "@/components/ui/badge";
 import {
   ConteudoMidia,
   Status,
-  Prioridade,
+  Formato,
   SETOR_LABELS,
   FORMATO_LABELS,
-  STATUS_LABELS,
   STATUS_COLORS,
   PRIORIDADE_LABELS,
   PRIORIDADE_COLORS,
+  getStatusLabel,
+  getStatusLabelsForFormato,
 } from "@/hooks/useConteudosMidia";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -150,10 +151,12 @@ export function ConteudoList({
                         STATUS_COLORS[conteudo.status]
                       }`}
                     >
-                      <SelectValue />
+                      <SelectValue>
+                        {getStatusLabel(conteudo.status, conteudo.formato as Formato)}
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {Object.entries(STATUS_LABELS).map(([value, label]) => (
+                      {Object.entries(getStatusLabelsForFormato(conteudo.formato as Formato)).map(([value, label]) => (
                         <SelectItem key={value} value={value}>
                           {label}
                         </SelectItem>

@@ -62,6 +62,29 @@ export const STATUS_LABELS: Record<Status, string> = {
   postado: "Postado",
 };
 
+// Labels dinâmicos para carrossel/estático (produção ao invés de gravação)
+export const STATUS_LABELS_PRODUCAO: Record<Status, string> = {
+  a_gravar: "A Produzir",
+  gravado: "Produzido",
+  em_edicao: "Em Edição",
+  editado: "Editado",
+  postado: "Postado",
+};
+
+export function getStatusLabel(status: Status, formato: Formato): string {
+  if (formato === "carrossel" || formato === "estatico") {
+    return STATUS_LABELS_PRODUCAO[status];
+  }
+  return STATUS_LABELS[status];
+}
+
+export function getStatusLabelsForFormato(formato: Formato): Record<Status, string> {
+  if (formato === "carrossel" || formato === "estatico") {
+    return STATUS_LABELS_PRODUCAO;
+  }
+  return STATUS_LABELS;
+}
+
 export const STATUS_COLORS: Record<Status, string> = {
   a_gravar: "bg-yellow-100 text-yellow-800 border-yellow-300",
   gravado: "bg-blue-100 text-blue-800 border-blue-300",
