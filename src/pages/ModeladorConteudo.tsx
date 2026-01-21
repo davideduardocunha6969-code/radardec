@@ -124,13 +124,24 @@ export default function ModeladorConteudo() {
     if (e.dataTransfer.files && e.dataTransfer.files[0]) {
       const file = e.dataTransfer.files[0];
       if (file.type.startsWith("video/") || file.type.startsWith("audio/")) {
+        // Revoke old URL first to prevent memory leaks and caching issues
+        setVideoPreviewUrl((prevUrl) => {
+          if (prevUrl) URL.revokeObjectURL(prevUrl);
+          return null;
+        });
+        
         setVideoFile(file);
-        // Create preview URL for video
+        
+        // Create new preview URL for video after a small delay to ensure cleanup
         if (file.type.startsWith("video/")) {
-          const url = URL.createObjectURL(file);
-          setVideoPreviewUrl(url);
-        } else {
-          setVideoPreviewUrl(null);
+          setTimeout(() => {
+            const url = URL.createObjectURL(file);
+            setVideoPreviewUrl(url);
+            // Force video element to reload
+            if (videoRef.current) {
+              videoRef.current.load();
+            }
+          }, 50);
         }
       } else {
         toast.error("Por favor, selecione um arquivo de vídeo ou áudio");
@@ -141,13 +152,25 @@ export default function ModeladorConteudo() {
   const handleFileChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      
+      // Revoke old URL first to prevent memory leaks and caching issues
+      setVideoPreviewUrl((prevUrl) => {
+        if (prevUrl) URL.revokeObjectURL(prevUrl);
+        return null;
+      });
+      
       setVideoFile(file);
-      // Create preview URL for video
+      
+      // Create new preview URL for video after a small delay to ensure cleanup
       if (file.type.startsWith("video/")) {
-        const url = URL.createObjectURL(file);
-        setVideoPreviewUrl(url);
-      } else {
-        setVideoPreviewUrl(null);
+        setTimeout(() => {
+          const url = URL.createObjectURL(file);
+          setVideoPreviewUrl(url);
+          // Force video element to reload
+          if (videoRef.current) {
+            videoRef.current.load();
+          }
+        }, 50);
       }
     }
   }, []);
@@ -568,9 +591,10 @@ export default function ModeladorConteudo() {
                       </div>
                       
                       {/* Video Preview Player */}
-                      {videoPreviewUrl && (
+                      {videoPreviewUrl && videoFile && (
                         <div className="relative rounded-lg overflow-hidden bg-black">
                           <video
+                            key={`${videoFile.name}-${videoFile.size}-${videoFile.lastModified}`}
                             ref={videoRef}
                             src={videoPreviewUrl}
                             controls
