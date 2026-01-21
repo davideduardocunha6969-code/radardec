@@ -49,13 +49,48 @@ async function scrapeContent(url: string): Promise<{ markdown: string; metadata:
   }
 }
 
+// Endpoint for scraping only (preview)
+async function handleScrapeOnly(url: string) {
+  const scrapedContent = await scrapeContent(url);
+  
+  if (!scrapedContent) {
+    return {
+      success: false,
+      error: "Não foi possível extrair o conteúdo do link",
+    };
+  }
+
+  return {
+    success: true,
+    data: {
+      title: scrapedContent.metadata?.title || null,
+      description: scrapedContent.metadata?.description || null,
+      author: scrapedContent.metadata?.author || null,
+      markdown: scrapedContent.markdown?.slice(0, 2000) || null, // Limit for preview
+      hasScreenshot: !!scrapedContent.screenshot,
+      screenshot: scrapedContent.screenshot ? `data:image/png;base64,${scrapedContent.screenshot}` : null,
+    },
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    const { link, tipo, produtos } = await req.json();
+    const body = await req.json();
+    
+    // Check if it's a scrape-only request (preview)
+    if (body.action === "scrape") {
+      const result = await handleScrapeOnly(body.link);
+      return new Response(JSON.stringify(result), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Original analyze logic
+    const { link, tipo, produtos } = body;
 
     if (!link || !tipo || !produtos) {
       return new Response(

@@ -15,8 +15,19 @@ export interface ModelagemResult {
   formato_sugerido: string;
 }
 
+export interface ScrapedPreview {
+  title: string | null;
+  description: string | null;
+  author: string | null;
+  markdown: string | null;
+  hasScreenshot: boolean;
+  screenshot: string | null;
+}
+
 export interface ModelagemState {
   isAnalyzing: boolean;
+  isScraping: boolean;
+  scrapedPreview: ScrapedPreview | null;
   result: ModelagemResult | null;
   error: string | null;
 }
@@ -24,16 +35,48 @@ export interface ModelagemState {
 export function useModelagemConteudo() {
   const [state, setState] = useState<ModelagemState>({
     isAnalyzing: false,
+    isScraping: false,
+    scrapedPreview: null,
     result: null,
     error: null,
   });
+
+  const scrapePreview = async (link: string): Promise<ScrapedPreview | null> => {
+    setState((prev) => ({ ...prev, isScraping: true, scrapedPreview: null, error: null }));
+
+    try {
+      const response = await supabase.functions.invoke("analyze-content", {
+        body: {
+          action: "scrape",
+          link,
+        },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message || "Erro ao extrair conteúdo");
+      }
+
+      if (!response.data.success) {
+        throw new Error(response.data.error || "Não foi possível extrair o conteúdo");
+      }
+
+      const preview = response.data.data as ScrapedPreview;
+      setState((prev) => ({ ...prev, isScraping: false, scrapedPreview: preview }));
+      return preview;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Erro desconhecido";
+      setState((prev) => ({ ...prev, isScraping: false, error: message }));
+      toast.error("Erro ao extrair conteúdo: " + message);
+      return null;
+    }
+  };
 
   const analyzeContent = async (
     link: string,
     tipo: "video" | "blog_post" | "publicacao",
     produtos: TipoProduto[]
   ): Promise<ModelagemResult | null> => {
-    setState({ isAnalyzing: true, result: null, error: null });
+    setState((prev) => ({ ...prev, isAnalyzing: true, result: null, error: null }));
 
     try {
       const produtosInfo = produtos
@@ -56,22 +99,29 @@ export function useModelagemConteudo() {
       }
 
       const result = response.data as ModelagemResult;
-      setState({ isAnalyzing: false, result, error: null });
+      setState((prev) => ({ ...prev, isAnalyzing: false, result }));
       return result;
     } catch (error) {
       const message = error instanceof Error ? error.message : "Erro desconhecido";
-      setState({ isAnalyzing: false, result: null, error: message });
+      setState((prev) => ({ ...prev, isAnalyzing: false, error: message }));
       toast.error("Erro ao analisar conteúdo: " + message);
       return null;
     }
   };
 
   const resetState = () => {
-    setState({ isAnalyzing: false, result: null, error: null });
+    setState({
+      isAnalyzing: false,
+      isScraping: false,
+      scrapedPreview: null,
+      result: null,
+      error: null,
+    });
   };
 
   return {
     ...state,
+    scrapePreview,
     analyzeContent,
     resetState,
   };

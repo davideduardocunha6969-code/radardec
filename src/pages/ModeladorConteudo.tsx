@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Wand2, Video, FileText, Image, Loader2, ExternalLink, ArrowRight, Send } from "lucide-react";
+import { Wand2, Video, FileText, Image, Loader2, ExternalLink, ArrowRight, Send, CheckCircle2, AlertCircle, Eye } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { useTiposProdutos, TipoProduto, SETOR_LABELS, SETOR_COLORS } from "@/hooks/useTiposProdutos";
-import { useModelagemConteudo, ModelagemResult } from "@/hooks/useModelagemConteudo";
+import { useModelagemConteudo, ModelagemResult, ScrapedPreview } from "@/hooks/useModelagemConteudo";
 import { ModelagemIdeiaFormDialog } from "@/components/modelador/ModelagemIdeiaFormDialog";
 import { toast } from "sonner";
 
@@ -22,9 +22,9 @@ interface PendingIdeia {
 
 export default function ModeladorConteudo() {
   const { produtos, isLoading: loadingProdutos } = useTiposProdutos();
-  const { isAnalyzing, analyzeContent } = useModelagemConteudo();
+  const { isAnalyzing, isScraping, scrapedPreview, scrapePreview, analyzeContent, resetState: resetModelagem } = useModelagemConteudo();
 
-  const [step, setStep] = useState<"select-type" | "input-link" | "analyzing" | "results">("select-type");
+  const [step, setStep] = useState<"select-type" | "input-link" | "preview" | "select-products" | "analyzing" | "results">("select-type");
   const [tipoSelecionado, setTipoSelecionado] = useState<TipoModelagem | null>(null);
   const [link, setLink] = useState("");
   const [produtosSelecionados, setProdutosSelecionados] = useState<string[]>([]);
@@ -67,6 +67,22 @@ export default function ModeladorConteudo() {
     );
   };
 
+  const handleScrapeLink = async () => {
+    if (!link) {
+      toast.error("Cole um link válido");
+      return;
+    }
+
+    const preview = await scrapePreview(link);
+    if (preview) {
+      setStep("preview");
+    }
+  };
+
+  const handleContinueToProducts = () => {
+    setStep("select-products");
+  };
+
   const handleAnalyze = async () => {
     if (!tipoSelecionado || !link || produtosSelecionados.length === 0) {
       toast.error("Preencha todos os campos obrigatórios");
@@ -94,7 +110,7 @@ export default function ModeladorConteudo() {
       setCurrentIdeiaIndex(0);
       setStep("results");
     } else {
-      setStep("input-link");
+      setStep("select-products");
     }
   };
 
@@ -121,6 +137,7 @@ export default function ModeladorConteudo() {
     setProdutosSelecionados([]);
     setPendingIdeias([]);
     setCurrentIdeiaIndex(0);
+    resetModelagem();
   };
 
   const currentIdeia = pendingIdeias[currentIdeiaIndex];
@@ -171,7 +188,7 @@ export default function ModeladorConteudo() {
               Modelar Vídeo
             </CardTitle>
             <CardDescription>
-              Cole o link do vídeo e selecione os produtos para modelagem
+              Cole o link do vídeo para extrair o conteúdo
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
@@ -185,6 +202,138 @@ export default function ModeladorConteudo() {
               />
             </div>
 
+            <div className="flex justify-between pt-4">
+              <Button variant="outline" onClick={resetState}>
+                Voltar
+              </Button>
+              <Button
+                onClick={handleScrapeLink}
+                disabled={!link || isScraping}
+              >
+                {isScraping ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Extraindo Conteúdo...
+                  </>
+                ) : (
+                  <>
+                    <Eye className="h-4 w-4 mr-2" />
+                    Extrair e Visualizar
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === "preview" && scrapedPreview && (
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="h-5 w-5 text-green-500" />
+              <CardTitle>Conteúdo Extraído com Sucesso</CardTitle>
+            </div>
+            <CardDescription className="flex items-center gap-1">
+              <ExternalLink className="h-3 w-3" />
+              <a href={link} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                {link.slice(0, 60)}...
+              </a>
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Left: Text content */}
+              <div className="space-y-4">
+                {scrapedPreview.title && (
+                  <div>
+                    <h4 className="text-sm font-medium text-primary mb-1">Título</h4>
+                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg">
+                      {scrapedPreview.title}
+                    </p>
+                  </div>
+                )}
+
+                {scrapedPreview.description && (
+                  <div>
+                    <h4 className="text-sm font-medium text-primary mb-1">Descrição</h4>
+                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg">
+                      {scrapedPreview.description}
+                    </p>
+                  </div>
+                )}
+
+                {scrapedPreview.author && (
+                  <div>
+                    <h4 className="text-sm font-medium text-primary mb-1">Autor</h4>
+                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg">
+                      {scrapedPreview.author}
+                    </p>
+                  </div>
+                )}
+
+                {scrapedPreview.markdown && (
+                  <div>
+                    <h4 className="text-sm font-medium text-primary mb-1">Conteúdo da Página</h4>
+                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg whitespace-pre-wrap max-h-48 overflow-y-auto">
+                      {scrapedPreview.markdown.slice(0, 1000)}
+                      {scrapedPreview.markdown.length > 1000 && "..."}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* Right: Screenshot */}
+              <div>
+                {scrapedPreview.screenshot ? (
+                  <div>
+                    <h4 className="text-sm font-medium text-primary mb-1">Screenshot da Página</h4>
+                    <div className="rounded-lg overflow-hidden border border-border">
+                      <img
+                        src={scrapedPreview.screenshot}
+                        alt="Screenshot da página"
+                        className="w-full h-auto"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-full bg-muted/30 rounded-lg p-8">
+                    <div className="text-center text-muted-foreground">
+                      <AlertCircle className="h-8 w-8 mx-auto mb-2" />
+                      <p className="text-sm">Screenshot não disponível</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <Separator />
+
+            <div className="flex justify-between pt-2">
+              <Button variant="outline" onClick={() => setStep("input-link")}>
+                Alterar Link
+              </Button>
+              <Button onClick={handleContinueToProducts}>
+                Continuar
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === "select-products" && (
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Wand2 className="h-5 w-5" />
+              Selecionar Produtos
+            </CardTitle>
+            <CardDescription>
+              Escolha os produtos para os quais deseja modelar o conteúdo
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
             <div className="space-y-3">
               <Label>Selecione os Produtos para Modelagem *</Label>
               {loadingProdutos ? (
@@ -231,12 +380,12 @@ export default function ModeladorConteudo() {
             </div>
 
             <div className="flex justify-between pt-4">
-              <Button variant="outline" onClick={resetState}>
+              <Button variant="outline" onClick={() => setStep("preview")}>
                 Voltar
               </Button>
               <Button
                 onClick={handleAnalyze}
-                disabled={!link || produtosSelecionados.length === 0}
+                disabled={produtosSelecionados.length === 0}
               >
                 Analisar Conteúdo
                 <ArrowRight className="h-4 w-4 ml-2" />
