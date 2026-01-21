@@ -3,6 +3,15 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import { TipoProduto } from "./useTiposProdutos";
 
+export interface AnaliseVisualDetalhada {
+  cenario: string;
+  transicoes: string;
+  enquadramento: string;
+  postura_apresentador: string;
+  elementos_visuais: string;
+  ritmo_edicao: string;
+}
+
 export interface ModelagemResult {
   gancho_original: string;
   analise_estrategia: string;
@@ -13,6 +22,9 @@ export interface ModelagemResult {
   copy_completa: string;
   orientacoes_filmagem: string;
   formato_sugerido: string;
+  // Extended fields from Instagram analysis
+  transcricao_audio?: string | null;
+  analise_visual_detalhada?: AnaliseVisualDetalhada | null;
 }
 
 export interface ScrapedPreview {

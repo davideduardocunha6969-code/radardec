@@ -299,7 +299,11 @@ IMPORTANTE: Responda APENAS com um objeto JSON válido, sem texto adicional. Use
   "copy_completa": "Roteiro/copy completa do conteúdo a ser produzido",
   "orientacoes_filmagem": "Orientações detalhadas de como produzir o conteúdo (cenário, postura, edição, etc.)",
   "formato_sugerido": "video | video_longo | carrossel | estatico"
-}`;
+}
+
+IMPORTANTE: Inclua também estes campos adicionais com os dados brutos da análise:
+- transcricao_audio: A transcrição completa do áudio do vídeo (copie exatamente o que foi transcrito)
+- analise_visual_detalhada: Objeto com os detalhes visuais (cenario, transicoes, enquadramento, postura_apresentador, elementos_visuais, ritmo_edicao)`;
 
     let contextInfo = `DADOS DO VÍDEO INSTAGRAM:
 - Autor: @${instagramData.username || "desconhecido"}
@@ -483,12 +487,19 @@ serve(async (req) => {
 
     // Step 4: Generate final content modeling
     console.log("Generating content modeling...");
-    const result = await generateContentModeling(
+    const modelingResult = await generateContentModeling(
       instagramData,
       transcription,
       visualAnalysis,
       produtos
     );
+
+    // Merge with transcription and visual analysis data
+    const result = {
+      ...modelingResult,
+      transcricao_audio: transcription?.text || null,
+      analise_visual_detalhada: visualAnalysis || null,
+    };
 
     return new Response(JSON.stringify(result), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
