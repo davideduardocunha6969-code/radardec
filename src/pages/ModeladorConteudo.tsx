@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Wand2, Video, FileText, Image, Loader2, ExternalLink, ArrowRight, Send, AlertCircle, Mic, Film, ChevronDown, Upload, X, FileVideo, SquareStack, ImageIcon } from "lucide-react";
+import { Wand2, Video, FileText, Image, Loader2, ExternalLink, ArrowRight, Send, AlertCircle, Mic, Film, ChevronDown, Upload, X, FileVideo, SquareStack, ImageIcon, BookOpen, Newspaper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,16 +17,29 @@ import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { isFieldVisibleForFormato } from "@/utils/formatoFields";
 
-type TipoModelagem = "video" | "blog_post" | "publicacao";
+// Tipos de formato expandidos para incluir blog_post e publicacao
+type FormatoCompleto = Formato | "blog_post" | "publicacao";
 
 interface PendingIdeia {
   produto: TipoProduto;
-  formato: Formato;
+  formatoSaida: Formato;
+  formatoOrigem: FormatoCompleto;
   result: ModelagemResult;
   link: string;
 }
 
-const FORMATO_OPTIONS: { value: Formato; label: string; icon: React.ReactNode; description: string }[] = [
+// Opções de formato de ORIGEM (conteúdo original)
+const FORMATO_ORIGEM_OPTIONS: { value: FormatoCompleto; label: string; icon: React.ReactNode; description: string; disponivel: boolean }[] = [
+  { value: "video", label: "Vídeo Curto", icon: <Video className="h-5 w-5" />, description: "Reels, Shorts, TikTok", disponivel: true },
+  { value: "video_longo", label: "Vídeo Longo", icon: <Film className="h-5 w-5" />, description: "YouTube (5-15min)", disponivel: true },
+  { value: "carrossel", label: "Carrossel", icon: <SquareStack className="h-5 w-5" />, description: "5-10 slides", disponivel: false },
+  { value: "estatico", label: "Post Estático", icon: <ImageIcon className="h-5 w-5" />, description: "Imagem única", disponivel: false },
+  { value: "blog_post", label: "Blog Post", icon: <BookOpen className="h-5 w-5" />, description: "Artigo de blog", disponivel: false },
+  { value: "publicacao", label: "Publicação", icon: <Newspaper className="h-5 w-5" />, description: "Post de texto", disponivel: false },
+];
+
+// Opções de formato de SAÍDA (conteúdo modelado)
+const FORMATO_SAIDA_OPTIONS: { value: Formato; label: string; icon: React.ReactNode; description: string }[] = [
   { value: "video", label: "Vídeo Curto", icon: <Video className="h-5 w-5" />, description: "Reels, Shorts (30-90s)" },
   { value: "video_longo", label: "Vídeo Longo", icon: <Film className="h-5 w-5" />, description: "YouTube (5-15min)" },
   { value: "carrossel", label: "Carrossel", icon: <SquareStack className="h-5 w-5" />, description: "5-10 slides" },
@@ -37,12 +50,12 @@ export default function ModeladorConteudo() {
   const { produtos, isLoading: loadingProdutos } = useTiposProdutos();
   const { isAnalyzing, analyzeVideoUploadMultiFormato, resetState: resetModelagem } = useModelagemConteudo();
 
-  const [step, setStep] = useState<"select-type" | "input-link" | "upload-video" | "select-formats" | "select-products" | "analyzing" | "results">("select-type");
-  const [tipoSelecionado, setTipoSelecionado] = useState<TipoModelagem | null>(null);
+  const [step, setStep] = useState<"select-origem" | "select-saida" | "input-link" | "upload-video" | "select-products" | "analyzing" | "results">("select-origem");
+  const [formatoOrigem, setFormatoOrigem] = useState<FormatoCompleto | null>(null);
+  const [formatosSaida, setFormatosSaida] = useState<Formato[]>([]);
   const [link, setLink] = useState("");
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
-  const [formatosSelecionados, setFormatosSelecionados] = useState<Formato[]>([]);
   const [produtosSelecionados, setProdutosSelecionados] = useState<string[]>([]);
   const [pendingIdeias, setPendingIdeias] = useState<PendingIdeia[]>([]);
   const [currentIdeiaIndex, setCurrentIdeiaIndex] = useState(0);
@@ -50,35 +63,18 @@ export default function ModeladorConteudo() {
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const tipoLabels: Record<TipoModelagem, { label: string; icon: React.ReactNode; description: string }> = {
-    video: {
-      label: "Modelar Vídeo",
-      icon: <Video className="h-6 w-6" />,
-      description: "Faça upload de um vídeo para análise completa",
-    },
-    blog_post: {
-      label: "Modelar Blog Post",
-      icon: <FileText className="h-6 w-6" />,
-      description: "Em breve",
-    },
-    publicacao: {
-      label: "Modelar Publicação",
-      icon: <Image className="h-6 w-6" />,
-      description: "Em breve",
-    },
-  };
-
-  const handleTipoSelect = (tipo: TipoModelagem) => {
-    if (tipo !== "video") {
+  const handleOrigemSelect = (formato: FormatoCompleto) => {
+    const option = FORMATO_ORIGEM_OPTIONS.find(o => o.value === formato);
+    if (!option?.disponivel) {
       toast.info("Esta funcionalidade estará disponível em breve!");
       return;
     }
-    setTipoSelecionado(tipo);
-    setStep("input-link");
+    setFormatoOrigem(formato);
+    setStep("select-saida");
   };
 
-  const handleFormatoToggle = (formato: Formato) => {
-    setFormatosSelecionados((prev) =>
+  const handleFormatoSaidaToggle = (formato: Formato) => {
+    setFormatosSaida((prev) =>
       prev.includes(formato)
         ? prev.filter((f) => f !== formato)
         : [...prev, formato]
@@ -93,9 +89,17 @@ export default function ModeladorConteudo() {
     );
   };
 
+  const handleContinueToInput = () => {
+    if (formatosSaida.length === 0) {
+      toast.error("Selecione pelo menos um formato de saída");
+      return;
+    }
+    setStep("input-link");
+  };
+
   const handleContinueToUpload = () => {
     if (!link) {
-      toast.error("Cole o link do vídeo original");
+      toast.error("Cole o link do conteúdo original");
       return;
     }
     setStep("upload-video");
@@ -139,7 +143,7 @@ export default function ModeladorConteudo() {
     }
   };
 
-  const handleContinueToFormats = () => {
+  const handleContinueToProducts = () => {
     if (!videoFile) {
       toast.error("Faça upload do vídeo");
       return;
@@ -148,19 +152,11 @@ export default function ModeladorConteudo() {
       toast.error("Cole a legenda do vídeo");
       return;
     }
-    setStep("select-formats");
-  };
-
-  const handleContinueToProducts = () => {
-    if (formatosSelecionados.length === 0) {
-      toast.error("Selecione pelo menos um formato de conteúdo");
-      return;
-    }
     setStep("select-products");
   };
 
   const handleAnalyze = async () => {
-    if (!tipoSelecionado || !link || !videoFile || !caption || formatosSelecionados.length === 0 || produtosSelecionados.length === 0) {
+    if (!formatoOrigem || !link || !videoFile || !caption || formatosSaida.length === 0 || produtosSelecionados.length === 0) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -171,21 +167,23 @@ export default function ModeladorConteudo() {
       produtosSelecionados.includes(p.id)
     );
 
-    // Analyze for each selected product with all formats
+    // Analyze for each selected product with all output formats
     const ideias: PendingIdeia[] = [];
 
     for (const produto of selectedProducts) {
-      const response = await analyzeVideoUploadMultiFormato(videoFile, caption, [produto], formatosSelecionados);
+      // Analyze video for this product with all output formats
+      // Note: formatoOrigem is stored for reference but the hook currently doesn't use it
+      const response = await analyzeVideoUploadMultiFormato(videoFile, caption, [produto], formatosSaida);
       
       if (response && response.formatos) {
         // Create pending ideias for each format in the order selected
-        for (const formato of formatosSelecionados) {
-          const result = response.formatos[formato];
+        for (const formatoSaida of formatosSaida) {
+          const result = response.formatos[formatoSaida];
           if (result) {
             // Add transcription and visual analysis to each result
             result.transcricao_audio = response.transcricao;
             result.analise_visual_detalhada = response.analise_visual;
-            ideias.push({ produto, formato, result, link });
+            ideias.push({ produto, formatoSaida, formatoOrigem, result, link });
           }
         }
       }
@@ -196,7 +194,7 @@ export default function ModeladorConteudo() {
       setCurrentIdeiaIndex(0);
       setStep("results");
     } else {
-      toast.error("Não foi possível analisar o vídeo");
+      toast.error("Não foi possível analisar o conteúdo");
       setStep("select-products");
     }
   };
@@ -228,12 +226,12 @@ export default function ModeladorConteudo() {
   };
 
   const resetState = () => {
-    setStep("select-type");
-    setTipoSelecionado(null);
+    setStep("select-origem");
+    setFormatoOrigem(null);
+    setFormatosSaida([]);
     setLink("");
     setVideoFile(null);
     setCaption("");
-    setFormatosSelecionados([]);
     setProdutosSelecionados([]);
     setPendingIdeias([]);
     setCurrentIdeiaIndex(0);
@@ -248,8 +246,13 @@ export default function ModeladorConteudo() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
+  const getOrigemLabel = (formato: FormatoCompleto) => {
+    const option = FORMATO_ORIGEM_OPTIONS.find(o => o.value === formato);
+    return option?.label || formato;
+  };
+
   const currentIdeia = pendingIdeias[currentIdeiaIndex];
-  const showFilmingInstructions = currentIdeia && isFieldVisibleForFormato("orientacoes_filmagem", currentIdeia.formato);
+  const showFilmingInstructions = currentIdeia && isFieldVisibleForFormato("orientacoes_filmagem", currentIdeia.formatoSaida);
 
   return (
     <div className="space-y-6">
@@ -263,46 +266,181 @@ export default function ModeladorConteudo() {
         </p>
       </div>
 
-      {step === "select-type" && (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {Object.entries(tipoLabels).map(([tipo, { label, icon, description }]) => (
-            <Card
-              key={tipo}
-              className={`bg-card/50 backdrop-blur-sm border-border/50 cursor-pointer transition-all hover:border-primary/50 ${
-                tipo !== "video" ? "opacity-50" : ""
-              }`}
-              onClick={() => handleTipoSelect(tipo as TipoModelagem)}
-            >
-              <CardHeader>
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                    {icon}
-                  </div>
-                  <div>
-                    <CardTitle className="text-lg">{label}</CardTitle>
-                    <CardDescription>{description}</CardDescription>
-                  </div>
-                </div>
-              </CardHeader>
-            </Card>
-          ))}
-        </div>
+      {/* STEP 1: Select Origin Format */}
+      {step === "select-origem" && (
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <ArrowRight className="h-5 w-5" />
+              Formato do Conteúdo Original
+            </CardTitle>
+            <CardDescription>
+              Selecione o tipo de conteúdo que você vai modelar (conteúdo de referência)
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {FORMATO_ORIGEM_OPTIONS.map((option) => (
+                <Card
+                  key={option.value}
+                  className={cn(
+                    "cursor-pointer transition-all hover:border-primary/50",
+                    !option.disponivel && "opacity-50 cursor-not-allowed",
+                    formatoOrigem === option.value && "border-primary bg-primary/5"
+                  )}
+                  onClick={() => handleOrigemSelect(option.value)}
+                >
+                  <CardContent className="p-4">
+                    <div className="flex items-center gap-3">
+                      <div className={cn(
+                        "p-2 rounded-lg",
+                        option.disponivel ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
+                      )}>
+                        {option.icon}
+                      </div>
+                      <div>
+                        <p className="font-medium text-foreground">{option.label}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {option.disponivel ? option.description : "Em breve"}
+                        </p>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
       )}
 
+      {/* STEP 2: Select Output Formats */}
+      {step === "select-saida" && (
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <SquareStack className="h-5 w-5" />
+              Formatos de Saída
+            </CardTitle>
+            <CardDescription>
+              Selecione os formatos para os quais deseja adaptar o conteúdo. A IA usará prompts específicos para cada combinação.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            {/* Origin info */}
+            <div className="p-3 bg-primary/10 border border-primary/30 rounded-lg">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-medium text-primary">Conteúdo Original:</span>
+                <Badge variant="secondary">
+                  {formatoOrigem && getOrigemLabel(formatoOrigem)}
+                </Badge>
+              </div>
+            </div>
+
+            <div className="space-y-3">
+              <Label>Selecione os Formatos de Saída Desejados *</Label>
+              <p className="text-sm text-muted-foreground">
+                Você pode selecionar mais de um formato. Para cada combinação (origem → saída), a IA usará um prompt especializado.
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                {FORMATO_SAIDA_OPTIONS.map((option) => (
+                  <div
+                    key={option.value}
+                    className={cn(
+                      "flex items-start gap-3 p-4 rounded-lg border transition-colors cursor-pointer",
+                      formatosSaida.includes(option.value)
+                        ? "border-primary bg-primary/5"
+                        : "border-border hover:border-primary/50"
+                    )}
+                    onClick={() => handleFormatoSaidaToggle(option.value)}
+                  >
+                    <Checkbox
+                      checked={formatosSaida.includes(option.value)}
+                      onCheckedChange={() => handleFormatoSaidaToggle(option.value)}
+                    />
+                    <div className="flex items-center gap-3 flex-1">
+                      <div className={cn(
+                        "p-2 rounded-lg",
+                        formatosSaida.includes(option.value) ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
+                      )}>
+                        {option.icon}
+                      </div>
+                      <div>
+                        <span className="font-medium text-foreground">
+                          {option.label}
+                        </span>
+                        <p className="text-xs text-muted-foreground">
+                          {option.description}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {formatosSaida.length > 0 && (
+              <div className="p-3 bg-muted/50 rounded-lg">
+                <p className="text-sm text-muted-foreground">
+                  <strong>Combinações selecionadas:</strong>
+                </p>
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formatosSaida.map((saida) => (
+                    <Badge key={saida} variant="outline" className="text-xs">
+                      {formatoOrigem && getOrigemLabel(formatoOrigem)} → {FORMATO_LABELS[saida]}
+                    </Badge>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <div className="flex justify-between pt-4">
+              <Button variant="outline" onClick={() => {
+                setFormatoOrigem(null);
+                setFormatosSaida([]);
+                setStep("select-origem");
+              }}>
+                Voltar
+              </Button>
+              <Button onClick={handleContinueToInput} disabled={formatosSaida.length === 0}>
+                Continuar
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* STEP 3: Input Link */}
       {step === "input-link" && (
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Video className="h-5 w-5" />
-              Link do Vídeo Original
+              Link do Conteúdo Original
             </CardTitle>
             <CardDescription>
-              Cole o link do vídeo que você quer modelar. Este link será salvo para referência futura no Content Hub.
+              Cole o link do conteúdo que você quer modelar. Este link será salvo para referência futura no Content Hub.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
+            {/* Origin and output summary */}
+            <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Origem:</span>
+                <Badge variant="secondary">{formatoOrigem && getOrigemLabel(formatoOrigem)}</Badge>
+              </div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-muted-foreground">Saídas:</span>
+                {formatosSaida.map((f) => (
+                  <Badge key={f} variant="outline" className="text-xs">
+                    {FORMATO_LABELS[f]}
+                  </Badge>
+                ))}
+              </div>
+            </div>
+
             <div className="space-y-2">
-              <Label htmlFor="link">Link do Vídeo (YouTube ou Instagram) *</Label>
+              <Label htmlFor="link">Link do Conteúdo (YouTube ou Instagram) *</Label>
               <Input
                 id="link"
                 value={link}
@@ -315,7 +453,7 @@ export default function ModeladorConteudo() {
             </div>
 
             <div className="flex justify-between pt-4">
-              <Button variant="outline" onClick={resetState}>
+              <Button variant="outline" onClick={() => setStep("select-saida")}>
                 Voltar
               </Button>
               <Button onClick={handleContinueToUpload} disabled={!link}>
@@ -327,6 +465,7 @@ export default function ModeladorConteudo() {
         </Card>
       )}
 
+      {/* STEP 4: Upload Video */}
       {step === "upload-video" && (
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardHeader>
@@ -339,8 +478,18 @@ export default function ModeladorConteudo() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Link display */}
-            <div className="p-3 bg-muted/50 rounded-lg">
+            {/* Summary */}
+            <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Origem:</span>
+                <Badge variant="secondary">{formatoOrigem && getOrigemLabel(formatoOrigem)}</Badge>
+                <span className="text-sm text-muted-foreground">→</span>
+                {formatosSaida.map((f) => (
+                  <Badge key={f} variant="outline" className="text-xs">
+                    {FORMATO_LABELS[f]}
+                  </Badge>
+                ))}
+              </div>
               <div className="flex items-center gap-2">
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
                 <a 
@@ -416,12 +565,12 @@ export default function ModeladorConteudo() {
 
             {/* Caption */}
             <div className="space-y-2">
-              <Label htmlFor="caption">Legenda/Descrição do Vídeo *</Label>
+              <Label htmlFor="caption">Legenda/Descrição do Conteúdo *</Label>
               <Textarea
                 id="caption"
                 value={caption}
                 onChange={(e) => setCaption(e.target.value)}
-                placeholder="Cole aqui a legenda completa do vídeo original, incluindo hashtags e menções..."
+                placeholder="Cole aqui a legenda completa do conteúdo original, incluindo hashtags e menções..."
                 className="min-h-[150px]"
               />
               <p className="text-xs text-muted-foreground">
@@ -442,7 +591,7 @@ export default function ModeladorConteudo() {
               <Button variant="outline" onClick={() => setStep("input-link")}>
                 Voltar
               </Button>
-              <Button onClick={handleContinueToFormats} disabled={!videoFile || !caption.trim()}>
+              <Button onClick={handleContinueToProducts} disabled={!videoFile || !caption.trim()}>
                 Continuar
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
@@ -451,85 +600,7 @@ export default function ModeladorConteudo() {
         </Card>
       )}
 
-      {step === "select-formats" && (
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <SquareStack className="h-5 w-5" />
-              Formatos de Conteúdo
-            </CardTitle>
-            <CardDescription>
-              Selecione os formatos para os quais deseja adaptar o conteúdo. A IA gerará uma modelagem específica para cada formato.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Video info summary */}
-            <div className="p-3 bg-muted/50 rounded-lg space-y-2">
-              <div className="flex items-center gap-2">
-                <ExternalLink className="h-4 w-4 text-muted-foreground" />
-                <a href={link} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate">
-                  {link}
-                </a>
-              </div>
-              {videoFile && (
-                <div className="flex items-center gap-2">
-                  <FileVideo className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">{videoFile.name} ({formatFileSize(videoFile.size)})</span>
-                </div>
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <Label>Selecione os Formatos Desejados *</Label>
-              <p className="text-sm text-muted-foreground">
-                Você pode selecionar mais de um formato. Para cada formato selecionado, a IA gerará uma modelagem adaptada.
-              </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {FORMATO_OPTIONS.map((option) => (
-                  <div
-                    key={option.value}
-                    className={`flex items-start gap-3 p-4 rounded-lg border transition-colors cursor-pointer ${
-                      formatosSelecionados.includes(option.value)
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    }`}
-                    onClick={() => handleFormatoToggle(option.value)}
-                  >
-                    <Checkbox
-                      checked={formatosSelecionados.includes(option.value)}
-                      onCheckedChange={() => handleFormatoToggle(option.value)}
-                    />
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className={`p-2 rounded-lg ${formatosSelecionados.includes(option.value) ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"}`}>
-                        {option.icon}
-                      </div>
-                      <div>
-                        <span className="font-medium text-foreground">
-                          {option.label}
-                        </span>
-                        <p className="text-xs text-muted-foreground">
-                          {option.description}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex justify-between pt-4">
-              <Button variant="outline" onClick={() => setStep("upload-video")}>
-                Voltar
-              </Button>
-              <Button onClick={handleContinueToProducts} disabled={formatosSelecionados.length === 0}>
-                Continuar
-                <ArrowRight className="h-4 w-4 ml-2" />
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
+      {/* STEP 5: Select Products */}
       {step === "select-products" && (
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardHeader>
@@ -542,8 +613,18 @@ export default function ModeladorConteudo() {
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-6">
-            {/* Video info summary */}
+            {/* Summary */}
             <div className="p-3 bg-muted/50 rounded-lg space-y-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="text-sm text-muted-foreground">Origem:</span>
+                <Badge variant="secondary">{formatoOrigem && getOrigemLabel(formatoOrigem)}</Badge>
+                <span className="text-sm text-muted-foreground">→ Saídas:</span>
+                {formatosSaida.map((f) => (
+                  <Badge key={f} variant="outline" className="text-xs">
+                    {FORMATO_LABELS[f]}
+                  </Badge>
+                ))}
+              </div>
               <div className="flex items-center gap-2">
                 <ExternalLink className="h-4 w-4 text-muted-foreground" />
                 <a href={link} target="_blank" rel="noopener noreferrer" className="text-sm text-primary hover:underline truncate">
@@ -556,14 +637,6 @@ export default function ModeladorConteudo() {
                   <span className="text-sm text-muted-foreground">{videoFile.name} ({formatFileSize(videoFile.size)})</span>
                 </div>
               )}
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-sm text-muted-foreground">Formatos:</span>
-                {formatosSelecionados.map((f) => (
-                  <Badge key={f} variant="secondary" className="text-xs">
-                    {FORMATO_LABELS[f]}
-                  </Badge>
-                ))}
-              </div>
             </div>
 
             <div className="space-y-3">
@@ -579,11 +652,12 @@ export default function ModeladorConteudo() {
                   {produtos.map((produto) => (
                     <div
                       key={produto.id}
-                      className={`flex items-start gap-3 p-3 rounded-lg border transition-colors cursor-pointer ${
+                      className={cn(
+                        "flex items-start gap-3 p-3 rounded-lg border transition-colors cursor-pointer",
                         produtosSelecionados.includes(produto.id)
                           ? "border-primary bg-primary/5"
                           : "border-border hover:border-primary/50"
-                      }`}
+                      )}
                       onClick={() => handleProdutoToggle(produto.id)}
                     >
                       <Checkbox
@@ -614,12 +688,12 @@ export default function ModeladorConteudo() {
             <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
               <p className="text-sm text-amber-700 dark:text-amber-300">
                 <AlertCircle className="h-4 w-4 inline mr-2" />
-                <strong>Nota:</strong> Serão geradas {formatosSelecionados.length * produtosSelecionados.length} ideias ({formatosSelecionados.length} formato(s) × {produtosSelecionados.length} produto(s))
+                <strong>Nota:</strong> Serão geradas {formatosSaida.length * produtosSelecionados.length} ideias ({formatosSaida.length} formato(s) de saída × {produtosSelecionados.length} produto(s))
               </p>
             </div>
 
             <div className="flex justify-between pt-4">
-              <Button variant="outline" onClick={() => setStep("select-formats")}>
+              <Button variant="outline" onClick={() => setStep("upload-video")}>
                 Voltar
               </Button>
               <Button
@@ -634,6 +708,7 @@ export default function ModeladorConteudo() {
         </Card>
       )}
 
+      {/* STEP 6: Analyzing */}
       {step === "analyzing" && (
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardContent className="flex flex-col items-center justify-center py-16">
@@ -642,8 +717,13 @@ export default function ModeladorConteudo() {
               Analisando Conteúdo
             </h3>
             <p className="text-muted-foreground text-center max-w-md">
-              A IA está processando o vídeo: transcrevendo o áudio, analisando visualmente e gerando modelagens para {formatosSelecionados.length} formato(s)...
+              A IA está processando o conteúdo: transcrevendo o áudio, analisando visualmente e gerando modelagens para {formatosSaida.length} formato(s) de saída...
             </p>
+            <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+              <p className="text-xs text-muted-foreground text-center">
+                <strong>Transformação:</strong> {formatoOrigem && getOrigemLabel(formatoOrigem)} → {formatosSaida.map(f => FORMATO_LABELS[f]).join(", ")}
+              </p>
+            </div>
             <p className="text-xs text-muted-foreground mt-4">
               Isso pode levar alguns segundos dependendo da quantidade de formatos selecionados.
             </p>
@@ -651,6 +731,7 @@ export default function ModeladorConteudo() {
         </Card>
       )}
 
+      {/* STEP 7: Results */}
       {step === "results" && currentIdeia && (
         <div className="space-y-6">
           <div className="flex items-center justify-between">
@@ -662,7 +743,7 @@ export default function ModeladorConteudo() {
                 {currentIdeia.produto.nome}
               </Badge>
               <Badge variant="secondary">
-                {FORMATO_LABELS[currentIdeia.formato]}
+                {getOrigemLabel(currentIdeia.formatoOrigem)} → {FORMATO_LABELS[currentIdeia.formatoSaida]}
               </Badge>
             </div>
             {pendingIdeias.length > 1 && (
@@ -677,7 +758,7 @@ export default function ModeladorConteudo() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    Modelagem: {FORMATO_LABELS[currentIdeia.formato]}
+                    Modelagem: {FORMATO_LABELS[currentIdeia.formatoSaida]}
                   </CardTitle>
                   <CardDescription className="flex items-center gap-1 mt-1">
                     <ExternalLink className="h-3 w-3" />
@@ -770,7 +851,7 @@ export default function ModeladorConteudo() {
                 <div className="space-y-4">
                   <div>
                     <h4 className="text-sm font-medium text-primary mb-2">
-                      Título Sugerido ({FORMATO_LABELS[currentIdeia.formato]})
+                      Título Sugerido ({FORMATO_LABELS[currentIdeia.formatoSaida]})
                     </h4>
                     <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg font-medium">
                       {currentIdeia.result.titulo_sugerido}
@@ -838,7 +919,7 @@ export default function ModeladorConteudo() {
                 </Button>
                 <Button onClick={handleOpenIdeiaForm}>
                   <Send className="h-4 w-4 mr-2" />
-                  Enviar para o Content Hub
+                  Enviar ao Content Hub
                 </Button>
               </div>
             </CardContent>
@@ -850,10 +931,10 @@ export default function ModeladorConteudo() {
         <ModelagemIdeiaFormDialog
           open={ideiaFormOpen}
           onOpenChange={setIdeiaFormOpen}
-          produto={currentIdeia.produto}
           result={currentIdeia.result}
+          produto={currentIdeia.produto}
+          formato={currentIdeia.formatoSaida}
           linkOriginal={currentIdeia.link}
-          formato={currentIdeia.formato}
           onSuccess={handleIdeiaEnviada}
         />
       )}
