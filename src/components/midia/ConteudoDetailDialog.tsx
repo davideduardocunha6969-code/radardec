@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -59,6 +59,11 @@ export function ConteudoDetailDialog({
   isAdmin,
 }: ConteudoDetailDialogProps) {
   const [editedData, setEditedData] = useState(conteudo);
+
+  // Sincroniza o estado local sempre que o conteudo prop mudar
+  useEffect(() => {
+    setEditedData(conteudo);
+  }, [conteudo]);
 
   const handleFieldChange = (field: keyof ConteudoMidia, value: string | number | null) => {
     setEditedData({ ...editedData, [field]: value });
