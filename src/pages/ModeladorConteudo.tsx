@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Wand2, Video, FileText, Image, Loader2, ExternalLink, ArrowRight, Send, CheckCircle2, AlertCircle, Eye } from "lucide-react";
+import { Wand2, Video, FileText, Image, Loader2, ExternalLink, ArrowRight, Send, CheckCircle2, AlertCircle, Eye, ClipboardPaste } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
+import { Textarea } from "@/components/ui/textarea";
 import { useTiposProdutos, TipoProduto, SETOR_LABELS, SETOR_COLORS } from "@/hooks/useTiposProdutos";
 import { useModelagemConteudo, ModelagemResult, ScrapedPreview } from "@/hooks/useModelagemConteudo";
 import { ModelagemIdeiaFormDialog } from "@/components/modelador/ModelagemIdeiaFormDialog";
@@ -24,9 +25,10 @@ export default function ModeladorConteudo() {
   const { produtos, isLoading: loadingProdutos } = useTiposProdutos();
   const { isAnalyzing, isScraping, scrapedPreview, scrapePreview, analyzeContent, resetState: resetModelagem } = useModelagemConteudo();
 
-  const [step, setStep] = useState<"select-type" | "input-link" | "preview" | "select-products" | "analyzing" | "results">("select-type");
+  const [step, setStep] = useState<"select-type" | "input-link" | "preview" | "manual-input" | "select-products" | "analyzing" | "results">("select-type");
   const [tipoSelecionado, setTipoSelecionado] = useState<TipoModelagem | null>(null);
   const [link, setLink] = useState("");
+  const [manualCaption, setManualCaption] = useState("");
   const [produtosSelecionados, setProdutosSelecionados] = useState<string[]>([]);
   const [pendingIdeias, setPendingIdeias] = useState<PendingIdeia[]>([]);
   const [currentIdeiaIndex, setCurrentIdeiaIndex] = useState(0);
@@ -76,7 +78,15 @@ export default function ModeladorConteudo() {
     const preview = await scrapePreview(link);
     if (preview) {
       setStep("preview");
+    } else {
+      // If scraping fails, go to manual input
+      setStep("manual-input");
+      toast.info("Extração automática não disponível. Por favor, cole a legenda manualmente.");
     }
+  };
+
+  const handleSkipToManual = () => {
+    setStep("manual-input");
   };
 
   const handleContinueToProducts = () => {
@@ -95,11 +105,11 @@ export default function ModeladorConteudo() {
       produtosSelecionados.includes(p.id)
     );
 
-    // Analyze for each selected product
+    // Analyze for each selected product, passing manual caption if available
     const ideias: PendingIdeia[] = [];
 
     for (const produto of selectedProducts) {
-      const result = await analyzeContent(link, tipoSelecionado, [produto]);
+      const result = await analyzeContent(link, tipoSelecionado, [produto], manualCaption || undefined);
       if (result) {
         ideias.push({ produto, result, link });
       }
@@ -134,6 +144,7 @@ export default function ModeladorConteudo() {
     setStep("select-type");
     setTipoSelecionado(null);
     setLink("");
+    setManualCaption("");
     setProdutosSelecionados([]);
     setPendingIdeias([]);
     setCurrentIdeiaIndex(0);
@@ -314,6 +325,68 @@ export default function ModeladorConteudo() {
                 Alterar Link
               </Button>
               <Button onClick={handleContinueToProducts}>
+                Continuar
+                <ArrowRight className="h-4 w-4 ml-2" />
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {step === "manual-input" && (
+        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <ClipboardPaste className="h-5 w-5 text-amber-500" />
+              <CardTitle>Entrada Manual</CardTitle>
+            </div>
+            <CardDescription>
+              A extração automática não está disponível para este link. Cole a legenda/descrição do conteúdo abaixo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+              <p className="text-sm text-amber-700 dark:text-amber-300">
+                <strong>Dica:</strong> Abra o vídeo no Instagram/YouTube, copie a legenda completa e cole abaixo. Isso ajudará a IA a fazer uma análise mais precisa.
+              </p>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="link-display">Link do Conteúdo</Label>
+              <div className="flex items-center gap-2 p-3 bg-muted/50 rounded-lg">
+                <ExternalLink className="h-4 w-4 text-muted-foreground" />
+                <a 
+                  href={link} 
+                  target="_blank" 
+                  rel="noopener noreferrer" 
+                  className="text-sm text-primary hover:underline truncate"
+                >
+                  {link}
+                </a>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="manual-caption">Legenda/Descrição do Conteúdo *</Label>
+              <Textarea
+                id="manual-caption"
+                value={manualCaption}
+                onChange={(e) => setManualCaption(e.target.value)}
+                placeholder="Cole aqui a legenda completa do vídeo, incluindo hashtags e menções..."
+                className="min-h-[200px]"
+              />
+              <p className="text-xs text-muted-foreground">
+                Inclua a legenda completa para uma análise mais precisa
+              </p>
+            </div>
+
+            <Separator />
+
+            <div className="flex justify-between pt-2">
+              <Button variant="outline" onClick={() => setStep("input-link")}>
+                Alterar Link
+              </Button>
+              <Button onClick={handleContinueToProducts} disabled={!manualCaption.trim()}>
                 Continuar
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
