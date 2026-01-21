@@ -1,266 +1,381 @@
-import { useState, useEffect } from "react";
-import { Wand2, Plus, Trash2, Edit2, Save } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Wand2, Video, LayoutGrid, Image, Play, Save, RotateCcw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
 import { useAiPrompts, AiPrompt } from "@/hooks/useAiPrompts";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+
+type FormatoConfig = {
+  id: string;
+  nome: string;
+  descricao: string;
+  icon: React.ComponentType<{ className?: string }>;
+  color: string;
+  promptPrefixes: string[];
+};
+
+const FORMATOS: FormatoConfig[] = [
+  {
+    id: "video",
+    nome: "Vídeo Curto",
+    descricao: "Reels/Shorts de 30-90 segundos",
+    icon: Play,
+    color: "text-red-500",
+    promptPrefixes: ["Modelagem de Conteúdo - Vídeo Curto", "Vídeo Curto"],
+  },
+  {
+    id: "video_longo",
+    nome: "Vídeo Longo",
+    descricao: "YouTube de 5-15 minutos",
+    icon: Video,
+    color: "text-blue-500",
+    promptPrefixes: ["Modelagem de Conteúdo - Vídeo Longo", "Vídeo Longo"],
+  },
+  {
+    id: "carrossel",
+    nome: "Carrossel",
+    descricao: "5-10 slides para Instagram",
+    icon: LayoutGrid,
+    color: "text-purple-500",
+    promptPrefixes: ["Modelagem de Conteúdo - Carrossel", "Carrossel"],
+  },
+  {
+    id: "estatico",
+    nome: "Estático",
+    descricao: "Imagem única para feed/stories",
+    icon: Image,
+    color: "text-green-500",
+    promptPrefixes: ["Modelagem de Conteúdo - Estático", "Estático"],
+  },
+];
+
+const PROMPT_AUXILIAR_PREFIXES = ["Análise Visual"];
+
+function FormatoCard({
+  formato,
+  prompt,
+  onSave,
+  isSaving,
+}: {
+  formato: FormatoConfig;
+  prompt: AiPrompt | null;
+  onSave: (promptText: string) => Promise<void>;
+  isSaving: boolean;
+}) {
+  const [editedPrompt, setEditedPrompt] = useState(prompt?.prompt || "");
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    setEditedPrompt(prompt?.prompt || "");
+    setHasChanges(false);
+  }, [prompt]);
+
+  const handleChange = (value: string) => {
+    setEditedPrompt(value);
+    setHasChanges(value !== (prompt?.prompt || ""));
+  };
+
+  const handleSave = async () => {
+    await onSave(editedPrompt);
+    setHasChanges(false);
+  };
+
+  const handleReset = () => {
+    setEditedPrompt(prompt?.prompt || "");
+    setHasChanges(false);
+  };
+
+  const Icon = formato.icon;
+
+  return (
+    <Card className="flex flex-col h-full">
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-3">
+          <div className={`p-2 rounded-lg bg-muted ${formato.color}`}>
+            <Icon className="h-5 w-5" />
+          </div>
+          <div>
+            <CardTitle className="text-lg">{formato.nome}</CardTitle>
+            <CardDescription>{formato.descricao}</CardDescription>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="flex-1 flex flex-col gap-3">
+        <div className="flex-1 flex flex-col gap-2">
+          <Label htmlFor={`prompt-${formato.id}`}>Instruções para a IA</Label>
+          <Textarea
+            id={`prompt-${formato.id}`}
+            value={editedPrompt}
+            onChange={(e) => handleChange(e.target.value)}
+            placeholder="Insira as instruções que a IA deve seguir ao modelar conteúdo para este formato..."
+            className="flex-1 min-h-[300px] font-mono text-sm"
+          />
+        </div>
+        <div className="flex gap-2 justify-end">
+          {hasChanges && (
+            <Button variant="outline" size="sm" onClick={handleReset}>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Descartar
+            </Button>
+          )}
+          <Button 
+            size="sm" 
+            onClick={handleSave} 
+            disabled={isSaving || !editedPrompt.trim()}
+          >
+            {isSaving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                {hasChanges ? "Salvar Alterações" : "Salvar"}
+              </>
+            )}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function PromptsAuxiliaresTab({
+  prompts,
+  onSave,
+  isSaving,
+}: {
+  prompts: AiPrompt[];
+  onSave: (id: string, promptText: string) => Promise<void>;
+  isSaving: string | null;
+}) {
+  const auxiliarPrompts = prompts.filter((p) =>
+    PROMPT_AUXILIAR_PREFIXES.some((prefix) => p.nome.startsWith(prefix))
+  );
+
+  if (auxiliarPrompts.length === 0) {
+    return (
+      <Card>
+        <CardContent className="flex flex-col items-center justify-center py-12">
+          <Wand2 className="h-12 w-12 text-muted-foreground/50 mb-4" />
+          <h3 className="text-lg font-medium mb-2">Nenhum prompt auxiliar</h3>
+          <p className="text-muted-foreground text-center">
+            Prompts auxiliares como "Análise Visual" aparecerão aqui.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  return (
+    <div className="grid gap-4">
+      {auxiliarPrompts.map((p) => (
+        <AuxiliarPromptCard
+          key={p.id}
+          prompt={p}
+          onSave={onSave}
+          isSaving={isSaving === p.id}
+        />
+      ))}
+    </div>
+  );
+}
+
+function AuxiliarPromptCard({
+  prompt,
+  onSave,
+  isSaving,
+}: {
+  prompt: AiPrompt;
+  onSave: (id: string, promptText: string) => Promise<void>;
+  isSaving: boolean;
+}) {
+  const [editedPrompt, setEditedPrompt] = useState(prompt.prompt);
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    setEditedPrompt(prompt.prompt);
+    setHasChanges(false);
+  }, [prompt]);
+
+  const handleChange = (value: string) => {
+    setEditedPrompt(value);
+    setHasChanges(value !== prompt.prompt);
+  };
+
+  const handleSave = async () => {
+    await onSave(prompt.id, editedPrompt);
+    setHasChanges(false);
+  };
+
+  const handleReset = () => {
+    setEditedPrompt(prompt.prompt);
+    setHasChanges(false);
+  };
+
+  return (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="text-lg">{prompt.nome}</CardTitle>
+        {prompt.descricao && (
+          <CardDescription>{prompt.descricao}</CardDescription>
+        )}
+      </CardHeader>
+      <CardContent className="flex flex-col gap-3">
+        <Textarea
+          value={editedPrompt}
+          onChange={(e) => handleChange(e.target.value)}
+          className="min-h-[200px] font-mono text-sm"
+        />
+        <div className="flex gap-2 justify-end">
+          {hasChanges && (
+            <Button variant="outline" size="sm" onClick={handleReset}>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Descartar
+            </Button>
+          )}
+          <Button 
+            size="sm" 
+            onClick={handleSave} 
+            disabled={isSaving || !editedPrompt.trim()}
+          >
+            {isSaving ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                {hasChanges ? "Salvar Alterações" : "Salvar"}
+              </>
+            )}
+          </Button>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function PromptsModeladorPage() {
-  const { prompts, isLoading, fetchPrompts, createPrompt, updatePrompt, deletePrompt } = useAiPrompts("modelador");
-  
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
-  const [editingPrompt, setEditingPrompt] = useState<AiPrompt | null>(null);
-  const [promptToDelete, setPromptToDelete] = useState<AiPrompt | null>(null);
-  
-  const [nome, setNome] = useState("");
-  const [prompt, setPrompt] = useState("");
-  const [descricao, setDescricao] = useState("");
-  const [saving, setSaving] = useState(false);
+  const { prompts, isLoading, fetchPrompts, createPrompt, updatePrompt } = useAiPrompts("modelador");
+  const [savingFormat, setSavingFormat] = useState<string | null>(null);
 
   useEffect(() => {
     fetchPrompts();
   }, [fetchPrompts]);
 
-  const resetForm = () => {
-    setNome("");
-    setPrompt("");
-    setDescricao("");
-    setEditingPrompt(null);
-  };
-
-  const handleOpenCreate = () => {
-    resetForm();
-    setDialogOpen(true);
-  };
-
-  const handleOpenEdit = (p: AiPrompt) => {
-    setEditingPrompt(p);
-    setNome(p.nome);
-    setPrompt(p.prompt);
-    setDescricao(p.descricao || "");
-    setDialogOpen(true);
-  };
-
-  const handleSave = async () => {
-    if (!nome.trim() || !prompt.trim()) return;
+  // Map prompts to formats
+  const promptsByFormat = useMemo(() => {
+    const map: Record<string, AiPrompt | null> = {};
     
-    setSaving(true);
+    FORMATOS.forEach((formato) => {
+      const found = prompts.find((p) =>
+        formato.promptPrefixes.some((prefix) => 
+          p.nome.toLowerCase().includes(prefix.toLowerCase())
+        )
+      );
+      map[formato.id] = found || null;
+    });
+    
+    return map;
+  }, [prompts]);
+
+  const handleSaveForFormat = async (formatoId: string, promptText: string) => {
+    const formato = FORMATOS.find((f) => f.id === formatoId);
+    if (!formato) return;
+
+    setSavingFormat(formatoId);
     try {
-      if (editingPrompt) {
-        await updatePrompt(editingPrompt.id, nome, prompt, descricao);
+      const existingPrompt = promptsByFormat[formatoId];
+      
+      if (existingPrompt) {
+        await updatePrompt(existingPrompt.id, existingPrompt.nome, promptText, existingPrompt.descricao || "");
       } else {
-        await createPrompt(nome, prompt, descricao);
+        await createPrompt(
+          `Modelagem de Conteúdo - ${formato.nome}`,
+          promptText,
+          `Instruções para modelar conteúdo no formato ${formato.nome}`
+        );
       }
-      setDialogOpen(false);
-      resetForm();
+      
+      toast.success(`Prompt de ${formato.nome} salvo com sucesso!`);
+    } catch (error) {
+      toast.error("Erro ao salvar prompt");
     } finally {
-      setSaving(false);
+      setSavingFormat(null);
     }
   };
 
-  const handleDeleteClick = (p: AiPrompt) => {
-    setPromptToDelete(p);
-    setDeleteDialogOpen(true);
-  };
-
-  const handleConfirmDelete = async () => {
-    if (promptToDelete) {
-      await deletePrompt(promptToDelete.id);
-      setDeleteDialogOpen(false);
-      setPromptToDelete(null);
+  const handleSaveAuxiliar = async (id: string, promptText: string) => {
+    setSavingFormat(id);
+    try {
+      const prompt = prompts.find((p) => p.id === id);
+      if (prompt) {
+        await updatePrompt(id, prompt.nome, promptText, prompt.descricao || "");
+        toast.success("Prompt salvo com sucesso!");
+      }
+    } catch (error) {
+      toast.error("Erro ao salvar prompt");
+    } finally {
+      setSavingFormat(null);
     }
   };
+
+  if (isLoading) {
+    return (
+      <div className="container mx-auto py-6">
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto py-6 space-y-6">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Wand2 className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-bold">Prompts Modelador</h1>
-        </div>
-        <Button onClick={handleOpenCreate}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Prompt
-        </Button>
+      <div className="flex items-center gap-2">
+        <Wand2 className="h-6 w-6 text-primary" />
+        <h1 className="text-2xl font-bold">Prompts Modelador</h1>
       </div>
 
       <p className="text-muted-foreground">
-        Crie prompts personalizados para modelar conteúdos a partir de vídeos de referência.
+        Configure as instruções que a IA deve seguir ao modelar conteúdos para cada formato.
       </p>
 
-      {/* Prompts List */}
-      {isLoading ? (
-        <div className="flex items-center justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-        </div>
-      ) : prompts.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Wand2 className="h-12 w-12 text-muted-foreground/50 mb-4" />
-            <h3 className="text-lg font-medium mb-2">Nenhum prompt criado</h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Crie prompts para modelar conteúdos automaticamente.
-            </p>
-            <Button onClick={handleOpenCreate}>
-              <Plus className="h-4 w-4 mr-2" />
-              Criar primeiro prompt
-            </Button>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {prompts.map((p) => (
-            <Card key={p.id} className="flex flex-col">
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg">{p.nome}</CardTitle>
-                  <div className="flex gap-1">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => handleOpenEdit(p)}
-                    >
-                      <Edit2 className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8 text-destructive hover:text-destructive"
-                      onClick={() => handleDeleteClick(p)}
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </Button>
-                  </div>
-                </div>
-                {p.descricao && (
-                  <CardDescription>{p.descricao}</CardDescription>
-                )}
-              </CardHeader>
-              <CardContent className="flex-1">
-                <div className="bg-muted/50 rounded-md p-3 text-sm text-muted-foreground line-clamp-4">
-                  {p.prompt}
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
-      )}
+      <Tabs defaultValue="formatos" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="formatos">Por Formato</TabsTrigger>
+          <TabsTrigger value="auxiliares">Prompts Auxiliares</TabsTrigger>
+        </TabsList>
 
-      {/* Create/Edit Dialog */}
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>
-              {editingPrompt ? "Editar Prompt" : "Novo Prompt"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingPrompt
-                ? "Edite o prompt para modelagem de conteúdo."
-                : "Crie um prompt para modelar conteúdos a partir de vídeos."}
-            </DialogDescription>
-          </DialogHeader>
-
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="nome">Nome do Prompt</Label>
-              <Input
-                id="nome"
-                value={nome}
-                onChange={(e) => setNome(e.target.value)}
-                placeholder="Ex: Análise de Estratégia"
+        <TabsContent value="formatos" className="space-y-4">
+          <div className="grid gap-6 lg:grid-cols-2">
+            {FORMATOS.map((formato) => (
+              <FormatoCard
+                key={formato.id}
+                formato={formato}
+                prompt={promptsByFormat[formato.id]}
+                onSave={(promptText) => handleSaveForFormat(formato.id, promptText)}
+                isSaving={savingFormat === formato.id}
               />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="descricao">Descrição (opcional)</Label>
-              <Input
-                id="descricao"
-                value={descricao}
-                onChange={(e) => setDescricao(e.target.value)}
-                placeholder="Ex: Analisa a estratégia de marketing do vídeo original"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="prompt">Prompt</Label>
-              <Textarea
-                id="prompt"
-                value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
-                placeholder="Ex: Analise o vídeo e identifique a estratégia utilizada..."
-                className="min-h-[200px]"
-              />
-              <p className="text-xs text-muted-foreground">
-                O conteúdo do vídeo e transcrição serão adicionados automaticamente ao prompt.
-              </p>
-            </div>
+            ))}
           </div>
+        </TabsContent>
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>
-              Cancelar
-            </Button>
-            <Button onClick={handleSave} disabled={saving || !nome.trim() || !prompt.trim()}>
-              {saving ? (
-                <>
-                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                  Salvando...
-                </>
-              ) : (
-                <>
-                  <Save className="h-4 w-4 mr-2" />
-                  Salvar
-                </>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Delete Confirmation */}
-      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Excluir prompt?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Tem certeza que deseja excluir o prompt "{promptToDelete?.nome}"?
-              Esta ação não pode ser desfeita.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancelar</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleConfirmDelete}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              Excluir
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+        <TabsContent value="auxiliares">
+          <PromptsAuxiliaresTab
+            prompts={prompts}
+            onSave={handleSaveAuxiliar}
+            isSaving={savingFormat}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
