@@ -229,12 +229,13 @@ Responda APENAS com um objeto JSON válido no seguinte formato:
   }
 }
 
-// Generate final content modeling
-async function generateContentModeling(
+// Generate content modeling for a specific format
+async function generateContentModelingForFormat(
   caption: string | undefined,
   transcription: TranscriptionResult | null,
   visualAnalysis: VisualAnalysisResult | null,
-  produtos: string
+  produtos: string,
+  formato: string
 ): Promise<object | null> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   
@@ -243,10 +244,36 @@ async function generateContentModeling(
     return null;
   }
 
-  try {
-    const systemPrompt = `Você é um especialista em marketing de conteúdo jurídico e análise de conteúdos virais. Sua tarefa é analisar conteúdos de concorrentes e influenciadores e adaptá-los para escritórios de advocacia.
+  const formatoInstructions: Record<string, string> = {
+    video: `Formato: VÍDEO CURTO (Reels/Shorts de 30-90 segundos)
+- Foco em gancho forte nos primeiros 3 segundos
+- Oriente sobre filmagem: cenário, enquadramento, postura
+- Copy curta e impactante
+- Sugira cortes rápidos e dinâmicos`,
+    video_longo: `Formato: VÍDEO LONGO (YouTube de 5-15 minutos)
+- Estruture com introdução, desenvolvimento e conclusão
+- Oriente sobre filmagem profissional: iluminação, áudio, cenário
+- Copy mais elaborada com storytelling
+- Sugira momentos de destaque e chamadas para ação`,
+    carrossel: `Formato: CARROSSEL (5-10 slides para Instagram)
+- Primeiro slide deve ser um gancho visual forte
+- Cada slide deve ter uma ideia principal
+- Último slide com call-to-action
+- NÃO inclua orientações de filmagem (não é vídeo)
+- Foque em textos curtos e impactantes por slide
+- Sugira elementos visuais para cada slide`,
+    estatico: `Formato: ESTÁTICO (Imagem única para feed/stories)
+- Gancho visual e textual forte em uma única imagem
+- Copy concisa e memorável
+- NÃO inclua orientações de filmagem (não é vídeo)
+- Foque no impacto visual imediato
+- Sugira elementos gráficos e composição`,
+  };
 
-Você receberá informações detalhadas sobre um vídeo (legenda, transcrição do áudio, análise visual) e deve gerar uma modelagem completa adaptada para os produtos jurídicos informados.
+  try {
+    const systemPrompt = `Você é um especialista em marketing de conteúdo jurídico e análise de conteúdos virais. Sua tarefa é adaptar um conteúdo original para um formato específico.
+
+${formatoInstructions[formato] || formatoInstructions.video}
 
 IMPORTANTE: Responda APENAS com um objeto JSON válido, sem texto adicional. Use o seguinte formato:
 
@@ -256,10 +283,10 @@ IMPORTANTE: Responda APENAS com um objeto JSON válido, sem texto adicional. Use
   "analise_performance": "Análise dos motivos pelos quais o conteúdo performou bem",
   "legenda_original": "A legenda completa do conteúdo original",
   "analise_filmagem": "Análise detalhada de como o vídeo foi filmado, editado, cenário, postura, etc.",
-  "titulo_sugerido": "Título sugerido para a nova postagem adaptada",
-  "copy_completa": "Roteiro/copy completa do conteúdo a ser produzido",
-  "orientacoes_filmagem": "Orientações detalhadas de como produzir o conteúdo (cenário, postura, edição, etc.)",
-  "formato_sugerido": "video | video_longo | carrossel | estatico",
+  "titulo_sugerido": "Título sugerido para a nova postagem adaptada ao formato ${formato}",
+  "copy_completa": "Roteiro/copy completa adaptada para o formato ${formato}",
+  ${formato === "video" || formato === "video_longo" ? '"orientacoes_filmagem": "Orientações detalhadas de como produzir o conteúdo (cenário, postura, edição, etc.)",' : '"orientacoes_design": "Orientações de design e layout para o formato estático/carrossel",'}
+  "formato_sugerido": "${formato}",
   "transcricao_audio": "A transcrição completa do áudio (copie exatamente)",
   "analise_visual_detalhada": {
     "cenario": "...",
@@ -271,7 +298,7 @@ IMPORTANTE: Responda APENAS com um objeto JSON válido, sem texto adicional. Use
   }
 }`;
 
-    let contextInfo = `DADOS DO VÍDEO:
+    let contextInfo = `DADOS DO CONTEÚDO ORIGINAL:
 
 `;
 
@@ -301,17 +328,19 @@ ${transcription.text}
 `;
     }
 
-    const userPrompt = `Analise o seguinte vídeo e modele para os produtos jurídicos listados abaixo:
+    const userPrompt = `Analise o seguinte conteúdo e ADAPTE para o formato ${formato.toUpperCase()}:
 
 ${contextInfo}
 PRODUTOS JURÍDICOS PARA MODELAGEM:
 ${produtos}
 
-Por favor, analise o conteúdo original e crie uma modelagem completa adaptada para os produtos jurídicos acima. Considere:
+Por favor, analise o conteúdo original e crie uma modelagem completa ESPECÍFICA PARA O FORMATO ${formato.toUpperCase()}. Considere:
 1. O público-alvo específico de cada produto
 2. A linguagem apropriada para o setor jurídico
 3. Os ganchos e estratégias que funcionam bem no nicho
-4. As características técnicas de produção que tornam o conteúdo efetivo
+4. As características técnicas específicas do formato ${formato}
+
+${formato === "carrossel" || formato === "estatico" ? "IMPORTANTE: Como este é um formato estático, NÃO inclua orientações de filmagem. Foque em orientações de design e layout." : ""}
 
 IMPORTANTE: Mantenha a transcrição exata do áudio no campo "transcricao_audio" e os detalhes visuais em "analise_visual_detalhada".
 
@@ -361,12 +390,31 @@ Responda APENAS com o JSON, sem markdown ou texto adicional.`;
     if (visualAnalysis && !result.analise_visual_detalhada) {
       result.analise_visual_detalhada = visualAnalysis;
     }
+    
+    // Set the formato
+    result.formato_sugerido = formato;
+    
+    // For carrossel/estatico, convert orientacoes_design to orientacoes_filmagem for consistency
+    if ((formato === "carrossel" || formato === "estatico") && result.orientacoes_design) {
+      result.orientacoes_filmagem = result.orientacoes_design;
+      delete result.orientacoes_design;
+    }
 
     return result;
   } catch (error) {
     console.error("Error generating content modeling:", error);
     throw error;
   }
+}
+
+// Legacy function for backward compatibility
+async function generateContentModeling(
+  caption: string | undefined,
+  transcription: TranscriptionResult | null,
+  visualAnalysis: VisualAnalysisResult | null,
+  produtos: string
+): Promise<object | null> {
+  return generateContentModelingForFormat(caption, transcription, visualAnalysis, produtos, "video");
 }
 
 serve(async (req) => {
@@ -388,6 +436,7 @@ serve(async (req) => {
     const videoFile = formData.get("video") as File | null;
     const caption = formData.get("caption") as string | null;
     const produtos = formData.get("produtos") as string | null;
+    const formatosStr = formData.get("formatos") as string | null;
 
     if (!videoFile) {
       return new Response(
@@ -402,6 +451,10 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
+
+    // Parse formatos (default to video if not provided)
+    const formatos: string[] = formatosStr ? JSON.parse(formatosStr) : ["video"];
+    console.log("Formatos to analyze:", formatos);
 
     console.log("Received video upload:", videoFile.name, "size:", videoFile.size, "bytes");
     console.log("Caption provided:", caption ? "Yes" : "No");
@@ -428,22 +481,36 @@ serve(async (req) => {
     }
     console.log("Visual analysis complete:", visualAnalysis ? "Success" : "Failed");
 
-    // Step 3: Generate content modeling
-    console.log("Generating content modeling...");
-    const result = await generateContentModeling(
-      caption || undefined,
-      transcription,
-      visualAnalysis,
-      produtos
-    );
+    // Step 3: Generate content modeling for each format
+    console.log("Generating content modeling for formats:", formatos);
+    const results: Record<string, object> = {};
+    
+    for (const formato of formatos) {
+      console.log(`Generating modeling for format: ${formato}`);
+      const result = await generateContentModelingForFormat(
+        caption || undefined,
+        transcription,
+        visualAnalysis,
+        produtos,
+        formato
+      );
+      if (result) {
+        results[formato] = result;
+      }
+    }
 
-    if (!result) {
+    if (Object.keys(results).length === 0) {
       throw new Error("Falha ao gerar modelagem");
     }
 
-    console.log("Content modeling complete!");
+    console.log("Content modeling complete for all formats!");
 
-    return new Response(JSON.stringify(result), {
+    // Return results by format
+    return new Response(JSON.stringify({ 
+      formatos: results,
+      transcricao: transcription?.text || null,
+      analise_visual: visualAnalysis
+    }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {

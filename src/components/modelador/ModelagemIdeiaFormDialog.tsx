@@ -23,9 +23,11 @@ import { TipoProduto, SETOR_LABELS, SETOR_COLORS } from "@/hooks/useTiposProduto
 import { ModelagemResult } from "@/hooks/useModelagemConteudo";
 import { useIdeiasConteudo, IdeiaConteudoInput } from "@/hooks/useIdeiasConteudo";
 import {
+  Formato,
   FORMATO_LABELS,
   PRIORIDADE_LABELS,
 } from "@/hooks/useConteudosMidia";
+import { isFieldVisibleForFormato, getLinkLabel } from "@/utils/formatoFields";
 
 interface ModelagemIdeiaFormDialogProps {
   open: boolean;
@@ -33,19 +35,12 @@ interface ModelagemIdeiaFormDialogProps {
   produto: TipoProduto;
   result: ModelagemResult;
   linkOriginal: string;
+  formato: Formato;
   onSuccess: () => void;
 }
 
 type Setor = "previdenciario" | "trabalhista" | "bancario";
-type Formato = "video" | "video_longo" | "carrossel" | "estatico";
 type Prioridade = "planejado" | "hot";
-
-const FORMATO_MAP: Record<string, Formato> = {
-  video: "video",
-  video_longo: "video_longo",
-  carrossel: "carrossel",
-  estatico: "estatico",
-};
 
 export function ModelagemIdeiaFormDialog({
   open,
@@ -53,13 +48,14 @@ export function ModelagemIdeiaFormDialog({
   produto,
   result,
   linkOriginal,
+  formato,
   onSuccess,
 }: ModelagemIdeiaFormDialogProps) {
   const { createIdeia } = useIdeiasConteudo();
 
   const [formData, setFormData] = useState<IdeiaConteudoInput>({
     setor: produto.setor as Setor,
-    formato: "video",
+    formato: formato,
     titulo: "",
     gancho: "",
     orientacoes_filmagem: "",
@@ -70,16 +66,16 @@ export function ModelagemIdeiaFormDialog({
     semana_publicacao: null,
   });
 
+  const showFilmingInstructions = isFieldVisibleForFormato("orientacoes_filmagem", formato);
+
   useEffect(() => {
     if (open && result) {
-      const formato = FORMATO_MAP[result.formato_sugerido] || "video";
-      
       setFormData({
         setor: produto.setor as Setor,
-        formato,
+        formato: formato,
         titulo: result.titulo_sugerido || "",
         gancho: result.gancho_original || "",
-        orientacoes_filmagem: result.orientacoes_filmagem || "",
+        orientacoes_filmagem: showFilmingInstructions ? (result.orientacoes_filmagem || "") : "",
         copy_completa: result.copy_completa || "",
         link_inspiracao: linkOriginal,
         link_video_drive: "",
@@ -87,7 +83,7 @@ export function ModelagemIdeiaFormDialog({
         semana_publicacao: null,
       });
     }
-  }, [open, result, produto, linkOriginal]);
+  }, [open, result, produto, linkOriginal, formato, showFilmingInstructions]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,10 +100,13 @@ export function ModelagemIdeiaFormDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
             <DialogTitle>Criar Ideia para Content Hub</DialogTitle>
             <Badge className={SETOR_COLORS[produto.setor]}>
               {produto.nome}
+            </Badge>
+            <Badge variant="secondary">
+              {FORMATO_LABELS[formato]}
             </Badge>
           </div>
         </DialogHeader>
@@ -219,23 +218,25 @@ export function ModelagemIdeiaFormDialog({
               onChange={(e) =>
                 setFormData({ ...formData, gancho: e.target.value })
               }
-              placeholder="Gancho que deve ser utilizado no vídeo"
+              placeholder="Gancho que deve ser utilizado"
               rows={2}
             />
           </div>
 
-          <div className="space-y-2">
-            <Label htmlFor="orientacoes_filmagem">Orientações para Filmagem</Label>
-            <Textarea
-              id="orientacoes_filmagem"
-              value={formData.orientacoes_filmagem}
-              onChange={(e) =>
-                setFormData({ ...formData, orientacoes_filmagem: e.target.value })
-              }
-              placeholder="Orientações gerais de como produzir este conteúdo..."
-              rows={3}
-            />
-          </div>
+          {showFilmingInstructions && (
+            <div className="space-y-2">
+              <Label htmlFor="orientacoes_filmagem">Orientações para Filmagem</Label>
+              <Textarea
+                id="orientacoes_filmagem"
+                value={formData.orientacoes_filmagem}
+                onChange={(e) =>
+                  setFormData({ ...formData, orientacoes_filmagem: e.target.value })
+                }
+                placeholder="Orientações gerais de como produzir este conteúdo..."
+                rows={3}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label htmlFor="copy_completa">Copy Completa</Label>
@@ -245,7 +246,7 @@ export function ModelagemIdeiaFormDialog({
               onChange={(e) =>
                 setFormData({ ...formData, copy_completa: e.target.value })
               }
-              placeholder="Roteiro completo do conteúdo a ser gravado..."
+              placeholder="Roteiro completo do conteúdo a ser produzido..."
               rows={5}
             />
           </div>
@@ -264,7 +265,7 @@ export function ModelagemIdeiaFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="link_video_drive">Link do Vídeo (Drive)</Label>
+              <Label htmlFor="link_video_drive">{getLinkLabel(formato)}</Label>
               <Input
                 id="link_video_drive"
                 value={formData.link_video_drive || ""}

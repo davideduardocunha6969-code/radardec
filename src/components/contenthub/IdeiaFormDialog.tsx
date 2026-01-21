@@ -161,15 +161,17 @@ export function IdeiaFormDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Orientações para Filmagem</Label>
-            <Textarea
-              value={formData.orientacoes_filmagem || ""}
-              onChange={(e) => setFormData({ ...formData, orientacoes_filmagem: e.target.value })}
-              placeholder="Digite as orientações..."
-              rows={3}
-            />
-          </div>
+          {(formData.formato === "video" || formData.formato === "video_longo") && (
+            <div className="space-y-2">
+              <Label>Orientações para Filmagem</Label>
+              <Textarea
+                value={formData.orientacoes_filmagem || ""}
+                onChange={(e) => setFormData({ ...formData, orientacoes_filmagem: e.target.value })}
+                placeholder="Digite as orientações..."
+                rows={3}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Copy Completa</Label>
@@ -193,7 +195,7 @@ export function IdeiaFormDialog({
             </div>
 
             <div className="space-y-2">
-              <Label>Link do Drive</Label>
+              <Label>Link do Conteúdo (Drive)</Label>
               <Input
                 value={formData.link_video_drive || ""}
                 onChange={(e) => setFormData({ ...formData, link_video_drive: e.target.value })}

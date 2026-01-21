@@ -223,14 +223,16 @@ export function IdeiaDetailDialog({
             />
           </div>
 
-          <div className="space-y-2">
-            <Label>Orientações para Filmagem</Label>
-            <Textarea
-              value={editedData.orientacoes_filmagem || ""}
-              onChange={(e) => handleFieldChange("orientacoes_filmagem", e.target.value)}
-              rows={3}
-            />
-          </div>
+          {(editedData.formato === "video" || editedData.formato === "video_longo") && (
+            <div className="space-y-2">
+              <Label>Orientações para Filmagem</Label>
+              <Textarea
+                value={editedData.orientacoes_filmagem || ""}
+                onChange={(e) => handleFieldChange("orientacoes_filmagem", e.target.value)}
+                rows={3}
+              />
+            </div>
+          )}
 
           <div className="space-y-2">
             <Label>Copy Completa</Label>
@@ -265,7 +267,7 @@ export function IdeiaDetailDialog({
 
             <div className="space-y-2">
               <Label className="flex items-center gap-2">
-                Link do Drive
+                Link do Conteúdo (Drive)
                 {editedData.link_video_drive && (
                   <a
                     href={editedData.link_video_drive}
