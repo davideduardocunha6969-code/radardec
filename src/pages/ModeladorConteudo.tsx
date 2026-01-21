@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Wand2, Video, FileText, Image, Loader2, ExternalLink, ArrowRight, Send, CheckCircle2, AlertCircle, Eye, ClipboardPaste } from "lucide-react";
+import { Wand2, Video, FileText, Image, Loader2, ExternalLink, ArrowRight, Send, CheckCircle2, AlertCircle, Eye, ClipboardPaste, Mic, Film, ChevronDown, ChevronUp } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useTiposProdutos, TipoProduto, SETOR_LABELS, SETOR_COLORS } from "@/hooks/useTiposProdutos";
 import { useModelagemConteudo, ModelagemResult, ScrapedPreview } from "@/hooks/useModelagemConteudo";
 import { ModelagemIdeiaFormDialog } from "@/components/modelador/ModelagemIdeiaFormDialog";
@@ -552,6 +553,78 @@ export default function ModeladorConteudo() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
+              {/* Transcription and Visual Analysis Section */}
+              {(currentIdeia.result.transcricao_audio || currentIdeia.result.analise_visual_detalhada) && (
+                <div className="space-y-4">
+                  {/* Audio Transcription */}
+                  {currentIdeia.result.transcricao_audio && (
+                    <Collapsible defaultOpen>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" className="w-full justify-between p-3 h-auto bg-blue-500/10 border border-blue-500/30 rounded-lg hover:bg-blue-500/20">
+                          <div className="flex items-center gap-2">
+                            <Mic className="h-4 w-4 text-blue-500" />
+                            <span className="font-medium text-blue-700 dark:text-blue-300">Transcrição do Áudio</span>
+                          </div>
+                          <ChevronDown className="h-4 w-4 text-blue-500 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-2">
+                        <div className="p-4 bg-muted/50 rounded-lg border border-border">
+                          <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
+                            {currentIdeia.result.transcricao_audio}
+                          </p>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )}
+
+                  {/* Visual Analysis */}
+                  {currentIdeia.result.analise_visual_detalhada && (
+                    <Collapsible defaultOpen>
+                      <CollapsibleTrigger asChild>
+                        <Button variant="ghost" className="w-full justify-between p-3 h-auto bg-purple-500/10 border border-purple-500/30 rounded-lg hover:bg-purple-500/20">
+                          <div className="flex items-center gap-2">
+                            <Film className="h-4 w-4 text-purple-500" />
+                            <span className="font-medium text-purple-700 dark:text-purple-300">Análise Visual Detalhada</span>
+                          </div>
+                          <ChevronDown className="h-4 w-4 text-purple-500 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent className="mt-2">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                          <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                            <h5 className="text-xs font-medium text-primary mb-1">Cenário</h5>
+                            <p className="text-sm text-foreground">{currentIdeia.result.analise_visual_detalhada.cenario}</p>
+                          </div>
+                          <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                            <h5 className="text-xs font-medium text-primary mb-1">Transições</h5>
+                            <p className="text-sm text-foreground">{currentIdeia.result.analise_visual_detalhada.transicoes}</p>
+                          </div>
+                          <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                            <h5 className="text-xs font-medium text-primary mb-1">Enquadramento</h5>
+                            <p className="text-sm text-foreground">{currentIdeia.result.analise_visual_detalhada.enquadramento}</p>
+                          </div>
+                          <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                            <h5 className="text-xs font-medium text-primary mb-1">Postura do Apresentador</h5>
+                            <p className="text-sm text-foreground">{currentIdeia.result.analise_visual_detalhada.postura_apresentador}</p>
+                          </div>
+                          <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                            <h5 className="text-xs font-medium text-primary mb-1">Elementos Visuais</h5>
+                            <p className="text-sm text-foreground">{currentIdeia.result.analise_visual_detalhada.elementos_visuais}</p>
+                          </div>
+                          <div className="p-3 bg-muted/50 rounded-lg border border-border">
+                            <h5 className="text-xs font-medium text-primary mb-1">Ritmo de Edição</h5>
+                            <p className="text-sm text-foreground">{currentIdeia.result.analise_visual_detalhada.ritmo_edicao}</p>
+                          </div>
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  )}
+
+                  <Separator />
+                </div>
+              )}
+
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
