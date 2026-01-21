@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -22,6 +23,47 @@ interface VisualAnalysisResult {
   postura_apresentador: string;
   elementos_visuais: string;
   ritmo_edicao: string;
+}
+
+interface AiPrompt {
+  id: string;
+  nome: string;
+  prompt: string;
+  formato_origem: string | null;
+  formato_saida: string | null;
+}
+
+// Fetch prompt from database based on format combination
+async function fetchPromptFromDb(formatoOrigem: string, formatoSaida: string): Promise<string | null> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("Supabase credentials not configured");
+    return null;
+  }
+
+  try {
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    const { data, error } = await supabase
+      .from("ai_prompts")
+      .select("prompt")
+      .eq("tipo", "modelador")
+      .eq("formato_origem", formatoOrigem)
+      .eq("formato_saida", formatoSaida)
+      .maybeSingle();
+    
+    if (error) {
+      console.error("Error fetching prompt:", error);
+      return null;
+    }
+    
+    return data?.prompt || null;
+  } catch (error) {
+    console.error("Error in fetchPromptFromDb:", error);
+    return null;
+  }
 }
 
 // Transcribe audio using ElevenLabs
@@ -242,7 +284,8 @@ async function generateContentModelingForFormat(
   transcription: TranscriptionResult | null,
   visualAnalysis: VisualAnalysisResult | null,
   produtos: string,
-  formato: string
+  formato: string,
+  formatoOrigem: string
 ): Promise<object | null> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   
@@ -251,7 +294,8 @@ async function generateContentModelingForFormat(
     return null;
   }
 
-  const formatoInstructions: Record<string, string> = {
+  // Fallback instructions if no custom prompt is found
+  const fallbackInstructions: Record<string, string> = {
     video: `Formato: VÍDEO CURTO (Reels/Shorts de 30-90 segundos)
 - Foco em gancho forte nos primeiros 3 segundos
 - Oriente sobre filmagem: cenário, enquadramento, postura
@@ -278,53 +322,60 @@ async function generateContentModelingForFormat(
   };
 
   try {
-    const systemPrompt = `Você é um especialista em marketing de conteúdo jurídico e análise de conteúdos virais. Sua tarefa é adaptar um conteúdo original para um formato específico.
+    // Try to fetch custom prompt from database
+    console.log(`Fetching prompt for: ${formatoOrigem} -> ${formato}`);
+    const customPrompt = await fetchPromptFromDb(formatoOrigem, formato);
+    
+    let formatoInstructions: string;
+    
+    if (customPrompt) {
+      console.log(`Using custom prompt from database for ${formatoOrigem} -> ${formato}`);
+      formatoInstructions = customPrompt;
+    } else {
+      console.log(`No custom prompt found, using fallback for format: ${formato}`);
+      formatoInstructions = fallbackInstructions[formato] || fallbackInstructions.video;
+    }
 
-${formatoInstructions[formato] || formatoInstructions.video}
+    const systemPrompt = `Você é um especialista em marketing de conteúdo jurídico e análise de conteúdos virais. Sua tarefa é ADAPTAR um conteúdo original para um novo formato, criando um conteúdo NOVO e PERSONALIZADO para os produtos jurídicos fornecidos.
 
-IMPORTANTE: Responda APENAS com um objeto JSON válido, sem texto adicional. Use o seguinte formato:
+IMPORTANTE: Você deve criar um NOVO conteúdo baseado no estilo e estratégia do original, mas ADAPTADO para o contexto jurídico e os produtos específicos.
+
+${formatoInstructions}
+
+Responda APENAS com um objeto JSON válido, sem texto adicional. Use o seguinte formato:
 
 {
-  "gancho_original": "O gancho/hook utilizado no conteúdo original (primeiros segundos)",
-  "analise_estrategia": "Análise detalhada da estratégia de conteúdo utilizada",
-  "analise_performance": "Análise dos motivos pelos quais o conteúdo performou bem",
-  "legenda_original": "A legenda completa do conteúdo original",
-  "analise_filmagem": "Análise detalhada de como o vídeo foi filmado, editado, cenário, postura, etc.",
-  "titulo_sugerido": "Título sugerido para a nova postagem adaptada ao formato ${formato}",
-  "copy_completa": "Roteiro/copy completa adaptada para o formato ${formato}",
-  ${formato === "video" || formato === "video_longo" ? '"orientacoes_filmagem": "Orientações detalhadas de como produzir o conteúdo (cenário, postura, edição, etc.)",' : '"orientacoes_design": "Orientações de design e layout para o formato estático/carrossel",'}
-  "formato_sugerido": "${formato}",
-  "transcricao_audio": "A transcrição completa do áudio (copie exatamente)",
-  "analise_visual_detalhada": {
-    "cenario": "...",
-    "transicoes": "...",
-    "enquadramento": "...",
-    "postura_apresentador": "...",
-    "elementos_visuais": "...",
-    "ritmo_edicao": "..."
-  }
+  "gancho_original": "O gancho/hook utilizado no conteúdo ORIGINAL (primeiros segundos do vídeo de referência)",
+  "analise_estrategia": "Análise detalhada da estratégia de conteúdo do ORIGINAL",
+  "analise_performance": "Análise dos motivos pelos quais o conteúdo ORIGINAL performou bem",
+  "legenda_original": "A legenda do conteúdo ORIGINAL",
+  "analise_filmagem": "Análise de como o vídeo ORIGINAL foi filmado/editado",
+  "titulo_sugerido": "Título para o NOVO conteúdo adaptado para os produtos jurídicos",
+  "copy_completa": "Roteiro/copy NOVO e ORIGINAL para o formato ${formato}, personalizado para os produtos jurídicos",
+  ${formato === "video" || formato === "video_longo" ? '"orientacoes_filmagem": "Orientações de como PRODUZIR o novo conteúdo (cenário, postura, edição)",' : '"orientacoes_design": "Orientações de design para o novo conteúdo estático/carrossel",'}
+  "formato_sugerido": "${formato}"
 }`;
 
-    let contextInfo = `DADOS DO CONTEÚDO ORIGINAL:
+    let contextInfo = `DADOS DO CONTEÚDO ORIGINAL (REFERÊNCIA):
 
 `;
 
     if (caption) {
-      contextInfo += `LEGENDA ORIGINAL:
+      contextInfo += `LEGENDA DO ORIGINAL:
 ${caption}
 
 `;
     }
 
     if (transcription?.text) {
-      contextInfo += `TRANSCRIÇÃO DO ÁUDIO:
+      contextInfo += `TRANSCRIÇÃO DO ÁUDIO ORIGINAL:
 ${transcription.text}
 
 `;
     }
 
     if (visualAnalysis) {
-      contextInfo += `ANÁLISE VISUAL DO VÍDEO:
+      contextInfo += `ANÁLISE VISUAL DO VÍDEO ORIGINAL:
 - Cenário: ${visualAnalysis.cenario}
 - Transições: ${visualAnalysis.transicoes}
 - Enquadramento: ${visualAnalysis.enquadramento}
@@ -335,21 +386,20 @@ ${transcription.text}
 `;
     }
 
-    const userPrompt = `Analise o seguinte conteúdo e ADAPTE para o formato ${formato.toUpperCase()}:
+    const userPrompt = `Analise o seguinte conteúdo ORIGINAL e crie um NOVO conteúdo para o formato ${formato.toUpperCase()}:
 
 ${contextInfo}
-PRODUTOS JURÍDICOS PARA MODELAGEM:
+PRODUTOS JURÍDICOS PARA O NOVO CONTEÚDO:
 ${produtos}
 
-Por favor, analise o conteúdo original e crie uma modelagem completa ESPECÍFICA PARA O FORMATO ${formato.toUpperCase()}. Considere:
-1. O público-alvo específico de cada produto
-2. A linguagem apropriada para o setor jurídico
-3. Os ganchos e estratégias que funcionam bem no nicho
-4. As características técnicas específicas do formato ${formato}
+INSTRUÇÕES:
+1. Analise a estratégia e o estilo do conteúdo ORIGINAL
+2. Crie um NOVO título e copy COMPLETAMENTE ADAPTADOS para os produtos jurídicos acima
+3. O "titulo_sugerido" e "copy_completa" devem ser NOVOS, criados para promover os produtos jurídicos
+4. Mantenha a análise do original nos campos "gancho_original", "analise_estrategia", "analise_performance", "legenda_original" e "analise_filmagem"
+5. Os campos de orientação devem instruir como PRODUZIR o novo conteúdo
 
 ${formato === "carrossel" || formato === "estatico" ? "IMPORTANTE: Como este é um formato estático, NÃO inclua orientações de filmagem. Foque em orientações de design e layout." : ""}
-
-IMPORTANTE: Mantenha a transcrição exata do áudio no campo "transcricao_audio" e os detalhes visuais em "analise_visual_detalhada".
 
 Responda APENAS com o JSON, sem markdown ou texto adicional.`;
 
@@ -421,7 +471,7 @@ async function generateContentModeling(
   visualAnalysis: VisualAnalysisResult | null,
   produtos: string
 ): Promise<object | null> {
-  return generateContentModelingForFormat(caption, transcription, visualAnalysis, produtos, "video");
+  return generateContentModelingForFormat(caption, transcription, visualAnalysis, produtos, "video", "video");
 }
 
 serve(async (req) => {
@@ -444,6 +494,7 @@ serve(async (req) => {
     const caption = formData.get("caption") as string | null;
     const produtos = formData.get("produtos") as string | null;
     const formatosStr = formData.get("formatos") as string | null;
+    const formatoOrigem = formData.get("formato_origem") as string | null;
 
     if (!videoFile) {
       return new Response(
@@ -461,7 +512,8 @@ serve(async (req) => {
 
     // Parse formatos (default to video if not provided)
     const formatos: string[] = formatosStr ? JSON.parse(formatosStr) : ["video"];
-    console.log("Formatos to analyze:", formatos);
+    const origem = formatoOrigem || "video"; // Default to video if not provided
+    console.log("Formato origem:", origem, "Formatos saida:", formatos);
 
     console.log("Received video upload:", videoFile.name, "size:", videoFile.size, "bytes");
     console.log("Caption provided:", caption ? "Yes" : "No");
@@ -493,13 +545,14 @@ serve(async (req) => {
     const results: Record<string, object> = {};
     
     for (const formato of formatos) {
-      console.log(`Generating modeling for format: ${formato}`);
+      console.log(`Generating modeling for: ${origem} -> ${formato}`);
       const result = await generateContentModelingForFormat(
         caption || undefined,
         transcription,
         visualAnalysis,
         produtos,
-        formato
+        formato,
+        origem
       );
       if (result) {
         results[formato] = result;

@@ -54,7 +54,8 @@ export function useModelagemConteudo() {
     videoFile: File,
     caption: string,
     produtos: TipoProduto[],
-    formatos: Formato[]
+    formatos: Formato[],
+    formatoOrigem?: string
   ): Promise<MultiFormatoResponse | null> => {
     setState((prev) => ({ ...prev, isAnalyzing: true, results: {}, error: null }));
 
@@ -72,6 +73,9 @@ export function useModelagemConteudo() {
       formData.append("caption", caption);
       formData.append("produtos", produtosInfo);
       formData.append("formatos", JSON.stringify(formatos));
+      if (formatoOrigem) {
+        formData.append("formato_origem", formatoOrigem);
+      }
 
       // Get the Supabase URL and key for the edge function call
       const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
