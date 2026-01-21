@@ -6,7 +6,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { useAiPrompts, AiPrompt } from "@/hooks/useAiPrompts";
 import { toast } from "sonner";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 type FormatoConfig = {
   id: string;
@@ -51,8 +50,6 @@ const FORMATOS: FormatoConfig[] = [
     promptPrefixes: ["Modelagem de Conteúdo - Estático", "Estático"],
   },
 ];
-
-const PROMPT_AUXILIAR_PREFIXES = ["Análise Visual"];
 
 function FormatoCard({
   formato,
@@ -144,123 +141,6 @@ function FormatoCard({
   );
 }
 
-function PromptsAuxiliaresTab({
-  prompts,
-  onSave,
-  isSaving,
-}: {
-  prompts: AiPrompt[];
-  onSave: (id: string, promptText: string) => Promise<void>;
-  isSaving: string | null;
-}) {
-  const auxiliarPrompts = prompts.filter((p) =>
-    PROMPT_AUXILIAR_PREFIXES.some((prefix) => p.nome.startsWith(prefix))
-  );
-
-  if (auxiliarPrompts.length === 0) {
-    return (
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12">
-          <Wand2 className="h-12 w-12 text-muted-foreground/50 mb-4" />
-          <h3 className="text-lg font-medium mb-2">Nenhum prompt auxiliar</h3>
-          <p className="text-muted-foreground text-center">
-            Prompts auxiliares como "Análise Visual" aparecerão aqui.
-          </p>
-        </CardContent>
-      </Card>
-    );
-  }
-
-  return (
-    <div className="grid gap-4">
-      {auxiliarPrompts.map((p) => (
-        <AuxiliarPromptCard
-          key={p.id}
-          prompt={p}
-          onSave={onSave}
-          isSaving={isSaving === p.id}
-        />
-      ))}
-    </div>
-  );
-}
-
-function AuxiliarPromptCard({
-  prompt,
-  onSave,
-  isSaving,
-}: {
-  prompt: AiPrompt;
-  onSave: (id: string, promptText: string) => Promise<void>;
-  isSaving: boolean;
-}) {
-  const [editedPrompt, setEditedPrompt] = useState(prompt.prompt);
-  const [hasChanges, setHasChanges] = useState(false);
-
-  useEffect(() => {
-    setEditedPrompt(prompt.prompt);
-    setHasChanges(false);
-  }, [prompt]);
-
-  const handleChange = (value: string) => {
-    setEditedPrompt(value);
-    setHasChanges(value !== prompt.prompt);
-  };
-
-  const handleSave = async () => {
-    await onSave(prompt.id, editedPrompt);
-    setHasChanges(false);
-  };
-
-  const handleReset = () => {
-    setEditedPrompt(prompt.prompt);
-    setHasChanges(false);
-  };
-
-  return (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="text-lg">{prompt.nome}</CardTitle>
-        {prompt.descricao && (
-          <CardDescription>{prompt.descricao}</CardDescription>
-        )}
-      </CardHeader>
-      <CardContent className="flex flex-col gap-3">
-        <Textarea
-          value={editedPrompt}
-          onChange={(e) => handleChange(e.target.value)}
-          className="min-h-[200px] font-mono text-sm"
-        />
-        <div className="flex gap-2 justify-end">
-          {hasChanges && (
-            <Button variant="outline" size="sm" onClick={handleReset}>
-              <RotateCcw className="h-4 w-4 mr-2" />
-              Descartar
-            </Button>
-          )}
-          <Button 
-            size="sm" 
-            onClick={handleSave} 
-            disabled={isSaving || !editedPrompt.trim()}
-          >
-            {isSaving ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                Salvando...
-              </>
-            ) : (
-              <>
-                <Save className="h-4 w-4 mr-2" />
-                {hasChanges ? "Salvar Alterações" : "Salvar"}
-              </>
-            )}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
 export default function PromptsModeladorPage() {
   const { prompts, isLoading, fetchPrompts, createPrompt, updatePrompt } = useAiPrompts("modelador");
   const [savingFormat, setSavingFormat] = useState<string | null>(null);
@@ -311,21 +191,6 @@ export default function PromptsModeladorPage() {
     }
   };
 
-  const handleSaveAuxiliar = async (id: string, promptText: string) => {
-    setSavingFormat(id);
-    try {
-      const prompt = prompts.find((p) => p.id === id);
-      if (prompt) {
-        await updatePrompt(id, prompt.nome, promptText, prompt.descricao || "");
-        toast.success("Prompt salvo com sucesso!");
-      }
-    } catch (error) {
-      toast.error("Erro ao salvar prompt");
-    } finally {
-      setSavingFormat(null);
-    }
-  };
-
   if (isLoading) {
     return (
       <div className="container mx-auto py-6">
@@ -345,37 +210,21 @@ export default function PromptsModeladorPage() {
       </div>
 
       <p className="text-muted-foreground">
-        Configure as instruções que a IA deve seguir ao modelar conteúdos para cada formato.
+        Configure as instruções completas que a IA deve seguir ao modelar conteúdos para cada formato. 
+        Cada prompt já inclui as etapas de análise visual e modelagem específica.
       </p>
 
-      <Tabs defaultValue="formatos" className="space-y-4">
-        <TabsList>
-          <TabsTrigger value="formatos">Por Formato</TabsTrigger>
-          <TabsTrigger value="auxiliares">Prompts Auxiliares</TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="formatos" className="space-y-4">
-          <div className="grid gap-6 lg:grid-cols-2">
-            {FORMATOS.map((formato) => (
-              <FormatoCard
-                key={formato.id}
-                formato={formato}
-                prompt={promptsByFormat[formato.id]}
-                onSave={(promptText) => handleSaveForFormat(formato.id, promptText)}
-                isSaving={savingFormat === formato.id}
-              />
-            ))}
-          </div>
-        </TabsContent>
-
-        <TabsContent value="auxiliares">
-          <PromptsAuxiliaresTab
-            prompts={prompts}
-            onSave={handleSaveAuxiliar}
-            isSaving={savingFormat}
+      <div className="grid gap-6 lg:grid-cols-2">
+        {FORMATOS.map((formato) => (
+          <FormatoCard
+            key={formato.id}
+            formato={formato}
+            prompt={promptsByFormat[formato.id]}
+            onSave={(promptText) => handleSaveForFormat(formato.id, promptText)}
+            isSaving={savingFormat === formato.id}
           />
-        </TabsContent>
-      </Tabs>
+        ))}
+      </div>
     </div>
   );
 }
