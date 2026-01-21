@@ -459,6 +459,47 @@ export type Database = {
         }
         Relationships: []
       }
+      tipos_produtos_anexos: {
+        Row: {
+          created_at: string
+          id: string
+          nome_arquivo: string
+          tamanho_bytes: number | null
+          tipo_arquivo: string | null
+          tipo_produto_id: string
+          url: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome_arquivo: string
+          tamanho_bytes?: number | null
+          tipo_arquivo?: string | null
+          tipo_produto_id: string
+          url: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome_arquivo?: string
+          tamanho_bytes?: number | null
+          tipo_arquivo?: string | null
+          tipo_produto_id?: string
+          url?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "tipos_produtos_anexos_tipo_produto_id_fkey"
+            columns: ["tipo_produto_id"]
+            isOneToOne: false
+            referencedRelation: "tipos_produtos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       transcricoes: {
         Row: {
           arquivo_nome: string
