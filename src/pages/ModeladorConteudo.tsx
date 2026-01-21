@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback } from "react";
-import { Wand2, Video, FileText, Image, Loader2, ExternalLink, ArrowRight, Send, AlertCircle, Mic, Film, ChevronDown, Upload, X, FileVideo, SquareStack, ImageIcon, BookOpen, Newspaper } from "lucide-react";
+import { Wand2, Video, Loader2, ExternalLink, ArrowRight, Send, AlertCircle, Film, Upload, X, FileVideo, SquareStack, ImageIcon, BookOpen, Newspaper } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -8,14 +8,13 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { useTiposProdutos, TipoProduto, SETOR_LABELS, SETOR_COLORS } from "@/hooks/useTiposProdutos";
 import { useModelagemConteudo, ModelagemResult } from "@/hooks/useModelagemConteudo";
 import { Formato, FORMATO_LABELS } from "@/hooks/useConteudosMidia";
 import { ModelagemIdeiaFormDialog } from "@/components/modelador/ModelagemIdeiaFormDialog";
+import { ModelagemResultsView } from "@/components/modelador/ModelagemResultsView";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { isFieldVisibleForFormato } from "@/utils/formatoFields";
 
 // Tipos de formato expandidos para incluir blog_post e publicacao
 type FormatoCompleto = Formato | "blog_post" | "publicacao";
@@ -252,7 +251,6 @@ export default function ModeladorConteudo() {
   };
 
   const currentIdeia = pendingIdeias[currentIdeiaIndex];
-  const showFilmingInstructions = currentIdeia && isFieldVisibleForFormato("orientacoes_filmagem", currentIdeia.formatoSaida);
 
   return (
     <div className="space-y-6">
@@ -775,141 +773,11 @@ export default function ModeladorConteudo() {
               </div>
             </CardHeader>
             <CardContent className="space-y-6">
-              {/* Transcription and Visual Analysis Section */}
-              {(currentIdeia.result.transcricao_audio || currentIdeia.result.analise_visual_detalhada) && (
-                <div className="space-y-4">
-                  {/* Audio Transcription */}
-                  {currentIdeia.result.transcricao_audio && (
-                    <Collapsible>
-                      <CollapsibleTrigger asChild>
-                        <Button variant="ghost" className="w-full justify-between p-3 h-auto bg-blue-500/10 border border-blue-500/30 rounded-lg hover:bg-blue-500/20">
-                          <div className="flex items-center gap-2">
-                            <Mic className="h-4 w-4 text-blue-500" />
-                            <span className="font-medium text-blue-700 dark:text-blue-300">Transcrição do Áudio</span>
-                          </div>
-                          <ChevronDown className="h-4 w-4 text-blue-500 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="mt-2">
-                        <div className="p-4 bg-muted/50 rounded-lg border border-border">
-                          <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-                            {currentIdeia.result.transcricao_audio}
-                          </p>
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  )}
-
-                  {/* Visual Analysis */}
-                  {currentIdeia.result.analise_visual_detalhada && (
-                    <Collapsible>
-                      <CollapsibleTrigger asChild>
-                        <Button variant="ghost" className="w-full justify-between p-3 h-auto bg-purple-500/10 border border-purple-500/30 rounded-lg hover:bg-purple-500/20">
-                          <div className="flex items-center gap-2">
-                            <Film className="h-4 w-4 text-purple-500" />
-                            <span className="font-medium text-purple-700 dark:text-purple-300">Análise Visual Detalhada</span>
-                          </div>
-                          <ChevronDown className="h-4 w-4 text-purple-500 transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent className="mt-2">
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                          <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                            <h5 className="text-xs font-medium text-primary mb-1">Cenário</h5>
-                            <p className="text-sm text-foreground">{currentIdeia.result.analise_visual_detalhada.cenario}</p>
-                          </div>
-                          <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                            <h5 className="text-xs font-medium text-primary mb-1">Transições</h5>
-                            <p className="text-sm text-foreground">{currentIdeia.result.analise_visual_detalhada.transicoes}</p>
-                          </div>
-                          <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                            <h5 className="text-xs font-medium text-primary mb-1">Enquadramento</h5>
-                            <p className="text-sm text-foreground">{currentIdeia.result.analise_visual_detalhada.enquadramento}</p>
-                          </div>
-                          <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                            <h5 className="text-xs font-medium text-primary mb-1">Postura do Apresentador</h5>
-                            <p className="text-sm text-foreground">{currentIdeia.result.analise_visual_detalhada.postura_apresentador}</p>
-                          </div>
-                          <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                            <h5 className="text-xs font-medium text-primary mb-1">Elementos Visuais</h5>
-                            <p className="text-sm text-foreground">{currentIdeia.result.analise_visual_detalhada.elementos_visuais}</p>
-                          </div>
-                          <div className="p-3 bg-muted/50 rounded-lg border border-border">
-                            <h5 className="text-xs font-medium text-primary mb-1">Ritmo de Edição</h5>
-                            <p className="text-sm text-foreground">{currentIdeia.result.analise_visual_detalhada.ritmo_edicao}</p>
-                          </div>
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  )}
-
-                  <Separator />
-                </div>
-              )}
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium text-primary mb-2">
-                      Título Sugerido ({FORMATO_LABELS[currentIdeia.formatoSaida]})
-                    </h4>
-                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg font-medium">
-                      {currentIdeia.result.titulo_sugerido}
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 className="text-sm font-medium text-primary mb-2">
-                      Gancho
-                    </h4>
-                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg">
-                      {currentIdeia.result.gancho_original}
-                    </p>
-                  </div>
-
-                  <div>
-                    <h4 className="text-sm font-medium text-primary mb-2">
-                      Análise da Estratégia
-                    </h4>
-                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg whitespace-pre-wrap">
-                      {currentIdeia.result.analise_estrategia}
-                    </p>
-                  </div>
-                </div>
-
-                <div className="space-y-4">
-                  <div>
-                    <h4 className="text-sm font-medium text-primary mb-2">
-                      Copy Completa
-                    </h4>
-                    <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg whitespace-pre-wrap max-h-60 overflow-y-auto">
-                      {currentIdeia.result.copy_completa}
-                    </p>
-                  </div>
-
-                  {showFilmingInstructions && currentIdeia.result.orientacoes_filmagem && (
-                    <div>
-                      <h4 className="text-sm font-medium text-primary mb-2">
-                        Orientações para Filmagem
-                      </h4>
-                      <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg whitespace-pre-wrap">
-                        {currentIdeia.result.orientacoes_filmagem}
-                      </p>
-                    </div>
-                  )}
-
-                  {!showFilmingInstructions && currentIdeia.result.orientacoes_filmagem && (
-                    <div>
-                      <h4 className="text-sm font-medium text-primary mb-2">
-                        Orientações de Design
-                      </h4>
-                      <p className="text-sm text-foreground bg-muted/50 p-3 rounded-lg whitespace-pre-wrap">
-                        {currentIdeia.result.orientacoes_filmagem}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <ModelagemResultsView
+                result={currentIdeia.result}
+                formatoSaida={currentIdeia.formatoSaida}
+                formatoOrigem={currentIdeia.formatoOrigem}
+              />
 
               <Separator />
 
