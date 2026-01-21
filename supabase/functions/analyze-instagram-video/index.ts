@@ -34,6 +34,19 @@ interface VisualAnalysisResult {
   ritmo_edicao: string;
 }
 
+function normalizeInstagramUrl(raw: string): string {
+  // RapidAPI scrapers tend to be picky with tracking params.
+  // Keep protocol + host + pathname, remove query/hash.
+  try {
+    const u = new URL(raw);
+    const normalized = `${u.protocol}//${u.host}${u.pathname}`;
+    return normalized.endsWith("/") ? normalized : `${normalized}/`;
+  } catch {
+    // If URL parsing fails, best-effort: strip query/hash
+    return raw.split("?")[0].split("#")[0];
+  }
+}
+
 // Extract Instagram media using RapidAPI
 async function extractInstagramMedia(url: string): Promise<InstagramMediaResponse | null> {
   const RAPIDAPI_KEY = Deno.env.get("RAPIDAPI_KEY");
@@ -44,17 +57,17 @@ async function extractInstagramMedia(url: string): Promise<InstagramMediaRespons
   }
 
   try {
-    console.log("Extracting Instagram media from:", url);
+    const normalizedUrl = normalizeInstagramUrl(url);
+    console.log("Extracting Instagram media from:", normalizedUrl);
     
     // Use the Instagram Scraper Stable API
-    const response = await fetch("https://instagram-scraper-stable-api.p.rapidapi.com/get_content_by_url.php", {
-      method: "POST",
+    const endpoint = `https://instagram-scraper-stable-api.p.rapidapi.com/get_content_by_url.php?url=${encodeURIComponent(normalizedUrl)}`;
+    const response = await fetch(endpoint, {
+      method: "GET",
       headers: {
-        "Content-Type": "application/json",
         "x-rapidapi-host": "instagram-scraper-stable-api.p.rapidapi.com",
         "x-rapidapi-key": RAPIDAPI_KEY,
       },
-      body: JSON.stringify({ url }),
     });
 
     if (!response.ok) {
