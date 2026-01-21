@@ -37,7 +37,7 @@ const radarItems = [
 // Robôs subitems
 const robosItems = [
   { title: "Transcritor de Audiências", url: "/robos/transcricao", icon: Mic, pageKey: "robos-transcricao" },
-  { title: "Prompts de IA", url: "/robos/prompts", icon: FileText, pageKey: "robos-prompts" },
+  { title: "Prompts Transcrições", url: "/robos/prompts", icon: FileText, pageKey: "robos-prompts" },
   { title: "Tipos de Produtos", url: "/robos/produtos", icon: Package, pageKey: "robos-produtos" },
 ];
 
