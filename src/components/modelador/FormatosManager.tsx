@@ -1,5 +1,20 @@
-import { useState } from "react";
-import { Plus, Edit2, Trash2, ArrowUp, ArrowDown, Settings } from "lucide-react";
+import { useState, useCallback } from "react";
+import { Plus, Settings } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -22,9 +37,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { FormatoFormDialog, FormatoFormData } from "./FormatoFormDialog";
-import { FormatoOrigem, FormatoSaida, UpdateFormatoParams, CreateFormatoParams } from "@/hooks/useFormatosModelador";
-import { getFormatoIcon, getFormatoColors } from "@/utils/formatoIcons";
-import { cn } from "@/lib/utils";
+import { SortableFormatoItem } from "./SortableFormatoItem";
+import {
+  FormatoOrigem,
+  FormatoSaida,
+  UpdateFormatoParams,
+  CreateFormatoParams,
+} from "@/hooks/useFormatosModelador";
 
 interface FormatosManagerProps {
   formatosOrigem: FormatoOrigem[];
@@ -51,10 +70,27 @@ export function FormatosManager({
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
-  
+
   const [editingTipo, setEditingTipo] = useState<"origem" | "saida">("origem");
-  const [editingFormato, setEditingFormato] = useState<FormatoOrigem | FormatoSaida | null>(null);
-  const [deletingFormato, setDeletingFormato] = useState<{ id: string; nome: string; tipo: "origem" | "saida" } | null>(null);
+  const [editingFormato, setEditingFormato] = useState<
+    FormatoOrigem | FormatoSaida | null
+  >(null);
+  const [deletingFormato, setDeletingFormato] = useState<{
+    id: string;
+    nome: string;
+    tipo: "origem" | "saida";
+  } | null>(null);
+
+  const sensors = useSensors(
+    useSensor(PointerSensor, {
+      activationConstraint: {
+        distance: 8,
+      },
+    }),
+    useSensor(KeyboardSensor, {
+      coordinateGetter: sortableKeyboardCoordinates,
+    })
+  );
 
   const handleAddClick = (tipo: "origem" | "saida") => {
     setEditingTipo(tipo);
@@ -62,13 +98,19 @@ export function FormatosManager({
     setFormDialogOpen(true);
   };
 
-  const handleEditClick = (formato: FormatoOrigem | FormatoSaida, tipo: "origem" | "saida") => {
+  const handleEditClick = (
+    formato: FormatoOrigem | FormatoSaida,
+    tipo: "origem" | "saida"
+  ) => {
     setEditingTipo(tipo);
     setEditingFormato(formato);
     setFormDialogOpen(true);
   };
 
-  const handleDeleteClick = (formato: FormatoOrigem | FormatoSaida, tipo: "origem" | "saida") => {
+  const handleDeleteClick = (
+    formato: FormatoOrigem | FormatoSaida,
+    tipo: "origem" | "saida"
+  ) => {
     setDeletingFormato({ id: formato.id, nome: formato.nome, tipo });
     setDeleteDialogOpen(true);
   };
@@ -77,7 +119,8 @@ export function FormatosManager({
     setIsSaving(true);
     try {
       if (editingFormato) {
-        const updateFn = editingTipo === "origem" ? onUpdateOrigem : onUpdateSaida;
+        const updateFn =
+          editingTipo === "origem" ? onUpdateOrigem : onUpdateSaida;
         await updateFn({
           id: editingFormato.id,
           key: data.key,
@@ -87,7 +130,8 @@ export function FormatosManager({
           cor: data.cor,
         });
       } else {
-        const createFn = editingTipo === "origem" ? onCreateOrigem : onCreateSaida;
+        const createFn =
+          editingTipo === "origem" ? onCreateOrigem : onCreateSaida;
         await createFn({
           key: data.key,
           nome: data.nome,
@@ -104,101 +148,63 @@ export function FormatosManager({
 
   const handleConfirmDelete = async () => {
     if (!deletingFormato) return;
-    
-    const deleteFn = deletingFormato.tipo === "origem" ? onDeleteOrigem : onDeleteSaida;
+
+    const deleteFn =
+      deletingFormato.tipo === "origem" ? onDeleteOrigem : onDeleteSaida;
     await deleteFn(deletingFormato.id);
     setDeleteDialogOpen(false);
     setDeletingFormato(null);
   };
 
-  const handleMoveUp = async (formato: FormatoOrigem | FormatoSaida, tipo: "origem" | "saida", list: (FormatoOrigem | FormatoSaida)[]) => {
-    const index = list.findIndex((f) => f.id === formato.id);
-    if (index <= 0) return;
-    
-    const updateFn = tipo === "origem" ? onUpdateOrigem : onUpdateSaida;
-    const prevFormato = list[index - 1];
-    
-    await Promise.all([
-      updateFn({ id: formato.id, ordem: prevFormato.ordem }),
-      updateFn({ id: prevFormato.id, ordem: formato.ordem }),
-    ]);
-  };
+  const handleDragEndOrigem = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
 
-  const handleMoveDown = async (formato: FormatoOrigem | FormatoSaida, tipo: "origem" | "saida", list: (FormatoOrigem | FormatoSaida)[]) => {
-    const index = list.findIndex((f) => f.id === formato.id);
-    if (index < 0 || index >= list.length - 1) return;
-    
-    const updateFn = tipo === "origem" ? onUpdateOrigem : onUpdateSaida;
-    const nextFormato = list[index + 1];
-    
-    await Promise.all([
-      updateFn({ id: formato.id, ordem: nextFormato.ordem }),
-      updateFn({ id: nextFormato.id, ordem: formato.ordem }),
-    ]);
-  };
+      if (over && active.id !== over.id) {
+        const oldIndex = formatosOrigem.findIndex((f) => f.id === active.id);
+        const newIndex = formatosOrigem.findIndex((f) => f.id === over.id);
 
-  const renderFormatoItem = (
-    formato: FormatoOrigem | FormatoSaida,
-    tipo: "origem" | "saida",
-    list: (FormatoOrigem | FormatoSaida)[],
-    index: number
-  ) => {
-    const Icon = getFormatoIcon(formato.icone);
-    const colors = getFormatoColors(formato.cor);
+        if (oldIndex !== -1 && newIndex !== -1) {
+          const reordered = arrayMove(formatosOrigem, oldIndex, newIndex);
 
-    return (
-      <div
-        key={formato.id}
-        className="flex items-center justify-between p-3 rounded-lg border bg-card"
-      >
-        <div className="flex items-center gap-3">
-          <div className={cn("p-2 rounded", colors.bgColor, colors.textColor)}>
-            <Icon className="h-4 w-4" />
-          </div>
-          <div>
-            <p className="font-medium text-sm">{formato.nome}</p>
-            <p className="text-xs text-muted-foreground">{formato.descricao}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => handleMoveUp(formato, tipo, list)}
-            disabled={index === 0}
-          >
-            <ArrowUp className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => handleMoveDown(formato, tipo, list)}
-            disabled={index === list.length - 1}
-          >
-            <ArrowDown className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => handleEditClick(formato, tipo)}
-          >
-            <Edit2 className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-destructive hover:text-destructive"
-            onClick={() => handleDeleteClick(formato, tipo)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-    );
-  };
+          // Update ordem for all affected items
+          const updates = reordered.map((item, index) => ({
+            id: item.id,
+            ordem: index,
+          }));
+
+          // Execute updates in parallel
+          await Promise.all(updates.map((u) => onUpdateOrigem(u)));
+        }
+      }
+    },
+    [formatosOrigem, onUpdateOrigem]
+  );
+
+  const handleDragEndSaida = useCallback(
+    async (event: DragEndEvent) => {
+      const { active, over } = event;
+
+      if (over && active.id !== over.id) {
+        const oldIndex = formatosSaida.findIndex((f) => f.id === active.id);
+        const newIndex = formatosSaida.findIndex((f) => f.id === over.id);
+
+        if (oldIndex !== -1 && newIndex !== -1) {
+          const reordered = arrayMove(formatosSaida, oldIndex, newIndex);
+
+          // Update ordem for all affected items
+          const updates = reordered.map((item, index) => ({
+            id: item.id,
+            ordem: index,
+          }));
+
+          // Execute updates in parallel
+          await Promise.all(updates.map((u) => onUpdateSaida(u)));
+        }
+      }
+    },
+    [formatosSaida, onUpdateSaida]
+  );
 
   return (
     <>
@@ -213,7 +219,7 @@ export function FormatosManager({
           <SheetHeader>
             <SheetTitle>Gerenciar Formatos</SheetTitle>
             <SheetDescription>
-              Adicione, edite ou remova formatos de origem e saída da matriz.
+              Arraste para reordenar os formatos. A ordem define a posição na matriz.
             </SheetDescription>
           </SheetHeader>
 
@@ -242,9 +248,28 @@ export function FormatosManager({
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Formato de Origem
               </Button>
-              <div className="space-y-2">
-                {formatosOrigem.map((f, i) => renderFormatoItem(f, "origem", formatosOrigem, i))}
-              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEndOrigem}
+              >
+                <SortableContext
+                  items={formatosOrigem.map((f) => f.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-2">
+                    {formatosOrigem.map((f) => (
+                      <SortableFormatoItem
+                        key={f.id}
+                        formato={f}
+                        tipo="origem"
+                        onEdit={handleEditClick}
+                        onDelete={handleDeleteClick}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             </TabsContent>
 
             <TabsContent value="saida" className="space-y-4 mt-4">
@@ -256,9 +281,28 @@ export function FormatosManager({
                 <Plus className="h-4 w-4 mr-2" />
                 Novo Formato de Saída
               </Button>
-              <div className="space-y-2">
-                {formatosSaida.map((f, i) => renderFormatoItem(f, "saida", formatosSaida, i))}
-              </div>
+              <DndContext
+                sensors={sensors}
+                collisionDetection={closestCenter}
+                onDragEnd={handleDragEndSaida}
+              >
+                <SortableContext
+                  items={formatosSaida.map((f) => f.id)}
+                  strategy={verticalListSortingStrategy}
+                >
+                  <div className="space-y-2">
+                    {formatosSaida.map((f) => (
+                      <SortableFormatoItem
+                        key={f.id}
+                        formato={f}
+                        tipo="saida"
+                        onEdit={handleEditClick}
+                        onDelete={handleDeleteClick}
+                      />
+                    ))}
+                  </div>
+                </SortableContext>
+              </DndContext>
             </TabsContent>
           </Tabs>
         </SheetContent>
@@ -288,8 +332,9 @@ export function FormatosManager({
           <AlertDialogHeader>
             <AlertDialogTitle>Excluir formato?</AlertDialogTitle>
             <AlertDialogDescription>
-              Tem certeza que deseja excluir o formato "{deletingFormato?.nome}"?
-              Prompts associados a este formato serão mantidos, mas ficarão órfãos.
+              Tem certeza que deseja excluir o formato "{deletingFormato?.nome}
+              "? Prompts associados a este formato serão mantidos, mas ficarão
+              órfãos.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
