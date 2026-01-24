@@ -1,12 +1,12 @@
 import { useState, useEffect, useCallback } from "react";
-import { Sparkles, Copy, Loader2, FileText } from "lucide-react";
+import { Sparkles, Copy, Loader2, FileText, Send } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Textarea } from "@/components/ui/textarea";
 import { useAiPrompts, AiPrompt } from "@/hooks/useAiPrompts";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-
 interface AiAnalysisSectionProps {
   transcricaoTexto: string;
   onAnalysisCountChange?: (count: number) => void;
@@ -28,6 +28,8 @@ export function AiAnalysisSection({
   
   const [showFormattedTranscription, setShowFormattedTranscription] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
+  const [customPrompt, setCustomPrompt] = useState("");
+  const [isCustomAnalyzing, setIsCustomAnalyzing] = useState(false);
 
   useEffect(() => {
     fetchPrompts();
@@ -198,6 +200,141 @@ export function AiAnalysisSection({
     }
   }, [analysisResults, transcricaoTexto, toast]);
 
+  const analyzeWithCustomPrompt = useCallback(async () => {
+    if (!customPrompt.trim()) {
+      toast({
+        title: "Prompt vazio",
+        description: "Digite um prompt personalizado para analisar.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsCustomAnalyzing(true);
+    const customId = `custom-${Date.now()}`;
+    const newIndex = analysisResults.length;
+
+    // Add the custom prompt result
+    setAnalysisResults(prev => [...prev, {
+      promptId: customId,
+      promptName: "Análise Personalizada",
+      response: "",
+      isLoading: true,
+    }]);
+
+    // Scroll to the analysis section after a brief delay
+    setTimeout(() => {
+      const element = document.getElementById(`analise-${newIndex}`);
+      const scrollContainer = document.querySelector('[data-scroll-container="transcricao"]');
+      if (element && scrollContainer) {
+        const containerRect = scrollContainer.getBoundingClientRect();
+        const elementRect = element.getBoundingClientRect();
+        const offset = elementRect.top - containerRect.top + scrollContainer.scrollTop - 20;
+        scrollContainer.scrollTo({ top: offset, behavior: "smooth" });
+      }
+    }, 100);
+
+    try {
+      const resp = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/analyze-transcricao`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          },
+          body: JSON.stringify({
+            prompt: customPrompt,
+            transcricao: transcricaoTexto,
+          }),
+        }
+      );
+
+      if (!resp.ok) {
+        const errorData = await resp.json();
+        throw new Error(errorData.error || "Erro ao analisar");
+      }
+
+      if (!resp.body) throw new Error("No response body");
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = "";
+      let responseSoFar = "";
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf("\n")) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith("\r")) line = line.slice(0, -1);
+          if (line.startsWith(":") || line.trim() === "") continue;
+          if (!line.startsWith("data: ")) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === "[DONE]") break;
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              responseSoFar += content;
+              setAnalysisResults(prev => prev.map(r => 
+                r.promptId === customId ? { ...r, response: responseSoFar } : r
+              ));
+            }
+          } catch {
+            textBuffer = line + "\n" + textBuffer;
+            break;
+          }
+        }
+      }
+
+      // Final flush
+      if (textBuffer.trim()) {
+        for (let raw of textBuffer.split("\n")) {
+          if (!raw) continue;
+          if (raw.endsWith("\r")) raw = raw.slice(0, -1);
+          if (raw.startsWith(":") || raw.trim() === "") continue;
+          if (!raw.startsWith("data: ")) continue;
+          const jsonStr = raw.slice(6).trim();
+          if (jsonStr === "[DONE]") continue;
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              responseSoFar += content;
+              setAnalysisResults(prev => prev.map(r => 
+                r.promptId === customId ? { ...r, response: responseSoFar } : r
+              ));
+            }
+          } catch {}
+        }
+      }
+
+      // Clear custom prompt after success
+      setCustomPrompt("");
+    } catch (error: any) {
+      console.error("Error analyzing:", error);
+      toast({
+        title: "Erro na análise",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setAnalysisResults(prev => prev.map(r => 
+        r.promptId === customId ? { ...r, isLoading: false } : r
+      ));
+      setIsCustomAnalyzing(false);
+    }
+  }, [customPrompt, analysisResults.length, transcricaoTexto, toast]);
+
   const copyResponse = (response: string) => {
     navigator.clipboard.writeText(response);
     toast({
@@ -299,6 +436,37 @@ export function AiAnalysisSection({
                 ))}
               </div>
             )}
+
+            {/* Custom Prompt Section */}
+            <div className="mt-6 pt-4 border-t">
+              <p className="text-sm font-medium mb-2">Prompt Personalizado</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Digite sua própria instrução para a IA analisar a transcrição
+              </p>
+              <div className="flex gap-2">
+                <Textarea
+                  placeholder="Ex: Resuma os principais pontos de discordância entre as partes..."
+                  value={customPrompt}
+                  onChange={(e) => setCustomPrompt(e.target.value)}
+                  className="min-h-[80px] flex-1"
+                  disabled={isCustomAnalyzing}
+                />
+              </div>
+              <div className="flex justify-end mt-2">
+                <Button
+                  onClick={analyzeWithCustomPrompt}
+                  disabled={!customPrompt.trim() || isCustomAnalyzing}
+                  className="gap-2"
+                >
+                  {isCustomAnalyzing ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                  Analisar
+                </Button>
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}
