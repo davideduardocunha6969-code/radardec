@@ -26,7 +26,7 @@ import {
 
 // Radares agrupados (incluindo Radar Geral)
 const radarItems = [
-  { title: "Radar Geral", url: "/", icon: Home, pageKey: "gestao-geral" },
+  { title: "Gestão Geral", url: "/", icon: Home, pageKey: "gestao-geral" },
   { title: "Radar Controladoria", url: "/radar-controladoria", icon: Radar, pageKey: "radar-controladoria" },
   { title: "Radar Comercial", url: "/radar-comercial", icon: TrendingUp, pageKey: "radar-comercial" },
   { title: "Radar Bancário", url: "/radar-bancario", icon: Landmark, pageKey: "radar-bancario" },

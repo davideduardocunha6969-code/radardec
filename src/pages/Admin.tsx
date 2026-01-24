@@ -25,7 +25,7 @@ const AVAILABLE_PAGES_GROUPED = [
   {
     group: 'Radares',
     pages: [
-      { key: 'gestao-geral', label: 'Radar Geral' },
+      { key: 'gestao-geral', label: 'Gestão Geral' },
       { key: 'radar-controladoria', label: 'Radar Controladoria' },
       { key: 'radar-comercial', label: 'Radar Comercial' },
       { key: 'radar-bancario', label: 'Radar Bancário' },
