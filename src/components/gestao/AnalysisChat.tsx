@@ -6,6 +6,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DynamicVisualization, VisualizationSpec } from "./DynamicVisualization";
+import { ContextualSuggestions } from "./ContextualSuggestions";
 
 interface AnalysisResponse {
   summary: string;
@@ -20,22 +21,34 @@ interface Message {
 
 interface AnalysisChatProps {
   contextData: {
-    commercial: unknown;
-    bancario: unknown;
-    controladoria: unknown;
-    previdenciario: unknown;
-    trabalhista: unknown;
+    commercial: {
+      records?: unknown[];
+      sdrData?: unknown[];
+      [key: string]: unknown;
+    };
+    bancario: {
+      iniciaisData?: unknown[];
+      saneamentoData?: unknown[];
+      transitoData?: unknown[];
+    };
+    controladoria: {
+      tasks?: unknown[];
+      conformityErrors?: unknown[];
+      deadlineErrors?: unknown[];
+    };
+    previdenciario: {
+      peticoesIniciais?: unknown[];
+      aposentadorias?: unknown[];
+      [key: string]: unknown;
+    };
+    trabalhista: {
+      iniciais?: unknown[];
+      atividades?: unknown[];
+      [key: string]: unknown;
+    };
   };
   isLoadingData: boolean;
 }
-
-const EXAMPLE_QUERIES = [
-  "Como está a produtividade geral da equipe comercial?",
-  "Quais são os setores com mais contratos fechados?",
-  "Mostre um panorama das metas de todos os setores",
-  "Compare a performance dos closers por honorários",
-  "Quais são os principais gargalos na controladoria?",
-];
 
 export function AnalysisChat({ contextData, isLoadingData }: AnalysisChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -128,25 +141,18 @@ export function AnalysisChat({ contextData, isLoadingData }: AnalysisChatProps) 
               Faça perguntas sobre produtividade, metas, contratos e performance de qualquer setor ou colaborador.
             </p>
             
-            {isLoadingData ? (
+          {isLoadingData ? (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span>Carregando dados dos setores...</span>
               </div>
             ) : (
-              <div className="space-y-2 w-full max-w-lg">
-                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">
-                  Exemplos de perguntas
-                </p>
-                {EXAMPLE_QUERIES.map((query, i) => (
-                  <button
-                    key={i}
-                    onClick={() => handleSend(query)}
-                    className="w-full text-left px-4 py-2 rounded-lg bg-muted/50 hover:bg-muted text-sm text-foreground transition-colors"
-                  >
-                    {query}
-                  </button>
-                ))}
+              <div className="w-full max-w-2xl">
+                <ContextualSuggestions 
+                  contextData={contextData}
+                  onSelectQuery={handleSend}
+                  disabled={isLoading}
+                />
               </div>
             )}
           </div>
