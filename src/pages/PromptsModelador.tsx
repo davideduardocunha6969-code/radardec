@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
-import { Wand2, Video, LayoutGrid, Image, Play, Save, RotateCcw, ArrowRight, BookOpen, Newspaper, Check, X } from "lucide-react";
+import { Wand2, Save, RotateCcw, ArrowRight, Check, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
@@ -8,111 +8,17 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useAiPrompts, AiPrompt } from "@/hooks/useAiPrompts";
+import { useFormatosModelador, FormatoOrigem, FormatoSaida } from "@/hooks/useFormatosModelador";
+import { FormatosManager } from "@/components/modelador/FormatosManager";
+import { getFormatoIcon, getFormatoColors } from "@/utils/formatoIcons";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-
-type FormatoConfig = {
-  id: string;
-  nome: string;
-  descricao: string;
-  icon: React.ComponentType<{ className?: string }>;
-  color: string;
-  bgColor: string;
-};
-
-// Formatos de ORIGEM (conteúdo original)
-const FORMATOS_ORIGEM: FormatoConfig[] = [
-  {
-    id: "video",
-    nome: "Vídeo Curto",
-    descricao: "Reels/Shorts/TikTok",
-    icon: Play,
-    color: "text-red-500",
-    bgColor: "bg-red-500/10",
-  },
-  {
-    id: "video_longo",
-    nome: "Vídeo Longo",
-    descricao: "YouTube 5-15min",
-    icon: Video,
-    color: "text-blue-500",
-    bgColor: "bg-blue-500/10",
-  },
-  {
-    id: "carrossel",
-    nome: "Carrossel",
-    descricao: "5-10 slides",
-    icon: LayoutGrid,
-    color: "text-purple-500",
-    bgColor: "bg-purple-500/10",
-  },
-  {
-    id: "estatico",
-    nome: "Post Estático",
-    descricao: "Imagem única",
-    icon: Image,
-    color: "text-green-500",
-    bgColor: "bg-green-500/10",
-  },
-  {
-    id: "blog_post",
-    nome: "Blog Post",
-    descricao: "Artigo de blog",
-    icon: BookOpen,
-    color: "text-amber-500",
-    bgColor: "bg-amber-500/10",
-  },
-  {
-    id: "publicacao",
-    nome: "Publicação",
-    descricao: "Post de texto",
-    icon: Newspaper,
-    color: "text-cyan-500",
-    bgColor: "bg-cyan-500/10",
-  },
-];
-
-// Formatos de SAÍDA (conteúdo modelado)
-const FORMATOS_SAIDA: FormatoConfig[] = [
-  {
-    id: "video",
-    nome: "Vídeo Curto",
-    descricao: "30-90 segundos",
-    icon: Play,
-    color: "text-red-500",
-    bgColor: "bg-red-500/10",
-  },
-  {
-    id: "video_longo",
-    nome: "Vídeo Longo",
-    descricao: "5-15 minutos",
-    icon: Video,
-    color: "text-blue-500",
-    bgColor: "bg-blue-500/10",
-  },
-  {
-    id: "carrossel",
-    nome: "Carrossel",
-    descricao: "5-10 slides",
-    icon: LayoutGrid,
-    color: "text-purple-500",
-    bgColor: "bg-purple-500/10",
-  },
-  {
-    id: "estatico",
-    nome: "Estático",
-    descricao: "Imagem única",
-    icon: Image,
-    color: "text-green-500",
-    bgColor: "bg-green-500/10",
-  },
-];
 
 interface CombinationDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  formatoOrigem: FormatoConfig | null;
-  formatoSaida: FormatoConfig | null;
+  formatoOrigem: FormatoOrigem | null;
+  formatoSaida: FormatoSaida | null;
   prompt: AiPrompt | null;
   onSave: (promptText: string) => Promise<void>;
   isSaving: boolean;
@@ -152,8 +58,10 @@ function CombinationDialog({
 
   if (!formatoOrigem || !formatoSaida) return null;
 
-  const OrigemIcon = formatoOrigem.icon;
-  const SaidaIcon = formatoSaida.icon;
+  const OrigemIcon = getFormatoIcon(formatoOrigem.icone);
+  const SaidaIcon = getFormatoIcon(formatoSaida.icone);
+  const origemColors = getFormatoColors(formatoOrigem.cor);
+  const saidaColors = getFormatoColors(formatoSaida.cor);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -162,12 +70,12 @@ function CombinationDialog({
           <DialogTitle className="flex items-center gap-2 flex-wrap">
             <span>Prompt:</span>
             <div className="flex items-center gap-2">
-              <Badge variant="outline" className={cn("gap-1", formatoOrigem.color)}>
+              <Badge variant="outline" className={cn("gap-1", origemColors.textColor)}>
                 <OrigemIcon className="h-3 w-3" />
                 {formatoOrigem.nome}
               </Badge>
               <ArrowRight className="h-4 w-4 text-muted-foreground" />
-              <Badge variant="outline" className={cn("gap-1", formatoSaida.color)}>
+              <Badge variant="outline" className={cn("gap-1", saidaColors.textColor)}>
                 <SaidaIcon className="h-3 w-3" />
                 {formatoSaida.nome}
               </Badge>
@@ -224,11 +132,23 @@ function CombinationDialog({
 }
 
 export default function PromptsModeladorPage() {
-  const { prompts, isLoading, fetchPrompts, createPromptWithFormats, updatePromptWithFormats } = useAiPrompts("modelador");
+  const { prompts, isLoading: isLoadingPrompts, fetchPrompts, createPromptWithFormats, updatePromptWithFormats } = useAiPrompts("modelador");
+  const {
+    formatosOrigem,
+    formatosSaida,
+    isLoading: isLoadingFormatos,
+    createFormatoOrigem,
+    createFormatoSaida,
+    updateFormatoOrigem,
+    updateFormatoSaida,
+    deleteFormatoOrigem,
+    deleteFormatoSaida,
+  } = useFormatosModelador();
+
   const [isSaving, setIsSaving] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [selectedOrigem, setSelectedOrigem] = useState<FormatoConfig | null>(null);
-  const [selectedSaida, setSelectedSaida] = useState<FormatoConfig | null>(null);
+  const [selectedOrigem, setSelectedOrigem] = useState<FormatoOrigem | null>(null);
+  const [selectedSaida, setSelectedSaida] = useState<FormatoSaida | null>(null);
 
   useEffect(() => {
     fetchPrompts();
@@ -238,20 +158,20 @@ export default function PromptsModeladorPage() {
   const promptsByCombination = useMemo(() => {
     const map: Record<string, AiPrompt | null> = {};
     
-    FORMATOS_ORIGEM.forEach((origem) => {
-      FORMATOS_SAIDA.forEach((saida) => {
-        const key = `${origem.id}_${saida.id}`;
+    formatosOrigem.forEach((origem) => {
+      formatosSaida.forEach((saida) => {
+        const key = `${origem.key}_${saida.key}`;
         const found = prompts.find(
-          (p) => p.formato_origem === origem.id && p.formato_saida === saida.id
+          (p) => p.formato_origem === origem.key && p.formato_saida === saida.key
         );
         map[key] = found || null;
       });
     });
     
     return map;
-  }, [prompts]);
+  }, [prompts, formatosOrigem, formatosSaida]);
 
-  const handleOpenDialog = (origem: FormatoConfig, saida: FormatoConfig) => {
+  const handleOpenDialog = (origem: FormatoOrigem, saida: FormatoSaida) => {
     setSelectedOrigem(origem);
     setSelectedSaida(saida);
     setDialogOpen(true);
@@ -260,7 +180,7 @@ export default function PromptsModeladorPage() {
   const handleSavePrompt = async (promptText: string) => {
     if (!selectedOrigem || !selectedSaida) return;
 
-    const key = `${selectedOrigem.id}_${selectedSaida.id}`;
+    const key = `${selectedOrigem.key}_${selectedSaida.key}`;
     const existingPrompt = promptsByCombination[key];
 
     setIsSaving(true);
@@ -274,16 +194,16 @@ export default function PromptsModeladorPage() {
           nome,
           prompt: promptText,
           descricao,
-          formato_origem: selectedOrigem.id,
-          formato_saida: selectedSaida.id,
+          formato_origem: selectedOrigem.key,
+          formato_saida: selectedSaida.key,
         });
       } else {
         await createPromptWithFormats({
           nome,
           prompt: promptText,
           descricao,
-          formato_origem: selectedOrigem.id,
-          formato_saida: selectedSaida.id,
+          formato_origem: selectedOrigem.key,
+          formato_saida: selectedSaida.key,
         });
       }
 
@@ -298,7 +218,7 @@ export default function PromptsModeladorPage() {
 
   const selectedPrompt = useMemo(() => {
     if (!selectedOrigem || !selectedSaida) return null;
-    const key = `${selectedOrigem.id}_${selectedSaida.id}`;
+    const key = `${selectedOrigem.key}_${selectedSaida.key}`;
     return promptsByCombination[key];
   }, [selectedOrigem, selectedSaida, promptsByCombination]);
 
@@ -306,7 +226,9 @@ export default function PromptsModeladorPage() {
     return Object.values(promptsByCombination).filter(Boolean).length;
   }, [promptsByCombination]);
 
-  const totalCombinations = FORMATOS_ORIGEM.length * FORMATOS_SAIDA.length;
+  const totalCombinations = formatosOrigem.length * formatosSaida.length;
+
+  const isLoading = isLoadingPrompts || isLoadingFormatos;
 
   if (isLoading) {
     return (
@@ -326,9 +248,21 @@ export default function PromptsModeladorPage() {
           <Wand2 className="h-6 w-6 text-primary" />
           <h1 className="text-2xl font-bold">Prompts Modelador</h1>
         </div>
-        <Badge variant="outline" className="text-sm">
-          {configuredCount} de {totalCombinations} configurados
-        </Badge>
+        <div className="flex items-center gap-3">
+          <Badge variant="outline" className="text-sm">
+            {configuredCount} de {totalCombinations} configurados
+          </Badge>
+          <FormatosManager
+            formatosOrigem={formatosOrigem}
+            formatosSaida={formatosSaida}
+            onCreateOrigem={createFormatoOrigem}
+            onCreateSaida={createFormatoSaida}
+            onUpdateOrigem={updateFormatoOrigem}
+            onUpdateSaida={updateFormatoSaida}
+            onDeleteOrigem={deleteFormatoOrigem}
+            onDeleteSaida={deleteFormatoSaida}
+          />
+        </div>
       </div>
 
       <p className="text-muted-foreground">
@@ -345,92 +279,103 @@ export default function PromptsModeladorPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full border-collapse">
-              <thead>
-                <tr>
-                  <th className="p-2 text-left border-b border-r bg-muted/50">
-                    <span className="text-xs text-muted-foreground">Origem ↓ / Saída →</span>
-                  </th>
-                  {FORMATOS_SAIDA.map((saida) => {
-                    const Icon = saida.icon;
-                    return (
-                      <th key={saida.id} className="p-2 border-b bg-muted/50 min-w-[120px]">
-                        <div className="flex flex-col items-center gap-1">
-                          <div className={cn("p-1.5 rounded", saida.bgColor, saida.color)}>
-                            <Icon className="h-4 w-4" />
-                          </div>
-                          <span className="text-xs font-medium">{saida.nome}</span>
-                        </div>
+          {formatosOrigem.length === 0 || formatosSaida.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <p>Nenhum formato configurado.</p>
+              <p className="text-sm">Clique em "Gerenciar Formatos" para adicionar formatos de origem e saída.</p>
+            </div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="p-2 text-left border-b border-r bg-muted/50">
+                        <span className="text-xs text-muted-foreground">Origem ↓ / Saída →</span>
                       </th>
-                    );
-                  })}
-                </tr>
-              </thead>
-              <tbody>
-                {FORMATOS_ORIGEM.map((origem) => {
-                  const OrigemIcon = origem.icon;
-                  return (
-                    <tr key={origem.id}>
-                      <td className="p-2 border-r bg-muted/50">
-                        <div className="flex items-center gap-2">
-                          <div className={cn("p-1.5 rounded", origem.bgColor, origem.color)}>
-                            <OrigemIcon className="h-4 w-4" />
-                          </div>
-                          <div>
-                            <span className="text-sm font-medium">{origem.nome}</span>
-                            <p className="text-xs text-muted-foreground">{origem.descricao}</p>
-                          </div>
-                        </div>
-                      </td>
-                      {FORMATOS_SAIDA.map((saida) => {
-                        const key = `${origem.id}_${saida.id}`;
-                        const hasPrompt = !!promptsByCombination[key];
-                        
+                      {formatosSaida.map((saida) => {
+                        const Icon = getFormatoIcon(saida.icone);
+                        const colors = getFormatoColors(saida.cor);
                         return (
-                          <td key={saida.id} className="p-2 border-b">
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className={cn(
-                                "w-full h-12 transition-all",
-                                hasPrompt 
-                                  ? "bg-green-500/10 hover:bg-green-500/20 border border-green-500/30" 
-                                  : "bg-muted/30 hover:bg-muted/50 border border-dashed border-muted-foreground/30"
-                              )}
-                              onClick={() => handleOpenDialog(origem, saida)}
-                            >
-                              {hasPrompt ? (
-                                <Check className="h-4 w-4 text-green-500" />
-                              ) : (
-                                <span className="text-xs text-muted-foreground">Configurar</span>
-                              )}
-                            </Button>
-                          </td>
+                          <th key={saida.id} className="p-2 border-b bg-muted/50 min-w-[120px]">
+                            <div className="flex flex-col items-center gap-1">
+                              <div className={cn("p-1.5 rounded", colors.bgColor, colors.textColor)}>
+                                <Icon className="h-4 w-4" />
+                              </div>
+                              <span className="text-xs font-medium">{saida.nome}</span>
+                            </div>
+                          </th>
                         );
                       })}
                     </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                  </thead>
+                  <tbody>
+                    {formatosOrigem.map((origem) => {
+                      const OrigemIcon = getFormatoIcon(origem.icone);
+                      const origemColors = getFormatoColors(origem.cor);
+                      return (
+                        <tr key={origem.id}>
+                          <td className="p-2 border-r bg-muted/50">
+                            <div className="flex items-center gap-2">
+                              <div className={cn("p-1.5 rounded", origemColors.bgColor, origemColors.textColor)}>
+                                <OrigemIcon className="h-4 w-4" />
+                              </div>
+                              <div>
+                                <span className="text-sm font-medium">{origem.nome}</span>
+                                <p className="text-xs text-muted-foreground">{origem.descricao}</p>
+                              </div>
+                            </div>
+                          </td>
+                          {formatosSaida.map((saida) => {
+                            const key = `${origem.key}_${saida.key}`;
+                            const hasPrompt = !!promptsByCombination[key];
+                            
+                            return (
+                              <td key={saida.id} className="p-2 border-b">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className={cn(
+                                    "w-full h-12 transition-all",
+                                    hasPrompt 
+                                      ? "bg-green-500/10 hover:bg-green-500/20 border border-green-500/30" 
+                                      : "bg-muted/30 hover:bg-muted/50 border border-dashed border-muted-foreground/30"
+                                  )}
+                                  onClick={() => handleOpenDialog(origem, saida)}
+                                >
+                                  {hasPrompt ? (
+                                    <Check className="h-4 w-4 text-green-500" />
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground">Configurar</span>
+                                  )}
+                                </Button>
+                              </td>
+                            );
+                          })}
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
 
-          {/* Legend */}
-          <div className="flex items-center gap-6 mt-4 pt-4 border-t">
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded bg-green-500/10 border border-green-500/30 flex items-center justify-center">
-                <Check className="h-3 w-3 text-green-500" />
+              {/* Legend */}
+              <div className="flex items-center gap-6 mt-4 pt-4 border-t">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-green-500/10 border border-green-500/30 flex items-center justify-center">
+                    <Check className="h-3 w-3 text-green-500" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">Prompt configurado</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded bg-muted/30 border border-dashed border-muted-foreground/30 flex items-center justify-center">
+                    <X className="h-3 w-3 text-muted-foreground/50" />
+                  </div>
+                  <span className="text-sm text-muted-foreground">Sem prompt (usará padrão)</span>
+                </div>
               </div>
-              <span className="text-sm text-muted-foreground">Prompt configurado</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="w-6 h-6 rounded bg-muted/30 border border-dashed border-muted-foreground/30 flex items-center justify-center">
-                <X className="h-3 w-3 text-muted-foreground/50" />
-              </div>
-              <span className="text-sm text-muted-foreground">Sem prompt (usará padrão)</span>
-            </div>
-          </div>
+            </>
+          )}
         </CardContent>
       </Card>
 
