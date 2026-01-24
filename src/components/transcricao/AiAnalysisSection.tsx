@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { Sparkles, Copy, Loader2, FileText, Send } from "lucide-react";
+import { Sparkles, Copy, Loader2, FileText, Send, Save } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -7,6 +7,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { useAiPrompts, AiPrompt } from "@/hooks/useAiPrompts";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { SavePromptDialog } from "./SavePromptDialog";
+
 interface AiAnalysisSectionProps {
   transcricaoTexto: string;
   onAnalysisCountChange?: (count: number) => void;
@@ -23,13 +25,14 @@ export function AiAnalysisSection({
   transcricaoTexto,
   onAnalysisCountChange 
 }: AiAnalysisSectionProps) {
-  const { prompts, fetchPrompts, isLoading: loadingPrompts } = useAiPrompts();
+  const { prompts, fetchPrompts, createPrompt, isLoading: loadingPrompts } = useAiPrompts();
   const { toast } = useToast();
   
   const [showFormattedTranscription, setShowFormattedTranscription] = useState(false);
   const [analysisResults, setAnalysisResults] = useState<AnalysisResult[]>([]);
   const [customPrompt, setCustomPrompt] = useState("");
   const [isCustomAnalyzing, setIsCustomAnalyzing] = useState(false);
+  const [saveDialogOpen, setSaveDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchPrompts();
@@ -347,6 +350,15 @@ export function AiAnalysisSection({
     return analysisResults.find(r => r.promptId === promptId)?.isLoading || false;
   };
 
+  const handleSavePrompt = async (nome: string, descricao: string): Promise<boolean> => {
+    const result = await createPrompt(nome, customPrompt, descricao || undefined);
+    if (result) {
+      setCustomPrompt("");
+      return true;
+    }
+    return false;
+  };
+
   return (
     <div className="space-y-4 mt-6">
       {/* Generate Transcription Button */}
@@ -439,7 +451,21 @@ export function AiAnalysisSection({
 
             {/* Custom Prompt Section */}
             <div className="mt-6 pt-4 border-t">
-              <p className="text-sm font-medium mb-2">Prompt Personalizado</p>
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-sm font-medium">Prompt Personalizado</p>
+                {customPrompt.trim() && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setSaveDialogOpen(true)}
+                    disabled={isCustomAnalyzing}
+                    className="h-7 gap-1 text-xs"
+                  >
+                    <Save className="h-3 w-3" />
+                    Salvar
+                  </Button>
+                )}
+              </div>
               <p className="text-xs text-muted-foreground mb-3">
                 Digite sua própria instrução para a IA analisar a transcrição
               </p>
@@ -452,7 +478,16 @@ export function AiAnalysisSection({
                   disabled={isCustomAnalyzing}
                 />
               </div>
-              <div className="flex justify-end mt-2">
+              <div className="flex justify-end mt-2 gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setSaveDialogOpen(true)}
+                  disabled={!customPrompt.trim() || isCustomAnalyzing}
+                  className="gap-2"
+                >
+                  <Save className="h-4 w-4" />
+                  Salvar para Reutilizar
+                </Button>
                 <Button
                   onClick={analyzeWithCustomPrompt}
                   disabled={!customPrompt.trim() || isCustomAnalyzing}
@@ -511,6 +546,14 @@ export function AiAnalysisSection({
           </CardContent>
         </Card>
       ))}
+
+      {/* Save Prompt Dialog */}
+      <SavePromptDialog
+        open={saveDialogOpen}
+        onOpenChange={setSaveDialogOpen}
+        promptText={customPrompt}
+        onSave={handleSavePrompt}
+      />
     </div>
   );
 }
