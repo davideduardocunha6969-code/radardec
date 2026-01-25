@@ -34,6 +34,12 @@ const AVAILABLE_PAGES_GROUPED = [
     ],
   },
   {
+    group: 'Comercial',
+    pages: [
+      { key: 'comercial-atendimentos', label: 'Atendimentos' },
+    ],
+  },
+  {
     group: 'Marketing',
     pages: [
       { key: 'marketing-atividades', label: 'Atividades' },
@@ -47,6 +53,7 @@ const AVAILABLE_PAGES_GROUPED = [
     pages: [
       { key: 'robos-transcricao', label: 'Transcritor de Audiências' },
       { key: 'robos-prompts', label: 'Prompts de IA' },
+      { key: 'robos-prompts-modelador', label: 'Prompts Modelador' },
       { key: 'robos-produtos', label: 'Tipos de Produtos' },
     ],
   },

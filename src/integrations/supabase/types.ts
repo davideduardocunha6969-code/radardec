@@ -53,6 +53,57 @@ export type Database = {
         }
         Relationships: []
       }
+      atendimentos_closers: {
+        Row: {
+          analises_ia: Json | null
+          audio_url: string | null
+          created_at: string
+          dados_atendimento: Json | null
+          dados_cliente: Json | null
+          data_atendimento: string
+          duracao_segundos: number | null
+          erro_mensagem: string | null
+          id: string
+          segmentos: Json | null
+          status: string
+          transcricao_texto: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          analises_ia?: Json | null
+          audio_url?: string | null
+          created_at?: string
+          dados_atendimento?: Json | null
+          dados_cliente?: Json | null
+          data_atendimento?: string
+          duracao_segundos?: number | null
+          erro_mensagem?: string | null
+          id?: string
+          segmentos?: Json | null
+          status?: string
+          transcricao_texto?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          analises_ia?: Json | null
+          audio_url?: string | null
+          created_at?: string
+          dados_atendimento?: Json | null
+          dados_cliente?: Json | null
+          data_atendimento?: string
+          duracao_segundos?: number | null
+          erro_mensagem?: string | null
+          id?: string
+          segmentos?: Json | null
+          status?: string
+          transcricao_texto?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       atividades_anexos: {
         Row: {
           atividade_id: string
