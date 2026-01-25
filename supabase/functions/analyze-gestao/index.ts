@@ -23,7 +23,7 @@ serve(async (req) => {
   }
 
   try {
-    const { query, context } = await req.json();
+    const { query, context, selectedSources } = await req.json();
     
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -32,6 +32,11 @@ serve(async (req) => {
 
     // Prepare context summary for AI
     const contextSummary = prepareContextSummary(context);
+    
+    // Build source selection info
+    const sourceInfo = selectedSources 
+      ? `\n\n⚠️ IMPORTANTE: O usuário filtrou as fontes de dados. Você deve responder APENAS com base nas seguintes fontes selecionadas: ${selectedSources}\n\nNão mencione dados de fontes que não foram selecionadas. Se a pergunta exigir dados de fontes não selecionadas, informe que esses dados não estão disponíveis com a seleção atual.`
+      : "";
     
     const systemPrompt = `Você é um analista de dados especializado em gestão jurídica e marketing. Você tem acesso a dados de múltiplos setores e fontes:
 
@@ -127,7 +132,7 @@ Responda APENAS com JSON válido, sem texto adicional antes ou depois.`;
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: systemPrompt },
+          { role: "system", content: systemPrompt + sourceInfo },
           { 
             role: "user", 
             content: `DADOS DISPONÍVEIS:\n${contextSummary}\n\nPERGUNTA DO USUÁRIO: ${query}` 
