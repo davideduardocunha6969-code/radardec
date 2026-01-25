@@ -45,7 +45,7 @@ const GestaoGeral = () => {
               <>
                 <Database className="h-3 w-3" />
                 <span className="hidden lg:inline">
-                  {dataSummary.comercial} comercial • {dataSummary.bancarioIniciais} bancário • {dataSummary.controladoriaTarefas} controladoria • {dataSummary.previdenciario} previdenciário • {dataSummary.trabalhista} trabalhista • {dataSummary.atividadesMarketing} atividades • {dataSummary.conteudosMidia} conteúdos • {dataSummary.atendimentosClosers} atendimentos
+                  {dataSummary.comercialAtendimentos} comercial • {dataSummary.bancarioIniciais} bancário • {dataSummary.controladoriaTarefas} controladoria • {dataSummary.previdenciarioPeticoes} previdenciário • {dataSummary.trabalhistaIniciais} trabalhista • {dataSummary.marketingAtividades} atividades • {dataSummary.marketingConteudos} conteúdos • {dataSummary.closersAtendimentos} atendimentos
                 </span>
                 <span className="lg:hidden">
                   {totalRecords} registros

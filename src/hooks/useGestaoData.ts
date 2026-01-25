@@ -90,6 +90,8 @@ export function useGestaoData() {
   const {
     data: commercialRecords,
     sdrData,
+    sdrMessagesData,
+    sdrMessagesSdrNames,
     indicacoesData,
     indicacoesRecebidasData,
     saneamentoData: saneamentoComercialData,
@@ -98,6 +100,7 @@ export function useGestaoData() {
     administrativo2Data,
     documentosFisicosData,
     bancarioAgendamentosData,
+    weeks: commercialWeeks,
     isLoading: commercialLoading,
     error: commercialError,
   } = useCommercialData();
@@ -106,6 +109,7 @@ export function useGestaoData() {
     iniciaisData,
     saneamentoData: saneamentoBancarioData,
     transitoData,
+    weeks: bancarioWeeks,
     isLoading: bancarioLoading,
     error: bancarioError,
   } = useBancarioData();
@@ -115,21 +119,20 @@ export function useGestaoData() {
     conformityErrors,
     deadlineErrors,
     intimacoesPrevidenciario,
+    sectorMapping,
     isLoading: controladoriaLoading,
     error: controladoriaError,
   } = useSheetData();
 
-  const {
-    data: previdenciarioData,
-    isLoading: previdenciarioLoading,
-    error: previdenciarioError,
-  } = usePrevidenciarioData();
+  const previdenciarioQuery = usePrevidenciarioData();
+  const previdenciarioData = previdenciarioQuery.data;
+  const previdenciarioLoading = previdenciarioQuery.isLoading;
+  const previdenciarioError = previdenciarioQuery.error;
 
-  const {
-    data: trabalhistaData,
-    isLoading: trabalhistaLoading,
-    error: trabalhistaError,
-  } = useTrabalhistaData();
+  const trabalhistaQuery = useTrabalhistaData();
+  const trabalhistaData = trabalhistaQuery.data;
+  const trabalhistaLoading = trabalhistaQuery.isLoading;
+  const trabalhistaError = trabalhistaQuery.error;
 
   // ===== DADOS DO MARKETING (Supabase) =====
   const { data: atividadesMarketing = [], isLoading: atividadesLoading } = useQuery({
@@ -269,72 +272,115 @@ export function useGestaoData() {
     (previdenciarioError instanceof Error ? previdenciarioError.message : "") ||
     (trabalhistaError instanceof Error ? trabalhistaError.message : "");
 
-  // Context data for AI
+  // Context data for AI - ALL DATA FROM ALL SOURCES
   const contextData = {
-    // Planilhas - Comercial
+    // ======= PLANILHAS - COMERCIAL (GID: 0, 1631515229, 686842485, 290508236, 2087539342, 1874749978, 651337262, 1905290884, 774111166, 186802545, 199327118) =======
     commercial: {
-      records: commercialRecords,
-      sdrData,
-      indicacoesData,
-      indicacoesRecebidasData,
-      saneamentoData: saneamentoComercialData,
-      administrativoData,
-      testemunhasData,
-      administrativo2Data,
-      documentosFisicosData,
-      bancarioAgendamentosData,
+      records: commercialRecords, // GID 0 - Atendimentos/Fechamentos
+      sdrData, // GID 1631515229 - SDR Agendamentos
+      sdrMessagesData, // GID 686842485 - SDR Mensagens
+      sdrMessagesSdrNames, // Nomes dos SDRs
+      indicacoesData, // GID 290508236 - Contatos Indicações
+      indicacoesRecebidasData, // GID 2087539342 - Indicações Recebidas
+      saneamentoData: saneamentoComercialData, // GID 1874749978 - Saneamento
+      administrativoData, // GID 651337262 - Avaliações Google
+      testemunhasData, // GID 774111166 - Abordagem Testemunhas
+      administrativo2Data, // GID 1905290884 - Documentação ADVBOX
+      documentosFisicosData, // GID 186802545 - Documentos Físicos
+      bancarioAgendamentosData, // GID 199327118 - Agendamentos Bancários
+      weeks: commercialWeeks,
     },
-    // Planilhas - Bancário
+    // ======= PLANILHAS - BANCÁRIO (GIDs: 0, 325813835, 642720152) =======
     bancario: {
-      iniciaisData,
-      saneamentoData: saneamentoBancarioData,
-      transitoData,
+      iniciaisData, // GID 0 - Petições Iniciais
+      saneamentoData: saneamentoBancarioData, // GID 325813835 - Saneamento
+      transitoData, // GID 642720152 - Trânsito em Julgado
+      weeks: bancarioWeeks,
     },
-    // Planilhas - Controladoria
+    // ======= PLANILHAS - CONTROLADORIA (GIDs: 0, 1319762905, 1590941680, 1397357779, 154449292) =======
     controladoria: {
-      tasks,
-      conformityErrors,
-      deadlineErrors,
-      intimacoesPrevidenciario,
+      tasks, // GID 0 - Tarefas Principais
+      conformityErrors, // GID 1590941680 - Erros de Conformidade
+      deadlineErrors, // GID 1397357779 - Erros de Prazo
+      intimacoesPrevidenciario, // GID 154449292 - Intimações Previdenciário
+      sectorMapping, // GID 1319762905 - Mapeamento de Setores
     },
-    // Planilhas - Previdenciário
-    previdenciario: previdenciarioData || {},
-    // Planilhas - Trabalhista
-    trabalhista: trabalhistaData || {},
-    // Supabase - Marketing
+    // ======= PLANILHAS - PREVIDENCIÁRIO (GIDs: 1358203598, 306675231, 1379612642, 0, 731526977) =======
+    previdenciario: {
+      peticoesIniciais: previdenciarioData?.peticoesIniciais || [], // GID 1358203598
+      evolucaoIncapacidade: previdenciarioData?.evolucaoIncapacidade || [], // GID 306675231
+      tarefas: previdenciarioData?.tarefas || [], // GID 1379612642
+      aposentadorias: previdenciarioData?.aposentadorias || [], // GID 0
+      pastasCorrecao: previdenciarioData?.pastasCorrecao || [], // GID 731526977
+      stats: previdenciarioData?.stats || {},
+    },
+    // ======= PLANILHAS - TRABALHISTA (GIDs: 1523237863, 52177345) =======
+    trabalhista: {
+      iniciais: trabalhistaData?.iniciais || [], // GID 1523237863
+      atividades: trabalhistaData?.atividades || [], // GID 52177345
+      stats: trabalhistaData?.stats || {},
+    },
+    // ======= SUPABASE - MARKETING =======
     marketing: {
       atividades: atividadesMarketing,
       colunas: colunasAtividades,
       ideias: ideiasConteudo,
       conteudos: conteudosMidia,
     },
-    // Supabase - Robôs
+    // ======= SUPABASE - ROBÔS =======
     robos: {
       tiposProdutos,
       transcricoes,
       modelagens: modelagensConteudo,
     },
-    // Supabase - Comercial (Closers)
+    // ======= SUPABASE - COMERCIAL (Closers) =======
     closers: {
       atendimentos: atendimentosClosers,
     },
-    // Supabase - Profiles (para referência)
+    // ======= SUPABASE - PROFILES =======
     profiles,
   };
 
-  // Data summary for header
+  // Data summary for header - Comprehensive
   const dataSummary = {
-    comercial: commercialRecords.length,
+    // Comercial (Planilha)
+    comercialAtendimentos: commercialRecords.length,
+    comercialSDR: sdrData.length,
+    comercialIndicacoes: indicacoesData.length,
+    comercialIndicacoesRecebidas: indicacoesRecebidasData.length,
+    comercialSaneamento: saneamentoComercialData.length,
+    comercialAvaliacoes: administrativoData.length,
+    comercialTestemunhas: testemunhasData.length,
+    comercialDocsFisicos: documentosFisicosData.length,
+    comercialAdvbox: administrativo2Data.length,
+    // Bancário (Planilha)
     bancarioIniciais: iniciaisData.length,
+    bancarioSaneamento: saneamentoBancarioData.length,
+    bancarioTransito: transitoData.length,
+    // Controladoria (Planilha)
     controladoriaTarefas: tasks.length,
-    previdenciario: previdenciarioData?.peticoesIniciais?.length || 0,
-    trabalhista: trabalhistaData?.iniciais?.length || 0,
-    atividadesMarketing: atividadesMarketing.length,
-    ideiasConteudo: ideiasConteudo.length,
-    conteudosMidia: conteudosMidia.length,
-    tiposProdutos: tiposProdutos.length,
-    transcricoes: transcricoes.length,
-    atendimentosClosers: atendimentosClosers.length,
+    controladoriaErrosConformidade: conformityErrors.length,
+    controladoriaErrosPrazo: deadlineErrors.length,
+    controladoriaIntimacoes: intimacoesPrevidenciario.length,
+    // Previdenciário (Planilha)
+    previdenciarioPeticoes: previdenciarioData?.peticoesIniciais?.length || 0,
+    previdenciarioAposentadorias: previdenciarioData?.aposentadorias?.length || 0,
+    previdenciarioTarefas: previdenciarioData?.tarefas?.length || 0,
+    previdenciarioPastasCorrecao: previdenciarioData?.pastasCorrecao?.length || 0,
+    previdenciarioEvolucao: previdenciarioData?.evolucaoIncapacidade?.length || 0,
+    // Trabalhista (Planilha)
+    trabalhistaIniciais: trabalhistaData?.iniciais?.length || 0,
+    trabalhistaAtividades: trabalhistaData?.atividades?.length || 0,
+    // Marketing (Supabase)
+    marketingAtividades: atividadesMarketing.length,
+    marketingIdeias: ideiasConteudo.length,
+    marketingConteudos: conteudosMidia.length,
+    // Robôs (Supabase)
+    robosTiposProdutos: tiposProdutos.length,
+    robosTranscricoes: transcricoes.length,
+    robosModelagens: modelagensConteudo.length,
+    // Closers (Supabase)
+    closersAtendimentos: atendimentosClosers.length,
   };
 
   return {

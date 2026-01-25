@@ -35,12 +35,41 @@ serve(async (req) => {
     
     const systemPrompt = `Você é um analista de dados especializado em gestão jurídica e marketing. Você tem acesso a dados de múltiplos setores e fontes:
 
-## DADOS DE PLANILHAS (Externos):
-- **Comercial**: atendimentos de closers, contratos fechados, SDRs, indicações, saneamento, administrativo, testemunhas, documentos físicos
-- **Bancário**: petições iniciais, saneamento de pastas, trânsito em julgado, acordos, cumprimentos de sentença
-- **Controladoria**: tarefas/atividades, erros de conformidade, erros de prazo, intimações previdenciário
-- **Previdenciário**: petições iniciais, aposentadorias, tarefas, evolução de incapacidade
-- **Trabalhista**: petições iniciais, atividades/tarefas diárias
+## DADOS DE PLANILHAS - COMERCIAL (11 abas):
+- GID 0: Atendimentos e fechamentos de contratos (closers, resultados, honorários)
+- GID 1631515229: SDR Agendamentos (leads, conversões)
+- GID 686842485: SDR Mensagens (volume de contatos por semana)
+- GID 290508236: Contatos de Indicações (indicações feitas a clientes antigos)
+- GID 2087539342: Indicações Recebidas (resultado das indicações)
+- GID 1874749978: Saneamento de Pastas Comercial
+- GID 651337262: Avaliações Google (estrelas, feedback)
+- GID 1905290884: Documentação ADVBOX (pastas salvas)
+- GID 774111166: Abordagem de Testemunhas (agendamentos)
+- GID 186802545: Documentos Físicos (digitalização)
+- GID 199327118: Agendamentos Bancários
+
+## DADOS DE PLANILHAS - BANCÁRIO (3 abas):
+- GID 0: Petições Iniciais (protocolos, responsáveis, estados)
+- GID 325813835: Saneamento de Pastas (revisão de processos)
+- GID 642720152: Trânsito em Julgado (acordos, cumprimentos, honorários)
+
+## DADOS DE PLANILHAS - CONTROLADORIA (5 abas):
+- GID 0: Tarefas Principais (atividades diárias)
+- GID 1319762905: Mapeamento de Setores
+- GID 1590941680: Erros de Conformidade
+- GID 1397357779: Erros de Prazo
+- GID 154449292: Intimações Previdenciário
+
+## DADOS DE PLANILHAS - PREVIDENCIÁRIO (5 abas):
+- GID 1358203598: Petições Iniciais (benefícios, valores, responsáveis)
+- GID 306675231: Evolução de Incapacidade (pendências semanais)
+- GID 1379612642: Tarefas (revisões, notas)
+- GID 0: Aposentadorias (DER, RMI, valores)
+- GID 731526977: Pastas para Correção
+
+## DADOS DE PLANILHAS - TRABALHISTA (2 abas):
+- GID 1523237863: Petições Iniciais (valor causa, temas, situação)
+- GID 52177345: Atividades (tarefas diárias, prazos)
 
 ## DADOS DO SISTEMA (Supabase):
 - **Marketing - Atividades**: Kanban de atividades da equipe de marketing com prioridades e prazos
@@ -239,7 +268,23 @@ function prepareContextSummary(context: Record<string, unknown>): string {
     // SDR Data
     const sdrData = comm.sdrData as unknown[] || [];
     if (sdrData.length > 0) {
+      const bySDR: Record<string, number> = {};
+      sdrData.forEach((r: unknown) => {
+        const record = r as Record<string, unknown>;
+        const sdr = (record.colA as string) || "Não identificado";
+        bySDR[sdr] = (bySDR[sdr] || 0) + 1;
+      });
       parts.push(`\n### Dados SDR: ${sdrData.length} registros de agendamentos`);
+      Object.entries(bySDR).slice(0, 10).forEach(([sdr, count]) => {
+        parts.push(`- ${sdr}: ${count}`);
+      });
+    }
+
+    // SDR Messages
+    const sdrMessagesData = comm.sdrMessagesData as unknown[] || [];
+    const sdrNames = comm.sdrMessagesSdrNames as string[] || [];
+    if (sdrMessagesData.length > 0) {
+      parts.push(`\n### Mensagens SDR: ${sdrMessagesData.length} semanas de dados para ${sdrNames.length} SDRs (${sdrNames.join(", ")})`);
     }
 
     // Indicações
@@ -247,6 +292,60 @@ function prepareContextSummary(context: Record<string, unknown>): string {
     const indicacoesRecebidas = comm.indicacoesRecebidasData as unknown[] || [];
     if (indicacoes.length > 0 || indicacoesRecebidas.length > 0) {
       parts.push(`\n### Indicações: ${indicacoes.length} contatos, ${indicacoesRecebidas.length} indicações recebidas`);
+      
+      if (indicacoes.length > 0) {
+        const byResp: Record<string, number> = {};
+        indicacoes.forEach((i: unknown) => {
+          const ind = i as Record<string, unknown>;
+          const resp = (ind.responsavel as string) || "Não identificado";
+          byResp[resp] = (byResp[resp] || 0) + 1;
+        });
+        parts.push("\n### Indicações por Responsável:");
+        Object.entries(byResp).forEach(([resp, count]) => {
+          parts.push(`- ${resp}: ${count}`);
+        });
+      }
+    }
+
+    // Saneamento Comercial
+    const saneamentoComercial = comm.saneamentoData as unknown[] || [];
+    if (saneamentoComercial.length > 0) {
+      const saneados = saneamentoComercial.filter((s: unknown) => {
+        const rec = s as Record<string, unknown>;
+        const status = ((rec.Saneamento || rec.saneamento) as string || "").toLowerCase();
+        return status.includes("saneado");
+      }).length;
+      parts.push(`\n### Saneamento Comercial: ${saneamentoComercial.length} pastas (${saneados} saneadas)`);
+    }
+
+    // Administrativo - Avaliações Google
+    const adminData = comm.administrativoData as unknown[] || [];
+    if (adminData.length > 0) {
+      parts.push(`\n### Avaliações Google: ${adminData.length} avaliações registradas`);
+    }
+
+    // Testemunhas
+    const testemunhas = comm.testemunhasData as unknown[] || [];
+    if (testemunhas.length > 0) {
+      parts.push(`\n### Abordagem de Testemunhas: ${testemunhas.length} registros`);
+    }
+
+    // Documentos Físicos
+    const docsFisicos = comm.documentosFisicosData as unknown[] || [];
+    if (docsFisicos.length > 0) {
+      parts.push(`\n### Documentos Físicos: ${docsFisicos.length} registros`);
+    }
+
+    // ADVBOX (Administrativo 2)
+    const advbox = comm.administrativo2Data as unknown[] || [];
+    if (advbox.length > 0) {
+      parts.push(`\n### Documentação ADVBOX: ${advbox.length} pastas registradas`);
+    }
+
+    // Agendamentos Bancários
+    const bancarioAg = comm.bancarioAgendamentosData as unknown[] || [];
+    if (bancarioAg.length > 0) {
+      parts.push(`\n### Agendamentos Bancários: ${bancarioAg.length} registros`);
     }
   }
   
