@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Lightbulb, TrendingUp, Users, AlertTriangle, Target, BarChart3 } from "lucide-react";
+import { Lightbulb, TrendingUp, Users, AlertTriangle, Target, BarChart3, Calendar, Megaphone, Bot, Phone } from "lucide-react";
 
 interface ContextualSuggestionsProps {
   contextData: {
@@ -17,6 +17,7 @@ interface ContextualSuggestionsProps {
       tasks?: unknown[];
       conformityErrors?: unknown[];
       deadlineErrors?: unknown[];
+      intimacoesPrevidenciario?: unknown[];
     };
     previdenciario: {
       peticoesIniciais?: unknown[];
@@ -28,6 +29,21 @@ interface ContextualSuggestionsProps {
       atividades?: unknown[];
       [key: string]: unknown;
     };
+    marketing?: {
+      atividades?: unknown[];
+      colunas?: unknown[];
+      ideias?: unknown[];
+      conteudos?: unknown[];
+    };
+    robos?: {
+      tiposProdutos?: unknown[];
+      transcricoes?: unknown[];
+      modelagens?: unknown[];
+    };
+    closers?: {
+      atendimentos?: unknown[];
+    };
+    profiles?: unknown[];
   };
   onSelectQuery: (query: string) => void;
   disabled?: boolean;
@@ -270,19 +286,103 @@ export function ContextualSuggestions({ contextData, onSelectQuery, disabled }: 
       }
     }
 
+    // ===== MARKETING SUGGESTIONS =====
+    const atividadesMarketing = contextData.marketing?.atividades as Array<{ atividade?: string; prioridade?: string; prazo_fatal?: string }> || [];
+    const ideiasConteudo = contextData.marketing?.ideias as Array<{ validado?: boolean }> || [];
+    const conteudosMidia = contextData.marketing?.conteudos as Array<{ status?: string; setor?: string }> || [];
+
+    if (atividadesMarketing.length > 0) {
+      const today = new Date().toISOString().split('T')[0];
+      const atrasadas = atividadesMarketing.filter(a => a.prazo_fatal && a.prazo_fatal < today);
+      const emergencias = atividadesMarketing.filter(a => a.prioridade === 'emergencia' || a.prioridade === 'urgente');
+
+      if (atrasadas.length > 0) {
+        result.push({
+          query: `Quais atividades de marketing estão atrasadas e precisam de atenção urgente?`,
+          icon: <AlertTriangle className="h-4 w-4" />,
+          category: "Marketing",
+          priority: 1,
+        });
+      }
+
+      if (emergencias.length > 0) {
+        result.push({
+          query: `Quantas atividades de marketing estão marcadas como emergência ou urgente?`,
+          icon: <Megaphone className="h-4 w-4" />,
+          category: "Marketing",
+          priority: 2,
+        });
+      }
+    }
+
+    if (ideiasConteudo.length > 0) {
+      const pendentes = ideiasConteudo.filter(i => !i.validado);
+      if (pendentes.length > 0) {
+        result.push({
+          query: `Quantas ideias de conteúdo estão aguardando validação?`,
+          icon: <Lightbulb className="h-4 w-4" />,
+          category: "Marketing",
+          priority: 3,
+        });
+      }
+    }
+
+    if (conteudosMidia.length > 0) {
+      result.push({
+        query: `Qual o status da produção de conteúdo por setor?`,
+        icon: <Calendar className="h-4 w-4" />,
+        category: "Marketing",
+        priority: 3,
+      });
+    }
+
+    // ===== ROBÔS SUGGESTIONS =====
+    const transcricoes = contextData.robos?.transcricoes as Array<{ status?: string }> || [];
+    const tiposProdutos = contextData.robos?.tiposProdutos as Array<{ setor?: string }> || [];
+
+    if (transcricoes.length > 0) {
+      result.push({
+        query: `Quantas transcrições de audiências foram realizadas e qual o status de cada uma?`,
+        icon: <Bot className="h-4 w-4" />,
+        category: "Robôs",
+        priority: 4,
+      });
+    }
+
+    if (tiposProdutos.length > 0) {
+      result.push({
+        query: `Quantos tipos de produtos temos cadastrados por setor?`,
+        icon: <Target className="h-4 w-4" />,
+        category: "Robôs",
+        priority: 5,
+      });
+    }
+
+    // ===== CLOSERS SUGGESTIONS =====
+    const atendimentosClosers = contextData.closers?.atendimentos as Array<{ status?: string; duracao_segundos?: number }> || [];
+
+    if (atendimentosClosers.length > 0) {
+      result.push({
+        query: `Qual o resumo dos atendimentos gravados pelos closers?`,
+        icon: <Phone className="h-4 w-4" />,
+        category: "Closers",
+        priority: 2,
+      });
+    }
+
     // ===== CROSS-SECTOR SUGGESTIONS =====
     result.push({
       query: "Faça uma análise geral da produtividade de todos os setores",
       icon: <TrendingUp className="h-4 w-4" />,
       category: "Geral",
-      priority: 4,
+      priority: 6,
     });
 
     result.push({
       query: "Quais setores estão abaixo da meta e precisam de atenção?",
       icon: <AlertTriangle className="h-4 w-4" />,
       category: "Geral",
-      priority: 5,
+      priority: 7,
     });
 
     // Sort by priority and limit

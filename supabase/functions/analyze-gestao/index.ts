@@ -33,12 +33,23 @@ serve(async (req) => {
     // Prepare context summary for AI
     const contextSummary = prepareContextSummary(context);
     
-    const systemPrompt = `Você é um analista de dados especializado em gestão jurídica. Você tem acesso a dados de múltiplos setores:
-- Comercial: atendimentos, contratos fechados, closers, SDRs, indicações
-- Bancário: petições iniciais, saneamento, trânsito em julgado
-- Controladoria: tarefas, prazos, conformidade
-- Previdenciário: petições iniciais, aposentadorias, tarefas
-- Trabalhista: petições iniciais, atividades
+    const systemPrompt = `Você é um analista de dados especializado em gestão jurídica e marketing. Você tem acesso a dados de múltiplos setores e fontes:
+
+## DADOS DE PLANILHAS (Externos):
+- **Comercial**: atendimentos de closers, contratos fechados, SDRs, indicações, saneamento, administrativo, testemunhas, documentos físicos
+- **Bancário**: petições iniciais, saneamento de pastas, trânsito em julgado, acordos, cumprimentos de sentença
+- **Controladoria**: tarefas/atividades, erros de conformidade, erros de prazo, intimações previdenciário
+- **Previdenciário**: petições iniciais, aposentadorias, tarefas, evolução de incapacidade
+- **Trabalhista**: petições iniciais, atividades/tarefas diárias
+
+## DADOS DO SISTEMA (Supabase):
+- **Marketing - Atividades**: Kanban de atividades da equipe de marketing com prioridades e prazos
+- **Marketing - Ideias**: Banco de ideias de conteúdo aguardando validação
+- **Marketing - Conteúdos**: Calendário de conteúdo com status de produção (a gravar, gravado, editado, postado)
+- **Robôs - Tipos de Produtos**: Base de conhecimento de produtos jurídicos por setor
+- **Robôs - Transcrições**: Transcrições de audiências realizadas
+- **Robôs - Modelagens**: Análises de conteúdo para modelagem
+- **Comercial - Atendimentos Closers**: Gravações e transcrições de ligações com clientes
 
 Sua tarefa é analisar a pergunta do usuário e gerar uma resposta estruturada com visualizações.
 
@@ -48,7 +59,7 @@ IMPORTANTE: Você DEVE responder em formato JSON válido com a seguinte estrutur
   "visualizations": [
     {
       "type": "metric",
-      "title": "Título do métric card",
+      "title": "Título do metric card",
       "data": { "value": 123, "label": "Descrição", "trend": "+10%", "trendUp": true }
     },
     {
@@ -85,7 +96,7 @@ Responda APENAS com JSON válido, sem texto adicional antes ou depois.`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-3-flash-preview",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { 
@@ -169,14 +180,15 @@ Responda APENAS com JSON válido, sem texto adicional antes ou depois.`;
 function prepareContextSummary(context: Record<string, unknown>): string {
   const parts: string[] = [];
   
-  // Commercial data
+  // ============================================================
+  // COMMERCIAL DATA (Planilha)
+  // ============================================================
   if (context.commercial) {
     const comm = context.commercial as Record<string, unknown>;
     const records = comm.records as unknown[] || [];
-    parts.push(`## DADOS COMERCIAIS (${records.length} registros)`);
+    parts.push(`## DADOS COMERCIAIS - PLANILHA (${records.length} registros)`);
     
     if (records.length > 0) {
-      // Group by closer
       const byCloser: Record<string, unknown[]> = {};
       const bySector: Record<string, number> = {};
       const byResult: Record<string, number> = {};
@@ -215,7 +227,6 @@ function prepareContextSummary(context: Record<string, unknown>): string {
         parts.push(`- ${result}: ${count}`);
       });
       
-      // List individual records for detailed queries
       parts.push("\n### Lista de Contratos Fechados:");
       records.filter((r: unknown) => 
         ((r as Record<string, unknown>).resultado as string)?.toLowerCase().includes("contrato fechado")
@@ -224,16 +235,31 @@ function prepareContextSummary(context: Record<string, unknown>): string {
         parts.push(`- Cliente: ${record.cliente}, Closer: ${record.responsavel}, Setor: ${record.setor}, Produto: ${record.produto}, Honorários: R$ ${record.honorariosExito || 0}`);
       });
     }
+
+    // SDR Data
+    const sdrData = comm.sdrData as unknown[] || [];
+    if (sdrData.length > 0) {
+      parts.push(`\n### Dados SDR: ${sdrData.length} registros de agendamentos`);
+    }
+
+    // Indicações
+    const indicacoes = comm.indicacoesData as unknown[] || [];
+    const indicacoesRecebidas = comm.indicacoesRecebidasData as unknown[] || [];
+    if (indicacoes.length > 0 || indicacoesRecebidas.length > 0) {
+      parts.push(`\n### Indicações: ${indicacoes.length} contatos, ${indicacoesRecebidas.length} indicações recebidas`);
+    }
   }
   
-  // Bancario data
+  // ============================================================
+  // BANCARIO DATA (Planilha)
+  // ============================================================
   if (context.bancario) {
     const banc = context.bancario as Record<string, unknown>;
     const iniciais = banc.iniciaisData as unknown[] || [];
     const saneamento = banc.saneamentoData as unknown[] || [];
     const transito = banc.transitoData as unknown[] || [];
     
-    parts.push(`\n## DADOS BANCÁRIO`);
+    parts.push(`\n## DADOS BANCÁRIO - PLANILHA`);
     parts.push(`- Petições Iniciais: ${iniciais.length}`);
     parts.push(`- Saneamento: ${saneamento.length}`);
     parts.push(`- Trânsito em Julgado: ${transito.length}`);
@@ -249,19 +275,35 @@ function prepareContextSummary(context: Record<string, unknown>): string {
         parts.push(`- ${resp}: ${count}`);
       });
     }
+
+    if (transito.length > 0) {
+      const byResult: Record<string, number> = {};
+      transito.forEach((r: unknown) => {
+        const result = ((r as Record<string, unknown>).resultadoFinal as string) || "Não identificado";
+        byResult[result] = (byResult[result] || 0) + 1;
+      });
+      parts.push("\n### Trânsito por Resultado Final:");
+      Object.entries(byResult).forEach(([result, count]) => {
+        parts.push(`- ${result}: ${count}`);
+      });
+    }
   }
   
-  // Controladoria data
+  // ============================================================
+  // CONTROLADORIA DATA (Planilha)
+  // ============================================================
   if (context.controladoria) {
     const ctrl = context.controladoria as Record<string, unknown>;
     const tasks = ctrl.tasks as unknown[] || [];
     const conformityErrors = ctrl.conformityErrors as unknown[] || [];
     const deadlineErrors = ctrl.deadlineErrors as unknown[] || [];
+    const intimacoes = ctrl.intimacoesPrevidenciario as unknown[] || [];
     
-    parts.push(`\n## DADOS CONTROLADORIA`);
+    parts.push(`\n## DADOS CONTROLADORIA - PLANILHA`);
     parts.push(`- Total de Tarefas: ${tasks.length}`);
     parts.push(`- Erros de Conformidade: ${conformityErrors.length}`);
     parts.push(`- Erros de Prazo: ${deadlineErrors.length}`);
+    parts.push(`- Intimações Previdenciário: ${intimacoes.length}`);
     
     if (tasks.length > 0) {
       const byController: Record<string, { total: number; completed: number }> = {};
@@ -279,48 +321,246 @@ function prepareContextSummary(context: Record<string, unknown>): string {
     }
   }
   
-  // Previdenciario data
+  // ============================================================
+  // PREVIDENCIARIO DATA (Planilha)
+  // ============================================================
   if (context.previdenciario) {
     const prev = context.previdenciario as Record<string, unknown>;
     const peticoes = prev.peticoesIniciais as unknown[] || [];
     const aposentadorias = prev.aposentadorias as unknown[] || [];
+    const tarefas = prev.tarefas as unknown[] || [];
     
-    parts.push(`\n## DADOS PREVIDENCIÁRIO`);
+    parts.push(`\n## DADOS PREVIDENCIÁRIO - PLANILHA`);
     parts.push(`- Petições Iniciais: ${peticoes.length}`);
     parts.push(`- Aposentadorias: ${aposentadorias.length}`);
+    parts.push(`- Tarefas: ${(tarefas || []).length}`);
     
     if (peticoes.length > 0) {
       const byResp: Record<string, number> = {};
+      const bySituacao: Record<string, number> = {};
       peticoes.forEach((p: unknown) => {
-        const resp = ((p as Record<string, unknown>).responsavel as string) || "Não identificado";
+        const record = p as Record<string, unknown>;
+        const resp = (record.responsavel as string) || "Não identificado";
+        const situacao = (record.situacao as string) || "Não identificado";
         byResp[resp] = (byResp[resp] || 0) + 1;
+        bySituacao[situacao] = (bySituacao[situacao] || 0) + 1;
       });
       parts.push("\n### Petições por Responsável:");
       Object.entries(byResp).forEach(([resp, count]) => {
         parts.push(`- ${resp}: ${count}`);
       });
+      parts.push("\n### Petições por Situação:");
+      Object.entries(bySituacao).forEach(([situacao, count]) => {
+        parts.push(`- ${situacao}: ${count}`);
+      });
     }
   }
   
-  // Trabalhista data
+  // ============================================================
+  // TRABALHISTA DATA (Planilha)
+  // ============================================================
   if (context.trabalhista) {
     const trab = context.trabalhista as Record<string, unknown>;
     const iniciais = trab.iniciais as unknown[] || [];
     const atividades = trab.atividades as unknown[] || [];
     
-    parts.push(`\n## DADOS TRABALHISTA`);
+    parts.push(`\n## DADOS TRABALHISTA - PLANILHA`);
     parts.push(`- Petições Iniciais: ${iniciais.length}`);
     parts.push(`- Atividades: ${atividades.length}`);
     
     if (iniciais.length > 0) {
       const byResp: Record<string, number> = {};
+      const byTipo: Record<string, number> = {};
       iniciais.forEach((i: unknown) => {
-        const resp = ((i as Record<string, unknown>).responsavel as string) || "Não identificado";
+        const record = i as Record<string, unknown>;
+        const resp = (record.responsavel as string) || "Não identificado";
+        const tipo = (record.tipo as string) || "Não identificado";
         byResp[resp] = (byResp[resp] || 0) + 1;
+        byTipo[tipo] = (byTipo[tipo] || 0) + 1;
       });
       parts.push("\n### Iniciais por Responsável:");
       Object.entries(byResp).forEach(([resp, count]) => {
         parts.push(`- ${resp}: ${count}`);
+      });
+      parts.push("\n### Iniciais por Tipo:");
+      Object.entries(byTipo).forEach(([tipo, count]) => {
+        parts.push(`- ${tipo}: ${count}`);
+      });
+    }
+  }
+
+  // ============================================================
+  // MARKETING DATA (Supabase)
+  // ============================================================
+  if (context.marketing) {
+    const mkt = context.marketing as Record<string, unknown>;
+    const atividades = mkt.atividades as unknown[] || [];
+    const colunas = mkt.colunas as unknown[] || [];
+    const ideias = mkt.ideias as unknown[] || [];
+    const conteudos = mkt.conteudos as unknown[] || [];
+
+    parts.push(`\n## DADOS MARKETING - SISTEMA`);
+    parts.push(`- Atividades Kanban: ${atividades.length}`);
+    parts.push(`- Ideias de Conteúdo: ${ideias.length}`);
+    parts.push(`- Conteúdos (Calendário): ${conteudos.length}`);
+
+    if (atividades.length > 0) {
+      const byPrioridade: Record<string, number> = {};
+      const atrasadas: unknown[] = [];
+      const today = new Date().toISOString().split('T')[0];
+
+      atividades.forEach((a: unknown) => {
+        const at = a as Record<string, unknown>;
+        const prioridade = (at.prioridade as string) || "util";
+        byPrioridade[prioridade] = (byPrioridade[prioridade] || 0) + 1;
+
+        const prazo = at.prazo_fatal as string;
+        if (prazo && prazo < today) {
+          atrasadas.push(at);
+        }
+      });
+
+      parts.push("\n### Atividades por Prioridade:");
+      Object.entries(byPrioridade).forEach(([pri, count]) => {
+        parts.push(`- ${pri}: ${count}`);
+      });
+
+      if (atrasadas.length > 0) {
+        parts.push(`\n### ⚠️ Atividades Atrasadas: ${atrasadas.length}`);
+        atrasadas.slice(0, 5).forEach((a: unknown) => {
+          const at = a as Record<string, unknown>;
+          parts.push(`- ${at.atividade} (prazo: ${at.prazo_fatal})`);
+        });
+      }
+    }
+
+    if (ideias.length > 0) {
+      const pendentes = ideias.filter((i: unknown) => !(i as Record<string, unknown>).validado).length;
+      const validadas = ideias.length - pendentes;
+      parts.push(`\n### Ideias: ${pendentes} pendentes, ${validadas} validadas`);
+    }
+
+    if (conteudos.length > 0) {
+      const byStatus: Record<string, number> = {};
+      const bySetor: Record<string, number> = {};
+      
+      conteudos.forEach((c: unknown) => {
+        const cont = c as Record<string, unknown>;
+        const status = (cont.status as string) || "a_gravar";
+        const setor = (cont.setor as string) || "Não identificado";
+        byStatus[status] = (byStatus[status] || 0) + 1;
+        bySetor[setor] = (bySetor[setor] || 0) + 1;
+      });
+
+      parts.push("\n### Conteúdos por Status:");
+      Object.entries(byStatus).forEach(([status, count]) => {
+        const label = status === "a_gravar" ? "A Gravar" : 
+                      status === "gravado" ? "Gravado" :
+                      status === "em_edicao" ? "Em Edição" :
+                      status === "editado" ? "Editado" :
+                      status === "postado" ? "Postado" : status;
+        parts.push(`- ${label}: ${count}`);
+      });
+
+      parts.push("\n### Conteúdos por Setor:");
+      Object.entries(bySetor).forEach(([setor, count]) => {
+        parts.push(`- ${setor}: ${count}`);
+      });
+    }
+  }
+
+  // ============================================================
+  // ROBÔS DATA (Supabase)
+  // ============================================================
+  if (context.robos) {
+    const robos = context.robos as Record<string, unknown>;
+    const produtos = robos.tiposProdutos as unknown[] || [];
+    const transcricoes = robos.transcricoes as unknown[] || [];
+    const modelagens = robos.modelagens as unknown[] || [];
+
+    parts.push(`\n## DADOS ROBÔS - SISTEMA`);
+    parts.push(`- Tipos de Produtos: ${produtos.length}`);
+    parts.push(`- Transcrições de Audiências: ${transcricoes.length}`);
+    parts.push(`- Modelagens de Conteúdo: ${modelagens.length}`);
+
+    if (produtos.length > 0) {
+      const bySetor: Record<string, number> = {};
+      produtos.forEach((p: unknown) => {
+        const prod = p as Record<string, unknown>;
+        const setor = (prod.setor as string) || "Não identificado";
+        bySetor[setor] = (bySetor[setor] || 0) + 1;
+      });
+      parts.push("\n### Produtos por Setor:");
+      Object.entries(bySetor).forEach(([setor, count]) => {
+        parts.push(`- ${setor}: ${count}`);
+      });
+    }
+
+    if (transcricoes.length > 0) {
+      const byStatus: Record<string, number> = {};
+      transcricoes.forEach((t: unknown) => {
+        const trans = t as Record<string, unknown>;
+        const status = (trans.status as string) || "pendente";
+        byStatus[status] = (byStatus[status] || 0) + 1;
+      });
+      parts.push("\n### Transcrições por Status:");
+      Object.entries(byStatus).forEach(([status, count]) => {
+        parts.push(`- ${status}: ${count}`);
+      });
+    }
+  }
+
+  // ============================================================
+  // CLOSERS DATA (Supabase)
+  // ============================================================
+  if (context.closers) {
+    const closers = context.closers as Record<string, unknown>;
+    const atendimentos = closers.atendimentos as unknown[] || [];
+
+    parts.push(`\n## DADOS ATENDIMENTOS CLOSERS - SISTEMA`);
+    parts.push(`- Total de Atendimentos Gravados: ${atendimentos.length}`);
+
+    if (atendimentos.length > 0) {
+      const byStatus: Record<string, number> = {};
+      let totalDuracao = 0;
+      let countWithDuracao = 0;
+
+      atendimentos.forEach((a: unknown) => {
+        const at = a as Record<string, unknown>;
+        const status = (at.status as string) || "pendente";
+        byStatus[status] = (byStatus[status] || 0) + 1;
+        
+        const duracao = at.duracao_segundos as number;
+        if (duracao && duracao > 0) {
+          totalDuracao += duracao;
+          countWithDuracao++;
+        }
+      });
+
+      parts.push("\n### Atendimentos por Status:");
+      Object.entries(byStatus).forEach(([status, count]) => {
+        parts.push(`- ${status}: ${count}`);
+      });
+
+      if (countWithDuracao > 0) {
+        const avgDuracao = totalDuracao / countWithDuracao;
+        const minutos = Math.floor(avgDuracao / 60);
+        const segundos = Math.floor(avgDuracao % 60);
+        parts.push(`\n### Duração Média: ${minutos}m ${segundos}s`);
+      }
+    }
+  }
+
+  // ============================================================
+  // PROFILES (referência)
+  // ============================================================
+  if (context.profiles) {
+    const profiles = context.profiles as unknown[] || [];
+    if (profiles.length > 0) {
+      parts.push(`\n## USUÁRIOS DO SISTEMA: ${profiles.length}`);
+      profiles.forEach((p: unknown) => {
+        const profile = p as Record<string, unknown>;
+        parts.push(`- ${profile.display_name}`);
       });
     }
   }
