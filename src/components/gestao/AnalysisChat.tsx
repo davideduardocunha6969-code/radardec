@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { Send, Loader2, Sparkles, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DynamicVisualization, VisualizationSpec } from "./DynamicVisualization";
 import { ContextualSuggestions } from "./ContextualSuggestions";
+import { SelectedSources, spreadsheetSources, supabaseSources } from "./DataSourceSelector";
 
 interface AnalysisResponse {
   summary: string;
@@ -65,14 +66,144 @@ interface AnalysisChatProps {
     profiles?: unknown[];
   };
   isLoadingData: boolean;
+  selectedSources: SelectedSources;
 }
 
-export function AnalysisChat({ contextData, isLoadingData }: AnalysisChatProps) {
+// Helper to filter context based on selected sources
+function filterContextBySelection(
+  contextData: AnalysisChatProps["contextData"],
+  selectedSources: SelectedSources
+): AnalysisChatProps["contextData"] {
+  const filtered: AnalysisChatProps["contextData"] = {
+    commercial: {},
+    bancario: {},
+    controladoria: {},
+    previdenciario: {},
+    trabalhista: {},
+    profiles: contextData.profiles,
+  };
+
+  // Map GIDs to context data keys for each spreadsheet
+  const gidToDataMapping: Record<string, Record<string, string>> = {
+    commercial: {
+      "0": "records",
+      "1631515229": "sdrData",
+      "686842485": "sdrMessages",
+      "290508236": "referralContacts",
+      "2087539342": "referralReceived",
+      "1874749978": "sanitization",
+      "651337262": "googleReviews",
+      "1905290884": "advboxDocs",
+      "774111166": "witnesses",
+      "186802545": "physicalDocs",
+      "199327118": "bankingSchedules",
+    },
+    bancario: {
+      "0": "iniciaisData",
+      "325813835": "saneamentoData",
+      "642720152": "transitoData",
+    },
+    controladoria: {
+      "0": "tasks",
+      "1319762905": "sectors",
+      "1590941680": "conformityErrors",
+      "1397357779": "deadlineErrors",
+      "154449292": "intimacoesPrevidenciario",
+    },
+    previdenciario: {
+      "1358203598": "peticoesIniciais",
+      "306675231": "evolucaoIncapacidade",
+      "1379612642": "tarefas",
+      "0": "aposentadorias",
+      "731526977": "pastasCorrecao",
+    },
+    trabalhista: {
+      "1523237863": "iniciais",
+      "52177345": "atividades",
+    },
+  };
+
+  // Filter spreadsheet data
+  Object.entries(selectedSources.spreadsheets).forEach(([sheetKey, gids]) => {
+    const mapping = gidToDataMapping[sheetKey];
+    if (!mapping) return;
+
+    const sourceData = contextData[sheetKey as keyof typeof contextData];
+    if (!sourceData || typeof sourceData !== "object") return;
+
+    gids.forEach(gid => {
+      const dataKey = mapping[gid];
+      if (dataKey && dataKey in sourceData) {
+        (filtered[sheetKey as keyof typeof filtered] as Record<string, unknown>)[dataKey] = 
+          (sourceData as Record<string, unknown>)[dataKey];
+      }
+    });
+  });
+
+  // Filter Supabase data
+  if (selectedSources.supabase.includes("marketing")) {
+    filtered.marketing = contextData.marketing;
+  }
+  if (selectedSources.supabase.includes("conteudos")) {
+    // conteudos is part of marketing
+    if (!filtered.marketing) filtered.marketing = {};
+    filtered.marketing.conteudos = contextData.marketing?.conteudos;
+    filtered.marketing.ideias = contextData.marketing?.ideias;
+  }
+  if (selectedSources.supabase.includes("closers")) {
+    filtered.closers = contextData.closers;
+  }
+  if (selectedSources.supabase.includes("robos")) {
+    filtered.robos = contextData.robos;
+  }
+
+  return filtered;
+}
+
+// Generate selection description for the AI
+function getSelectionDescription(selectedSources: SelectedSources): string {
+  const parts: string[] = [];
+
+  spreadsheetSources.forEach(sheet => {
+    const selectedGids = selectedSources.spreadsheets[sheet.key] || [];
+    if (selectedGids.length === 0) return;
+
+    if (selectedGids.length === sheet.tabs.length) {
+      parts.push(`${sheet.name} (todas as abas)`);
+    } else {
+      const tabNames = sheet.tabs
+        .filter(t => selectedGids.includes(t.gid))
+        .map(t => t.name);
+      parts.push(`${sheet.name}: ${tabNames.join(", ")}`);
+    }
+  });
+
+  supabaseSources.forEach(source => {
+    if (selectedSources.supabase.includes(source.id)) {
+      parts.push(source.name);
+    }
+  });
+
+  return parts.length > 0 ? parts.join(" | ") : "Nenhuma fonte selecionada";
+}
+
+export function AnalysisChat({ contextData, isLoadingData, selectedSources }: AnalysisChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+
+  // Filter context based on selection
+  const filteredContext = useMemo(
+    () => filterContextBySelection(contextData, selectedSources),
+    [contextData, selectedSources]
+  );
+
+  const selectionDescription = useMemo(
+    () => getSelectionDescription(selectedSources),
+    [selectedSources]
+  );
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -95,7 +226,8 @@ export function AnalysisChat({ contextData, isLoadingData }: AnalysisChatProps) 
       const { data, error } = await supabase.functions.invoke("analyze-gestao", {
         body: {
           query: messageText,
-          context: contextData,
+          context: filteredContext,
+          selectedSources: selectionDescription,
         },
       });
 
@@ -142,6 +274,10 @@ export function AnalysisChat({ contextData, isLoadingData }: AnalysisChatProps) 
     setMessages([]);
   };
 
+  const hasNoSourcesSelected = 
+    Object.keys(selectedSources.spreadsheets).length === 0 && 
+    selectedSources.supabase.length === 0;
+
   return (
     <div className="flex flex-col h-full">
       {/* Messages area */}
@@ -154,8 +290,13 @@ export function AnalysisChat({ contextData, isLoadingData }: AnalysisChatProps) 
             <h3 className="text-lg font-semibold text-foreground mb-2">
               Assistente de Análise Inteligente
             </h3>
-            <p className="text-muted-foreground mb-6 max-w-md">
+            <p className="text-muted-foreground mb-2 max-w-md">
               Faça perguntas sobre produtividade, metas, contratos e performance de qualquer setor ou colaborador.
+            </p>
+            
+            {/* Show selected sources */}
+            <p className="text-xs text-muted-foreground mb-6 max-w-lg bg-muted/50 px-3 py-2 rounded-lg">
+              <strong>Fontes ativas:</strong> {selectionDescription}
             </p>
             
           {isLoadingData ? (
@@ -163,10 +304,14 @@ export function AnalysisChat({ contextData, isLoadingData }: AnalysisChatProps) 
                 <Loader2 className="h-4 w-4 animate-spin" />
                 <span>Carregando dados dos setores...</span>
               </div>
+            ) : hasNoSourcesSelected ? (
+              <div className="text-amber-600 bg-amber-50 dark:bg-amber-900/20 px-4 py-3 rounded-lg">
+                ⚠️ Nenhuma fonte de dados selecionada. Selecione ao menos uma fonte para fazer perguntas.
+              </div>
             ) : (
               <div className="w-full max-w-2xl">
                 <ContextualSuggestions 
-                  contextData={contextData}
+                  contextData={filteredContext}
                   onSelectQuery={handleSend}
                   disabled={isLoading}
                 />
@@ -256,15 +401,15 @@ export function AnalysisChat({ contextData, isLoadingData }: AnalysisChatProps) 
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="Faça uma pergunta sobre os dados..."
+            placeholder={hasNoSourcesSelected ? "Selecione fontes de dados primeiro..." : "Faça uma pergunta sobre os dados..."}
             className="resize-none min-h-[44px] max-h-32"
-            disabled={isLoading || isLoadingData}
+            disabled={isLoading || isLoadingData || hasNoSourcesSelected}
             rows={1}
           />
           
           <Button
             onClick={() => handleSend()}
-            disabled={!input.trim() || isLoading || isLoadingData}
+            disabled={!input.trim() || isLoading || isLoadingData || hasNoSourcesSelected}
             className="shrink-0"
           >
             {isLoading ? (
