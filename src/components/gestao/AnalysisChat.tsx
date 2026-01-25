@@ -35,10 +35,12 @@ interface AnalysisChatProps {
       tasks?: unknown[];
       conformityErrors?: unknown[];
       deadlineErrors?: unknown[];
+      intimacoesPrevidenciario?: unknown[];
     };
     previdenciario: {
       peticoesIniciais?: unknown[];
       aposentadorias?: unknown[];
+      tarefas?: unknown[];
       [key: string]: unknown;
     };
     trabalhista: {
@@ -46,6 +48,21 @@ interface AnalysisChatProps {
       atividades?: unknown[];
       [key: string]: unknown;
     };
+    marketing?: {
+      atividades?: unknown[];
+      colunas?: unknown[];
+      ideias?: unknown[];
+      conteudos?: unknown[];
+    };
+    robos?: {
+      tiposProdutos?: unknown[];
+      transcricoes?: unknown[];
+      modelagens?: unknown[];
+    };
+    closers?: {
+      atendimentos?: unknown[];
+    };
+    profiles?: unknown[];
   };
   isLoadingData: boolean;
 }
