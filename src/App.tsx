@@ -22,6 +22,7 @@ import MidiaSocial from "./pages/MidiaSocial";
 import ContentHub from "./pages/ContentHub";
 import ModeladorConteudo from "./pages/ModeladorConteudo";
 import AtividadesMarketing from "./pages/AtividadesMarketing";
+import AtendimentosClosers from "./pages/AtendimentosClosers";
 import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
@@ -41,6 +42,7 @@ const App = () => (
               <Route path="/radar-bancario" element={<ProtectedRoute pageKey="radar-bancario"><RadarBancario /></ProtectedRoute>} />
               <Route path="/radar-previdenciario" element={<ProtectedRoute pageKey="radar-previdenciario"><RadarPrevidenciario /></ProtectedRoute>} />
               <Route path="/radar-trabalhista" element={<ProtectedRoute pageKey="radar-trabalhista"><RadarTrabalhista /></ProtectedRoute>} />
+              <Route path="/comercial/atendimentos" element={<ProtectedRoute pageKey="comercial-atendimentos"><AtendimentosClosers /></ProtectedRoute>} />
               <Route path="/robos/transcricao" element={<ProtectedRoute pageKey="robos-transcricao"><Transcricao /></ProtectedRoute>} />
               <Route path="/robos/prompts" element={<ProtectedRoute pageKey="robos-prompts"><AiPrompts /></ProtectedRoute>} />
               <Route path="/robos/prompts-modelador" element={<ProtectedRoute pageKey="robos-prompts-modelador"><PromptsModelador /></ProtectedRoute>} />
