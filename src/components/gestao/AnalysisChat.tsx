@@ -740,7 +740,7 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
           {pdfPreviewIndex !== null && messages[pdfPreviewIndex] && (
             <div ref={pdfContentRef} className="bg-white text-black p-8 rounded-lg">
               {/* Header with Logo */}
-              <div className="flex items-center justify-center border-b border-gray-200 pb-4 mb-6">
+              <div className="flex items-center justify-center py-6 mb-6 -mx-8 -mt-8 rounded-t-lg" style={{ backgroundColor: 'hsl(216, 50%, 12%)' }}>
                 <img 
                   src={logoEscritorio} 
                   alt="David Eduardo Cunha Advogados" 
