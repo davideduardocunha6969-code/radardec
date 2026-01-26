@@ -402,6 +402,48 @@ export type Database = {
         }
         Relationships: []
       }
+      ia_profile: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          forma_pensar: string
+          formato_resposta: string
+          id: string
+          nome: string
+          persona: string
+          postura: string
+          regras: string
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          forma_pensar: string
+          formato_resposta: string
+          id?: string
+          nome?: string
+          persona: string
+          postura: string
+          regras: string
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          forma_pensar?: string
+          formato_resposta?: string
+          id?: string
+          nome?: string
+          persona?: string
+          postura?: string
+          regras?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ideias_conteudo: {
         Row: {
           copy_completa: string | null
