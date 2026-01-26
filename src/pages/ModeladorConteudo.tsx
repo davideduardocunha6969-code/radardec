@@ -1,5 +1,5 @@
-import { useState, useRef, useCallback, useEffect } from "react";
-import { Wand2, Video, Loader2, ExternalLink, ArrowRight, Send, AlertCircle, Film, Upload, X, FileVideo, SquareStack, ImageIcon, BookOpen, Newspaper } from "lucide-react";
+import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { Wand2, Loader2, ExternalLink, ArrowRight, Send, AlertCircle, Upload, X, FileVideo, LayoutGrid } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -11,47 +11,29 @@ import { Textarea } from "@/components/ui/textarea";
 import { useTiposProdutos, TipoProduto, SETOR_LABELS, SETOR_COLORS } from "@/hooks/useTiposProdutos";
 import { useModelagemConteudo, ModelagemResult } from "@/hooks/useModelagemConteudo";
 import { Formato, FORMATO_LABELS } from "@/hooks/useConteudosMidia";
+import { useFormatosModelador, FormatoOrigem, FormatoSaida } from "@/hooks/useFormatosModelador";
 import { ModelagemIdeiaFormDialog } from "@/components/modelador/ModelagemIdeiaFormDialog";
 import { ModelagemResultsView } from "@/components/modelador/ModelagemResultsView";
+import { getFormatoIcon, getFormatoColors } from "@/utils/formatoIcons";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
-// Tipos de formato expandidos para incluir blog_post e publicacao
-type FormatoCompleto = Formato | "blog_post" | "publicacao";
-
 interface PendingIdeia {
   produto: TipoProduto;
-  formatoSaida: Formato;
-  formatoOrigem: FormatoCompleto;
+  formatoSaida: string;
+  formatoOrigem: string;
   result: ModelagemResult;
   link: string;
 }
 
-// Opções de formato de ORIGEM (conteúdo original)
-const FORMATO_ORIGEM_OPTIONS: { value: FormatoCompleto; label: string; icon: React.ReactNode; description: string; disponivel: boolean }[] = [
-  { value: "video", label: "Vídeo Curto", icon: <Video className="h-5 w-5" />, description: "Reels, Shorts, TikTok", disponivel: true },
-  { value: "video_longo", label: "Vídeo Longo", icon: <Film className="h-5 w-5" />, description: "YouTube (5-15min)", disponivel: true },
-  { value: "carrossel", label: "Carrossel", icon: <SquareStack className="h-5 w-5" />, description: "5-10 slides", disponivel: false },
-  { value: "estatico", label: "Post Estático", icon: <ImageIcon className="h-5 w-5" />, description: "Imagem única", disponivel: false },
-  { value: "blog_post", label: "Blog Post", icon: <BookOpen className="h-5 w-5" />, description: "Artigo de blog", disponivel: false },
-  { value: "publicacao", label: "Publicação", icon: <Newspaper className="h-5 w-5" />, description: "Post de texto", disponivel: false },
-];
-
-// Opções de formato de SAÍDA (conteúdo modelado)
-const FORMATO_SAIDA_OPTIONS: { value: Formato; label: string; icon: React.ReactNode; description: string }[] = [
-  { value: "video", label: "Vídeo Curto", icon: <Video className="h-5 w-5" />, description: "Reels, Shorts (30-90s)" },
-  { value: "video_longo", label: "Vídeo Longo", icon: <Film className="h-5 w-5" />, description: "YouTube (5-15min)" },
-  { value: "carrossel", label: "Carrossel", icon: <SquareStack className="h-5 w-5" />, description: "5-10 slides" },
-  { value: "estatico", label: "Estático", icon: <ImageIcon className="h-5 w-5" />, description: "Imagem única" },
-];
-
 export default function ModeladorConteudo() {
   const { produtos, isLoading: loadingProdutos } = useTiposProdutos();
   const { isAnalyzing, analyzeVideoUploadMultiFormato, resetState: resetModelagem } = useModelagemConteudo();
+  const { formatosOrigem, formatosSaida: formatosSaidaDB, isLoading: loadingFormatos } = useFormatosModelador();
 
   const [step, setStep] = useState<"select-origem" | "select-saida" | "input-link" | "upload-video" | "select-products" | "analyzing" | "results">("select-origem");
-  const [formatoOrigem, setFormatoOrigem] = useState<FormatoCompleto | null>(null);
-  const [formatosSaida, setFormatosSaida] = useState<Formato[]>([]);
+  const [formatoOrigem, setFormatoOrigem] = useState<string | null>(null);
+  const [formatosSaidaSelecionados, setFormatosSaidaSelecionados] = useState<string[]>([]);
   const [link, setLink] = useState("");
   const [videoFile, setVideoFile] = useState<File | null>(null);
   const [videoPreviewUrl, setVideoPreviewUrl] = useState<string | null>(null);
@@ -64,8 +46,23 @@ export default function ModeladorConteudo() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
+  // Get current selected origin format details
+  const selectedOrigemFormat = useMemo(() => {
+    return formatosOrigem.find(f => f.key === formatoOrigem) || null;
+  }, [formatosOrigem, formatoOrigem]);
+
+  // Get labels for display
+  const getOrigemLabel = useCallback((key: string) => {
+    const format = formatosOrigem.find(f => f.key === key);
+    return format?.nome || key;
+  }, [formatosOrigem]);
+
+  const getSaidaLabel = useCallback((key: string) => {
+    const format = formatosSaidaDB.find(f => f.key === key);
+    return format?.nome || FORMATO_LABELS[key as Formato] || key;
+  }, [formatosSaidaDB]);
+
   const clearVideoPreview = useCallback(() => {
-    // Stop and fully reset the video element (some browsers keep the previous buffer otherwise)
     if (videoRef.current) {
       try {
         videoRef.current.pause();
@@ -95,14 +92,12 @@ export default function ModeladorConteudo() {
     [clearVideoPreview]
   );
 
-  // Single source of truth for preview URL lifecycle
   useEffect(() => {
     if (!videoFile || !videoFile.type.startsWith("video/")) return;
 
     const url = URL.createObjectURL(videoFile);
     setVideoPreviewUrl(url);
 
-    // Force a reload right after setting the URL
     if (videoRef.current) {
       try {
         videoRef.current.load();
@@ -120,21 +115,16 @@ export default function ModeladorConteudo() {
     };
   }, [videoFile]);
 
-  const handleOrigemSelect = (formato: FormatoCompleto) => {
-    const option = FORMATO_ORIGEM_OPTIONS.find(o => o.value === formato);
-    if (!option?.disponivel) {
-      toast.info("Esta funcionalidade estará disponível em breve!");
-      return;
-    }
-    setFormatoOrigem(formato);
+  const handleOrigemSelect = (formatKey: string) => {
+    setFormatoOrigem(formatKey);
     setStep("select-saida");
   };
 
-  const handleFormatoSaidaToggle = (formato: Formato) => {
-    setFormatosSaida((prev) =>
-      prev.includes(formato)
-        ? prev.filter((f) => f !== formato)
-        : [...prev, formato]
+  const handleFormatoSaidaToggle = (formatKey: string) => {
+    setFormatosSaidaSelecionados((prev) =>
+      prev.includes(formatKey)
+        ? prev.filter((f) => f !== formatKey)
+        : [...prev, formatKey]
     );
   };
 
@@ -147,7 +137,7 @@ export default function ModeladorConteudo() {
   };
 
   const handleContinueToInput = () => {
-    if (formatosSaida.length === 0) {
+    if (formatosSaidaSelecionados.length === 0) {
       toast.error("Selecione pelo menos um formato de saída");
       return;
     }
@@ -207,12 +197,11 @@ export default function ModeladorConteudo() {
       toast.error("Faça upload do vídeo");
       return;
     }
-    // Caption is now optional
     setStep("select-products");
   };
 
   const handleAnalyze = async () => {
-    if (!formatoOrigem || !link || !videoFile || formatosSaida.length === 0 || produtosSelecionados.length === 0) {
+    if (!formatoOrigem || !link || !videoFile || formatosSaidaSelecionados.length === 0 || produtosSelecionados.length === 0) {
       toast.error("Preencha todos os campos obrigatórios");
       return;
     }
@@ -223,22 +212,20 @@ export default function ModeladorConteudo() {
       produtosSelecionados.includes(p.id)
     );
 
-    // Analyze for each selected product with all output formats
     const ideias: PendingIdeia[] = [];
 
     for (const produto of selectedProducts) {
-      // Analyze video for this product with all output formats, passing formatoOrigem for correct prompt lookup
-      const response = await analyzeVideoUploadMultiFormato(videoFile, caption, [produto], formatosSaida, formatoOrigem || undefined);
+      // Cast to Formato[] for the API call - the backend will use the keys
+      const formatosParaAPI = formatosSaidaSelecionados as Formato[];
+      const response = await analyzeVideoUploadMultiFormato(videoFile, caption, [produto], formatosParaAPI, formatoOrigem);
       
       if (response && response.formatos) {
-        // Create pending ideias for each format in the order selected
-        for (const formatoSaida of formatosSaida) {
-          const result = response.formatos[formatoSaida];
+        for (const formatoSaidaKey of formatosSaidaSelecionados) {
+          const result = response.formatos[formatoSaidaKey];
           if (result) {
-            // Add transcription and visual analysis to each result
             result.transcricao_audio = response.transcricao;
             result.analise_visual_detalhada = response.analise_visual;
-            ideias.push({ produto, formatoSaida, formatoOrigem, result, link });
+            ideias.push({ produto, formatoSaida: formatoSaidaKey, formatoOrigem, result, link });
           }
         }
       }
@@ -284,7 +271,7 @@ export default function ModeladorConteudo() {
     clearVideoPreview();
     setStep("select-origem");
     setFormatoOrigem(null);
-    setFormatosSaida([]);
+    setFormatosSaidaSelecionados([]);
     setLink("");
     setVideoFile(null);
     setCaption("");
@@ -302,12 +289,23 @@ export default function ModeladorConteudo() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
   };
 
-  const getOrigemLabel = (formato: FormatoCompleto) => {
-    const option = FORMATO_ORIGEM_OPTIONS.find(o => o.value === formato);
-    return option?.label || formato;
-  };
-
   const currentIdeia = pendingIdeias[currentIdeiaIndex];
+
+  if (loadingFormatos) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Wand2 className="h-6 w-6" />
+            Modelador de Conteúdo
+          </h1>
+        </div>
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -334,36 +332,43 @@ export default function ModeladorConteudo() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {FORMATO_ORIGEM_OPTIONS.map((option) => (
-                <Card
-                  key={option.value}
-                  className={cn(
-                    "cursor-pointer transition-all hover:border-primary/50",
-                    !option.disponivel && "opacity-50 cursor-not-allowed",
-                    formatoOrigem === option.value && "border-primary bg-primary/5"
-                  )}
-                  onClick={() => handleOrigemSelect(option.value)}
-                >
-                  <CardContent className="p-4">
-                    <div className="flex items-center gap-3">
-                      <div className={cn(
-                        "p-2 rounded-lg",
-                        option.disponivel ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
-                      )}>
-                        {option.icon}
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">{option.label}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {option.disponivel ? option.description : "Em breve"}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
+            {formatosOrigem.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>Nenhum formato de origem configurado.</p>
+                <p className="text-sm mt-1">Configure os formatos em Robôs → Prompts Modelador.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {formatosOrigem.map((option) => {
+                  const Icon = getFormatoIcon(option.icone);
+                  const colors = getFormatoColors(option.cor);
+                  return (
+                    <Card
+                      key={option.id}
+                      className={cn(
+                        "cursor-pointer transition-all hover:border-primary/50",
+                        formatoOrigem === option.key && "border-primary bg-primary/5"
+                      )}
+                      onClick={() => handleOrigemSelect(option.key)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-3">
+                          <div className={cn("p-2 rounded-lg", colors.bgColor, colors.textColor)}>
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <p className="font-medium text-foreground">{option.nome}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {option.descricao || ""}
+                            </p>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -373,7 +378,7 @@ export default function ModeladorConteudo() {
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <SquareStack className="h-5 w-5" />
+              <LayoutGrid className="h-5 w-5" />
               Formatos de Saída
             </CardTitle>
             <CardDescription>
@@ -396,52 +401,61 @@ export default function ModeladorConteudo() {
               <p className="text-sm text-muted-foreground">
                 Você pode selecionar mais de um formato. Para cada combinação (origem → saída), a IA usará um prompt especializado.
               </p>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {FORMATO_SAIDA_OPTIONS.map((option) => (
-                  <div
-                    key={option.value}
-                    className={cn(
-                      "flex items-start gap-3 p-4 rounded-lg border transition-colors cursor-pointer",
-                      formatosSaida.includes(option.value)
-                        ? "border-primary bg-primary/5"
-                        : "border-border hover:border-primary/50"
-                    )}
-                    onClick={() => handleFormatoSaidaToggle(option.value)}
-                  >
-                    <Checkbox
-                      checked={formatosSaida.includes(option.value)}
-                      onCheckedChange={() => handleFormatoSaidaToggle(option.value)}
-                    />
-                    <div className="flex items-center gap-3 flex-1">
-                      <div className={cn(
-                        "p-2 rounded-lg",
-                        formatosSaida.includes(option.value) ? "bg-primary/20 text-primary" : "bg-muted text-muted-foreground"
-                      )}>
-                        {option.icon}
+              {formatosSaidaDB.length === 0 ? (
+                <div className="text-center py-4 text-muted-foreground">
+                  <p>Nenhum formato de saída configurado.</p>
+                  <p className="text-sm">Configure em Robôs → Prompts Modelador.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {formatosSaidaDB.map((option) => {
+                    const Icon = getFormatoIcon(option.icone);
+                    const colors = getFormatoColors(option.cor);
+                    const isSelected = formatosSaidaSelecionados.includes(option.key);
+                    return (
+                      <div
+                        key={option.id}
+                        className={cn(
+                          "flex items-start gap-3 p-4 rounded-lg border transition-colors cursor-pointer",
+                          isSelected
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-primary/50"
+                        )}
+                        onClick={() => handleFormatoSaidaToggle(option.key)}
+                      >
+                        <Checkbox
+                          checked={isSelected}
+                          onCheckedChange={() => handleFormatoSaidaToggle(option.key)}
+                        />
+                        <div className="flex items-center gap-3 flex-1">
+                          <div className={cn("p-2 rounded-lg", isSelected ? colors.bgColor : "bg-muted", colors.textColor)}>
+                            <Icon className="h-5 w-5" />
+                          </div>
+                          <div>
+                            <span className="font-medium text-foreground">
+                              {option.nome}
+                            </span>
+                            <p className="text-xs text-muted-foreground">
+                              {option.descricao || ""}
+                            </p>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <span className="font-medium text-foreground">
-                          {option.label}
-                        </span>
-                        <p className="text-xs text-muted-foreground">
-                          {option.description}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
+                    );
+                  })}
+                </div>
+              )}
             </div>
 
-            {formatosSaida.length > 0 && (
+            {formatosSaidaSelecionados.length > 0 && (
               <div className="p-3 bg-muted/50 rounded-lg">
                 <p className="text-sm text-muted-foreground">
                   <strong>Combinações selecionadas:</strong>
                 </p>
                 <div className="flex flex-wrap gap-2 mt-2">
-                  {formatosSaida.map((saida) => (
-                    <Badge key={saida} variant="outline" className="text-xs">
-                      {formatoOrigem && getOrigemLabel(formatoOrigem)} → {FORMATO_LABELS[saida]}
+                  {formatosSaidaSelecionados.map((saidaKey) => (
+                    <Badge key={saidaKey} variant="outline" className="text-xs">
+                      {formatoOrigem && getOrigemLabel(formatoOrigem)} → {getSaidaLabel(saidaKey)}
                     </Badge>
                   ))}
                 </div>
@@ -451,12 +465,12 @@ export default function ModeladorConteudo() {
             <div className="flex justify-between pt-4">
               <Button variant="outline" onClick={() => {
                 setFormatoOrigem(null);
-                setFormatosSaida([]);
+                setFormatosSaidaSelecionados([]);
                 setStep("select-origem");
               }}>
                 Voltar
               </Button>
-              <Button onClick={handleContinueToInput} disabled={formatosSaida.length === 0}>
+              <Button onClick={handleContinueToInput} disabled={formatosSaidaSelecionados.length === 0}>
                 Continuar
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
@@ -470,7 +484,7 @@ export default function ModeladorConteudo() {
         <Card className="bg-card/50 backdrop-blur-sm border-border/50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Video className="h-5 w-5" />
+              <ExternalLink className="h-5 w-5" />
               Link do Conteúdo Original
             </CardTitle>
             <CardDescription>
@@ -486,9 +500,9 @@ export default function ModeladorConteudo() {
               </div>
               <div className="flex items-center gap-2 flex-wrap">
                 <span className="text-sm text-muted-foreground">Saídas:</span>
-                {formatosSaida.map((f) => (
-                  <Badge key={f} variant="outline" className="text-xs">
-                    {FORMATO_LABELS[f]}
+                {formatosSaidaSelecionados.map((key) => (
+                  <Badge key={key} variant="outline" className="text-xs">
+                    {getSaidaLabel(key)}
                   </Badge>
                 ))}
               </div>
@@ -539,9 +553,9 @@ export default function ModeladorConteudo() {
                 <span className="text-sm text-muted-foreground">Origem:</span>
                 <Badge variant="secondary">{formatoOrigem && getOrigemLabel(formatoOrigem)}</Badge>
                 <span className="text-sm text-muted-foreground">→</span>
-                {formatosSaida.map((f) => (
-                  <Badge key={f} variant="outline" className="text-xs">
-                    {FORMATO_LABELS[f]}
+                {formatosSaidaSelecionados.map((key) => (
+                  <Badge key={key} variant="outline" className="text-xs">
+                    {getSaidaLabel(key)}
                   </Badge>
                 ))}
               </div>
@@ -701,9 +715,9 @@ export default function ModeladorConteudo() {
                 <span className="text-sm text-muted-foreground">Origem:</span>
                 <Badge variant="secondary">{formatoOrigem && getOrigemLabel(formatoOrigem)}</Badge>
                 <span className="text-sm text-muted-foreground">→ Saídas:</span>
-                {formatosSaida.map((f) => (
-                  <Badge key={f} variant="outline" className="text-xs">
-                    {FORMATO_LABELS[f]}
+                {formatosSaidaSelecionados.map((key) => (
+                  <Badge key={key} variant="outline" className="text-xs">
+                    {getSaidaLabel(key)}
                   </Badge>
                 ))}
               </div>
@@ -770,7 +784,7 @@ export default function ModeladorConteudo() {
             <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
               <p className="text-sm text-amber-700 dark:text-amber-300">
                 <AlertCircle className="h-4 w-4 inline mr-2" />
-                <strong>Nota:</strong> Serão geradas {formatosSaida.length * produtosSelecionados.length} ideias ({formatosSaida.length} formato(s) de saída × {produtosSelecionados.length} produto(s))
+                <strong>Nota:</strong> Serão geradas {formatosSaidaSelecionados.length * produtosSelecionados.length} ideias ({formatosSaidaSelecionados.length} formato(s) de saída × {produtosSelecionados.length} produto(s))
               </p>
             </div>
 
@@ -799,11 +813,11 @@ export default function ModeladorConteudo() {
               Analisando Conteúdo
             </h3>
             <p className="text-muted-foreground text-center max-w-md">
-              A IA está processando o conteúdo: transcrevendo o áudio, analisando visualmente e gerando modelagens para {formatosSaida.length} formato(s) de saída...
+              A IA está processando o conteúdo: transcrevendo o áudio, analisando visualmente e gerando modelagens para {formatosSaidaSelecionados.length} formato(s) de saída...
             </p>
             <div className="mt-4 p-3 bg-muted/50 rounded-lg">
               <p className="text-xs text-muted-foreground text-center">
-                <strong>Transformação:</strong> {formatoOrigem && getOrigemLabel(formatoOrigem)} → {formatosSaida.map(f => FORMATO_LABELS[f]).join(", ")}
+                <strong>Transformação:</strong> {formatoOrigem && getOrigemLabel(formatoOrigem)} → {formatosSaidaSelecionados.map(key => getSaidaLabel(key)).join(", ")}
               </p>
             </div>
             <p className="text-xs text-muted-foreground mt-4">
@@ -825,7 +839,7 @@ export default function ModeladorConteudo() {
                 {currentIdeia.produto.nome}
               </Badge>
               <Badge variant="secondary">
-                {getOrigemLabel(currentIdeia.formatoOrigem)} → {FORMATO_LABELS[currentIdeia.formatoSaida]}
+                {getOrigemLabel(currentIdeia.formatoOrigem)} → {getSaidaLabel(currentIdeia.formatoSaida)}
               </Badge>
             </div>
             {pendingIdeias.length > 1 && (
@@ -840,7 +854,7 @@ export default function ModeladorConteudo() {
               <div className="flex items-center justify-between">
                 <div>
                   <CardTitle className="flex items-center gap-2">
-                    Modelagem: {FORMATO_LABELS[currentIdeia.formatoSaida]}
+                    Modelagem: {getSaidaLabel(currentIdeia.formatoSaida)}
                   </CardTitle>
                   <CardDescription className="flex items-center gap-1 mt-1">
                     <ExternalLink className="h-3 w-3" />
@@ -859,7 +873,7 @@ export default function ModeladorConteudo() {
             <CardContent className="space-y-6">
               <ModelagemResultsView
                 result={currentIdeia.result}
-                formatoSaida={currentIdeia.formatoSaida}
+                formatoSaida={currentIdeia.formatoSaida as Formato}
                 formatoOrigem={currentIdeia.formatoOrigem}
               />
 
@@ -885,7 +899,7 @@ export default function ModeladorConteudo() {
           onOpenChange={setIdeiaFormOpen}
           result={currentIdeia.result}
           produto={currentIdeia.produto}
-          formato={currentIdeia.formatoSaida}
+          formato={currentIdeia.formatoSaida as Formato}
           linkOriginal={currentIdeia.link}
           onSuccess={handleIdeiaEnviada}
         />
