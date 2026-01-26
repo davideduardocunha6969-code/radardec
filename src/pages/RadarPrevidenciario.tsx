@@ -290,6 +290,30 @@ const RadarPrevidenciario = () => {
       .slice(0, 10);
   }, [data, tarefasWeekFilter]);
 
+  // Nota média das tarefas que passaram por correção (revisão)
+  const notaMediaTarefas = useMemo(() => {
+    if (!data?.tarefas) return null;
+    
+    const filtered = tarefasWeekFilter 
+      ? data.tarefas.filter(t => t.semana === tarefasWeekFilter)
+      : data.tarefas;
+    
+    const comNota = filtered.filter(t => {
+      const nota = parseFloat(t.notaRevisao);
+      return !isNaN(nota) && nota > 0;
+    });
+
+    if (comNota.length === 0) return null;
+
+    const somaNotas = comNota.reduce((acc, t) => acc + parseFloat(t.notaRevisao), 0);
+    const media = somaNotas / comNota.length;
+
+    return {
+      media: media.toFixed(2),
+      total: comNota.length,
+    };
+  }, [data, tarefasWeekFilter]);
+
   const tarefasPorResponsavelData = useMemo(() => {
     if (!data?.tarefas) return [];
     
@@ -1150,12 +1174,69 @@ const RadarPrevidenciario = () => {
               </CardContent>
             </Card>
           </div>
+
+          {/* Card de Nota Média das Tarefas Revisadas */}
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <Star className="h-5 w-5 text-yellow-500" />
+                <CardTitle className="text-lg">Nota Média das Correções</CardTitle>
+              </div>
+              <p className="text-xs text-muted-foreground">Média das notas de revisão das tarefas corrigidas</p>
+            </CardHeader>
+            <CardContent>
+              {notaMediaTarefas ? (
+                <div className="flex flex-col items-center justify-center py-6">
+                  <div className="relative">
+                    <div className="text-6xl font-bold text-primary">
+                      {notaMediaTarefas.media}
+                    </div>
+                    <div className="absolute -top-2 -right-6">
+                      <Star className="h-8 w-8 text-yellow-500 fill-yellow-500" />
+                    </div>
+                  </div>
+                  <p className="text-muted-foreground mt-4">
+                    Baseado em <span className="font-semibold text-foreground">{notaMediaTarefas.total}</span> tarefas revisadas
+                  </p>
+                  <div className="flex items-center gap-1 mt-4">
+                    {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map((star) => {
+                      const nota = parseFloat(notaMediaTarefas.media);
+                      const filled = star <= Math.floor(nota);
+                      const partial = star === Math.ceil(nota) && nota % 1 !== 0;
+                      const fillPercent = partial ? (nota % 1) * 100 : 0;
+                      
+                      return (
+                        <div key={star} className="relative w-5 h-5">
+                          {/* Estrela de fundo (vazia) */}
+                          <Star className="absolute inset-0 h-5 w-5 text-muted-foreground/30" />
+                          {/* Estrela preenchida */}
+                          {filled && (
+                            <Star className="absolute inset-0 h-5 w-5 text-yellow-500 fill-yellow-500" />
+                          )}
+                          {/* Estrela parcialmente preenchida */}
+                          {partial && (
+                            <div className="absolute inset-0 overflow-hidden" style={{ width: `${fillPercent}%` }}>
+                              <Star className="h-5 w-5 text-yellow-500 fill-yellow-500" />
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ) : (
+                <div className="h-[200px] flex items-center justify-center bg-muted/30 rounded-lg">
+                  <p className="text-muted-foreground text-sm">Nenhuma tarefa revisada com nota</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
         </CollapsibleContent>
       </Collapsible>
 
       {/* Seção 4: Radar Aposentadorias (GID 0) */}
       <Collapsible 
-        open={openSection === 'aposentadorias'} 
+        open={openSection === 'aposentadorias'}
         onOpenChange={() => handleSectionToggle('aposentadorias')}
         className="mb-8"
       >
