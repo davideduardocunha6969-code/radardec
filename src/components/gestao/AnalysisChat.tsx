@@ -3,6 +3,7 @@ import { Send, Loader2, Sparkles, RefreshCw, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DynamicVisualization, VisualizationSpec } from "./DynamicVisualization";
@@ -372,8 +373,29 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
                     </div>
                     
                     {/* Markdown content */}
-                    <div className="prose prose-sm dark:prose-invert max-w-none text-foreground prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-li:text-foreground prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5">
-                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                    <div className="prose prose-sm dark:prose-invert max-w-none text-foreground prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-li:text-foreground prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-img:rounded-lg prose-img:max-w-full prose-img:my-4">
+                      <ReactMarkdown 
+                        remarkPlugins={[remarkGfm]}
+                        components={{
+                          img: ({ node, ...props }) => (
+                            <img 
+                              {...props} 
+                              className="rounded-lg max-w-full h-auto shadow-md" 
+                              loading="lazy"
+                            />
+                          ),
+                          a: ({ node, ...props }) => (
+                            <a 
+                              {...props} 
+                              className="text-primary hover:underline" 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                            />
+                          ),
+                        }}
+                      >
+                        {message.content}
+                      </ReactMarkdown>
                     </div>
                     
                     {/* Visualizations */}

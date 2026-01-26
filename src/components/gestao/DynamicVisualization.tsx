@@ -5,6 +5,7 @@ import {
 } from "recharts";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 interface MetricData {
   value: number | string;
@@ -237,8 +238,29 @@ function TextCard({ title, data }: { title?: string; data: TextData }) {
       {title && (
         <h3 className="text-base font-semibold text-foreground mb-3">{title}</h3>
       )}
-      <div className="prose prose-sm dark:prose-invert max-w-none text-foreground prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-li:text-foreground prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5">
-        <ReactMarkdown>{data.content}</ReactMarkdown>
+      <div className="prose prose-sm dark:prose-invert max-w-none text-foreground prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-li:text-foreground prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-img:rounded-lg prose-img:max-w-full prose-img:my-4">
+        <ReactMarkdown 
+          remarkPlugins={[remarkGfm]}
+          components={{
+            img: ({ node, ...props }) => (
+              <img 
+                {...props} 
+                className="rounded-lg max-w-full h-auto shadow-md" 
+                loading="lazy"
+              />
+            ),
+            a: ({ node, ...props }) => (
+              <a 
+                {...props} 
+                className="text-primary hover:underline" 
+                target="_blank" 
+                rel="noopener noreferrer"
+              />
+            ),
+          }}
+        >
+          {data.content}
+        </ReactMarkdown>
       </div>
     </div>
   );
