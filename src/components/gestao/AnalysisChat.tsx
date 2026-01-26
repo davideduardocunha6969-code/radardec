@@ -215,13 +215,57 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
     scrollToBottom();
   }, [messages]);
 
-  const handleCopy = async (index: number, content: string) => {
+  const buildFullContent = (message: Message): string => {
+    let fullContent = message.content;
+    
+    if (message.visualizations && message.visualizations.length > 0) {
+      message.visualizations.forEach((viz) => {
+        if (viz.type === "text") {
+          const textData = viz.data as { content: string };
+          if (textData?.content) {
+            fullContent += "\n\n" + (viz.title ? `## ${viz.title}\n\n` : "") + textData.content;
+          }
+        } else if (viz.type === "table") {
+          const tableData = viz.data as { headers: string[]; rows: (string | number)[][] };
+          if (tableData?.headers && tableData?.rows) {
+            fullContent += "\n\n" + (viz.title ? `## ${viz.title}\n\n` : "");
+            // Build markdown table
+            fullContent += "| " + tableData.headers.join(" | ") + " |\n";
+            fullContent += "| " + tableData.headers.map(() => "---").join(" | ") + " |\n";
+            tableData.rows.forEach(row => {
+              fullContent += "| " + row.join(" | ") + " |\n";
+            });
+          }
+        } else if (viz.type === "metric") {
+          const metricData = viz.data as { value: number | string; label: string; trend?: string };
+          if (metricData) {
+            fullContent += "\n\n" + (viz.title ? `**${viz.title}:** ` : "") + 
+              `${metricData.label}: ${metricData.value}` + 
+              (metricData.trend ? ` (${metricData.trend})` : "");
+          }
+        } else if (viz.type === "chart") {
+          const chartData = viz.data as { name: string; value: number }[];
+          if (Array.isArray(chartData)) {
+            fullContent += "\n\n" + (viz.title ? `## ${viz.title}\n\n` : "");
+            chartData.forEach(item => {
+              fullContent += `- ${item.name}: ${item.value}\n`;
+            });
+          }
+        }
+      });
+    }
+    
+    return fullContent;
+  };
+
+  const handleCopy = async (index: number, message: Message) => {
     try {
-      await navigator.clipboard.writeText(content);
+      const fullContent = buildFullContent(message);
+      await navigator.clipboard.writeText(fullContent);
       setCopiedIndex(index);
       toast({
         title: "Copiado!",
-        description: "Resposta copiada para a área de transferência.",
+        description: "Resposta completa copiada para a área de transferência.",
       });
       setTimeout(() => setCopiedIndex(null), 2000);
     } catch {
@@ -356,7 +400,7 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
                         variant="ghost"
                         size="sm"
                         className="h-8 px-2 text-muted-foreground hover:text-foreground"
-                        onClick={() => handleCopy(index, message.content)}
+                        onClick={() => handleCopy(index, message)}
                       >
                         {copiedIndex === index ? (
                           <>
