@@ -4,6 +4,7 @@ import {
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from "recharts";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
+import ReactMarkdown from "react-markdown";
 
 interface MetricData {
   value: number | string;
@@ -232,17 +233,13 @@ function TableCard({ title, data }: { title?: string; data: TableData }) {
 
 function TextCard({ title, data }: { title?: string; data: TextData }) {
   return (
-    <Card className="bg-card/50 backdrop-blur-sm border-border/50">
+    <div className="w-full">
       {title && (
-        <CardHeader className="pb-2">
-          <CardTitle className="text-base font-semibold">{title}</CardTitle>
-        </CardHeader>
+        <h3 className="text-base font-semibold text-foreground mb-3">{title}</h3>
       )}
-      <CardContent>
-        <p className="text-sm text-foreground whitespace-pre-wrap leading-relaxed">
-          {data.content}
-        </p>
-      </CardContent>
-    </Card>
+      <div className="prose prose-sm dark:prose-invert max-w-none text-foreground prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-li:text-foreground prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5">
+        <ReactMarkdown>{data.content}</ReactMarkdown>
+      </div>
+    </div>
   );
 }
