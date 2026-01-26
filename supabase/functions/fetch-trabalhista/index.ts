@@ -123,7 +123,7 @@ serve(async (req) => {
 
     // Process Atividades (skip header)
     // Coluna B: data da tarefa, D: data conclusão, F: prazo fatal, H: tipo, K: responsável, L: cliente, M: número do processo
-    const atividadesRaw = atividadesData.slice(1).map(row => ({
+    const atividades = atividadesData.slice(1).map(row => ({
       dataTarefa: row[1] || '',       // Coluna B (índice 1)
       dataConclusao: row[3] || '',    // Coluna D (índice 3)
       prazoFatal: row[5] || '',       // Coluna F (índice 5)
@@ -131,14 +131,7 @@ serve(async (req) => {
       responsavel: row[10] || '',     // Coluna K (índice 10)
       cliente: row[11] || '',         // Coluna L (índice 11)
       numeroProcesso: row[12] || '',  // Coluna M (índice 12)
-    }));
-    
-    // Filtra apenas atividades que tenham pelo menos um campo relevante preenchido
-    const atividades = atividadesRaw.filter(a => 
-      a.tipoTarefa || a.responsavel || a.dataTarefa || a.dataConclusao
-    );
-    
-    console.log(`Atividades raw: ${atividadesRaw.length}, após filtro: ${atividades.length}`);
+    })).filter(a => a.tipoTarefa); // Exclui tarefas sem tipo preenchido
 
     // Calculate statistics for Iniciais
     const stats = {
