@@ -1,8 +1,8 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Send, Loader2, Sparkles, RefreshCw } from "lucide-react";
+import { Send, Loader2, Sparkles, RefreshCw, Copy, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
+import ReactMarkdown from "react-markdown";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DynamicVisualization, VisualizationSpec } from "./DynamicVisualization";
@@ -191,6 +191,7 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
 
@@ -212,6 +213,24 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  const handleCopy = async (index: number, content: string) => {
+    try {
+      await navigator.clipboard.writeText(content);
+      setCopiedIndex(index);
+      toast({
+        title: "Copiado!",
+        description: "Resposta copiada para a área de transferência.",
+      });
+      setTimeout(() => setCopiedIndex(null), 2000);
+    } catch {
+      toast({
+        title: "Erro ao copiar",
+        description: "Não foi possível copiar o texto.",
+        variant: "destructive",
+      });
+    }
+  };
 
   const handleSend = async (query?: string) => {
     const messageText = query || input.trim();
@@ -323,21 +342,43 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
             {messages.map((message, index) => (
               <div key={index} className="w-full">
                 {message.role === "user" ? (
-                  <div className="flex justify-end mb-2">
+                  <div className="flex justify-end mb-4">
                     <div className="bg-primary text-primary-foreground rounded-2xl rounded-br-md px-4 py-2 max-w-[85%]">
                       <p className="text-sm">{message.content}</p>
                     </div>
                   </div>
                 ) : (
-                  <div className="w-full space-y-4">
-                    <div className="prose prose-sm max-w-none text-foreground">
-                      <p className="whitespace-pre-wrap leading-relaxed">
-                        {message.content}
-                      </p>
+                  <div className="w-full mb-6">
+                    {/* Copy button */}
+                    <div className="flex justify-end mb-2">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                        onClick={() => handleCopy(index, message.content)}
+                      >
+                        {copiedIndex === index ? (
+                          <>
+                            <Check className="h-4 w-4 mr-1" />
+                            Copiado
+                          </>
+                        ) : (
+                          <>
+                            <Copy className="h-4 w-4 mr-1" />
+                            Copiar
+                          </>
+                        )}
+                      </Button>
                     </div>
                     
+                    {/* Markdown content */}
+                    <div className="prose prose-sm dark:prose-invert max-w-none text-foreground prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-li:text-foreground prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5">
+                      <ReactMarkdown>{message.content}</ReactMarkdown>
+                    </div>
+                    
+                    {/* Visualizations */}
                     {message.visualizations && message.visualizations.length > 0 && (
-                      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
+                      <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3 mt-6">
                         {message.visualizations.map((viz, vizIndex) => (
                           <div 
                             key={vizIndex} 
@@ -358,13 +399,9 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
             ))}
             
             {isLoading && (
-              <div className="flex justify-start">
-                <Card className="bg-muted/30 border-border/50">
-                  <CardContent className="pt-4 flex items-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin text-primary" />
-                    <span className="text-sm text-muted-foreground">Analisando dados...</span>
-                  </CardContent>
-                </Card>
+              <div className="flex items-center gap-2 text-muted-foreground py-4">
+                <Loader2 className="h-4 w-4 animate-spin text-primary" />
+                <span className="text-sm">Analisando dados...</span>
               </div>
             )}
             
