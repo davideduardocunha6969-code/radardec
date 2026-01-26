@@ -14,9 +14,11 @@ import html2canvas from "html2canvas";
 import jsPDF from "jspdf";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
+import { useAuthContext } from "@/contexts/AuthContext";
 import { DynamicVisualization, VisualizationSpec } from "./DynamicVisualization";
 import { ContextualSuggestions } from "./ContextualSuggestions";
 import { SelectedSources, spreadsheetSources, supabaseSources } from "./DataSourceSelector";
+import logoEscritorio from "@/assets/logo-escritorio.webp";
 
 interface AnalysisResponse {
   summary: string;
@@ -206,7 +208,9 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messageRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
+  const pdfContentRef = useRef<HTMLDivElement>(null);
   const { toast } = useToast();
+  const { profile } = useAuthContext();
 
   // Filter context based on selection
   const filteredContext = useMemo(
@@ -297,11 +301,11 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
   const handleDownloadPdf = async () => {
     if (pdfPreviewIndex === null) return;
     
-    const messageElement = messageRefs.current[pdfPreviewIndex];
-    if (!messageElement) {
+    const pdfElement = pdfContentRef.current;
+    if (!pdfElement) {
       toast({
         title: "Erro",
-        description: "Não foi possível encontrar o conteúdo da mensagem.",
+        description: "Não foi possível encontrar o conteúdo para o PDF.",
         variant: "destructive",
       });
       return;
@@ -310,34 +314,13 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
     setIsGeneratingPdf(true);
     
     try {
-      // Create a clone for PDF generation with white background
-      const clone = messageElement.cloneNode(true) as HTMLElement;
-      clone.style.backgroundColor = "white";
-      clone.style.color = "black";
-      clone.style.padding = "20px";
-      clone.style.width = "800px";
-      
-      // Apply dark text to all elements
-      const allElements = clone.querySelectorAll("*");
-      allElements.forEach((el) => {
-        (el as HTMLElement).style.color = "black";
-      });
-      
-      // Temporarily add to document
-      clone.style.position = "absolute";
-      clone.style.left = "-9999px";
-      clone.style.top = "0";
-      document.body.appendChild(clone);
-
-      const canvas = await html2canvas(clone, {
+      const canvas = await html2canvas(pdfElement, {
         scale: 2,
         useCORS: true,
         logging: false,
         backgroundColor: "#ffffff",
         windowWidth: 800,
       });
-
-      document.body.removeChild(clone);
 
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
@@ -350,26 +333,56 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
       const pdfHeight = pdf.internal.pageSize.getHeight();
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
       
-      // Handle multi-page PDFs
-      const pageHeight = pdfHeight * (imgWidth / pdfWidth);
-      let heightLeft = imgHeight;
-      let position = 0;
-
-      pdf.addImage(imgData, "PNG", imgX, 10, imgWidth * ratio * 0.95, imgHeight * ratio * 0.95);
-      heightLeft -= pageHeight;
-
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, "PNG", imgX, position * ratio * 0.95 + 10, imgWidth * ratio * 0.95, imgHeight * ratio * 0.95);
-        heightLeft -= pageHeight;
+      // Calculate dimensions to fit content
+      const contentWidth = pdfWidth - 20; // 10mm margin each side
+      const scaleFactor = contentWidth / (imgWidth / 2); // Divide by scale factor
+      const contentHeight = (imgHeight / 2) * scaleFactor;
+      
+      // Handle multi-page if content is too tall
+      const maxContentHeight = pdfHeight - 20; // 10mm margin top/bottom
+      
+      if (contentHeight <= maxContentHeight) {
+        // Single page
+        pdf.addImage(imgData, "PNG", 10, 10, contentWidth, contentHeight);
+      } else {
+        // Multi-page
+        const pageContentHeight = maxContentHeight;
+        const sourcePageHeight = pageContentHeight / scaleFactor * 2; // In canvas pixels
+        let yOffset = 0;
+        let pageNum = 0;
+        
+        while (yOffset < imgHeight) {
+          if (pageNum > 0) {
+            pdf.addPage();
+          }
+          
+          // Create a temporary canvas for this page section
+          const pageCanvas = document.createElement("canvas");
+          pageCanvas.width = imgWidth;
+          pageCanvas.height = Math.min(sourcePageHeight, imgHeight - yOffset);
+          const ctx = pageCanvas.getContext("2d");
+          
+          if (ctx) {
+            ctx.drawImage(
+              canvas,
+              0, yOffset, imgWidth, pageCanvas.height,
+              0, 0, imgWidth, pageCanvas.height
+            );
+            
+            const pageImgData = pageCanvas.toDataURL("image/png");
+            const thisPageHeight = (pageCanvas.height / 2) * scaleFactor;
+            pdf.addImage(pageImgData, "PNG", 10, 10, contentWidth, thisPageHeight);
+          }
+          
+          yOffset += sourcePageHeight;
+          pageNum++;
+        }
       }
 
       // Download
-      const timestamp = new Date().toISOString().split("T")[0];
+      const now = new Date();
+      const timestamp = now.toISOString().split("T")[0];
       pdf.save(`analise-gestao-${timestamp}.pdf`);
 
       toast({
@@ -386,6 +399,13 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
     } finally {
       setIsGeneratingPdf(false);
     }
+  };
+
+  const formatDateTime = () => {
+    const now = new Date();
+    const date = now.toLocaleDateString("pt-BR");
+    const time = now.toLocaleTimeString("pt-BR");
+    return { date, time };
   };
 
   const handleSend = async (query?: string) => {
@@ -718,7 +738,16 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
           </DialogHeader>
           
           {pdfPreviewIndex !== null && messages[pdfPreviewIndex] && (
-            <div className="bg-white text-black p-6 rounded-lg">
+            <div ref={pdfContentRef} className="bg-white text-black p-8 rounded-lg">
+              {/* Header with Logo */}
+              <div className="flex items-center justify-center border-b border-gray-200 pb-4 mb-6">
+                <img 
+                  src={logoEscritorio} 
+                  alt="David Eduardo Cunha Advogados" 
+                  className="h-16 object-contain"
+                />
+              </div>
+              
               {/* Main content */}
               <div className="prose prose-base max-w-none prose-headings:text-black prose-p:text-black prose-strong:text-black prose-li:text-black">
                 <ReactMarkdown remarkPlugins={[remarkGfm]}>
@@ -824,6 +853,13 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
                     })}
                 </div>
               )}
+              
+              {/* Footer */}
+              <div className="border-t border-gray-200 pt-4 mt-8 text-center">
+                <p className="text-sm text-gray-500">
+                  Gerado por <span className="font-medium text-gray-700">{profile?.display_name || "Usuário"}</span> em {formatDateTime().date} às {formatDateTime().time}
+                </p>
+              </div>
             </div>
           )}
         </DialogContent>
