@@ -308,28 +308,51 @@ Responda APENAS com JSON válido, sem texto adicional antes ou depois.`;
     try {
       // Clean up the response - remove markdown code blocks if present
       let cleanContent = content.trim();
-      if (cleanContent.startsWith("```json")) {
+      
+      // Remove various markdown code block formats
+      const jsonMatch = cleanContent.match(/```(?:json)?\s*([\s\S]*?)```/);
+      if (jsonMatch) {
+        cleanContent = jsonMatch[1].trim();
+      } else if (cleanContent.startsWith("```json")) {
         cleanContent = cleanContent.slice(7);
+        if (cleanContent.endsWith("```")) {
+          cleanContent = cleanContent.slice(0, -3);
+        }
       } else if (cleanContent.startsWith("```")) {
         cleanContent = cleanContent.slice(3);
-      }
-      if (cleanContent.endsWith("```")) {
-        cleanContent = cleanContent.slice(0, -3);
+        if (cleanContent.endsWith("```")) {
+          cleanContent = cleanContent.slice(0, -3);
+        }
       }
       cleanContent = cleanContent.trim();
       
       analysisResult = JSON.parse(cleanContent);
+      
+      // Validate the result has required fields
+      if (!analysisResult.summary || typeof analysisResult.summary !== 'string') {
+        throw new Error("Invalid summary field");
+      }
     } catch (parseError) {
       console.error("Failed to parse AI response:", content);
+      
+      // Try to extract summary from the raw content if it looks like JSON
+      let extractedSummary = content;
+      try {
+        // Try to find and extract just the summary field from malformed JSON
+        const summaryMatch = content.match(/"summary"\s*:\s*"([\s\S]*?)(?:"\s*,\s*"visualizations|"\s*})/);
+        if (summaryMatch) {
+          extractedSummary = summaryMatch[1]
+            .replace(/\\n/g, '\n')
+            .replace(/\\"/g, '"')
+            .replace(/\\\\/g, '\\');
+        }
+      } catch {
+        // Keep original content
+      }
+      
       analysisResult = {
-        summary: content,
-        visualizations: [
-          {
-            type: "text",
-            title: "Análise",
-            data: { content: content }
-          }
-        ]
+        summary: extractedSummary,
+        visualizations: []
       };
     }
 
