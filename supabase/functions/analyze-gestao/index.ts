@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -17,6 +18,39 @@ interface AnalysisResponse {
   visualizations: VisualizationSpec[];
 }
 
+interface IaProfile {
+  persona: string;
+  forma_pensar: string;
+  formato_resposta: string;
+  regras: string;
+  postura: string;
+}
+
+async function getIaProfile(): Promise<IaProfile | null> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  
+  if (!supabaseUrl || !supabaseKey) {
+    console.log("Supabase credentials not found, using default profile");
+    return null;
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseKey);
+  
+  const { data, error } = await supabase
+    .from("ia_profile")
+    .select("persona, forma_pensar, formato_resposta, regras, postura")
+    .eq("ativo", true)
+    .single();
+
+  if (error) {
+    console.error("Error fetching IA profile:", error);
+    return null;
+  }
+
+  return data;
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -30,6 +64,9 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
+    // Fetch IA profile from database
+    const iaProfile = await getIaProfile();
+
     // Prepare context summary for AI
     const contextSummary = prepareContextSummary(context);
     
@@ -38,7 +75,109 @@ serve(async (req) => {
       ? `\n\n⚠️ IMPORTANTE: O usuário filtrou as fontes de dados. Você deve responder APENAS com base nas seguintes fontes selecionadas: ${selectedSources}\n\nNão mencione dados de fontes que não foram selecionadas. Se a pergunta exigir dados de fontes não selecionadas, informe que esses dados não estão disponíveis com a seleção atual.`
       : "";
     
-    const systemPrompt = `Você é um analista de dados especializado em gestão jurídica e marketing. Você tem acesso a dados de múltiplos setores e fontes:
+    // Build system prompt with IA profile
+    let systemPrompt: string;
+    
+    if (iaProfile) {
+      systemPrompt = `## QUEM VOCÊ É
+${iaProfile.persona}
+
+## FORMA DE PENSAR (OBRIGATÓRIA)
+${iaProfile.forma_pensar}
+
+## REGRAS IMPORTANTES
+${iaProfile.regras}
+
+## POSTURA
+${iaProfile.postura}
+
+## DADOS DISPONÍVEIS - PLANILHAS COMERCIAL (11 abas):
+- GID 0: Atendimentos e fechamentos de contratos (closers, resultados, honorários)
+- GID 1631515229: SDR Agendamentos (leads, conversões)
+- GID 686842485: SDR Mensagens (volume de contatos por semana)
+- GID 290508236: Contatos de Indicações (indicações feitas a clientes antigos)
+- GID 2087539342: Indicações Recebidas (resultado das indicações)
+- GID 1874749978: Saneamento de Pastas Comercial
+- GID 651337262: Avaliações Google (estrelas, feedback)
+- GID 1905290884: Documentação ADVBOX (pastas salvas)
+- GID 774111166: Abordagem de Testemunhas (agendamentos)
+- GID 186802545: Documentos Físicos (digitalização)
+- GID 199327118: Agendamentos Bancários
+
+## DADOS DISPONÍVEIS - PLANILHAS BANCÁRIO (3 abas):
+- GID 0: Petições Iniciais (protocolos, responsáveis, estados)
+- GID 325813835: Saneamento de Pastas (revisão de processos)
+- GID 642720152: Trânsito em Julgado (acordos, cumprimentos, honorários)
+
+## DADOS DISPONÍVEIS - PLANILHAS CONTROLADORIA (5 abas):
+- GID 0: Tarefas Principais (atividades diárias)
+- GID 1319762905: Mapeamento de Setores
+- GID 1590941680: Erros de Conformidade
+- GID 1397357779: Erros de Prazo
+- GID 154449292: Intimações Previdenciário
+
+## DADOS DISPONÍVEIS - PLANILHAS PREVIDENCIÁRIO (5 abas):
+- GID 1358203598: Petições Iniciais (benefícios, valores, responsáveis)
+- GID 306675231: Evolução de Incapacidade (pendências semanais)
+- GID 1379612642: Tarefas (revisões, notas)
+- GID 0: Aposentadorias (DER, RMI, valores)
+- GID 731526977: Pastas para Correção
+
+## DADOS DISPONÍVEIS - PLANILHAS TRABALHISTA (2 abas):
+- GID 1523237863: Petições Iniciais (valor causa, temas, situação)
+- GID 52177345: Atividades (tarefas diárias, prazos)
+
+## DADOS DO SISTEMA (Supabase):
+- **Marketing - Atividades**: Kanban de atividades da equipe de marketing com prioridades e prazos
+- **Marketing - Ideias**: Banco de ideias de conteúdo aguardando validação
+- **Marketing - Conteúdos**: Calendário de conteúdo com status de produção (a gravar, gravado, editado, postado)
+- **Robôs - Tipos de Produtos**: Base de conhecimento de produtos jurídicos por setor
+- **Robôs - Transcrições**: Transcrições de audiências realizadas
+- **Robôs - Modelagens**: Análises de conteúdo para modelagem
+- **Comercial - Atendimentos Closers**: Gravações e transcrições de ligações com clientes
+
+## FORMATO DAS RESPOSTAS (OBRIGATÓRIO)
+${iaProfile.formato_resposta}
+
+## FORMATO TÉCNICO DE SAÍDA
+Você DEVE responder em formato JSON válido com a seguinte estrutura:
+{
+  "summary": "Resposta textual completa seguindo o formato acima, em Markdown",
+  "visualizations": [
+    {
+      "type": "metric",
+      "title": "Título do metric card",
+      "data": { "value": 123, "label": "Descrição", "trend": "+10%", "trendUp": true }
+    },
+    {
+      "type": "chart",
+      "title": "Título do gráfico",
+      "config": { "chartType": "bar" | "line" | "pie" },
+      "data": [{ "name": "Label", "value": 100 }]
+    },
+    {
+      "type": "table",
+      "title": "Título da tabela",
+      "data": { "headers": ["Col1", "Col2"], "rows": [["val1", "val2"]] }
+    },
+    {
+      "type": "text",
+      "title": "Título da seção",
+      "data": { "content": "Texto explicativo ou análise detalhada" }
+    }
+  ]
+}
+
+Gere visualizações que sejam úteis para responder a pergunta. Use:
+- metric: para KPIs e números importantes
+- chart: para comparações e tendências
+- table: para listar itens detalhados
+- text: para explicações e insights
+
+Responda APENAS com JSON válido, sem texto adicional antes ou depois.`;
+    } else {
+      // Fallback to default prompt if no profile is found
+      systemPrompt = `Você é um analista de dados especializado em gestão jurídica e marketing. Você tem acesso a dados de múltiplos setores e fontes:
 
 ## DADOS DE PLANILHAS - COMERCIAL (11 abas):
 - GID 0: Atendimentos e fechamentos de contratos (closers, resultados, honorários)
@@ -122,6 +261,7 @@ Gere visualizações que sejam úteis para responder a pergunta. Use:
 - text: para explicações e insights
 
 Responda APENAS com JSON válido, sem texto adicional antes ou depois.`;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
