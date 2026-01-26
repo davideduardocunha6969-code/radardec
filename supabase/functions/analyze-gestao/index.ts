@@ -26,29 +26,145 @@ interface IaProfile {
   postura: string;
 }
 
-async function getIaProfile(): Promise<IaProfile | null> {
+interface ColunaDescricao {
+  letra: string;
+  nome: string;
+  descricao: string;
+}
+
+interface IaDataContext {
+  planilha_key: string;
+  gid: string | null;
+  nome: string;
+  descricao: string | null;
+  colunas: ColunaDescricao[];
+}
+
+interface IaOrganograma {
+  nome: string;
+  cargo: string;
+  setor: string | null;
+  funcao: string | null;
+}
+
+interface ExtendedIaContext {
+  profile: IaProfile | null;
+  dataContexts: IaDataContext[];
+  organograma: IaOrganograma[];
+}
+
+async function getExtendedIaContext(): Promise<ExtendedIaContext> {
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
   const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   
+  const result: ExtendedIaContext = {
+    profile: null,
+    dataContexts: [],
+    organograma: [],
+  };
+  
   if (!supabaseUrl || !supabaseKey) {
-    console.log("Supabase credentials not found, using default profile");
-    return null;
+    console.log("Supabase credentials not found, using defaults");
+    return result;
   }
 
   const supabase = createClient(supabaseUrl, supabaseKey);
   
-  const { data, error } = await supabase
+  // Fetch IA Profile
+  const { data: profileData, error: profileError } = await supabase
     .from("ia_profile")
     .select("persona, forma_pensar, formato_resposta, regras, postura")
     .eq("ativo", true)
     .single();
 
-  if (error) {
-    console.error("Error fetching IA profile:", error);
-    return null;
+  if (!profileError && profileData) {
+    result.profile = profileData;
+  } else {
+    console.error("Error fetching IA profile:", profileError);
   }
 
-  return data;
+  // Fetch Data Contexts
+  const { data: contextsData, error: contextsError } = await supabase
+    .from("ia_data_context")
+    .select("planilha_key, gid, nome, descricao, colunas")
+    .order("planilha_key")
+    .order("gid", { nullsFirst: true });
+
+  if (!contextsError && contextsData) {
+    result.dataContexts = contextsData as IaDataContext[];
+  } else {
+    console.error("Error fetching data contexts:", contextsError);
+  }
+
+  // Fetch Organograma
+  const { data: orgData, error: orgError } = await supabase
+    .from("ia_organograma")
+    .select("nome, cargo, setor, funcao")
+    .eq("ativo", true)
+    .order("ordem");
+
+  if (!orgError && orgData) {
+    result.organograma = orgData;
+  } else {
+    console.error("Error fetching organograma:", orgError);
+  }
+
+  return result;
+}
+
+function buildDataContextPrompt(dataContexts: IaDataContext[]): string {
+  if (!dataContexts || dataContexts.length === 0) {
+    return "";
+  }
+
+  const bySheet: Record<string, IaDataContext[]> = {};
+  dataContexts.forEach(ctx => {
+    if (!bySheet[ctx.planilha_key]) {
+      bySheet[ctx.planilha_key] = [];
+    }
+    bySheet[ctx.planilha_key].push(ctx);
+  });
+
+  let prompt = "\n\n## CONTEXTO DETALHADO DAS PLANILHAS (fornecido pelo usuário):\n";
+  
+  Object.entries(bySheet).forEach(([sheetKey, tabs]) => {
+    prompt += `\n### Planilha: ${sheetKey.toUpperCase()}\n`;
+    tabs.forEach(tab => {
+      prompt += `\n**${tab.nome}** (GID ${tab.gid || 'principal'})`;
+      if (tab.descricao) {
+        prompt += `\n${tab.descricao}`;
+      }
+      if (tab.colunas && tab.colunas.length > 0) {
+        prompt += "\nColunas:";
+        tab.colunas.forEach(col => {
+          prompt += `\n- Coluna ${col.letra}: ${col.nome}${col.descricao ? ` - ${col.descricao}` : ''}`;
+        });
+      }
+      prompt += "\n";
+    });
+  });
+
+  return prompt;
+}
+
+function buildOrganogramaPrompt(organograma: IaOrganograma[]): string {
+  if (!organograma || organograma.length === 0) {
+    return "";
+  }
+
+  let prompt = "\n\n## ESTRUTURA ORGANIZACIONAL DO ESCRITÓRIO:\n";
+  
+  organograma.forEach(membro => {
+    prompt += `\n**${membro.nome}** - ${membro.cargo}`;
+    if (membro.setor) {
+      prompt += ` (${membro.setor})`;
+    }
+    if (membro.funcao) {
+      prompt += `\n  Responsabilidades: ${membro.funcao}`;
+    }
+  });
+
+  return prompt;
 }
 
 serve(async (req) => {
@@ -64,8 +180,11 @@ serve(async (req) => {
       throw new Error("LOVABLE_API_KEY is not configured");
     }
 
-    // Fetch IA profile from database
-    const iaProfile = await getIaProfile();
+    // Fetch IA profile and extended context from database
+    const iaContext = await getExtendedIaContext();
+    const iaProfile = iaContext.profile;
+    const dataContextPrompt = buildDataContextPrompt(iaContext.dataContexts);
+    const organogramaPrompt = buildOrganogramaPrompt(iaContext.organograma);
 
     // Prepare context summary for AI
     const contextSummary = prepareContextSummary(context);
@@ -90,6 +209,8 @@ ${iaProfile.regras}
 
 ## POSTURA
 ${iaProfile.postura}
+${organogramaPrompt}
+${dataContextPrompt}
 
 ## DADOS DISPONÍVEIS - PLANILHAS COMERCIAL (11 abas):
 - GID 0: Atendimentos e fechamentos de contratos (closers, resultados, honorários)

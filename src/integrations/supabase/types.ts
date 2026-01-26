@@ -402,6 +402,89 @@ export type Database = {
         }
         Relationships: []
       }
+      ia_data_context: {
+        Row: {
+          colunas: Json | null
+          created_at: string
+          descricao: string | null
+          gid: string | null
+          id: string
+          nome: string
+          planilha_key: string
+          tipo: string
+          updated_at: string
+        }
+        Insert: {
+          colunas?: Json | null
+          created_at?: string
+          descricao?: string | null
+          gid?: string | null
+          id?: string
+          nome: string
+          planilha_key: string
+          tipo: string
+          updated_at?: string
+        }
+        Update: {
+          colunas?: Json | null
+          created_at?: string
+          descricao?: string | null
+          gid?: string | null
+          id?: string
+          nome?: string
+          planilha_key?: string
+          tipo?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      ia_organograma: {
+        Row: {
+          ativo: boolean
+          cargo: string
+          created_at: string
+          funcao: string | null
+          id: string
+          nome: string
+          ordem: number
+          setor: string | null
+          subordinado_a: string | null
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cargo: string
+          created_at?: string
+          funcao?: string | null
+          id?: string
+          nome: string
+          ordem?: number
+          setor?: string | null
+          subordinado_a?: string | null
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cargo?: string
+          created_at?: string
+          funcao?: string | null
+          id?: string
+          nome?: string
+          ordem?: number
+          setor?: string | null
+          subordinado_a?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "ia_organograma_subordinado_a_fkey"
+            columns: ["subordinado_a"]
+            isOneToOne: false
+            referencedRelation: "ia_organograma"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       ia_profile: {
         Row: {
           ativo: boolean
