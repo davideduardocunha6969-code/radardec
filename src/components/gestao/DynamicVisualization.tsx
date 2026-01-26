@@ -236,9 +236,22 @@ function TextCard({ title, data }: { title?: string; data: TextData }) {
   return (
     <div className="w-full">
       {title && (
-        <h3 className="text-base font-semibold text-foreground mb-3">{title}</h3>
+        <h3 className="text-lg font-semibold text-foreground mb-4">{title}</h3>
       )}
-      <div className="prose prose-sm dark:prose-invert max-w-none text-foreground prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground prose-li:text-foreground prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-img:rounded-lg prose-img:max-w-full prose-img:my-4">
+      <div className="prose prose-base dark:prose-invert max-w-none 
+        prose-headings:text-foreground prose-headings:font-semibold prose-headings:mt-6 prose-headings:mb-3
+        prose-p:text-foreground prose-p:leading-relaxed prose-p:mb-4
+        prose-strong:text-foreground prose-strong:font-semibold
+        prose-li:text-foreground prose-li:leading-relaxed
+        prose-ul:my-4 prose-ul:pl-6 prose-ul:list-disc
+        prose-ol:my-4 prose-ol:pl-6 prose-ol:list-decimal
+        prose-li:my-1
+        prose-img:rounded-lg prose-img:max-w-full prose-img:my-6
+        prose-blockquote:border-l-4 prose-blockquote:border-primary prose-blockquote:pl-4 prose-blockquote:italic
+        prose-code:bg-muted prose-code:px-1.5 prose-code:py-0.5 prose-code:rounded prose-code:text-sm
+        prose-pre:bg-muted prose-pre:p-4 prose-pre:rounded-lg
+        prose-hr:my-6 prose-hr:border-border
+      ">
         <ReactMarkdown 
           remarkPlugins={[remarkGfm]}
           components={{
@@ -252,10 +265,37 @@ function TextCard({ title, data }: { title?: string; data: TextData }) {
             a: ({ node, ...props }) => (
               <a 
                 {...props} 
-                className="text-primary hover:underline" 
+                className="text-primary hover:underline font-medium" 
                 target="_blank" 
                 rel="noopener noreferrer"
               />
+            ),
+            p: ({ node, ...props }) => (
+              <p {...props} className="mb-4 leading-relaxed" />
+            ),
+            ul: ({ node, ...props }) => (
+              <ul {...props} className="my-4 pl-6 space-y-2 list-disc" />
+            ),
+            ol: ({ node, ...props }) => (
+              <ol {...props} className="my-4 pl-6 space-y-2 list-decimal" />
+            ),
+            li: ({ node, ...props }) => (
+              <li {...props} className="leading-relaxed" />
+            ),
+            h1: ({ node, ...props }) => (
+              <h1 {...props} className="text-2xl font-bold mt-6 mb-4" />
+            ),
+            h2: ({ node, ...props }) => (
+              <h2 {...props} className="text-xl font-semibold mt-5 mb-3" />
+            ),
+            h3: ({ node, ...props }) => (
+              <h3 {...props} className="text-lg font-semibold mt-4 mb-2" />
+            ),
+            strong: ({ node, ...props }) => (
+              <strong {...props} className="font-semibold text-foreground" />
+            ),
+            blockquote: ({ node, ...props }) => (
+              <blockquote {...props} className="border-l-4 border-primary pl-4 italic my-4 text-muted-foreground" />
             ),
           }}
         >
