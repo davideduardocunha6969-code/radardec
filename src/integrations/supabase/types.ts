@@ -438,6 +438,42 @@ export type Database = {
         }
         Relationships: []
       }
+      ia_escritorio: {
+        Row: {
+          areas_atuacao: string | null
+          created_at: string
+          diferenciais: string | null
+          historico: string | null
+          id: string
+          metas_ano: string | null
+          sobre: string | null
+          updated_at: string
+          valores: string | null
+        }
+        Insert: {
+          areas_atuacao?: string | null
+          created_at?: string
+          diferenciais?: string | null
+          historico?: string | null
+          id?: string
+          metas_ano?: string | null
+          sobre?: string | null
+          updated_at?: string
+          valores?: string | null
+        }
+        Update: {
+          areas_atuacao?: string | null
+          created_at?: string
+          diferenciais?: string | null
+          historico?: string | null
+          id?: string
+          metas_ano?: string | null
+          sobre?: string | null
+          updated_at?: string
+          valores?: string | null
+        }
+        Relationships: []
+      }
       ia_organograma: {
         Row: {
           ativo: boolean
