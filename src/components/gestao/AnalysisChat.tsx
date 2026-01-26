@@ -1,9 +1,17 @@
 import { useState, useRef, useEffect, useMemo } from "react";
-import { Send, Loader2, Sparkles, RefreshCw, Copy, Check } from "lucide-react";
+import { Send, Loader2, Sparkles, RefreshCw, Copy, Check, FileDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { DynamicVisualization, VisualizationSpec } from "./DynamicVisualization";
@@ -193,7 +201,11 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [copiedIndex, setCopiedIndex] = useState<number | null>(null);
+  const [pdfPreviewOpen, setPdfPreviewOpen] = useState(false);
+  const [pdfPreviewIndex, setPdfPreviewIndex] = useState<number | null>(null);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messageRefs = useRef<{ [key: number]: HTMLDivElement | null }>({});
   const { toast } = useToast();
 
   // Filter context based on selection
@@ -274,6 +286,105 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
         description: "Não foi possível copiar o texto.",
         variant: "destructive",
       });
+    }
+  };
+
+  const handlePdfPreview = (index: number) => {
+    setPdfPreviewIndex(index);
+    setPdfPreviewOpen(true);
+  };
+
+  const handleDownloadPdf = async () => {
+    if (pdfPreviewIndex === null) return;
+    
+    const messageElement = messageRefs.current[pdfPreviewIndex];
+    if (!messageElement) {
+      toast({
+        title: "Erro",
+        description: "Não foi possível encontrar o conteúdo da mensagem.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsGeneratingPdf(true);
+    
+    try {
+      // Create a clone for PDF generation with white background
+      const clone = messageElement.cloneNode(true) as HTMLElement;
+      clone.style.backgroundColor = "white";
+      clone.style.color = "black";
+      clone.style.padding = "20px";
+      clone.style.width = "800px";
+      
+      // Apply dark text to all elements
+      const allElements = clone.querySelectorAll("*");
+      allElements.forEach((el) => {
+        (el as HTMLElement).style.color = "black";
+      });
+      
+      // Temporarily add to document
+      clone.style.position = "absolute";
+      clone.style.left = "-9999px";
+      clone.style.top = "0";
+      document.body.appendChild(clone);
+
+      const canvas = await html2canvas(clone, {
+        scale: 2,
+        useCORS: true,
+        logging: false,
+        backgroundColor: "#ffffff",
+        windowWidth: 800,
+      });
+
+      document.body.removeChild(clone);
+
+      const imgData = canvas.toDataURL("image/png");
+      const pdf = new jsPDF({
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
+      });
+
+      const pdfWidth = pdf.internal.pageSize.getWidth();
+      const pdfHeight = pdf.internal.pageSize.getHeight();
+      const imgWidth = canvas.width;
+      const imgHeight = canvas.height;
+      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const imgX = (pdfWidth - imgWidth * ratio) / 2;
+      
+      // Handle multi-page PDFs
+      const pageHeight = pdfHeight * (imgWidth / pdfWidth);
+      let heightLeft = imgHeight;
+      let position = 0;
+
+      pdf.addImage(imgData, "PNG", imgX, 10, imgWidth * ratio * 0.95, imgHeight * ratio * 0.95);
+      heightLeft -= pageHeight;
+
+      while (heightLeft > 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(imgData, "PNG", imgX, position * ratio * 0.95 + 10, imgWidth * ratio * 0.95, imgHeight * ratio * 0.95);
+        heightLeft -= pageHeight;
+      }
+
+      // Download
+      const timestamp = new Date().toISOString().split("T")[0];
+      pdf.save(`analise-gestao-${timestamp}.pdf`);
+
+      toast({
+        title: "PDF gerado!",
+        description: "O arquivo foi baixado com sucesso.",
+      });
+    } catch (error) {
+      console.error("PDF generation error:", error);
+      toast({
+        title: "Erro ao gerar PDF",
+        description: "Não foi possível gerar o arquivo PDF.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingPdf(false);
     }
   };
 
@@ -393,9 +504,9 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
                     </div>
                   </div>
                 ) : (
-                  <div className="w-full mb-6">
-                    {/* Copy button */}
-                    <div className="flex justify-end mb-2">
+                  <div className="w-full mb-6" ref={(el) => { messageRefs.current[index] = el; }}>
+                    {/* Action buttons */}
+                    <div className="flex justify-end gap-2 mb-2">
                       <Button
                         variant="ghost"
                         size="sm"
@@ -413,6 +524,15 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
                             Copiar
                           </>
                         )}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 px-2 text-muted-foreground hover:text-foreground"
+                        onClick={() => handlePdfPreview(index)}
+                      >
+                        <FileDown className="h-4 w-4 mr-1" />
+                        PDF
                       </Button>
                     </div>
                     
@@ -570,6 +690,144 @@ export function AnalysisChat({ contextData, isLoadingData, selectedSources }: An
           </Button>
         </div>
       </div>
+
+      {/* PDF Preview Dialog */}
+      <Dialog open={pdfPreviewOpen} onOpenChange={setPdfPreviewOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-auto">
+          <DialogHeader>
+            <DialogTitle className="flex items-center justify-between">
+              <span>Prévia do PDF</span>
+              <Button
+                onClick={handleDownloadPdf}
+                disabled={isGeneratingPdf}
+                className="mr-8"
+              >
+                {isGeneratingPdf ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Gerando...
+                  </>
+                ) : (
+                  <>
+                    <FileDown className="h-4 w-4 mr-2" />
+                    Baixar PDF
+                  </>
+                )}
+              </Button>
+            </DialogTitle>
+          </DialogHeader>
+          
+          {pdfPreviewIndex !== null && messages[pdfPreviewIndex] && (
+            <div className="bg-white text-black p-6 rounded-lg">
+              {/* Main content */}
+              <div className="prose prose-base max-w-none prose-headings:text-black prose-p:text-black prose-strong:text-black prose-li:text-black">
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {messages[pdfPreviewIndex].content}
+                </ReactMarkdown>
+              </div>
+              
+              {/* Visualizations preview */}
+              {messages[pdfPreviewIndex].visualizations && 
+               messages[pdfPreviewIndex].visualizations!.length > 0 && (
+                <div className="mt-6 space-y-6">
+                  {messages[pdfPreviewIndex].visualizations!
+                    .filter(viz => viz.type === "text")
+                    .map((viz, vizIndex) => {
+                      const textData = viz.data as { content: string };
+                      return (
+                        <div key={`text-${vizIndex}`}>
+                          {viz.title && (
+                            <h3 className="text-lg font-semibold mb-2 text-black">{viz.title}</h3>
+                          )}
+                          <div className="prose prose-base max-w-none prose-headings:text-black prose-p:text-black prose-strong:text-black prose-li:text-black">
+                            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                              {textData?.content || ""}
+                            </ReactMarkdown>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  
+                  {messages[pdfPreviewIndex].visualizations!
+                    .filter(viz => viz.type === "table")
+                    .map((viz, vizIndex) => {
+                      const tableData = viz.data as { headers: string[]; rows: (string | number)[][] };
+                      return (
+                        <div key={`table-${vizIndex}`}>
+                          {viz.title && (
+                            <h3 className="text-lg font-semibold mb-2 text-black">{viz.title}</h3>
+                          )}
+                          <table className="w-full border-collapse border border-gray-300">
+                            <thead>
+                              <tr className="bg-gray-100">
+                                {tableData?.headers?.map((header, i) => (
+                                  <th key={i} className="border border-gray-300 px-3 py-2 text-left text-black font-medium">
+                                    {header}
+                                  </th>
+                                ))}
+                              </tr>
+                            </thead>
+                            <tbody>
+                              {tableData?.rows?.map((row, rowIdx) => (
+                                <tr key={rowIdx} className={rowIdx % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                                  {row.map((cell, cellIdx) => (
+                                    <td key={cellIdx} className="border border-gray-300 px-3 py-2 text-black">
+                                      {typeof cell === "number" ? cell.toLocaleString("pt-BR") : cell}
+                                    </td>
+                                  ))}
+                                </tr>
+                              ))}
+                            </tbody>
+                          </table>
+                        </div>
+                      );
+                    })}
+                  
+                  {messages[pdfPreviewIndex].visualizations!
+                    .filter(viz => viz.type === "metric")
+                    .map((viz, vizIndex) => {
+                      const metricData = viz.data as { value: number | string; label: string; trend?: string };
+                      return (
+                        <div key={`metric-${vizIndex}`} className="bg-gray-50 p-4 rounded-lg border border-gray-200">
+                          <p className="text-sm text-gray-600">{viz.title || metricData?.label}</p>
+                          <p className="text-2xl font-bold text-black">
+                            {typeof metricData?.value === "number" 
+                              ? metricData.value.toLocaleString("pt-BR") 
+                              : metricData?.value}
+                          </p>
+                          {metricData?.trend && (
+                            <p className="text-sm text-gray-500">{metricData.trend}</p>
+                          )}
+                        </div>
+                      );
+                    })}
+                  
+                  {messages[pdfPreviewIndex].visualizations!
+                    .filter(viz => viz.type === "chart")
+                    .map((viz, vizIndex) => {
+                      const chartData = viz.data as { name: string; value: number }[];
+                      return (
+                        <div key={`chart-${vizIndex}`}>
+                          {viz.title && (
+                            <h3 className="text-lg font-semibold mb-2 text-black">{viz.title}</h3>
+                          )}
+                          <p className="text-sm text-gray-600 mb-2">(Dados do gráfico)</p>
+                          <ul className="list-disc pl-6">
+                            {Array.isArray(chartData) && chartData.map((item, i) => (
+                              <li key={i} className="text-black">
+                                {item.name}: {typeof item.value === "number" ? item.value.toLocaleString("pt-BR") : item.value}
+                              </li>
+                            ))}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
