@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Loader2, Save, Bot, Brain, MessageSquare, Shield, Target, Database, Users } from "lucide-react";
+import { Loader2, Save, Bot, Brain, MessageSquare, Shield, Target, Database, Users, Building2 } from "lucide-react";
 import { useIaProfile } from "@/hooks/useIaProfile";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { DataContextSection } from "@/components/perfil-ia/DataContextSection";
 import { OrganogramaSection } from "@/components/perfil-ia/OrganogramaSection";
+import { EscritorioSection } from "@/components/perfil-ia/EscritorioSection";
 
 const PerfilIA = () => {
   const { profile, isLoading, updateProfile } = useIaProfile();
@@ -74,8 +75,12 @@ const PerfilIA = () => {
         </div>
 
         {/* Main Tabs */}
-        <Tabs defaultValue="persona" className="space-y-4">
-          <TabsList className="grid grid-cols-3 w-full max-w-md">
+        <Tabs defaultValue="escritorio" className="space-y-4">
+          <TabsList className="grid grid-cols-4 w-full max-w-xl">
+            <TabsTrigger value="escritorio" className="flex items-center gap-2">
+              <Building2 className="h-4 w-4" />
+              <span>Escritório</span>
+            </TabsTrigger>
             <TabsTrigger value="persona" className="flex items-center gap-2">
               <Bot className="h-4 w-4" />
               <span>Persona</span>
@@ -89,6 +94,26 @@ const PerfilIA = () => {
               <span>Organograma</span>
             </TabsTrigger>
           </TabsList>
+
+          {/* Escritório Tab */}
+          <TabsContent value="escritorio" className="space-y-6">
+            <Card className="border-primary/20 bg-primary/5">
+              <CardContent className="pt-6">
+                <div className="flex items-start gap-4">
+                  <Building2 className="h-5 w-5 text-primary mt-0.5" />
+                  <div>
+                    <p className="font-medium text-foreground">Contexto do Escritório</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Documente informações sobre o escritório, áreas de atuação, metas e valores.
+                      Essas informações ajudarão a IA a entender o contexto do negócio e fornecer análises mais precisas.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <EscritorioSection />
+          </TabsContent>
 
           {/* Persona Tab */}
           <TabsContent value="persona" className="space-y-6">
