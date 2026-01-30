@@ -47,7 +47,7 @@ serve(async (req) => {
       throw new Error("Only admins can create users");
     }
 
-    const { email, password, displayName, isAdmin, permissions } = await req.json();
+    const { email, password, displayName, role, permissions } = await req.json();
 
     if (!email || !password || !displayName) {
       throw new Error("Email, password, and display name are required");
@@ -80,12 +80,13 @@ serve(async (req) => {
       throw profileError;
     }
 
-    // Create role
+    // Create role (admin, marketing_manager, or user)
+    const userRole = role || "user";
     const { error: roleError } = await supabaseAdmin
       .from("user_roles")
       .insert({
         user_id: newUserId,
-        role: isAdmin ? "admin" : "user",
+        role: userRole,
       });
 
     if (roleError) {
@@ -94,7 +95,7 @@ serve(async (req) => {
     }
 
     // Create permissions if not admin and permissions provided
-    if (!isAdmin && permissions && permissions.length > 0) {
+    if (userRole !== "admin" && permissions && permissions.length > 0) {
       const permissionInserts = permissions.map((pageKey: string) => ({
         user_id: newUserId,
         page_key: pageKey,

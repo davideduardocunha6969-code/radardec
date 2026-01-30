@@ -10,6 +10,7 @@ interface UserProfile {
 
 interface UserPermissions {
   isAdmin: boolean;
+  isMarketingManager: boolean;
   allowedPages: string[];
 }
 
@@ -22,7 +23,9 @@ interface AuthContextType {
   signIn: (email: string, password: string) => Promise<{ error: Error | null }>;
   signOut: () => Promise<void>;
   hasPageAccess: (pageKey: string) => boolean;
+  canValidateContent: () => boolean;
   isAdmin: boolean;
+  isMarketingManager: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);

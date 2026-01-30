@@ -18,10 +18,10 @@ interface IdeiaListProps {
   ideias: IdeiaConteudo[];
   onItemClick: (ideia: IdeiaConteudo) => void;
   onValidar: (ideia: IdeiaConteudo) => void;
-  isAdmin?: boolean;
+  canValidate?: boolean;
 }
 
-export function IdeiaList({ ideias, onItemClick, onValidar, isAdmin }: IdeiaListProps) {
+export function IdeiaList({ ideias, onItemClick, onValidar, canValidate }: IdeiaListProps) {
   // Sort ideias with "hot" first
   const sortedIdeias = [...ideias].sort((a, b) => {
     if (a.prioridade === "hot" && b.prioridade !== "hot") return -1;
@@ -49,7 +49,7 @@ export function IdeiaList({ ideias, onItemClick, onValidar, isAdmin }: IdeiaList
             <th className="text-left p-3 text-sm font-medium text-muted-foreground">Prioridade</th>
             <th className="text-left p-3 text-sm font-medium text-muted-foreground">Data</th>
             <th className="text-left p-3 text-sm font-medium text-muted-foreground">Situação</th>
-            {isAdmin && <th className="text-left p-3 text-sm font-medium text-muted-foreground">Ação</th>}
+            {canValidate && <th className="text-left p-3 text-sm font-medium text-muted-foreground">Ação</th>}
           </tr>
         </thead>
         <tbody>
@@ -104,7 +104,7 @@ export function IdeiaList({ ideias, onItemClick, onValidar, isAdmin }: IdeiaList
                     {ideia.validado ? "Validado" : "Pendente"}
                   </Badge>
                 </td>
-                {isAdmin && (
+                {canValidate && (
                   <td className="p-3">
                     {!ideia.validado && (
                       <Button

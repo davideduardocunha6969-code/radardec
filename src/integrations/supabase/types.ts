@@ -882,6 +882,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_validate_content: { Args: { _user_id: string }; Returns: boolean }
       has_page_permission: {
         Args: { _page_key: string; _user_id: string }
         Returns: boolean
@@ -895,7 +896,7 @@ export type Database = {
       }
     }
     Enums: {
-      app_role: "admin" | "user"
+      app_role: "admin" | "user" | "marketing_manager"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1023,7 +1024,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
-      app_role: ["admin", "user"],
+      app_role: ["admin", "user", "marketing_manager"],
     },
   },
 } as const
