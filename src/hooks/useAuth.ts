@@ -10,6 +10,7 @@ interface UserProfile {
 
 interface UserPermissions {
   isAdmin: boolean;
+  isMarketingManager: boolean;
   allowedPages: string[];
 }
 
@@ -17,7 +18,7 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
-  const [permissions, setPermissions] = useState<UserPermissions>({ isAdmin: false, allowedPages: [] });
+  const [permissions, setPermissions] = useState<UserPermissions>({ isAdmin: false, isMarketingManager: false, allowedPages: [] });
   const [loading, setLoading] = useState(true);
 
   const fetchUserData = useCallback(async (userId: string) => {
@@ -41,6 +42,7 @@ export function useAuth() {
         .single();
 
       const isAdmin = roleData?.role === 'admin';
+      const isMarketingManager = roleData?.role === 'marketing_manager';
 
       // Fetch permissions
       const { data: permData } = await supabase
@@ -50,7 +52,7 @@ export function useAuth() {
 
       const allowedPages = permData?.map(p => p.page_key) || [];
 
-      setPermissions({ isAdmin, allowedPages });
+      setPermissions({ isAdmin, isMarketingManager, allowedPages });
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
@@ -68,7 +70,7 @@ export function useAuth() {
           setTimeout(() => fetchUserData(currentSession.user.id), 0);
         } else {
           setProfile(null);
-          setPermissions({ isAdmin: false, allowedPages: [] });
+          setPermissions({ isAdmin: false, isMarketingManager: false, allowedPages: [] });
         }
         setLoading(false);
       }
@@ -97,12 +99,16 @@ export function useAuth() {
     setUser(null);
     setSession(null);
     setProfile(null);
-    setPermissions({ isAdmin: false, allowedPages: [] });
+    setPermissions({ isAdmin: false, isMarketingManager: false, allowedPages: [] });
   };
 
   const hasPageAccess = (pageKey: string): boolean => {
     if (permissions.isAdmin) return true;
     return permissions.allowedPages.includes(pageKey);
+  };
+
+  const canValidateContent = (): boolean => {
+    return permissions.isAdmin || permissions.isMarketingManager;
   };
 
   return {
@@ -114,6 +120,8 @@ export function useAuth() {
     signIn,
     signOut,
     hasPageAccess,
+    canValidateContent,
     isAdmin: permissions.isAdmin,
+    isMarketingManager: permissions.isMarketingManager,
   };
 }

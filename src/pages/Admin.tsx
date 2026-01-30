@@ -13,11 +13,13 @@ import { Badge } from '@/components/ui/badge';
 import { UserPlus, Trash2, Shield, ShieldCheck, Edit } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
 
+type AppRole = 'admin' | 'marketing_manager' | 'user';
+
 interface UserWithDetails {
   user_id: string;
   display_name: string;
   email: string;
-  role: 'admin' | 'user';
+  role: AppRole;
   permissions: string[];
 }
 
@@ -75,7 +77,7 @@ export default function Admin() {
   const [newEmail, setNewEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [newDisplayName, setNewDisplayName] = useState('');
-  const [newIsAdmin, setNewIsAdmin] = useState(false);
+  const [newRole, setNewRole] = useState<AppRole>('user');
   const [newPermissions, setNewPermissions] = useState<string[]>([]);
   const [isCreating, setIsCreating] = useState(false);
 
@@ -116,7 +118,7 @@ export default function Admin() {
           user_id: profile.user_id,
           display_name: profile.display_name,
           email: profile.display_name, // We'll use display_name as identifier since we can't access auth.users
-          role: (role?.role as 'admin' | 'user') || 'user',
+          role: (role?.role as AppRole) || 'user',
           permissions: userPerms,
         };
       }) || [];
@@ -150,7 +152,7 @@ export default function Admin() {
           email: newEmail,
           password: newPassword,
           displayName: newDisplayName,
-          isAdmin: newIsAdmin,
+          role: newRole,
           permissions: newPermissions,
         },
       });
@@ -166,7 +168,7 @@ export default function Admin() {
       setNewEmail('');
       setNewPassword('');
       setNewDisplayName('');
-      setNewIsAdmin(false);
+      setNewRole('user');
       setNewPermissions([]);
       fetchUsers();
     } catch (error: any) {
@@ -337,18 +339,34 @@ export default function Admin() {
                   required
                 />
               </div>
-              <div className="flex items-center space-x-2">
-                <Checkbox
-                  id="isAdmin"
-                  checked={newIsAdmin}
-                  onCheckedChange={(checked) => setNewIsAdmin(checked === true)}
-                />
-                <Label htmlFor="isAdmin" className="flex items-center gap-2">
-                  <ShieldCheck className="h-4 w-4" />
-                  Administrador (acesso total)
-                </Label>
+              <div className="space-y-2">
+                <Label>Tipo de Usuário</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="roleAdmin"
+                      checked={newRole === 'admin'}
+                      onCheckedChange={(checked) => setNewRole(checked ? 'admin' : 'user')}
+                    />
+                    <Label htmlFor="roleAdmin" className="flex items-center gap-2">
+                      <ShieldCheck className="h-4 w-4 text-amber-500" />
+                      Administrador (acesso total)
+                    </Label>
+                  </div>
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="roleMarketing"
+                      checked={newRole === 'marketing_manager'}
+                      onCheckedChange={(checked) => setNewRole(checked ? 'marketing_manager' : 'user')}
+                    />
+                    <Label htmlFor="roleMarketing" className="flex items-center gap-2">
+                      <Shield className="h-4 w-4 text-purple-500" />
+                      Gestor de Marketing (valida conteúdo)
+                    </Label>
+                  </div>
+                </div>
               </div>
-              {!newIsAdmin && (
+              {newRole !== 'admin' && (
                 <div className="space-y-3">
                   <Label>Páginas Permitidas</Label>
                   <div className="max-h-64 overflow-y-auto border rounded-md p-3 space-y-4">
@@ -417,6 +435,11 @@ export default function Admin() {
                         <Badge className="bg-amber-500">
                           <ShieldCheck className="h-3 w-3 mr-1" />
                           Admin
+                        </Badge>
+                      ) : user.role === 'marketing_manager' ? (
+                        <Badge className="bg-purple-500">
+                          <Shield className="h-3 w-3 mr-1" />
+                          Gestor Mkt
                         </Badge>
                       ) : (
                         <Badge variant="secondary">

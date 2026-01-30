@@ -16,7 +16,7 @@ import { IdeiaList } from "@/components/contenthub/IdeiaList";
 import { IdeiaStatsSection } from "@/components/contenthub/IdeiaStatsSection";
 
 export default function ContentHub() {
-  const { isAdmin } = useAuthContext();
+  const { isAdmin, canValidateContent } = useAuthContext();
   const { ideias, isLoading, createIdeia, updateIdeia, deleteIdeia, validarIdeia } = useIdeiasConteudo();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
@@ -118,7 +118,7 @@ export default function ContentHub() {
             setIsDetailOpen(true);
           }}
           onValidar={handleValidar}
-          isAdmin={isAdmin}
+          canValidate={canValidateContent()}
         />
       )}
 
