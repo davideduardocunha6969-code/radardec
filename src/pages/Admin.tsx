@@ -82,6 +82,7 @@ export default function Admin() {
   const [isCreating, setIsCreating] = useState(false);
 
   // Edit permissions form
+  const [editRole, setEditRole] = useState<AppRole>('user');
   const [editPermissions, setEditPermissions] = useState<string[]>([]);
   const [isSaving, setIsSaving] = useState(false);
 
@@ -185,6 +186,7 @@ export default function Admin() {
 
   const handleEditUser = (user: UserWithDetails) => {
     setSelectedUser(user);
+    setEditRole(user.role);
     setEditPermissions(user.permissions);
     setEditDialogOpen(true);
   };
@@ -194,14 +196,22 @@ export default function Admin() {
     setIsSaving(true);
 
     try {
+      // Update role
+      const { error: roleError } = await supabase
+        .from('user_roles')
+        .update({ role: editRole })
+        .eq('user_id', selectedUser.user_id);
+
+      if (roleError) throw roleError;
+
       // Delete existing permissions
       await supabase
         .from('user_permissions')
         .delete()
         .eq('user_id', selectedUser.user_id);
 
-      // Insert new permissions
-      if (editPermissions.length > 0) {
+      // Insert new permissions (only if not admin)
+      if (editRole !== 'admin' && editPermissions.length > 0) {
         const { error } = await supabase
           .from('user_permissions')
           .insert(
@@ -216,16 +226,16 @@ export default function Admin() {
 
       toast({
         title: 'Sucesso!',
-        description: 'Permissões atualizadas com sucesso.',
+        description: 'Usuário atualizado com sucesso.',
       });
 
       setEditDialogOpen(false);
       fetchUsers();
     } catch (error: any) {
-      console.error('Error updating permissions:', error);
+      console.error('Error updating user:', error);
       toast({
         title: 'Erro',
-        description: 'Não foi possível atualizar as permissões.',
+        description: 'Não foi possível atualizar o usuário.',
         variant: 'destructive',
       });
     }
@@ -494,47 +504,75 @@ export default function Admin() {
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Editar Permissões - {selectedUser?.display_name}</DialogTitle>
+            <DialogTitle>Editar Usuário - {selectedUser?.display_name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-3">
-              <Label>Páginas Permitidas</Label>
-              <div className="max-h-72 overflow-y-auto border rounded-md p-3 space-y-4">
-                {AVAILABLE_PAGES_GROUPED.map(group => (
-                  <div key={group.group} className="space-y-2">
-                    <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
-                      {group.group}
-                    </p>
-                    <div className="space-y-1.5 pl-2">
-                      {group.pages.map(page => (
-                        <div key={page.key} className="flex items-center space-x-2">
-                          <Checkbox
-                            id={`edit-${page.key}`}
-                            checked={editPermissions.includes(page.key)}
-                            onCheckedChange={() => togglePermission(page.key, true)}
-                            disabled={selectedUser?.role === 'admin'}
-                          />
-                          <Label htmlFor={`edit-${page.key}`} className="text-sm font-normal">
-                            {page.label}
-                          </Label>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ))}
+            <div className="space-y-2">
+              <Label>Tipo de Usuário</Label>
+              <div className="space-y-2">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="editRoleAdmin"
+                    checked={editRole === 'admin'}
+                    onCheckedChange={(checked) => setEditRole(checked ? 'admin' : 'user')}
+                  />
+                  <Label htmlFor="editRoleAdmin" className="flex items-center gap-2">
+                    <ShieldCheck className="h-4 w-4 text-amber-500" />
+                    Administrador (acesso total)
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    id="editRoleMarketing"
+                    checked={editRole === 'marketing_manager'}
+                    onCheckedChange={(checked) => setEditRole(checked ? 'marketing_manager' : 'user')}
+                  />
+                  <Label htmlFor="editRoleMarketing" className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-purple-500" />
+                    Gestor de Marketing (valida conteúdo)
+                  </Label>
+                </div>
               </div>
-              {selectedUser?.role === 'admin' && (
-                <p className="text-sm text-muted-foreground">
-                  Administradores têm acesso a todas as páginas.
-                </p>
-              )}
             </div>
+            {editRole !== 'admin' && (
+              <div className="space-y-3">
+                <Label>Páginas Permitidas</Label>
+                <div className="max-h-72 overflow-y-auto border rounded-md p-3 space-y-4">
+                  {AVAILABLE_PAGES_GROUPED.map(group => (
+                    <div key={group.group} className="space-y-2">
+                      <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+                        {group.group}
+                      </p>
+                      <div className="space-y-1.5 pl-2">
+                        {group.pages.map(page => (
+                          <div key={page.key} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`edit-${page.key}`}
+                              checked={editPermissions.includes(page.key)}
+                              onCheckedChange={() => togglePermission(page.key, true)}
+                            />
+                            <Label htmlFor={`edit-${page.key}`} className="text-sm font-normal">
+                              {page.label}
+                            </Label>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+            {editRole === 'admin' && (
+              <p className="text-sm text-muted-foreground">
+                Administradores têm acesso a todas as páginas.
+              </p>
+            )}
             <Button
               onClick={handleSavePermissions}
               className="w-full"
-              disabled={isSaving || selectedUser?.role === 'admin'}
+              disabled={isSaving}
             >
-              {isSaving ? 'Salvando...' : 'Salvar Permissões'}
+              {isSaving ? 'Salvando...' : 'Salvar Alterações'}
             </Button>
           </div>
         </DialogContent>
