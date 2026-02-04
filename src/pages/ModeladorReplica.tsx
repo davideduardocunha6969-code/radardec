@@ -1,104 +1,251 @@
-import { useState, useEffect } from "react";
-import { Copy, Save, Loader2, Info } from "lucide-react";
+import { useState, useEffect, useMemo } from "react";
+import { Copy, Save, RotateCcw, Check, Loader2, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useFormatosModelador, FormatoSaida } from "@/hooks/useFormatosModelador";
+import { getFormatoIcon, getFormatoColors } from "@/utils/formatoIcons";
 import { toast } from "sonner";
+import { cn } from "@/lib/utils";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthContext } from "@/contexts/AuthContext";
 
-const PROMPT_REPLICA_KEY = "replica_otimizada";
+interface ReplicaPrompt {
+  id: string;
+  nome: string;
+  prompt: string;
+  descricao: string | null;
+  formato_saida: string;
+}
+
+interface FormatDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  formato: FormatoSaida | null;
+  prompt: ReplicaPrompt | null;
+  onSave: (promptText: string) => Promise<void>;
+  isSaving: boolean;
+}
+
+function FormatDialog({
+  open,
+  onOpenChange,
+  formato,
+  prompt,
+  onSave,
+  isSaving,
+}: FormatDialogProps) {
+  const [editedPrompt, setEditedPrompt] = useState(prompt?.prompt || getDefaultPrompt());
+  const [hasChanges, setHasChanges] = useState(false);
+
+  useEffect(() => {
+    setEditedPrompt(prompt?.prompt || getDefaultPrompt());
+    setHasChanges(false);
+  }, [prompt, open]);
+
+  const handleChange = (value: string) => {
+    setEditedPrompt(value);
+    setHasChanges(value !== (prompt?.prompt || getDefaultPrompt()));
+  };
+
+  const handleSave = async () => {
+    await onSave(editedPrompt);
+    setHasChanges(false);
+  };
+
+  const handleReset = () => {
+    setEditedPrompt(prompt?.prompt || getDefaultPrompt());
+    setHasChanges(false);
+  };
+
+  const handleRestoreDefault = () => {
+    setEditedPrompt(getDefaultPrompt());
+    setHasChanges(true);
+  };
+
+  if (!formato) return null;
+
+  const Icon = getFormatoIcon(formato.icone);
+  const colors = getFormatoColors(formato.cor);
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-4xl max-h-[90vh] flex flex-col">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2 flex-wrap">
+            <span>Prompt Réplica:</span>
+            <Badge variant="outline" className={cn("gap-1", colors.textColor)}>
+              <Icon className="h-3 w-3" />
+              {formato.nome}
+            </Badge>
+          </DialogTitle>
+          <DialogDescription>
+            Configure as instruções específicas para modelar réplicas no formato {formato.nome}
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex-1 flex flex-col gap-3 min-h-0">
+          <div className="flex items-center justify-between">
+            <Label htmlFor="prompt-edit">Instruções para a IA</Label>
+            <Button variant="ghost" size="sm" onClick={handleRestoreDefault}>
+              <RotateCcw className="h-3 w-3 mr-1" />
+              Restaurar Padrão
+            </Button>
+          </div>
+          <ScrollArea className="flex-1 border rounded-md">
+            <Textarea
+              id="prompt-edit"
+              value={editedPrompt}
+              onChange={(e) => handleChange(e.target.value)}
+              placeholder={`Insira as instruções que a IA deve seguir ao modelar réplicas no formato ${formato.nome}...`}
+              className="min-h-[400px] border-0 font-mono text-sm resize-none"
+            />
+          </ScrollArea>
+          <p className="text-xs text-muted-foreground">
+            Variáveis disponíveis: {"{transcricao}"}, {"{legenda}"}, {"{formato_origem}"}, {"{formato_saida}"}
+          </p>
+        </div>
+
+        <DialogFooter className="flex gap-2">
+          {hasChanges && (
+            <Button variant="outline" onClick={handleReset}>
+              <RotateCcw className="h-4 w-4 mr-2" />
+              Descartar
+            </Button>
+          )}
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handleSave} 
+            disabled={isSaving || !editedPrompt.trim()}
+          >
+            {isSaving ? (
+              <>
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                Salvando...
+              </>
+            ) : (
+              <>
+                <Save className="h-4 w-4 mr-2" />
+                {hasChanges ? "Salvar Alterações" : "Salvar"}
+              </>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 export default function ModeladorReplica() {
   const { user } = useAuthContext();
-  const [prompt, setPrompt] = useState("");
-  const [promptId, setPromptId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const { formatosSaida, isLoading: isLoadingFormatos } = useFormatosModelador();
+  
+  const [prompts, setPrompts] = useState<ReplicaPrompt[]>([]);
+  const [isLoadingPrompts, setIsLoadingPrompts] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [selectedFormato, setSelectedFormato] = useState<FormatoSaida | null>(null);
 
   useEffect(() => {
-    loadPrompt();
+    loadPrompts();
   }, []);
 
-  const loadPrompt = async () => {
+  const loadPrompts = async () => {
     try {
       const { data, error } = await supabase
         .from("ai_prompts")
         .select("*")
         .eq("tipo", "replica")
-        .eq("nome", PROMPT_REPLICA_KEY)
-        .maybeSingle();
+        .not("formato_saida", "is", null);
 
       if (error) throw error;
-
-      if (data) {
-        setPrompt(data.prompt);
-        setPromptId(data.id);
-      } else {
-        // Load default prompt
-        setPrompt(getDefaultPrompt());
-      }
+      setPrompts(data as ReplicaPrompt[] || []);
     } catch (error) {
-      console.error("Erro ao carregar prompt:", error);
+      console.error("Erro ao carregar prompts:", error);
       toast.error("Erro ao carregar configurações");
     } finally {
-      setIsLoading(false);
+      setIsLoadingPrompts(false);
     }
   };
 
-  const handleSave = async () => {
-    if (!user?.id) {
-      toast.error("Usuário não autenticado");
-      return;
-    }
+  const promptsByFormato = useMemo(() => {
+    const map: Record<string, ReplicaPrompt | null> = {};
+    formatosSaida.forEach((formato) => {
+      const found = prompts.find((p) => p.formato_saida === formato.key);
+      map[formato.key] = found || null;
+    });
+    return map;
+  }, [prompts, formatosSaida]);
+
+  const handleOpenDialog = (formato: FormatoSaida) => {
+    setSelectedFormato(formato);
+    setDialogOpen(true);
+  };
+
+  const handleSavePrompt = async (promptText: string) => {
+    if (!selectedFormato || !user?.id) return;
+
+    const existingPrompt = promptsByFormato[selectedFormato.key];
 
     setIsSaving(true);
     try {
-      if (promptId) {
-        // Update existing
+      const nome = `Réplica → ${selectedFormato.nome}`;
+      const descricao = `Prompt para modelar réplica no formato ${selectedFormato.nome}`;
+
+      if (existingPrompt) {
         const { error } = await supabase
           .from("ai_prompts")
-          .update({ prompt, updated_at: new Date().toISOString() })
-          .eq("id", promptId);
+          .update({
+            prompt: promptText,
+            nome,
+            descricao,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", existingPrompt.id);
 
         if (error) throw error;
       } else {
-        // Create new
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("ai_prompts")
           .insert({
             user_id: user.id,
-            nome: PROMPT_REPLICA_KEY,
+            nome,
+            prompt: promptText,
+            descricao,
             tipo: "replica",
-            prompt,
-            descricao: "Prompt para modelagem de réplica otimizada (sem produto específico)"
-          })
-          .select()
-          .single();
+            formato_saida: selectedFormato.key,
+          });
 
         if (error) throw error;
-        setPromptId(data.id);
       }
 
-      toast.success("Configurações salvas com sucesso!");
+      toast.success(`Prompt para "${selectedFormato.nome}" salvo com sucesso!`);
+      await loadPrompts();
+      setDialogOpen(false);
     } catch (error) {
       console.error("Erro ao salvar:", error);
-      toast.error("Erro ao salvar configurações");
+      toast.error("Erro ao salvar prompt");
     } finally {
       setIsSaving(false);
     }
   };
 
-  const handleCopy = () => {
-    navigator.clipboard.writeText(prompt);
-    toast.success("Prompt copiado!");
-  };
+  const selectedPrompt = useMemo(() => {
+    if (!selectedFormato) return null;
+    return promptsByFormato[selectedFormato.key];
+  }, [selectedFormato, promptsByFormato]);
 
-  const handleRestoreDefault = () => {
-    setPrompt(getDefaultPrompt());
-    toast.info("Prompt padrão restaurado. Clique em Salvar para confirmar.");
-  };
+  const configuredCount = useMemo(() => {
+    return Object.values(promptsByFormato).filter(Boolean).length;
+  }, [promptsByFormato]);
+
+  const isLoading = isLoadingPrompts || isLoadingFormatos;
 
   if (isLoading) {
     return (
@@ -118,81 +265,113 @@ export default function ModeladorReplica() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-          <Copy className="h-6 w-6" />
-          Modelador Réplica
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          Configure o treinamento da IA para modelagem de réplicas otimizadas
-        </p>
+      <div className="flex items-center justify-between flex-wrap gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
+            <Copy className="h-6 w-6" />
+            Modelador Réplica
+          </h1>
+          <p className="text-muted-foreground mt-1">
+            Configure o treinamento da IA para modelagem de réplicas otimizadas por formato de saída
+          </p>
+        </div>
+        <Badge variant="outline" className="text-sm">
+          {configuredCount} de {formatosSaida.length} configurados
+        </Badge>
       </div>
 
       <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Info className="h-5 w-5" />
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Info className="h-4 w-4" />
             O que é a Réplica Otimizada?
           </CardTitle>
-          <CardDescription>
-            A réplica otimizada permite modelar conteúdos virais sem associá-los a um produto específico do seu escritório.
+        </CardHeader>
+        <CardContent>
+          <p className="text-sm text-muted-foreground">
+            A réplica otimizada permite modelar conteúdos virais sem associá-los a um produto específico.
             Ideal para identificar tendências e adaptar conteúdos em alta para seu perfil.
+            Configure abaixo um prompt específico para cada tipo de formato de saída.
+          </p>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader className="pb-4">
+          <CardTitle className="text-lg">Matriz de Formatos de Saída</CardTitle>
+          <CardDescription>
+            Clique em um formato para configurar o prompt específico de réplica
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="p-4 bg-primary/10 border border-primary/30 rounded-lg">
-            <p className="text-sm text-primary">
-              <strong>Quando usar:</strong> Quando você encontrar um conteúdo viral que quer replicar, mas não precisa associar a nenhum serviço específico.
-              A IA irá analisar a estrutura, linguagem e abordagem do conteúdo e gerar uma versão otimizada para você.
-            </p>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-        <CardHeader>
-          <CardTitle>Prompt de Modelagem</CardTitle>
-          <CardDescription>
-            Configure as instruções que a IA seguirá ao modelar réplicas otimizadas.
-            Este prompt será usado quando você clicar em "Modelar Réplica Otimizada" no Modelador de Conteúdo.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="prompt">Instruções para a IA</Label>
-            <Textarea
-              id="prompt"
-              value={prompt}
-              onChange={(e) => setPrompt(e.target.value)}
-              placeholder="Digite as instruções para modelagem de réplicas..."
-              className="min-h-[400px] font-mono text-sm"
-            />
-            <p className="text-xs text-muted-foreground">
-              Variáveis disponíveis: {"{transcricao}"}, {"{legenda}"}, {"{formato_origem}"}, {"{formato_saida}"}
-            </p>
-          </div>
-
-          <div className="flex items-center gap-2 justify-between pt-4">
-            <div className="flex gap-2">
-              <Button variant="outline" size="sm" onClick={handleCopy}>
-                <Copy className="h-4 w-4 mr-2" />
-                Copiar
-              </Button>
-              <Button variant="ghost" size="sm" onClick={handleRestoreDefault}>
-                Restaurar Padrão
-              </Button>
+          {formatosSaida.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <p>Nenhum formato de saída configurado.</p>
+              <p className="text-sm">Acesse "Prompts Modelador" para adicionar formatos.</p>
             </div>
-            <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? (
-                <Loader2 className="h-4 w-4 animate-spin mr-2" />
-              ) : (
-                <Save className="h-4 w-4 mr-2" />
-              )}
-              Salvar
-            </Button>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+              {formatosSaida.map((formato) => {
+                const Icon = getFormatoIcon(formato.icone);
+                const colors = getFormatoColors(formato.cor);
+                const hasPrompt = !!promptsByFormato[formato.key];
+
+                return (
+                  <Button
+                    key={formato.id}
+                    variant="outline"
+                    className={cn(
+                      "h-auto flex-col gap-2 p-4 transition-all relative",
+                      hasPrompt 
+                        ? "bg-green-500/10 hover:bg-green-500/20 border-green-500/30" 
+                        : "hover:bg-muted/50"
+                    )}
+                    onClick={() => handleOpenDialog(formato)}
+                  >
+                    {hasPrompt && (
+                      <div className="absolute top-2 right-2">
+                        <Check className="h-4 w-4 text-green-500" />
+                      </div>
+                    )}
+                    <div className={cn("p-2 rounded", colors.bgColor, colors.textColor)}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <span className="text-sm font-medium">{formato.nome}</span>
+                    {formato.descricao && (
+                      <span className="text-xs text-muted-foreground text-center line-clamp-2">
+                        {formato.descricao}
+                      </span>
+                    )}
+                  </Button>
+                );
+              })}
+            </div>
+          )}
+
+          {/* Legend */}
+          <div className="flex items-center gap-6 mt-6 pt-4 border-t">
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded bg-green-500/10 border border-green-500/30 flex items-center justify-center">
+                <Check className="h-3 w-3 text-green-500" />
+              </div>
+              <span className="text-sm text-muted-foreground">Prompt configurado</span>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="w-6 h-6 rounded border border-dashed border-muted-foreground/30" />
+              <span className="text-sm text-muted-foreground">Sem prompt (usará padrão)</span>
+            </div>
           </div>
         </CardContent>
       </Card>
+
+      <FormatDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        formato={selectedFormato}
+        prompt={selectedPrompt}
+        onSave={handleSavePrompt}
+        isSaving={isSaving}
+      />
     </div>
   );
 }
