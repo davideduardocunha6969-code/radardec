@@ -21,6 +21,7 @@ import TiposProdutos from "./pages/TiposProdutos";
 import MidiaSocial from "./pages/MidiaSocial";
 import ContentHub from "./pages/ContentHub";
 import ModeladorConteudo from "./pages/ModeladorConteudo";
+import ModeladorReplica from "./pages/ModeladorReplica";
 import AtividadesMarketing from "./pages/AtividadesMarketing";
 import AtendimentosClosers from "./pages/AtendimentosClosers";
 import PerfilIA from "./pages/PerfilIA";
@@ -48,6 +49,7 @@ const App = () => (
               <Route path="/robos/transcricao" element={<ProtectedRoute pageKey="robos-transcricao"><Transcricao /></ProtectedRoute>} />
               <Route path="/robos/prompts" element={<ProtectedRoute pageKey="robos-prompts"><AiPrompts /></ProtectedRoute>} />
               <Route path="/robos/prompts-modelador" element={<ProtectedRoute pageKey="robos-prompts-modelador"><PromptsModelador /></ProtectedRoute>} />
+              <Route path="/robos/modelador-replica" element={<ProtectedRoute pageKey="robos-modelador-replica"><ModeladorReplica /></ProtectedRoute>} />
               <Route path="/robos/produtos" element={<ProtectedRoute pageKey="robos-produtos"><TiposProdutos /></ProtectedRoute>} />
               <Route path="/content-hub" element={<ProtectedRoute pageKey="content-hub"><ContentHub /></ProtectedRoute>} />
               <Route path="/midia-social" element={<ProtectedRoute pageKey="midia-social"><MidiaSocial /></ProtectedRoute>} />

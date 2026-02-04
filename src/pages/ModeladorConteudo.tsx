@@ -1,5 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
-import { Wand2, Loader2, ExternalLink, ArrowRight, Send, AlertCircle, Upload, X, FileVideo, LayoutGrid } from "lucide-react";
+import { Wand2, Loader2, ExternalLink, ArrowRight, Send, AlertCircle, Upload, X, FileVideo, LayoutGrid, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,14 +17,32 @@ import { ModelagemResultsView } from "@/components/modelador/ModelagemResultsVie
 import { getFormatoIcon, getFormatoColors } from "@/utils/formatoIcons";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { supabase } from "@/integrations/supabase/client";
 
 interface PendingIdeia {
-  produto: TipoProduto;
+  produto: TipoProduto | null;
   formatoSaida: string;
   formatoOrigem: string;
   result: ModelagemResult;
   link: string;
+  isReplica?: boolean;
 }
+
+// Produto fake para réplica otimizada
+const REPLICA_PRODUTO: TipoProduto = {
+  id: "replica-otimizada",
+  nome: "Réplica Otimizada",
+  setor: "geral" as any,
+  descricao: "Conteúdo modelado sem associação a produto específico",
+  caracteristicas: null,
+  perfil_cliente_ideal: null,
+  estrutura_editorial: null,
+  created_at: "",
+  updated_at: "",
+  user_id: "",
+};
+
+type ModeladorStep = "select-origem" | "select-saida" | "input-link" | "upload-video" | "select-products" | "analyzing" | "results";
 
 export default function ModeladorConteudo() {
   const { produtos, isLoading: loadingProdutos } = useTiposProdutos();
@@ -225,8 +243,74 @@ export default function ModeladorConteudo() {
           if (result) {
             result.transcricao_audio = response.transcricao;
             result.analise_visual_detalhada = response.analise_visual;
-            ideias.push({ produto, formatoSaida: formatoSaidaKey, formatoOrigem, result, link });
+            ideias.push({ produto, formatoSaida: formatoSaidaKey, formatoOrigem, result, link, isReplica: false });
           }
+        }
+      }
+    }
+
+    if (ideias.length > 0) {
+      setPendingIdeias(ideias);
+      setCurrentIdeiaIndex(0);
+      setStep("results");
+    } else {
+      toast.error("Não foi possível analisar o conteúdo");
+      setStep("select-products");
+    }
+  };
+
+  // Função para modelar réplica otimizada (sem produto específico)
+  const handleAnalyzeReplica = async () => {
+    if (!formatoOrigem || !link || !videoFile || formatosSaidaSelecionados.length === 0) {
+      toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    setStep("analyzing");
+
+    const ideias: PendingIdeia[] = [];
+
+    // Buscar o prompt de réplica personalizado
+    let replicaPrompt = "";
+    try {
+      const { data } = await supabase
+        .from("ai_prompts")
+        .select("prompt")
+        .eq("tipo", "replica")
+        .eq("nome", "replica_otimizada")
+        .maybeSingle();
+      
+      if (data?.prompt) {
+        replicaPrompt = data.prompt;
+      }
+    } catch (error) {
+      console.error("Erro ao buscar prompt de réplica:", error);
+    }
+
+    // Usar o produto fake para réplica
+    const formatosParaAPI = formatosSaidaSelecionados as Formato[];
+    const response = await analyzeVideoUploadMultiFormato(
+      videoFile, 
+      caption, 
+      [], // Sem produtos - usa prompt de réplica
+      formatosParaAPI, 
+      formatoOrigem
+    );
+    
+    if (response && response.formatos) {
+      for (const formatoSaidaKey of formatosSaidaSelecionados) {
+        const result = response.formatos[formatoSaidaKey];
+        if (result) {
+          result.transcricao_audio = response.transcricao;
+          result.analise_visual_detalhada = response.analise_visual;
+          ideias.push({ 
+            produto: REPLICA_PRODUTO, 
+            formatoSaida: formatoSaidaKey, 
+            formatoOrigem, 
+            result, 
+            link,
+            isReplica: true 
+          });
         }
       }
     }
@@ -781,12 +865,38 @@ export default function ModeladorConteudo() {
               )}
             </div>
 
-            <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-              <p className="text-sm text-amber-700 dark:text-amber-300">
-                <AlertCircle className="h-4 w-4 inline mr-2" />
-                <strong>Nota:</strong> Serão geradas {formatosSaidaSelecionados.length * produtosSelecionados.length} ideias ({formatosSaidaSelecionados.length} formato(s) de saída × {produtosSelecionados.length} produto(s))
-              </p>
+            {/* Opção Réplica Otimizada */}
+            <Separator />
+            
+            <div className="p-4 bg-gradient-to-r from-violet-500/10 to-purple-500/10 border border-violet-500/30 rounded-lg">
+              <div className="flex items-start gap-3">
+                <Copy className="h-5 w-5 text-violet-600 mt-0.5" />
+                <div className="flex-1">
+                  <h4 className="font-medium text-foreground">Modelar Réplica Otimizada</h4>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Crie uma réplica do conteúdo sem associar a nenhum produto específico. 
+                    Ideal para conteúdos virais que você quer adaptar para seu perfil.
+                  </p>
+                  <Button 
+                    variant="outline" 
+                    className="mt-3 border-violet-500/50 text-violet-600 hover:bg-violet-500/10"
+                    onClick={handleAnalyzeReplica}
+                  >
+                    <Copy className="h-4 w-4 mr-2" />
+                    Modelar Réplica Otimizada
+                  </Button>
+                </div>
+              </div>
             </div>
+
+            {produtosSelecionados.length > 0 && (
+              <div className="p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                <p className="text-sm text-amber-700 dark:text-amber-300">
+                  <AlertCircle className="h-4 w-4 inline mr-2" />
+                  <strong>Nota:</strong> Serão geradas {formatosSaidaSelecionados.length * produtosSelecionados.length} ideias ({formatosSaidaSelecionados.length} formato(s) de saída × {produtosSelecionados.length} produto(s))
+                </p>
+              </div>
+            )}
 
             <div className="flex justify-between pt-4">
               <Button variant="outline" onClick={() => setStep("upload-video")}>
@@ -796,7 +906,7 @@ export default function ModeladorConteudo() {
                 onClick={handleAnalyze}
                 disabled={produtosSelecionados.length === 0}
               >
-                Analisar Conteúdo
+                Analisar com Produtos
                 <ArrowRight className="h-4 w-4 ml-2" />
               </Button>
             </div>
@@ -835,9 +945,16 @@ export default function ModeladorConteudo() {
               <Badge variant="outline">
                 {currentIdeiaIndex + 1} de {pendingIdeias.length}
               </Badge>
-              <Badge className={SETOR_COLORS[currentIdeia.produto.setor]}>
-                {currentIdeia.produto.nome}
-              </Badge>
+              {currentIdeia.isReplica ? (
+                <Badge className="bg-violet-500/20 text-violet-700 border-violet-500/30">
+                  <Copy className="h-3 w-3 mr-1" />
+                  Réplica Otimizada
+                </Badge>
+              ) : currentIdeia.produto && (
+                <Badge className={SETOR_COLORS[currentIdeia.produto.setor]}>
+                  {currentIdeia.produto.nome}
+                </Badge>
+              )}
               <Badge variant="secondary">
                 {getOrigemLabel(currentIdeia.formatoOrigem)} → {getSaidaLabel(currentIdeia.formatoSaida)}
               </Badge>
@@ -902,6 +1019,7 @@ export default function ModeladorConteudo() {
           formato={currentIdeia.formatoSaida as Formato}
           linkOriginal={currentIdeia.link}
           onSuccess={handleIdeiaEnviada}
+          isReplica={currentIdeia.isReplica}
         />
       )}
     </div>
