@@ -66,6 +66,38 @@ async function fetchPromptFromDb(formatoOrigem: string, formatoSaida: string): P
   }
 }
 
+// Fetch replica prompt from database based on output format
+async function fetchReplicaPromptFromDb(formatoSaida: string): Promise<string | null> {
+  const supabaseUrl = Deno.env.get("SUPABASE_URL");
+  const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+  
+  if (!supabaseUrl || !supabaseKey) {
+    console.error("Supabase credentials not configured");
+    return null;
+  }
+
+  try {
+    const supabase = createClient(supabaseUrl, supabaseKey);
+    
+    const { data, error } = await supabase
+      .from("ai_prompts")
+      .select("prompt")
+      .eq("tipo", "replica")
+      .eq("formato_saida", formatoSaida)
+      .maybeSingle();
+    
+    if (error) {
+      console.error("Error fetching replica prompt:", error);
+      return null;
+    }
+    
+    return data?.prompt || null;
+  } catch (error) {
+    console.error("Error in fetchReplicaPromptFromDb:", error);
+    return null;
+  }
+}
+
 // Transcribe audio using ElevenLabs
 async function transcribeAudio(audioData: Uint8Array, fileName: string): Promise<TranscriptionResult | null> {
   const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
@@ -283,9 +315,10 @@ async function generateContentModelingForFormat(
   caption: string | undefined,
   transcription: TranscriptionResult | null,
   visualAnalysis: VisualAnalysisResult | null,
-  produtos: string,
+  produtos: string | null,
   formato: string,
-  formatoOrigem: string
+  formatoOrigem: string,
+  isReplicaMode: boolean = false
 ): Promise<object | null> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   
@@ -322,40 +355,11 @@ async function generateContentModelingForFormat(
   };
 
   try {
-    // Try to fetch custom prompt from database
-    console.log(`Fetching prompt for: ${formatoOrigem} -> ${formato}`);
-    const customPrompt = await fetchPromptFromDb(formatoOrigem, formato);
-    
     let formatoInstructions: string;
+    let systemPrompt: string;
+    let userPrompt: string;
     
-    if (customPrompt) {
-      console.log(`Using custom prompt from database for ${formatoOrigem} -> ${formato}`);
-      formatoInstructions = customPrompt;
-    } else {
-      console.log(`No custom prompt found, using fallback for format: ${formato}`);
-      formatoInstructions = fallbackInstructions[formato] || fallbackInstructions.video;
-    }
-
-    const systemPrompt = `Você é um especialista em marketing de conteúdo jurídico e análise de conteúdos virais. Sua tarefa é ADAPTAR um conteúdo original para um novo formato, criando um conteúdo NOVO e PERSONALIZADO para os produtos jurídicos fornecidos.
-
-IMPORTANTE: Você deve criar um NOVO conteúdo baseado no estilo e estratégia do original, mas ADAPTADO para o contexto jurídico e os produtos específicos.
-
-${formatoInstructions}
-
-Responda APENAS com um objeto JSON válido, sem texto adicional. Use o seguinte formato:
-
-{
-  "gancho_original": "O gancho/hook utilizado no conteúdo ORIGINAL (primeiros segundos do vídeo de referência)",
-  "analise_estrategia": "Análise detalhada da estratégia de conteúdo do ORIGINAL",
-  "analise_performance": "Análise dos motivos pelos quais o conteúdo ORIGINAL performou bem",
-  "legenda_original": "A legenda do conteúdo ORIGINAL",
-  "analise_filmagem": "Análise de como o vídeo ORIGINAL foi filmado/editado",
-  "titulo_sugerido": "Título para o NOVO conteúdo adaptado para os produtos jurídicos",
-  "copy_completa": "Roteiro/copy NOVO e ORIGINAL para o formato ${formato}, personalizado para os produtos jurídicos",
-  ${formato === "video" || formato === "video_longo" ? '"orientacoes_filmagem": "Orientações de como PRODUZIR o novo conteúdo (cenário, postura, edição)",' : '"orientacoes_design": "Orientações de design para o novo conteúdo estático/carrossel",'}
-  "formato_sugerido": "${formato}"
-}`;
-
+    // Build context info for both modes
     let contextInfo = `DADOS DO CONTEÚDO ORIGINAL (REFERÊNCIA):
 
 `;
@@ -386,7 +390,92 @@ ${transcription.text}
 `;
     }
 
-    const userPrompt = `Analise o seguinte conteúdo ORIGINAL e crie um NOVO conteúdo para o formato ${formato.toUpperCase()}:
+    if (isReplicaMode) {
+      // REPLICA MODE: Use replica-specific prompt
+      console.log(`Fetching REPLICA prompt for format: ${formato}`);
+      const replicaPrompt = await fetchReplicaPromptFromDb(formato);
+      
+      if (replicaPrompt) {
+        console.log(`Using custom replica prompt for format: ${formato}`);
+        // Replace variables in the custom prompt
+        formatoInstructions = replicaPrompt
+          .replace(/\{transcricao\}/g, transcription?.text || "Não disponível")
+          .replace(/\{legenda\}/g, caption || "Não disponível")
+          .replace(/\{formato_origem\}/g, formatoOrigem)
+          .replace(/\{formato_saida\}/g, formato);
+      } else {
+        console.log(`No custom replica prompt found, using default for format: ${formato}`);
+        formatoInstructions = fallbackInstructions[formato] || fallbackInstructions.video;
+      }
+      
+      systemPrompt = `Você é um especialista em marketing de conteúdo e análise de vídeos virais.
+
+Sua tarefa é analisar o conteúdo fornecido e criar uma RÉPLICA OTIMIZADA - uma versão adaptada que mantém a essência do que fez o conteúdo original funcionar, mas com uma abordagem original e autêntica.
+
+${formatoInstructions}
+
+Responda APENAS com um objeto JSON válido, sem texto adicional. Use o seguinte formato:
+
+{
+  "gancho_original": "O gancho/hook utilizado no conteúdo ORIGINAL",
+  "analise_estrategia": "Análise detalhada da estratégia de conteúdo do ORIGINAL",
+  "analise_performance": "Análise dos motivos pelos quais o conteúdo ORIGINAL performou bem",
+  "legenda_original": "A legenda do conteúdo ORIGINAL",
+  "analise_filmagem": "Análise de como o vídeo ORIGINAL foi filmado/editado",
+  "titulo_sugerido": "Título para a RÉPLICA OTIMIZADA",
+  "copy_completa": "Roteiro/copy COMPLETO para a réplica no formato ${formato}",
+  ${formato === "video" || formato === "video_longo" ? '"orientacoes_filmagem": "Orientações de como PRODUZIR a réplica (cenário, postura, edição)",' : '"orientacoes_design": "Orientações de design para a réplica estática/carrossel",'}
+  "formato_sugerido": "${formato}"
+}`;
+
+      userPrompt = `Analise o seguinte conteúdo viral e crie uma RÉPLICA OTIMIZADA no formato ${formato.toUpperCase()}:
+
+${contextInfo}
+INSTRUÇÕES:
+1. Analise a estratégia, linguagem e elementos que fazem este conteúdo funcionar
+2. Crie uma RÉPLICA OTIMIZADA que capture a essência do sucesso do original
+3. O "titulo_sugerido" e "copy_completa" devem ser para a SUA versão replicada
+4. Mantenha a análise do original nos campos "gancho_original", "analise_estrategia", "analise_performance", "legenda_original" e "analise_filmagem"
+5. Os campos de orientação devem instruir como PRODUZIR a réplica
+
+${formato === "carrossel" || formato === "estatico" ? "IMPORTANTE: Como este é um formato estático, NÃO inclua orientações de filmagem. Foque em orientações de design e layout." : ""}
+
+Responda APENAS com o JSON, sem markdown ou texto adicional.`;
+
+    } else {
+      // PRODUCT MODE: Use existing product-focused logic
+      console.log(`Fetching prompt for: ${formatoOrigem} -> ${formato}`);
+      const customPrompt = await fetchPromptFromDb(formatoOrigem, formato);
+      
+      if (customPrompt) {
+        console.log(`Using custom prompt from database for ${formatoOrigem} -> ${formato}`);
+        formatoInstructions = customPrompt;
+      } else {
+        console.log(`No custom prompt found, using fallback for format: ${formato}`);
+        formatoInstructions = fallbackInstructions[formato] || fallbackInstructions.video;
+      }
+
+      systemPrompt = `Você é um especialista em marketing de conteúdo jurídico e análise de conteúdos virais. Sua tarefa é ADAPTAR um conteúdo original para um novo formato, criando um conteúdo NOVO e PERSONALIZADO para os produtos jurídicos fornecidos.
+
+IMPORTANTE: Você deve criar um NOVO conteúdo baseado no estilo e estratégia do original, mas ADAPTADO para o contexto jurídico e os produtos específicos.
+
+${formatoInstructions}
+
+Responda APENAS com um objeto JSON válido, sem texto adicional. Use o seguinte formato:
+
+{
+  "gancho_original": "O gancho/hook utilizado no conteúdo ORIGINAL (primeiros segundos do vídeo de referência)",
+  "analise_estrategia": "Análise detalhada da estratégia de conteúdo do ORIGINAL",
+  "analise_performance": "Análise dos motivos pelos quais o conteúdo ORIGINAL performou bem",
+  "legenda_original": "A legenda do conteúdo ORIGINAL",
+  "analise_filmagem": "Análise de como o vídeo ORIGINAL foi filmado/editado",
+  "titulo_sugerido": "Título para o NOVO conteúdo adaptado para os produtos jurídicos",
+  "copy_completa": "Roteiro/copy NOVO e ORIGINAL para o formato ${formato}, personalizado para os produtos jurídicos",
+  ${formato === "video" || formato === "video_longo" ? '"orientacoes_filmagem": "Orientações de como PRODUZIR o novo conteúdo (cenário, postura, edição)",' : '"orientacoes_design": "Orientações de design para o novo conteúdo estático/carrossel",'}
+  "formato_sugerido": "${formato}"
+}`;
+
+      userPrompt = `Analise o seguinte conteúdo ORIGINAL e crie um NOVO conteúdo para o formato ${formato.toUpperCase()}:
 
 ${contextInfo}
 PRODUTOS JURÍDICOS PARA O NOVO CONTEÚDO:
@@ -402,6 +491,7 @@ INSTRUÇÕES:
 ${formato === "carrossel" || formato === "estatico" ? "IMPORTANTE: Como este é um formato estático, NÃO inclua orientações de filmagem. Foque em orientações de design e layout." : ""}
 
 Responda APENAS com o JSON, sem markdown ou texto adicional.`;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -503,16 +593,13 @@ serve(async (req) => {
       );
     }
 
-    if (!produtos) {
-      return new Response(
-        JSON.stringify({ error: "Produtos são obrigatórios" }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
-    }
-
     // Parse formatos (default to video if not provided)
     const formatos: string[] = formatosStr ? JSON.parse(formatosStr) : ["video"];
     const origem = formatoOrigem || "video"; // Default to video if not provided
+    
+    // Check if this is a replica request (no products = replica mode)
+    const isReplicaMode = !produtos || produtos.trim() === "";
+    console.log("Replica mode:", isReplicaMode);
     console.log("Formato origem:", origem, "Formatos saida:", formatos);
 
     console.log("Received video upload:", videoFile.name, "size:", videoFile.size, "bytes");
@@ -541,18 +628,19 @@ serve(async (req) => {
     console.log("Visual analysis complete:", visualAnalysis ? "Success" : "Failed");
 
     // Step 3: Generate content modeling for each format
-    console.log("Generating content modeling for formats:", formatos);
+    console.log("Generating content modeling for formats:", formatos, "isReplica:", isReplicaMode);
     const results: Record<string, object> = {};
     
     for (const formato of formatos) {
-      console.log(`Generating modeling for: ${origem} -> ${formato}`);
+      console.log(`Generating modeling for: ${origem} -> ${formato}, replica: ${isReplicaMode}`);
       const result = await generateContentModelingForFormat(
         caption || undefined,
         transcription,
         visualAnalysis,
         produtos,
         formato,
-        origem
+        origem,
+        isReplicaMode
       );
       if (result) {
         results[formato] = result;
