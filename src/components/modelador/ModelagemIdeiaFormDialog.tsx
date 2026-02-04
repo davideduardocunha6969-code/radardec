@@ -18,7 +18,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Send } from "lucide-react";
+import { Send, Copy } from "lucide-react";
 import { TipoProduto, SETOR_LABELS, SETOR_COLORS } from "@/hooks/useTiposProdutos";
 import { ModelagemResult } from "@/hooks/useModelagemConteudo";
 import { useIdeiasConteudo, IdeiaConteudoInput } from "@/hooks/useIdeiasConteudo";
@@ -32,11 +32,12 @@ import { isFieldVisibleForFormato, getLinkLabel } from "@/utils/formatoFields";
 interface ModelagemIdeiaFormDialogProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  produto: TipoProduto;
+  produto: TipoProduto | null;
   result: ModelagemResult;
   linkOriginal: string;
   formato: Formato;
   onSuccess: () => void;
+  isReplica?: boolean;
 }
 
 type Setor = "previdenciario" | "trabalhista" | "bancario";
@@ -50,11 +51,15 @@ export function ModelagemIdeiaFormDialog({
   linkOriginal,
   formato,
   onSuccess,
+  isReplica = false,
 }: ModelagemIdeiaFormDialogProps) {
   const { createIdeia } = useIdeiasConteudo();
 
+  // Default setor for replicas or when produto is null
+  const defaultSetor = produto?.setor || "previdenciario";
+
   const [formData, setFormData] = useState<IdeiaConteudoInput>({
-    setor: produto.setor as Setor,
+    setor: defaultSetor as Setor,
     formato: formato,
     titulo: "",
     gancho: "",
@@ -71,7 +76,7 @@ export function ModelagemIdeiaFormDialog({
   useEffect(() => {
     if (open && result) {
       setFormData({
-        setor: produto.setor as Setor,
+        setor: (produto?.setor || "previdenciario") as Setor,
         formato: formato,
         titulo: result.titulo_sugerido || "",
         gancho: result.gancho_original || "",
@@ -102,9 +107,16 @@ export function ModelagemIdeiaFormDialog({
         <DialogHeader>
           <div className="flex items-center gap-2 flex-wrap">
             <DialogTitle>Criar Ideia para Content Hub</DialogTitle>
-            <Badge className={SETOR_COLORS[produto.setor]}>
-              {produto.nome}
-            </Badge>
+            {isReplica ? (
+              <Badge className="bg-violet-500/20 text-violet-700 border-violet-500/30">
+                <Copy className="h-3 w-3 mr-1" />
+                Réplica Otimizada
+              </Badge>
+            ) : produto && (
+              <Badge className={SETOR_COLORS[produto.setor]}>
+                {produto.nome}
+              </Badge>
+            )}
             <Badge variant="secondary">
               {FORMATO_LABELS[formato]}
             </Badge>

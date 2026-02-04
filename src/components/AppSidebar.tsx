@@ -1,4 +1,4 @@
-import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, CalendarDays, Megaphone, Lightbulb, Wand2, Package, ClipboardList, Phone, UserCog } from "lucide-react";
+import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, CalendarDays, Megaphone, Lightbulb, Wand2, Package, ClipboardList, Phone, UserCog, Copy } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import logoEscritorio from "@/assets/logo-escritorio.webp";
@@ -45,6 +45,7 @@ const robosItems = [
   { title: "Transcritor de Audiências", url: "/robos/transcricao", icon: Mic, pageKey: "robos-transcricao" },
   { title: "Prompts Transcrições", url: "/robos/prompts", icon: FileText, pageKey: "robos-prompts" },
   { title: "Prompts Modelador", url: "/robos/prompts-modelador", icon: Wand2, pageKey: "robos-prompts-modelador" },
+  { title: "Modelador Réplica", url: "/robos/modelador-replica", icon: Copy, pageKey: "robos-modelador-replica" },
   { title: "Tipos de Produtos", url: "/robos/produtos", icon: Package, pageKey: "robos-produtos" },
 ];
 
