@@ -197,6 +197,8 @@ export function CollapsibleRichField({
             onInput={handleContentChange}
             onPaste={handlePaste}
             dangerouslySetInnerHTML={{ __html: value || "" }}
+            dir="ltr"
+            style={{ unicodeBidi: "plaintext", textAlign: "left" }}
             className={cn(
               "min-h-[150px] max-h-[400px] overflow-y-auto",
               "px-3 py-2 rounded-md border border-border bg-background",
