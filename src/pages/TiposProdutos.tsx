@@ -1,12 +1,12 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { Plus, Package, Pencil, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
   useTiposProdutos,
   TipoProduto,
   TipoProdutoInput,
+  Setor,
   SETOR_LABELS,
   SETOR_COLORS,
 } from "@/hooks/useTiposProdutos";
@@ -22,6 +22,14 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import { ChevronDown } from "lucide-react";
+
+const SETOR_ORDER: Setor[] = ["previdenciario", "bancario", "trabalhista", "civel"];
 
 export default function TiposProdutos() {
   const { produtos, isLoading, createProduto, updateProduto, deleteProduto } =
@@ -32,6 +40,30 @@ export default function TiposProdutos() {
   const [deleteOpen, setDeleteOpen] = useState(false);
   const [selectedProduto, setSelectedProduto] = useState<TipoProduto | null>(null);
   const [editingProduto, setEditingProduto] = useState<TipoProduto | null>(null);
+  const [expandedSections, setExpandedSections] = useState<Record<Setor, boolean>>({
+    previdenciario: true,
+    bancario: true,
+    trabalhista: true,
+    civel: true,
+  });
+
+  // Group products by sector
+  const produtosPorSetor = useMemo(() => {
+    const grouped: Record<Setor, TipoProduto[]> = {
+      previdenciario: [],
+      bancario: [],
+      trabalhista: [],
+      civel: [],
+    };
+
+    produtos.forEach((produto) => {
+      if (grouped[produto.setor]) {
+        grouped[produto.setor].push(produto);
+      }
+    });
+
+    return grouped;
+  }, [produtos]);
 
   const handleCreate = () => {
     setEditingProduto(null);
@@ -70,6 +102,13 @@ export default function TiposProdutos() {
     }
   };
 
+  const toggleSection = (setor: Setor) => {
+    setExpandedSections((prev) => ({
+      ...prev,
+      [setor]: !prev[setor],
+    }));
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -93,69 +132,97 @@ export default function TiposProdutos() {
           Carregando produtos...
         </div>
       ) : produtos.length === 0 ? (
-        <Card className="bg-card/50 backdrop-blur-sm border-border/50">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Package className="h-12 w-12 text-muted-foreground mb-4" />
-            <h3 className="text-lg font-medium text-foreground mb-2">
-              Nenhum produto cadastrado
-            </h3>
-            <p className="text-muted-foreground text-center mb-4">
-              Cadastre os tipos de produtos jurídicos do seu escritório para usar na modelagem de conteúdo.
-            </p>
-            <Button onClick={handleCreate}>
-              <Plus className="h-4 w-4 mr-2" />
-              Criar Primeiro Produto
-            </Button>
-          </CardContent>
-        </Card>
+        <div className="bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg p-12 flex flex-col items-center justify-center">
+          <Package className="h-12 w-12 text-muted-foreground mb-4" />
+          <h3 className="text-lg font-medium text-foreground mb-2">
+            Nenhum produto cadastrado
+          </h3>
+          <p className="text-muted-foreground text-center mb-4">
+            Cadastre os tipos de produtos jurídicos do seu escritório para usar na modelagem de conteúdo.
+          </p>
+          <Button onClick={handleCreate}>
+            <Plus className="h-4 w-4 mr-2" />
+            Criar Primeiro Produto
+          </Button>
+        </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {produtos.map((produto) => (
-            <Card
-              key={produto.id}
-              className="bg-card/50 backdrop-blur-sm border-border/50 hover:border-primary/50 transition-colors cursor-pointer"
-              onClick={() => handleView(produto)}
-            >
-              <CardHeader className="pb-2">
-                <div className="flex items-start justify-between">
-                  <CardTitle className="text-lg font-semibold text-foreground">
-                    {produto.nome}
-                  </CardTitle>
-                  <Badge className={SETOR_COLORS[produto.setor]}>
-                    {SETOR_LABELS[produto.setor]}
-                  </Badge>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <p className="text-sm text-muted-foreground line-clamp-2 mb-4">
-                  {produto.descricao || "Sem descrição"}
-                </p>
-                <div className="flex justify-end gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleEdit(produto);
-                    }}
-                  >
-                    <Pencil className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDelete(produto);
-                    }}
-                    className="text-destructive hover:text-destructive"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+        <div className="space-y-4">
+          {SETOR_ORDER.map((setor) => {
+            const produtosDoSetor = produtosPorSetor[setor];
+            if (produtosDoSetor.length === 0) return null;
+
+            return (
+              <Collapsible
+                key={setor}
+                open={expandedSections[setor]}
+                onOpenChange={() => toggleSection(setor)}
+              >
+                <CollapsibleTrigger asChild>
+                  <div className="flex items-center justify-between p-4 bg-card/50 backdrop-blur-sm border border-border/50 rounded-lg cursor-pointer hover:bg-card/70 transition-colors">
+                    <div className="flex items-center gap-3">
+                      <Badge className={SETOR_COLORS[setor]}>
+                        {SETOR_LABELS[setor]}
+                      </Badge>
+                      <span className="text-sm text-muted-foreground">
+                        {produtosDoSetor.length} produto{produtosDoSetor.length !== 1 ? "s" : ""}
+                      </span>
+                    </div>
+                    <ChevronDown
+                      className={`h-5 w-5 text-muted-foreground transition-transform ${
+                        expandedSections[setor] ? "rotate-180" : ""
+                      }`}
+                    />
+                  </div>
+                </CollapsibleTrigger>
+                <CollapsibleContent>
+                  <div className="mt-2 space-y-2">
+                    {produtosDoSetor.map((produto) => (
+                      <div
+                        key={produto.id}
+                        className="flex items-center justify-between p-4 bg-card/30 backdrop-blur-sm border border-border/30 rounded-lg hover:border-primary/50 transition-colors cursor-pointer group"
+                        onClick={() => handleView(produto)}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <h3 className="font-medium text-foreground truncate">
+                            {produto.nome}
+                          </h3>
+                          {produto.descricao && (
+                            <p className="text-sm text-muted-foreground truncate mt-0.5">
+                              {produto.descricao.replace(/<[^>]*>/g, "").substring(0, 80)}
+                              {produto.descricao.length > 80 ? "..." : ""}
+                            </p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEdit(produto);
+                            }}
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(produto);
+                            }}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+            );
+          })}
         </div>
       )}
 
