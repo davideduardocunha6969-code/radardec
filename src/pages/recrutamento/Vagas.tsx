@@ -38,6 +38,7 @@
    clt: "CLT",
    pj: "PJ",
    estagio: "Estágio",
+  associado: "Associado",
  };
  
  export default function Vagas() {

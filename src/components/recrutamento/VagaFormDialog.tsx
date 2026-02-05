@@ -20,7 +20,7 @@
  const vagaSchema = z.object({
    titulo: z.string().min(1, "Título é obrigatório"),
    setor: z.string().min(1, "Setor é obrigatório"),
-   tipo_contrato: z.enum(["clt", "pj", "estagio"]),
+ tipo_contrato: z.enum(["clt", "pj", "estagio", "associado"]),
    modalidade: z.enum(["presencial", "hibrido", "remoto"]),
    senioridade: z.enum(["junior", "pleno", "senior"]),
    salario_min: z.coerce.number().optional(),

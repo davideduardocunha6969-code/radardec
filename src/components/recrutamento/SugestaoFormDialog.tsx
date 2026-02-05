@@ -18,7 +18,7 @@
  const sugestaoSchema = z.object({
    cargo: z.string().min(1, "Cargo é obrigatório"),
    setor: z.string().min(1, "Setor é obrigatório"),
-   tipo_contrato: z.enum(["clt", "pj", "estagio"]),
+ tipo_contrato: z.enum(["clt", "pj", "estagio", "associado"]),
    modalidade: z.enum(["presencial", "hibrido", "remoto"]),
    senioridade: z.enum(["junior", "pleno", "senior"]),
    descricao: z.string().optional(),
@@ -397,6 +397,7 @@
                            <SelectItem value="clt">CLT</SelectItem>
                            <SelectItem value="pj">PJ</SelectItem>
                            <SelectItem value="estagio">Estágio</SelectItem>
+                           <SelectItem value="associado">Associado</SelectItem>
                          </SelectContent>
                        </Select>
                        <FormMessage />
