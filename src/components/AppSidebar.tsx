@@ -1,4 +1,4 @@
- import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, CalendarDays, Megaphone, Lightbulb, Wand2, Package, ClipboardList, Phone, UserCog, Copy, Users } from "lucide-react";
+import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, CalendarDays, Megaphone, Lightbulb, Wand2, Package, ClipboardList, Phone, UserCog, Copy, Users, FileQuestion } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import logoEscritorio from "@/assets/logo-escritorio.webp";
@@ -41,9 +41,9 @@ const comercialItems = [
  
  // Recrutamento
  const recrutamentoItems = [
+  { title: "Contratações Sugeridas", url: "/recrutamento/sugestoes", icon: FileQuestion, pageKey: "recrutamento" },
    { title: "Vagas", url: "/recrutamento/vagas", icon: Briefcase, pageKey: "recrutamento" },
    { title: "Banco de Talentos", url: "/recrutamento/banco-talentos", icon: Users, pageKey: "recrutamento" },
-   { title: "Triagem IA", url: "/recrutamento/triagem-ia", icon: Bot, pageKey: "recrutamento" },
    { title: "Pipeline", url: "/recrutamento/pipeline", icon: ClipboardList, pageKey: "recrutamento" },
    { title: "Relatórios", url: "/recrutamento/relatorios", icon: TrendingUp, pageKey: "recrutamento" },
  ];
