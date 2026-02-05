@@ -7,7 +7,7 @@
  export type TipoContrato = "clt" | "pj" | "estagio";
  export type Modalidade = "presencial" | "hibrido" | "remoto";
  export type Senioridade = "junior" | "pleno" | "senior";
- export type CandidatoStatus = "triagem_ia" | "entrevista_rh" | "entrevista_tecnica" | "proposta" | "contratado" | "reprovado" | "banco_talentos";
+export type CandidatoStatus = "triagem_ia" | "entrevista_rh" | "entrevista_tecnica" | "proposta" | "contratado" | "reprovado" | "banco_talentos" | "agendar_entrevista" | "entrevista_agendada" | "entrevista_coordenador" | "proposta_enviada" | "proposta_recusada";
  
  export interface Vaga {
    id: string;
@@ -411,6 +411,11 @@
          contratado: [],
          reprovado: [],
          banco_talentos: [],
+        agendar_entrevista: [],
+        entrevista_agendada: [],
+        entrevista_coordenador: [],
+        proposta_enviada: [],
+        proposta_recusada: [],
        };
  
        (data as CandidatoVaga[]).forEach((item) => {

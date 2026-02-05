@@ -11,12 +11,13 @@
  import { KanbanIcon } from "lucide-react";
  
  const columns: { id: CandidatoStatus; title: string; color: string }[] = [
-   { id: "triagem_ia", title: "Triagem IA", color: "bg-blue-500" },
-   { id: "entrevista_rh", title: "Entrevista RH", color: "bg-purple-500" },
-   { id: "entrevista_tecnica", title: "Entrevista Técnica", color: "bg-indigo-500" },
-   { id: "proposta", title: "Proposta", color: "bg-orange-500" },
+  { id: "agendar_entrevista" as CandidatoStatus, title: "Agendar Entrevista", color: "bg-blue-500" },
+  { id: "entrevista_agendada" as CandidatoStatus, title: "Entrevista Agendada", color: "bg-cyan-500" },
+  { id: "entrevista_coordenador" as CandidatoStatus, title: "Entrevista Coordenador", color: "bg-purple-500" },
+  { id: "proposta_enviada" as CandidatoStatus, title: "Proposta Enviada", color: "bg-orange-500" },
    { id: "contratado", title: "Contratado", color: "bg-green-500" },
    { id: "reprovado", title: "Reprovado", color: "bg-red-500" },
+  { id: "proposta_recusada" as CandidatoStatus, title: "Proposta Recusada", color: "bg-gray-500" },
  ];
  
  export default function Pipeline() {
