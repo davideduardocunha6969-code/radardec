@@ -1,4 +1,5 @@
  import { useEffect, useState } from "react";
+ import { useRef } from "react";
  import { useForm } from "react-hook-form";
  import { zodResolver } from "@hookform/resolvers/zod";
  import { z } from "zod";
@@ -10,6 +11,7 @@
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
  import { Slider } from "@/components/ui/slider";
  import { Sparkles, Loader2 } from "lucide-react";
+ import { Mic, Square, MicOff } from "lucide-react";
  import { useToast } from "@/hooks/use-toast";
  import { useCreateVaga, useUpdateVaga, Vaga, VagaStatus, TipoContrato, Modalidade, Senioridade } from "@/hooks/useRecrutamento";
  import { supabase } from "@/integrations/supabase/client";
@@ -53,6 +55,10 @@
    const [aiPrompt, setAiPrompt] = useState("");
    const [isGenerating, setIsGenerating] = useState(false);
    const [showAiInput, setShowAiInput] = useState(false);
+   const [isRecording, setIsRecording] = useState(false);
+   const [isTranscribing, setIsTranscribing] = useState(false);
+   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
+   const chunksRef = useRef<Blob[]>([]);
  
    const form = useForm<VagaFormData>({
      resolver: zodResolver(vagaSchema),
@@ -186,6 +192,86 @@
      }
    };
  
+   const startRecording = async () => {
+     try {
+       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+       const mediaRecorder = new MediaRecorder(stream, { mimeType: "audio/webm" });
+       mediaRecorderRef.current = mediaRecorder;
+       chunksRef.current = [];
+ 
+       mediaRecorder.ondataavailable = (e) => {
+         if (e.data.size > 0) {
+           chunksRef.current.push(e.data);
+         }
+       };
+ 
+       mediaRecorder.onstop = async () => {
+         stream.getTracks().forEach((track) => track.stop());
+         const audioBlob = new Blob(chunksRef.current, { type: "audio/webm" });
+         await transcribeAudio(audioBlob);
+       };
+ 
+       mediaRecorder.start();
+       setIsRecording(true);
+     } catch (error) {
+       console.error("Error accessing microphone:", error);
+       toast({
+         title: "Erro ao acessar microfone",
+         description: "Verifique as permissões do navegador.",
+         variant: "destructive",
+       });
+     }
+   };
+ 
+   const stopRecording = () => {
+     if (mediaRecorderRef.current && isRecording) {
+       mediaRecorderRef.current.stop();
+       setIsRecording(false);
+     }
+   };
+ 
+   const transcribeAudio = async (audioBlob: Blob) => {
+     setIsTranscribing(true);
+     try {
+       const formData = new FormData();
+       formData.append("audio", audioBlob, "recording.webm");
+ 
+       const response = await fetch(
+         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/transcribe-voice`,
+         {
+           method: "POST",
+           headers: {
+             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+           },
+           body: formData,
+         }
+       );
+ 
+       const data = await response.json();
+ 
+       if (!response.ok) {
+         throw new Error(data.error || "Erro na transcrição");
+       }
+ 
+       if (data.text) {
+         setAiPrompt((prev) => (prev ? `${prev} ${data.text}` : data.text));
+         toast({
+           title: "Áudio transcrito!",
+           description: "O texto foi adicionado ao campo.",
+         });
+       }
+     } catch (error) {
+       console.error("Error transcribing:", error);
+       toast({
+         title: "Erro na transcrição",
+         description: error instanceof Error ? error.message : "Tente novamente",
+         variant: "destructive",
+       });
+     } finally {
+       setIsTranscribing(false);
+     }
+   };
+ 
    const onSubmit = async (data: VagaFormData) => {
      const { data: user } = await supabase.auth.getUser();
      if (!user.user) return;
@@ -258,20 +344,57 @@
                  {showAiInput && (
                    <div className="space-y-3">
                      <p className="text-sm text-muted-foreground">
-                       Descreva a vaga em poucas palavras e a IA preencherá todos os campos automaticamente.
+                        Descreva a vaga digitando ou gravando um áudio.
                      </p>
-                     <Textarea
-                       placeholder="Ex: Preciso de um advogado trabalhista pleno, CLT, presencial, com experiência em audiências e conhecimento em PJe. Salário entre 6 e 8 mil."
-                       value={aiPrompt}
-                       onChange={(e) => setAiPrompt(e.target.value)}
-                       rows={3}
-                       className="resize-none"
-                     />
+                      <div className="relative">
+                        <Textarea
+                          placeholder="Ex: Preciso de um advogado trabalhista pleno, CLT, presencial, com experiência em audiências e conhecimento em PJe. Salário entre 6 e 8 mil."
+                          value={aiPrompt}
+                          onChange={(e) => setAiPrompt(e.target.value)}
+                          rows={3}
+                          className="resize-none pr-14"
+                          disabled={isRecording || isTranscribing}
+                        />
+                        <div className="absolute right-2 top-2">
+                          {isTranscribing ? (
+                            <div className="flex items-center justify-center h-10 w-10">
+                              <Loader2 className="h-5 w-5 animate-spin text-muted-foreground" />
+                            </div>
+                          ) : isRecording ? (
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              size="icon"
+                              className="h-10 w-10 rounded-full animate-pulse"
+                              onClick={stopRecording}
+                            >
+                              <Square className="h-4 w-4" />
+                            </Button>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon"
+                              className="h-10 w-10 rounded-full"
+                              onClick={startRecording}
+                              title="Gravar áudio"
+                            >
+                              <Mic className="h-4 w-4" />
+                            </Button>
+                          )}
+                        </div>
+                      </div>
+                      {isRecording && (
+                        <p className="text-xs text-destructive flex items-center gap-1">
+                          <span className="h-2 w-2 rounded-full bg-destructive animate-pulse" />
+                          Gravando... Clique no botão para parar.
+                        </p>
+                      )}
                      <div className="flex gap-2">
                        <Button
                          type="button"
                          onClick={handleAiGenerate}
-                         disabled={isGenerating || !aiPrompt.trim()}
+                          disabled={isGenerating || !aiPrompt.trim() || isRecording || isTranscribing}
                          className="flex-1"
                        >
                          {isGenerating ? (
