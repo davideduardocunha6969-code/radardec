@@ -311,64 +311,19 @@ IMPORTANTE: Extraia APENAS informações que realmente existem no documento. Nã
         throw new Error("Failed to download file");
       }
 
-      // We only need a prefix of the file encoded in base64 for the extraction prompt.
-      // This avoids converting the whole binary file into base64 (slow + memory heavy).
-      const fileBase64Prefix = arrayBufferToBase64Prefix(fileBuffer, 40_000);
- 
-     // First, extract candidate data from CV
-     const extractionPrompt = `Você é um especialista em análise de currículos.
- Extraia as informações do currículo e retorne um JSON:
- {
-   "nome": "Nome completo do candidato",
-   "email": "Email do candidato",
-   "telefone": "Telefone (se encontrado)",
-   "linkedin_url": "URL do LinkedIn (se encontrada)",
-   "experiencia_total_anos": número de anos de experiência total,
-   "ultimo_cargo": "Último cargo ocupado",
-   "formacao": "Formação acadêmica principal",
-   "skills_detectadas": ["skill1", "skill2", ...],
-   "cursos_extras": ["curso1", "curso2", ...],
-   "idiomas": ["idioma1", "idioma2", ...],
-   "resumo": "Resumo profissional em 2-3 frases"
- }`;
- 
-     const extractResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-       method: "POST",
-       headers: {
-         Authorization: `Bearer ${LOVABLE_API_KEY}`,
-         "Content-Type": "application/json",
-       },
-       body: JSON.stringify({
-         model: "google/gemini-2.5-flash",
-         messages: [
-           { role: "system", content: extractionPrompt },
-            {
-              role: "user",
-              content: `Analise este currículo (arquivo: ${fileName || "curriculo"}). O conteúdo (prefixo) está em base64: ${fileBase64Prefix}`,
-            },
-         ],
-         temperature: 0.3,
-       }),
-     });
- 
-     if (!extractResponse.ok) {
-       throw new Error("Failed to extract CV data");
-     }
- 
-     const extractResult = await extractResponse.json();
-     const extractContent = extractResult.choices?.[0]?.message?.content || "";
- 
-     let candidatoData;
-     try {
-       const jsonMatch = extractContent.match(/\{[\s\S]*\}/);
-       if (jsonMatch) {
-         candidatoData = JSON.parse(jsonMatch[0]);
-       } else {
-         throw new Error("No JSON found");
-       }
-     } catch (e) {
-       throw new Error("Failed to parse CV data");
-     }
+    // Convert file to base64 for vision API
+    const fileBase64 = arrayBufferToBase64(fileBuffer);
+    const mimeType = getMimeType(fileName || "document.pdf");
+
+    // Extract candidate data using vision API (supports PDF directly)
+    const candidatoData = await extractCvDataWithVision(
+      fileBase64,
+      mimeType,
+      fileName || "curriculo.pdf",
+      LOVABLE_API_KEY
+    );
+
+    console.log("Extracted candidate data:", JSON.stringify(candidatoData).substring(0, 500));
  
      // Create or update candidato
      let candidatoId: string;
