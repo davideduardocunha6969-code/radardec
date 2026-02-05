@@ -190,6 +190,7 @@
       const urlParsed = fileUrl ? parseStorageObjectUrl(fileUrl) : null;
       const bucket = bucketFromBody || urlParsed?.bucket || "curriculos";
       const objectPath = filePath || urlParsed?.path;
+      const arquivoUrlParaSalvar = fileUrl || objectPath || "";
 
       if (supabaseServiceRoleKey && objectPath) {
         const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
@@ -333,7 +334,7 @@
        .insert({
          candidato_id: candidatoId,
           arquivo_nome: fileName || "curriculo",
-          arquivo_url: fileUrl || "",
+          arquivo_url: arquivoUrlParaSalvar,
           arquivo_tipo: (fileName || "").includes(".") ? (fileName || "").split(".").pop() : null,
          texto_extraido: extractContent,
          processado: true,
