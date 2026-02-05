@@ -16,6 +16,11 @@
    contratado: "Contratado",
    reprovado: "Reprovado",
    banco_talentos: "Banco Talentos",
+  agendar_entrevista: "Agendar Entrevista",
+  entrevista_agendada: "Entrevista Agendada",
+  entrevista_coordenador: "Entrevista Coordenador",
+  proposta_enviada: "Proposta Enviada",
+  proposta_recusada: "Proposta Recusada",
  };
  
  const statusColors: Record<CandidatoStatus, string> = {
@@ -26,6 +31,11 @@
    contratado: "bg-green-500/20 text-green-700",
    reprovado: "bg-red-500/20 text-red-700",
    banco_talentos: "bg-muted text-muted-foreground",
+  agendar_entrevista: "bg-blue-500/20 text-blue-700",
+  entrevista_agendada: "bg-cyan-500/20 text-cyan-700",
+  entrevista_coordenador: "bg-purple-500/20 text-purple-700",
+  proposta_enviada: "bg-orange-500/20 text-orange-700",
+  proposta_recusada: "bg-gray-500/20 text-gray-700",
  };
  
  function getScoreColor(score: number): string {
