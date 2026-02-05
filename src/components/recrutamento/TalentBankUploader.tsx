@@ -214,7 +214,7 @@ function sanitizeFileName(fileName: string): string {
                    <Badge variant="default">{processingFiles.length} processando</Badge>
                  )}
                  {completedFiles.length > 0 && (
-                   <Badge className="bg-green-500">{completedFiles.length} concluído(s)</Badge>
+                    <Badge className="bg-primary text-primary-foreground">{completedFiles.length} concluído(s)</Badge>
                  )}
                  {errorFiles.length > 0 && (
                    <Badge variant="destructive">{errorFiles.length} com erro</Badge>
@@ -235,7 +235,7 @@ function sanitizeFileName(fileName: string): string {
                  >
                    <div className="flex items-center gap-2 truncate">
                      {fileItem.status === "done" ? (
-                       <CheckCircle className="h-4 w-4 shrink-0 text-green-500" />
+                        <CheckCircle className="h-4 w-4 shrink-0 text-primary" />
                      ) : fileItem.status === "error" ? (
                        <AlertCircle className="h-4 w-4 shrink-0 text-destructive" />
                      ) : fileItem.status === "uploading" || fileItem.status === "processing" ? (
