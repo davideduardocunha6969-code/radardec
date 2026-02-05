@@ -88,23 +88,23 @@ function sanitizeFileName(fileName: string): string {
  
          if (uploadError) throw uploadError;
  
-         setFiles((prev) =>
-           prev.map((f, idx) => (idx === i ? { ...f, progress: 30 } : f))
-         );
- 
-         const { data: urlData } = supabase.storage.from("curriculos").getPublicUrl(filePath);
- 
-         setFiles((prev) =>
-           prev.map((f, idx) => (idx === i ? { ...f, status: "processing", progress: 50 } : f))
-         );
+          setFiles((prev) =>
+            prev.map((f, idx) => (idx === i ? { ...f, progress: 30 } : f))
+          );
+
+          setFiles((prev) =>
+            prev.map((f, idx) => (idx === i ? { ...f, status: "processing", progress: 50 } : f))
+          );
  
          // Call the new edge function that analyzes for ALL open vagas
          const { data: result, error: analysisError } = await supabase.functions.invoke(
            "analyze-curriculum-all-vagas",
            {
              body: {
-               fileUrl: urlData.publicUrl,
-               fileName: fileItem.file.name,
+                // The "curriculos" storage bucket is private, so we send the path for server-side download.
+                bucket: "curriculos",
+                filePath,
+                fileName: fileItem.file.name,
              },
            }
          );
