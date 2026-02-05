@@ -41,18 +41,38 @@
    return useQuery({
      queryKey: ["sugestoes-contratacao", status],
      queryFn: async () => {
-       let query = supabase
+      // First get suggestions
+      let suggestionsQuery = supabase
          .from("sugestoes_contratacao")
-         .select("*, criador:profiles!sugestoes_contratacao_user_id_fkey(display_name)")
+        .select("*")
          .order("created_at", { ascending: false });
  
        if (status) {
-         query = query.eq("status", status);
+        suggestionsQuery = suggestionsQuery.eq("status", status);
        }
  
-       const { data, error } = await query;
+      const { data: sugestoes, error } = await suggestionsQuery;
        if (error) throw error;
-       return data as unknown as SugestaoContratacao[];
+      
+      if (!sugestoes || sugestoes.length === 0) {
+        return [] as SugestaoContratacao[];
+      }
+      
+      // Get unique user IDs and fetch their profiles
+      const userIds = [...new Set(sugestoes.map(s => s.user_id))];
+      const { data: profiles } = await supabase
+        .from("profiles")
+        .select("user_id, display_name")
+        .in("user_id", userIds);
+      
+      // Create a map for quick lookup
+      const profileMap = new Map(profiles?.map(p => [p.user_id, p.display_name]) || []);
+      
+      // Merge the data
+      return sugestoes.map(s => ({
+        ...s,
+        criador: { display_name: profileMap.get(s.user_id) || "Desconhecido" }
+      })) as unknown as SugestaoContratacao[];
      },
    });
  }
