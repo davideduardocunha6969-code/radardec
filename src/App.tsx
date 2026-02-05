@@ -31,6 +31,7 @@ import AtendimentosClosers from "./pages/AtendimentosClosers";
  import TriagemIA from "./pages/recrutamento/TriagemIA";
  import Pipeline from "./pages/recrutamento/Pipeline";
  import Relatorios from "./pages/recrutamento/Relatorios";
+ import SugestoesContratacao from "./pages/recrutamento/SugestoesContratacao";
  import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
@@ -70,6 +71,7 @@ const App = () => (
                  <Route path="triagem-ia" element={<TriagemIA />} />
                  <Route path="pipeline" element={<Pipeline />} />
                  <Route path="relatorios" element={<Relatorios />} />
+                <Route path="sugestoes" element={<SugestoesContratacao />} />
                </Route>
             </Route>
             <Route path="*" element={<NotFound />} />
