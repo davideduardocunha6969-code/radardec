@@ -6,37 +6,43 @@
    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
  };
 
-  function parseStorageObjectUrl(fileUrl: string): { bucket: string; path: string } | null {
-    try {
-      const url = new URL(fileUrl);
-      // Supports both:
-      // /storage/v1/object/public/<bucket>/<path>
-      // /storage/v1/object/<bucket>/<path>
-      const match = url.pathname.match(/\/storage\/v1\/object\/(?:public\/)?([^/]+)\/(.+)$/);
-      if (!match) return null;
-      return {
-        bucket: decodeURIComponent(match[1]),
-        path: decodeURIComponent(match[2]),
-      };
-    } catch {
-      return null;
-    }
+function parseStorageObjectUrl(fileUrl: string): { bucket: string; path: string } | null {
+  try {
+    const url = new URL(fileUrl);
+    const match = url.pathname.match(/\/storage\/v1\/object\/(?:public\/)?([^/]+)\/(.+)$/);
+    if (!match) return null;
+    return {
+      bucket: decodeURIComponent(match[1]),
+      path: decodeURIComponent(match[2]),
+    };
+  } catch {
+    return null;
   }
+}
 
-  function bytesToBase64(bytes: Uint8Array): string {
-    const chunkSize = 0x8000; // 32k
-    let binary = "";
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-    }
-    return btoa(binary);
+function bytesToBase64(bytes: Uint8Array): string {
+  const chunkSize = 0x8000;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
   }
+  return btoa(binary);
+}
 
-  function arrayBufferToBase64Prefix(buffer: ArrayBuffer, maxBytes: number): string {
-    const slice = buffer.byteLength > maxBytes ? buffer.slice(0, maxBytes) : buffer;
-    return bytesToBase64(new Uint8Array(slice));
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  return bytesToBase64(new Uint8Array(buffer));
+}
+
+function getMimeType(fileName: string): string {
+  const ext = fileName.toLowerCase().split('.').pop();
+  switch (ext) {
+    case 'pdf': return 'application/pdf';
+    case 'doc': return 'application/msword';
+    case 'docx': return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    default: return 'application/octet-stream';
   }
- 
+}
+
  interface Vaga {
    id: string;
    titulo: string;
@@ -136,6 +142,93 @@
    return { score_total: 0, score_detalhado: {}, explicacao_score: "Erro ao processar resposta" };
  }
  
+async function extractCvDataWithVision(
+  fileBase64: string,
+  mimeType: string,
+  fileName: string,
+  LOVABLE_API_KEY: string
+): Promise<Record<string, any>> {
+  const extractionPrompt = `Você é um especialista em análise de currículos para um escritório de advocacia.
+
+Analise o currículo anexado e extraia TODAS as informações reais presentes no documento.
+NÃO INVENTE informações. Se algo não estiver presente, marque como null.
+
+Retorne APENAS um JSON válido (sem markdown, sem blocos de código):
+{
+  "nome": "Nome completo do candidato (string ou null)",
+  "email": "Email do candidato (string ou null)",
+  "telefone": "Telefone (string ou null)",
+  "linkedin_url": "URL do LinkedIn (string ou null)",
+  "experiencia_total_anos": número de anos de experiência (number ou null),
+  "ultimo_cargo": "Último cargo ocupado (string ou null)",
+  "formacao": "Formação acadêmica principal (string ou null)",
+  "skills_detectadas": ["skill1", "skill2"] (array de strings reais do currículo),
+  "cursos_extras": ["curso1", "curso2"] (array de strings),
+  "idiomas": ["idioma1", "idioma2"] (array de strings),
+  "resumo": "Resumo profissional em 2-3 frases baseado no conteúdo real do currículo"
+}
+
+IMPORTANTE: Extraia APENAS informações que realmente existem no documento. Não liste skills genéricas.`;
+
+  console.log(`Extracting CV data from ${fileName} (${mimeType}), base64 size: ${fileBase64.length} chars`);
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: extractionPrompt },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${mimeType};base64,${fileBase64}`,
+              },
+            },
+          ],
+        },
+      ],
+      temperature: 0.1,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Vision API error:", errorText);
+    throw new Error(`Vision API failed: ${response.status}`);
+  }
+
+  const result = await response.json();
+  const content = result.choices?.[0]?.message?.content || "";
+  
+  console.log("Vision API response preview:", content.substring(0, 500));
+
+  // Parse JSON from response (handle markdown code blocks)
+  let jsonStr = content;
+  const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) {
+    jsonStr = jsonMatch[1].trim();
+  } else {
+    const rawJsonMatch = content.match(/\{[\s\S]*\}/);
+    if (rawJsonMatch) {
+      jsonStr = rawJsonMatch[0];
+    }
+  }
+
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    console.error("Failed to parse CV extraction response:", e, "Content:", jsonStr.substring(0, 200));
+    throw new Error("Failed to parse CV data");
+  }
+}
+
  serve(async (req) => {
    if (req.method === "OPTIONS") {
      return new Response(null, { headers: corsHeaders });
@@ -218,71 +311,34 @@
         throw new Error("Failed to download file");
       }
 
-      // We only need a prefix of the file encoded in base64 for the extraction prompt.
-      // This avoids converting the whole binary file into base64 (slow + memory heavy).
-      const fileBase64Prefix = arrayBufferToBase64Prefix(fileBuffer, 40_000);
- 
-     // First, extract candidate data from CV
-     const extractionPrompt = `Você é um especialista em análise de currículos.
- Extraia as informações do currículo e retorne um JSON:
- {
-   "nome": "Nome completo do candidato",
-   "email": "Email do candidato",
-   "telefone": "Telefone (se encontrado)",
-   "linkedin_url": "URL do LinkedIn (se encontrada)",
-   "experiencia_total_anos": número de anos de experiência total,
-   "ultimo_cargo": "Último cargo ocupado",
-   "formacao": "Formação acadêmica principal",
-   "skills_detectadas": ["skill1", "skill2", ...],
-   "cursos_extras": ["curso1", "curso2", ...],
-   "idiomas": ["idioma1", "idioma2", ...],
-   "resumo": "Resumo profissional em 2-3 frases"
- }`;
- 
-     const extractResponse = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-       method: "POST",
-       headers: {
-         Authorization: `Bearer ${LOVABLE_API_KEY}`,
-         "Content-Type": "application/json",
-       },
-       body: JSON.stringify({
-         model: "google/gemini-2.5-flash",
-         messages: [
-           { role: "system", content: extractionPrompt },
-            {
-              role: "user",
-              content: `Analise este currículo (arquivo: ${fileName || "curriculo"}). O conteúdo (prefixo) está em base64: ${fileBase64Prefix}`,
-            },
-         ],
-         temperature: 0.3,
-       }),
-     });
- 
-     if (!extractResponse.ok) {
-       throw new Error("Failed to extract CV data");
-     }
- 
-     const extractResult = await extractResponse.json();
-     const extractContent = extractResult.choices?.[0]?.message?.content || "";
- 
-     let candidatoData;
-     try {
-       const jsonMatch = extractContent.match(/\{[\s\S]*\}/);
-       if (jsonMatch) {
-         candidatoData = JSON.parse(jsonMatch[0]);
-       } else {
-         throw new Error("No JSON found");
-       }
-     } catch (e) {
-       throw new Error("Failed to parse CV data");
-     }
+    // Convert file to base64 for vision API
+    const fileBase64 = arrayBufferToBase64(fileBuffer);
+    const mimeType = getMimeType(fileName || "document.pdf");
+
+    // Extract candidate data using vision API (supports PDF directly)
+    const candidatoData = await extractCvDataWithVision(
+      fileBase64,
+      mimeType,
+      fileName || "curriculo.pdf",
+      LOVABLE_API_KEY
+    );
+
+    console.log("Extracted candidate data:", JSON.stringify(candidatoData).substring(0, 500));
  
      // Create or update candidato
      let candidatoId: string;
+    // Normalize email - treat null-like values as missing
+    const normalizedEmail = candidatoData.email && 
+      candidatoData.email !== "null" && 
+      candidatoData.email !== "Não encontrado" &&
+      candidatoData.email.includes("@")
+        ? candidatoData.email 
+        : null;
+    
      const { data: existingCandidato } = await supabase
        .from("candidatos")
        .select("id")
-       .eq("email", candidatoData.email || `unknown-${Date.now()}@temp.com`)
+      .eq("email", normalizedEmail || `candidato-${Date.now()}@temp.com`)
        .single();
  
      if (existingCandidato) {
@@ -308,7 +364,7 @@
          .from("candidatos")
          .insert({
            nome: candidatoData.nome || "Candidato Desconhecido",
-           email: candidatoData.email || `unknown-${Date.now()}@temp.com`,
+           email: normalizedEmail || `candidato-${Date.now()}@temp.com`,
            telefone: candidatoData.telefone,
            linkedin_url: candidatoData.linkedin_url,
            experiencia_total_anos: candidatoData.experiencia_total_anos || 0,
@@ -336,7 +392,7 @@
           arquivo_nome: fileName || "curriculo",
           arquivo_url: arquivoUrlParaSalvar,
           arquivo_tipo: (fileName || "").includes(".") ? (fileName || "").split(".").pop() : null,
-         texto_extraido: extractContent,
+         texto_extraido: JSON.stringify(candidatoData, null, 2),
          processado: true,
          user_id: user.id,
        })
