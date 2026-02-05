@@ -1,4 +1,4 @@
- import { useEffect } from "react";
+ import { useEffect, useState } from "react";
  import { useForm } from "react-hook-form";
  import { zodResolver } from "@hookform/resolvers/zod";
  import { z } from "zod";
@@ -9,6 +9,8 @@
  import { Button } from "@/components/ui/button";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
  import { Slider } from "@/components/ui/slider";
+ import { Sparkles, Loader2 } from "lucide-react";
+ import { useToast } from "@/hooks/use-toast";
  import { useCreateVaga, useUpdateVaga, Vaga, VagaStatus, TipoContrato, Modalidade, Senioridade } from "@/hooks/useRecrutamento";
  import { supabase } from "@/integrations/supabase/client";
  import { ScrollArea } from "@/components/ui/scroll-area";
@@ -47,6 +49,10 @@
  export function VagaFormDialog({ open, onOpenChange, vaga }: VagaFormDialogProps) {
    const createVaga = useCreateVaga();
    const updateVaga = useUpdateVaga();
+   const { toast } = useToast();
+   const [aiPrompt, setAiPrompt] = useState("");
+   const [isGenerating, setIsGenerating] = useState(false);
+   const [showAiInput, setShowAiInput] = useState(false);
  
    const form = useForm<VagaFormData>({
      resolver: zodResolver(vagaSchema),
@@ -108,6 +114,78 @@
      }
    }, [vaga, form]);
  
+   const handleAiGenerate = async () => {
+     if (!aiPrompt.trim()) {
+       toast({
+         title: "Descrição vazia",
+         description: "Digite uma descrição da vaga para a IA preencher os campos.",
+         variant: "destructive",
+       });
+       return;
+     }
+ 
+     setIsGenerating(true);
+     try {
+       const response = await fetch(
+         `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-vaga`,
+         {
+           method: "POST",
+           headers: {
+             "Content-Type": "application/json",
+             Authorization: `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+           },
+           body: JSON.stringify({ descricao: aiPrompt }),
+         }
+       );
+ 
+       const data = await response.json();
+ 
+       if (!response.ok) {
+         throw new Error(data.error || "Erro ao gerar vaga");
+       }
+ 
+       // Fill the form with AI-generated data
+       form.reset({
+         titulo: data.titulo || "",
+         setor: data.setor || "",
+         tipo_contrato: data.tipo_contrato || "clt",
+         modalidade: data.modalidade || "presencial",
+         senioridade: data.senioridade || "pleno",
+         salario_min: data.salario_min || undefined,
+         salario_max: data.salario_max || undefined,
+         descricao: data.descricao || "",
+         responsabilidades: data.responsabilidades || "",
+         hard_skills_obrigatorias: (data.hard_skills_obrigatorias || []).join(", "),
+         hard_skills_desejaveis: (data.hard_skills_desejaveis || []).join(", "),
+         soft_skills: (data.soft_skills || []).join(", "),
+         experiencia_minima_anos: data.experiencia_minima_anos || 0,
+         formacao_minima: data.formacao_minima || "",
+         peso_experiencia: data.peso_experiencia || 40,
+         peso_soft_skills: data.peso_soft_skills || 20,
+         peso_formacao: data.peso_formacao || 15,
+         peso_cursos: data.peso_cursos || 10,
+         peso_fit_cultural: data.peso_fit_cultural || 15,
+         status: "aberta",
+       });
+ 
+       setShowAiInput(false);
+       setAiPrompt("");
+       toast({
+         title: "Campos preenchidos!",
+         description: "Revise os dados e ajuste o que for necessário.",
+       });
+     } catch (error) {
+       console.error("Error generating vaga:", error);
+       toast({
+         title: "Erro ao gerar vaga",
+         description: error instanceof Error ? error.message : "Tente novamente",
+         variant: "destructive",
+       });
+     } finally {
+       setIsGenerating(false);
+     }
+   };
+ 
    const onSubmit = async (data: VagaFormData) => {
      const { data: user } = await supabase.auth.getUser();
      if (!user.user) return;
@@ -156,6 +234,80 @@
          </DialogHeader>
  
          <ScrollArea className="max-h-[70vh] pr-4">
+             {/* AI Assistant Section - Only for new vagas */}
+             {!vaga && (
+               <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 p-4">
+                 <div className="flex items-center justify-between mb-2">
+                   <div className="flex items-center gap-2">
+                     <Sparkles className="h-5 w-5 text-primary" />
+                     <span className="font-medium text-sm">Assistente IA</span>
+                   </div>
+                   {!showAiInput && (
+                     <Button
+                       type="button"
+                       variant="outline"
+                       size="sm"
+                       onClick={() => setShowAiInput(true)}
+                     >
+                       <Sparkles className="mr-2 h-4 w-4" />
+                       Preencher com IA
+                     </Button>
+                   )}
+                 </div>
+                 
+                 {showAiInput && (
+                   <div className="space-y-3">
+                     <p className="text-sm text-muted-foreground">
+                       Descreva a vaga em poucas palavras e a IA preencherá todos os campos automaticamente.
+                     </p>
+                     <Textarea
+                       placeholder="Ex: Preciso de um advogado trabalhista pleno, CLT, presencial, com experiência em audiências e conhecimento em PJe. Salário entre 6 e 8 mil."
+                       value={aiPrompt}
+                       onChange={(e) => setAiPrompt(e.target.value)}
+                       rows={3}
+                       className="resize-none"
+                     />
+                     <div className="flex gap-2">
+                       <Button
+                         type="button"
+                         onClick={handleAiGenerate}
+                         disabled={isGenerating || !aiPrompt.trim()}
+                         className="flex-1"
+                       >
+                         {isGenerating ? (
+                           <>
+                             <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                             Gerando...
+                           </>
+                         ) : (
+                           <>
+                             <Sparkles className="mr-2 h-4 w-4" />
+                             Preencher Campos
+                           </>
+                         )}
+                       </Button>
+                       <Button
+                         type="button"
+                         variant="ghost"
+                         onClick={() => {
+                           setShowAiInput(false);
+                           setAiPrompt("");
+                         }}
+                       >
+                         Cancelar
+                       </Button>
+                     </div>
+                   </div>
+                 )}
+                 
+                 {!showAiInput && (
+                   <p className="text-xs text-muted-foreground">
+                     Descreva a vaga brevemente e deixe a IA preencher os campos automaticamente.
+                   </p>
+                 )}
+               </div>
+             )}
+ 
            <Form {...form}>
              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                {/* Basic Info */}
