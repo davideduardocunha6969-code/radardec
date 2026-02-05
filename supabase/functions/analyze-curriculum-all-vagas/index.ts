@@ -142,6 +142,93 @@ function getMimeType(fileName: string): string {
    return { score_total: 0, score_detalhado: {}, explicacao_score: "Erro ao processar resposta" };
  }
  
+async function extractCvDataWithVision(
+  fileBase64: string,
+  mimeType: string,
+  fileName: string,
+  LOVABLE_API_KEY: string
+): Promise<Record<string, any>> {
+  const extractionPrompt = `Você é um especialista em análise de currículos para um escritório de advocacia.
+
+Analise o currículo anexado e extraia TODAS as informações reais presentes no documento.
+NÃO INVENTE informações. Se algo não estiver presente, marque como null.
+
+Retorne APENAS um JSON válido (sem markdown, sem blocos de código):
+{
+  "nome": "Nome completo do candidato (string ou null)",
+  "email": "Email do candidato (string ou null)",
+  "telefone": "Telefone (string ou null)",
+  "linkedin_url": "URL do LinkedIn (string ou null)",
+  "experiencia_total_anos": número de anos de experiência (number ou null),
+  "ultimo_cargo": "Último cargo ocupado (string ou null)",
+  "formacao": "Formação acadêmica principal (string ou null)",
+  "skills_detectadas": ["skill1", "skill2"] (array de strings reais do currículo),
+  "cursos_extras": ["curso1", "curso2"] (array de strings),
+  "idiomas": ["idioma1", "idioma2"] (array de strings),
+  "resumo": "Resumo profissional em 2-3 frases baseado no conteúdo real do currículo"
+}
+
+IMPORTANTE: Extraia APENAS informações que realmente existem no documento. Não liste skills genéricas.`;
+
+  console.log(`Extracting CV data from ${fileName} (${mimeType}), base64 size: ${fileBase64.length} chars`);
+
+  const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${LOVABLE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "google/gemini-2.5-flash",
+      messages: [
+        {
+          role: "user",
+          content: [
+            { type: "text", text: extractionPrompt },
+            {
+              type: "image_url",
+              image_url: {
+                url: `data:${mimeType};base64,${fileBase64}`,
+              },
+            },
+          ],
+        },
+      ],
+      temperature: 0.1,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text();
+    console.error("Vision API error:", errorText);
+    throw new Error(`Vision API failed: ${response.status}`);
+  }
+
+  const result = await response.json();
+  const content = result.choices?.[0]?.message?.content || "";
+  
+  console.log("Vision API response preview:", content.substring(0, 500));
+
+  // Parse JSON from response (handle markdown code blocks)
+  let jsonStr = content;
+  const jsonMatch = content.match(/```(?:json)?\s*([\s\S]*?)```/);
+  if (jsonMatch) {
+    jsonStr = jsonMatch[1].trim();
+  } else {
+    const rawJsonMatch = content.match(/\{[\s\S]*\}/);
+    if (rawJsonMatch) {
+      jsonStr = rawJsonMatch[0];
+    }
+  }
+
+  try {
+    return JSON.parse(jsonStr);
+  } catch (e) {
+    console.error("Failed to parse CV extraction response:", e, "Content:", jsonStr.substring(0, 200));
+    throw new Error("Failed to parse CV data");
+  }
+}
+
  serve(async (req) => {
    if (req.method === "OPTIONS") {
      return new Response(null, { headers: corsHeaders });
