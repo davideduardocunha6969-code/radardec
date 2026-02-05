@@ -403,6 +403,7 @@ export type Database = {
           idiomas: string[] | null
           linkedin_url: string | null
           nome: string
+          processado_todas_vagas_em: string | null
           resumo: string | null
           skills_detectadas: string[] | null
           telefone: string | null
@@ -421,6 +422,7 @@ export type Database = {
           idiomas?: string[] | null
           linkedin_url?: string | null
           nome: string
+          processado_todas_vagas_em?: string | null
           resumo?: string | null
           skills_detectadas?: string[] | null
           telefone?: string | null
@@ -439,6 +441,7 @@ export type Database = {
           idiomas?: string[] | null
           linkedin_url?: string | null
           nome?: string
+          processado_todas_vagas_em?: string | null
           resumo?: string | null
           skills_detectadas?: string[] | null
           telefone?: string | null
@@ -545,6 +548,7 @@ export type Database = {
           erro_processamento: string | null
           id: string
           processado: boolean | null
+          processado_todas_vagas: boolean | null
           texto_extraido: string | null
           user_id: string
         }
@@ -557,6 +561,7 @@ export type Database = {
           erro_processamento?: string | null
           id?: string
           processado?: boolean | null
+          processado_todas_vagas?: boolean | null
           texto_extraido?: string | null
           user_id: string
         }
@@ -569,6 +574,7 @@ export type Database = {
           erro_processamento?: string | null
           id?: string
           processado?: boolean | null
+          processado_todas_vagas?: boolean | null
           texto_extraido?: string | null
           user_id?: string
         }
@@ -1112,6 +1118,42 @@ export type Database = {
           },
         ]
       }
+      notificacoes: {
+        Row: {
+          created_at: string
+          enviado_email: boolean
+          id: string
+          lida: boolean
+          link: string | null
+          mensagem: string
+          tipo: string
+          titulo: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          enviado_email?: boolean
+          id?: string
+          lida?: boolean
+          link?: string | null
+          mensagem: string
+          tipo?: string
+          titulo: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          enviado_email?: boolean
+          id?: string
+          lida?: boolean
+          link?: string | null
+          mensagem?: string
+          tipo?: string
+          titulo?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -1133,6 +1175,96 @@ export type Database = {
           id?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      sugestoes_contratacao: {
+        Row: {
+          anuidade_oab: number | null
+          aprovado_em: string | null
+          aprovado_por: string | null
+          cargo: string
+          comissoes_mensais: number | null
+          created_at: string
+          descricao: string | null
+          experiencia_minima_anos: number | null
+          formacao_minima: string | null
+          hard_skills: string[] | null
+          id: string
+          is_advogado: boolean | null
+          justificativa_contratacao: string
+          justificativa_nao_delegar: string
+          modalidade: Database["public"]["Enums"]["modalidade_trabalho"]
+          motivo_recusa: string | null
+          responsabilidades: string | null
+          salario_mensal: number
+          senioridade: Database["public"]["Enums"]["senioridade"]
+          setor: string
+          soft_skills: string[] | null
+          status: string
+          tipo_contrato: Database["public"]["Enums"]["tipo_contrato"]
+          updated_at: string
+          user_id: string
+          vaga_criada_id: string | null
+          valor_ppr: number | null
+        }
+        Insert: {
+          anuidade_oab?: number | null
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          cargo: string
+          comissoes_mensais?: number | null
+          created_at?: string
+          descricao?: string | null
+          experiencia_minima_anos?: number | null
+          formacao_minima?: string | null
+          hard_skills?: string[] | null
+          id?: string
+          is_advogado?: boolean | null
+          justificativa_contratacao: string
+          justificativa_nao_delegar: string
+          modalidade?: Database["public"]["Enums"]["modalidade_trabalho"]
+          motivo_recusa?: string | null
+          responsabilidades?: string | null
+          salario_mensal: number
+          senioridade?: Database["public"]["Enums"]["senioridade"]
+          setor: string
+          soft_skills?: string[] | null
+          status?: string
+          tipo_contrato?: Database["public"]["Enums"]["tipo_contrato"]
+          updated_at?: string
+          user_id: string
+          vaga_criada_id?: string | null
+          valor_ppr?: number | null
+        }
+        Update: {
+          anuidade_oab?: number | null
+          aprovado_em?: string | null
+          aprovado_por?: string | null
+          cargo?: string
+          comissoes_mensais?: number | null
+          created_at?: string
+          descricao?: string | null
+          experiencia_minima_anos?: number | null
+          formacao_minima?: string | null
+          hard_skills?: string[] | null
+          id?: string
+          is_advogado?: boolean | null
+          justificativa_contratacao?: string
+          justificativa_nao_delegar?: string
+          modalidade?: Database["public"]["Enums"]["modalidade_trabalho"]
+          motivo_recusa?: string | null
+          responsabilidades?: string | null
+          salario_mensal?: number
+          senioridade?: Database["public"]["Enums"]["senioridade"]
+          setor?: string
+          soft_skills?: string[] | null
+          status?: string
+          tipo_contrato?: Database["public"]["Enums"]["tipo_contrato"]
+          updated_at?: string
+          user_id?: string
+          vaga_criada_id?: string | null
+          valor_ppr?: number | null
         }
         Relationships: []
       }
@@ -1398,6 +1530,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_coordinator: { Args: { _user_id: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "user" | "marketing_manager" | "coordinator"
