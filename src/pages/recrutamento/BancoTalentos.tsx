@@ -1,5 +1,5 @@
  import { useState } from "react";
- import { Search, Filter, Download, RefreshCw, User, Mail, Phone, Briefcase, GraduationCap, Star } from "lucide-react";
+ import { Search, Filter, Download, RefreshCw, User, Mail, Phone, Briefcase, GraduationCap, Upload } from "lucide-react";
  import { Button } from "@/components/ui/button";
  import { Input } from "@/components/ui/input";
  import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -8,11 +8,13 @@
  import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
  import { useCandidatos, Candidato } from "@/hooks/useRecrutamento";
  import { CandidatoDetailDialog } from "@/components/recrutamento/CandidatoDetailDialog";
+ import { TalentBankUploader } from "@/components/recrutamento/TalentBankUploader";
  
  export default function BancoTalentos() {
    const [search, setSearch] = useState("");
    const [skillFilter, setSkillFilter] = useState<string>("all");
    const [selectedCandidato, setSelectedCandidato] = useState<Candidato | null>(null);
+   const [showUploader, setShowUploader] = useState(false);
  
    const { data: candidatos = [], isLoading, refetch } = useCandidatos(search || undefined);
  
@@ -57,6 +59,10 @@
            </p>
          </div>
          <div className="flex gap-2">
+             <Button onClick={() => setShowUploader(!showUploader)}>
+               <Upload className="mr-2 h-4 w-4" />
+               {showUploader ? "Fechar Upload" : "Adicionar Currículos"}
+             </Button>
            <Button variant="outline" onClick={() => refetch()}>
              <RefreshCw className="mr-2 h-4 w-4" />
              Atualizar
@@ -67,6 +73,11 @@
            </Button>
          </div>
        </div>
+ 
+         {/* Uploader Section */}
+         {showUploader && (
+           <TalentBankUploader />
+         )}
  
        {/* Stats Cards */}
        <div className="grid gap-4 md:grid-cols-4">
