@@ -23,3 +23,9 @@ verify_jwt = false
  
  [functions.transcribe-voice]
  verify_jwt = false
+ 
+ [functions.analyze-curriculum-all-vagas]
+ verify_jwt = false
+ 
+ [functions.reprocess-candidatos-for-vaga]
+ verify_jwt = false
