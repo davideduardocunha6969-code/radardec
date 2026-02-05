@@ -482,6 +482,7 @@
                            <SelectItem value="clt">CLT</SelectItem>
                            <SelectItem value="pj">PJ</SelectItem>
                            <SelectItem value="estagio">Estágio</SelectItem>
+                           <SelectItem value="associado">Associado</SelectItem>
                          </SelectContent>
                        </Select>
                      </FormItem>
