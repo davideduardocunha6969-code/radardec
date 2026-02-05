@@ -1409,6 +1409,11 @@ export type Database = {
         | "contratado"
         | "reprovado"
         | "banco_talentos"
+        | "agendar_entrevista"
+        | "entrevista_agendada"
+        | "entrevista_coordenador"
+        | "proposta_enviada"
+        | "proposta_recusada"
       modalidade_trabalho: "presencial" | "hibrido" | "remoto"
       senioridade: "junior" | "pleno" | "senior"
       tipo_contrato: "clt" | "pj" | "estagio"
@@ -1549,6 +1554,11 @@ export const Constants = {
         "contratado",
         "reprovado",
         "banco_talentos",
+        "agendar_entrevista",
+        "entrevista_agendada",
+        "entrevista_coordenador",
+        "proposta_enviada",
+        "proposta_recusada",
       ],
       modalidade_trabalho: ["presencial", "hibrido", "remoto"],
       senioridade: ["junior", "pleno", "senior"],
