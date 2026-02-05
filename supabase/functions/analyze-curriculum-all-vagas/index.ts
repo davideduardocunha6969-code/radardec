@@ -5,6 +5,37 @@
    "Access-Control-Allow-Origin": "*",
    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
  };
+
+  function parseStorageObjectUrl(fileUrl: string): { bucket: string; path: string } | null {
+    try {
+      const url = new URL(fileUrl);
+      // Supports both:
+      // /storage/v1/object/public/<bucket>/<path>
+      // /storage/v1/object/<bucket>/<path>
+      const match = url.pathname.match(/\/storage\/v1\/object\/(?:public\/)?([^/]+)\/(.+)$/);
+      if (!match) return null;
+      return {
+        bucket: decodeURIComponent(match[1]),
+        path: decodeURIComponent(match[2]),
+      };
+    } catch {
+      return null;
+    }
+  }
+
+  function bytesToBase64(bytes: Uint8Array): string {
+    const chunkSize = 0x8000; // 32k
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += chunkSize) {
+      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+    }
+    return btoa(binary);
+  }
+
+  function arrayBufferToBase64Prefix(buffer: ArrayBuffer, maxBytes: number): string {
+    const slice = buffer.byteLength > maxBytes ? buffer.slice(0, maxBytes) : buffer;
+    return bytesToBase64(new Uint8Array(slice));
+  }
  
  interface Vaga {
    id: string;
@@ -127,11 +158,15 @@
        throw new Error("Not authenticated");
      }
  
-     const { fileUrl, fileName } = await req.json();
- 
-     if (!fileUrl) {
-       throw new Error("Missing required field: fileUrl");
-     }
+      const body = await req.json().catch(() => ({}));
+      const fileUrl: string | undefined = body?.fileUrl;
+      const fileName: string | undefined = body?.fileName;
+      const filePath: string | undefined = body?.filePath;
+      const bucketFromBody: string | undefined = body?.bucket;
+
+      if (!fileUrl && !filePath) {
+        throw new Error("Missing required field: fileUrl or filePath");
+      }
  
      const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
      if (!LOVABLE_API_KEY) {
@@ -146,14 +181,46 @@
  
      if (vagasError) throw vagasError;
  
-     // Download and analyze file content
-     const fileResponse = await fetch(fileUrl);
-     if (!fileResponse.ok) {
-       throw new Error("Failed to download file");
-     }
- 
-     const fileBuffer = await fileResponse.arrayBuffer();
-     const fileBase64 = btoa(String.fromCharCode(...new Uint8Array(fileBuffer)));
+      // Download and analyze file content
+      // NOTE: The "curriculos" bucket is private, so we must not rely on public URLs.
+      // We download via storage using the service role key (server-side only).
+      let fileBuffer: ArrayBuffer | null = null;
+
+      const supabaseServiceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
+      const urlParsed = fileUrl ? parseStorageObjectUrl(fileUrl) : null;
+      const bucket = bucketFromBody || urlParsed?.bucket || "curriculos";
+      const objectPath = filePath || urlParsed?.path;
+      const arquivoUrlParaSalvar = fileUrl || objectPath || "";
+
+      if (supabaseServiceRoleKey && objectPath) {
+        const supabaseAdmin = createClient(supabaseUrl, supabaseServiceRoleKey);
+        const { data: blob, error: downloadError } = await supabaseAdmin.storage
+          .from(bucket)
+          .download(objectPath);
+
+        if (downloadError) {
+          console.error("Storage download error:", downloadError);
+        } else if (blob) {
+          fileBuffer = await blob.arrayBuffer();
+        }
+      }
+
+      // Fallback to fetching URL (works only if URL is truly public)
+      if (!fileBuffer && fileUrl) {
+        const fileResponse = await fetch(fileUrl);
+        if (!fileResponse.ok) {
+          throw new Error(`Failed to download file (status ${fileResponse.status})`);
+        }
+        fileBuffer = await fileResponse.arrayBuffer();
+      }
+
+      if (!fileBuffer) {
+        throw new Error("Failed to download file");
+      }
+
+      // We only need a prefix of the file encoded in base64 for the extraction prompt.
+      // This avoids converting the whole binary file into base64 (slow + memory heavy).
+      const fileBase64Prefix = arrayBufferToBase64Prefix(fileBuffer, 40_000);
  
      // First, extract candidate data from CV
      const extractionPrompt = `Você é um especialista em análise de currículos.
@@ -182,7 +249,10 @@
          model: "google/gemini-2.5-flash",
          messages: [
            { role: "system", content: extractionPrompt },
-           { role: "user", content: `Analise este currículo (arquivo: ${fileName}). O conteúdo está em base64: ${fileBase64.substring(0, 50000)}` },
+            {
+              role: "user",
+              content: `Analise este currículo (arquivo: ${fileName || "curriculo"}). O conteúdo (prefixo) está em base64: ${fileBase64Prefix}`,
+            },
          ],
          temperature: 0.3,
        }),
@@ -263,9 +333,9 @@
        .from("curriculos")
        .insert({
          candidato_id: candidatoId,
-         arquivo_nome: fileName,
-         arquivo_url: fileUrl,
-         arquivo_tipo: fileName.split(".").pop(),
+          arquivo_nome: fileName || "curriculo",
+          arquivo_url: arquivoUrlParaSalvar,
+          arquivo_tipo: (fileName || "").includes(".") ? (fileName || "").split(".").pop() : null,
          texto_extraido: extractContent,
          processado: true,
          user_id: user.id,
