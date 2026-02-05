@@ -327,10 +327,18 @@ IMPORTANTE: Extraia APENAS informações que realmente existem no documento. Nã
  
      // Create or update candidato
      let candidatoId: string;
+    // Normalize email - treat null-like values as missing
+    const normalizedEmail = candidatoData.email && 
+      candidatoData.email !== "null" && 
+      candidatoData.email !== "Não encontrado" &&
+      candidatoData.email.includes("@")
+        ? candidatoData.email 
+        : null;
+    
      const { data: existingCandidato } = await supabase
        .from("candidatos")
        .select("id")
-       .eq("email", candidatoData.email || `unknown-${Date.now()}@temp.com`)
+      .eq("email", normalizedEmail || `candidato-${Date.now()}@temp.com`)
        .single();
  
      if (existingCandidato) {
@@ -356,7 +364,7 @@ IMPORTANTE: Extraia APENAS informações que realmente existem no documento. Nã
          .from("candidatos")
          .insert({
            nome: candidatoData.nome || "Candidato Desconhecido",
-           email: candidatoData.email || `unknown-${Date.now()}@temp.com`,
+           email: normalizedEmail || `candidato-${Date.now()}@temp.com`,
            telefone: candidatoData.telefone,
            linkedin_url: candidatoData.linkedin_url,
            experiencia_total_anos: candidatoData.experiencia_total_anos || 0,
