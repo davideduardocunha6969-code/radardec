@@ -65,16 +65,20 @@
  
  RETORNE APENAS UM JSON VÁLIDO com os campos acima. Não inclua explicações.`;
  
-     const response = await fetch("https://ai-gateway.lovable.dev/anthropic/v1/messages", {
+     // Use Google Gemini via OpenAI-compatible endpoint
+     const response = await fetch("https://generativelanguage.googleapis.com/v1beta/openai/chat/completions", {
        method: "POST",
        headers: {
          "Content-Type": "application/json",
-         "x-lovable-api-key": Deno.env.get("LOVABLE_API_KEY") || "",
+         "Authorization": `Bearer ${Deno.env.get("GEMINI_API_KEY")}`,
        },
        body: JSON.stringify({
-         model: "claude-sonnet-4-20250514",
-         max_tokens: 2000,
+         model: "gemini-2.0-flash",
          messages: [
+           {
+             role: "system",
+             content: systemPrompt,
+           },
            {
              role: "user",
              content: `Analise a seguinte descrição de vaga e gere todos os campos necessários para cadastro:
@@ -84,18 +88,19 @@
  Retorne APENAS o JSON com os campos preenchidos.`,
            },
          ],
-         system: systemPrompt,
+         temperature: 0.7,
+         max_tokens: 2000,
        }),
      });
  
      if (!response.ok) {
        const errorText = await response.text();
-       console.error("AI Gateway error:", errorText);
-       throw new Error(`AI Gateway error: ${response.status}`);
+       console.error("Gemini API error:", errorText);
+       throw new Error(`Gemini API error: ${response.status}`);
      }
  
      const aiResponse = await response.json();
-     const content = aiResponse.content?.[0]?.text || "";
+     const content = aiResponse.choices?.[0]?.message?.content || "";
  
      // Extract JSON from response
      let vagaData;
