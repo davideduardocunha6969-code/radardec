@@ -17,6 +17,16 @@
    vagasAnalisadas?: number;
  }
  
+// Helper function to sanitize file names for storage
+function sanitizeFileName(fileName: string): string {
+  // Remove accents and special characters
+  return fileName
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "") // Remove accents
+    .replace(/[^a-zA-Z0-9.-]/g, "_") // Replace special chars with underscore
+    .replace(/_+/g, "_"); // Collapse multiple underscores
+}
+
  export function TalentBankUploader() {
    const [files, setFiles] = useState<FileWithStatus[]>([]);
    const [isUploading, setIsUploading] = useState(false);
@@ -70,7 +80,8 @@
  
        try {
          // Upload to storage (banco-talentos folder)
-         const filePath = `banco-talentos/${Date.now()}-${fileItem.file.name}`;
+          const sanitizedName = sanitizeFileName(fileItem.file.name);
+          const filePath = `banco-talentos/${Date.now()}-${sanitizedName}`;
          const { error: uploadError } = await supabase.storage
            .from("curriculos")
            .upload(filePath, fileItem.file);
