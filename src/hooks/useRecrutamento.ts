@@ -155,11 +155,28 @@
          .select()
          .single();
        if (error) throw error;
+       
+       // Trigger reprocessing of all existing candidates for the new vaga
+       // This is done asynchronously in the background
+       supabase.functions.invoke("reprocess-candidatos-for-vaga", {
+         body: { vagaId: data.id },
+       }).then((result) => {
+         if (result.data?.success) {
+           console.log(`Reprocessed ${result.data.processed} candidates for new vaga`);
+           queryClient.invalidateQueries({ queryKey: ["candidatos-vaga", data.id] });
+         }
+       }).catch((err) => {
+         console.error("Error reprocessing candidates:", err);
+       });
+       
        return data;
      },
      onSuccess: () => {
        queryClient.invalidateQueries({ queryKey: ["vagas-recrutamento"] });
-       toast({ title: "Vaga criada com sucesso!" });
+       toast({ 
+         title: "Vaga criada com sucesso!", 
+         description: "Os currículos do Banco de Talentos estão sendo analisados em segundo plano." 
+       });
      },
      onError: (error: Error) => {
        toast({ title: "Erro ao criar vaga", description: error.message, variant: "destructive" });
