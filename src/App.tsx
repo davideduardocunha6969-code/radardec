@@ -24,8 +24,14 @@ import ModeladorConteudo from "./pages/ModeladorConteudo";
 import ModeladorReplica from "./pages/ModeladorReplica";
 import AtividadesMarketing from "./pages/AtividadesMarketing";
 import AtendimentosClosers from "./pages/AtendimentosClosers";
-import PerfilIA from "./pages/PerfilIA";
-import NotFound from "./pages/NotFound";
+ import PerfilIA from "./pages/PerfilIA";
+ import RecrutamentoLayout from "./pages/recrutamento";
+ import Vagas from "./pages/recrutamento/Vagas";
+ import BancoTalentos from "./pages/recrutamento/BancoTalentos";
+ import TriagemIA from "./pages/recrutamento/TriagemIA";
+ import Pipeline from "./pages/recrutamento/Pipeline";
+ import Relatorios from "./pages/recrutamento/Relatorios";
+ import NotFound from "./pages/NotFound";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -56,6 +62,15 @@ const App = () => (
               <Route path="/marketing/modelador" element={<ProtectedRoute pageKey="marketing-modelador"><ModeladorConteudo /></ProtectedRoute>} />
               <Route path="/marketing/atividades" element={<ProtectedRoute pageKey="marketing-atividades"><AtividadesMarketing /></ProtectedRoute>} />
               <Route path="/admin" element={<Admin />} />
+               {/* Recrutamento Inteligente */}
+               <Route path="/recrutamento" element={<ProtectedRoute pageKey="recrutamento"><RecrutamentoLayout /></ProtectedRoute>}>
+                 <Route index element={<Vagas />} />
+                 <Route path="vagas" element={<Vagas />} />
+                 <Route path="banco-talentos" element={<BancoTalentos />} />
+                 <Route path="triagem-ia" element={<TriagemIA />} />
+                 <Route path="pipeline" element={<Pipeline />} />
+                 <Route path="relatorios" element={<Relatorios />} />
+               </Route>
             </Route>
             <Route path="*" element={<NotFound />} />
           </Routes>

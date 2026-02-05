@@ -53,6 +53,75 @@ export type Database = {
         }
         Relationships: []
       }
+      analises_curriculo: {
+        Row: {
+          created_at: string
+          curriculo_id: string
+          id: string
+          match_experiencia: Json | null
+          match_formacao: Json | null
+          match_skills: Json | null
+          pontos_fortes: string[] | null
+          pontos_fracos: string[] | null
+          processado_em: string | null
+          prompt_usado: string | null
+          recomendacao: string | null
+          resposta_ia: Json | null
+          score_calculado: number | null
+          user_id: string
+          vaga_id: string
+        }
+        Insert: {
+          created_at?: string
+          curriculo_id: string
+          id?: string
+          match_experiencia?: Json | null
+          match_formacao?: Json | null
+          match_skills?: Json | null
+          pontos_fortes?: string[] | null
+          pontos_fracos?: string[] | null
+          processado_em?: string | null
+          prompt_usado?: string | null
+          recomendacao?: string | null
+          resposta_ia?: Json | null
+          score_calculado?: number | null
+          user_id: string
+          vaga_id: string
+        }
+        Update: {
+          created_at?: string
+          curriculo_id?: string
+          id?: string
+          match_experiencia?: Json | null
+          match_formacao?: Json | null
+          match_skills?: Json | null
+          pontos_fortes?: string[] | null
+          pontos_fracos?: string[] | null
+          processado_em?: string | null
+          prompt_usado?: string | null
+          recomendacao?: string | null
+          resposta_ia?: Json | null
+          score_calculado?: number | null
+          user_id?: string
+          vaga_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "analises_curriculo_curriculo_id_fkey"
+            columns: ["curriculo_id"]
+            isOneToOne: false
+            referencedRelation: "curriculos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "analises_curriculo_vaga_id_fkey"
+            columns: ["vaga_id"]
+            isOneToOne: false
+            referencedRelation: "vagas_recrutamento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       atendimentos_closers: {
         Row: {
           analises_ia: Json | null
@@ -249,6 +318,169 @@ export type Database = {
           },
         ]
       }
+      candidato_vaga: {
+        Row: {
+          candidato_id: string
+          created_at: string
+          curriculo_id: string | null
+          enviar_email_automatico: boolean | null
+          explicacao_score: string | null
+          id: string
+          notas: string | null
+          ordem: number | null
+          score_detalhado: Json | null
+          score_total: number | null
+          status: Database["public"]["Enums"]["candidato_status"]
+          updated_at: string
+          user_id: string
+          vaga_id: string
+        }
+        Insert: {
+          candidato_id: string
+          created_at?: string
+          curriculo_id?: string | null
+          enviar_email_automatico?: boolean | null
+          explicacao_score?: string | null
+          id?: string
+          notas?: string | null
+          ordem?: number | null
+          score_detalhado?: Json | null
+          score_total?: number | null
+          status?: Database["public"]["Enums"]["candidato_status"]
+          updated_at?: string
+          user_id: string
+          vaga_id: string
+        }
+        Update: {
+          candidato_id?: string
+          created_at?: string
+          curriculo_id?: string | null
+          enviar_email_automatico?: boolean | null
+          explicacao_score?: string | null
+          id?: string
+          notas?: string | null
+          ordem?: number | null
+          score_detalhado?: Json | null
+          score_total?: number | null
+          status?: Database["public"]["Enums"]["candidato_status"]
+          updated_at?: string
+          user_id?: string
+          vaga_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "candidato_vaga_candidato_id_fkey"
+            columns: ["candidato_id"]
+            isOneToOne: false
+            referencedRelation: "candidatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidato_vaga_curriculo_id_fkey"
+            columns: ["curriculo_id"]
+            isOneToOne: false
+            referencedRelation: "curriculos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "candidato_vaga_vaga_id_fkey"
+            columns: ["vaga_id"]
+            isOneToOne: false
+            referencedRelation: "vagas_recrutamento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      candidatos: {
+        Row: {
+          created_at: string
+          cursos_extras: string[] | null
+          dados_extraidos: Json | null
+          email: string
+          experiencia_total_anos: number | null
+          formacao: string | null
+          id: string
+          idiomas: string[] | null
+          linkedin_url: string | null
+          nome: string
+          resumo: string | null
+          skills_detectadas: string[] | null
+          telefone: string | null
+          ultimo_cargo: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          cursos_extras?: string[] | null
+          dados_extraidos?: Json | null
+          email: string
+          experiencia_total_anos?: number | null
+          formacao?: string | null
+          id?: string
+          idiomas?: string[] | null
+          linkedin_url?: string | null
+          nome: string
+          resumo?: string | null
+          skills_detectadas?: string[] | null
+          telefone?: string | null
+          ultimo_cargo?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          cursos_extras?: string[] | null
+          dados_extraidos?: Json | null
+          email?: string
+          experiencia_total_anos?: number | null
+          formacao?: string | null
+          id?: string
+          idiomas?: string[] | null
+          linkedin_url?: string | null
+          nome?: string
+          resumo?: string | null
+          skills_detectadas?: string[] | null
+          telefone?: string | null
+          ultimo_cargo?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      config_recrutamento: {
+        Row: {
+          created_at: string
+          dias_alerta_vaga_parada: number | null
+          email_resposta: string | null
+          envio_automatico_habilitado: boolean | null
+          id: string
+          link_agendamento_padrao: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dias_alerta_vaga_parada?: number | null
+          email_resposta?: string | null
+          envio_automatico_habilitado?: boolean | null
+          id?: string
+          link_agendamento_padrao?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dias_alerta_vaga_parada?: number | null
+          email_resposta?: string | null
+          envio_automatico_habilitado?: boolean | null
+          id?: string
+          link_agendamento_padrao?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       conteudos_midia: {
         Row: {
           copy_completa: string | null
@@ -302,6 +534,153 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      curriculos: {
+        Row: {
+          arquivo_nome: string
+          arquivo_tipo: string | null
+          arquivo_url: string
+          candidato_id: string
+          created_at: string
+          erro_processamento: string | null
+          id: string
+          processado: boolean | null
+          texto_extraido: string | null
+          user_id: string
+        }
+        Insert: {
+          arquivo_nome: string
+          arquivo_tipo?: string | null
+          arquivo_url: string
+          candidato_id: string
+          created_at?: string
+          erro_processamento?: string | null
+          id?: string
+          processado?: boolean | null
+          texto_extraido?: string | null
+          user_id: string
+        }
+        Update: {
+          arquivo_nome?: string
+          arquivo_tipo?: string | null
+          arquivo_url?: string
+          candidato_id?: string
+          created_at?: string
+          erro_processamento?: string | null
+          id?: string
+          processado?: boolean | null
+          texto_extraido?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "curriculos_candidato_id_fkey"
+            columns: ["candidato_id"]
+            isOneToOne: false
+            referencedRelation: "candidatos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      email_templates_recrutamento: {
+        Row: {
+          assunto: string
+          ativo: boolean | null
+          corpo: string
+          created_at: string
+          id: string
+          nome: string
+          tipo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          assunto: string
+          ativo?: boolean | null
+          corpo: string
+          created_at?: string
+          id?: string
+          nome: string
+          tipo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          assunto?: string
+          ativo?: boolean | null
+          corpo?: string
+          created_at?: string
+          id?: string
+          nome?: string
+          tipo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      emails_recrutamento: {
+        Row: {
+          assunto: string
+          candidato_id: string
+          corpo: string
+          created_at: string
+          enviado_em: string | null
+          erro: string | null
+          id: string
+          status: string | null
+          template_id: string | null
+          user_id: string
+          vaga_id: string | null
+        }
+        Insert: {
+          assunto: string
+          candidato_id: string
+          corpo: string
+          created_at?: string
+          enviado_em?: string | null
+          erro?: string | null
+          id?: string
+          status?: string | null
+          template_id?: string | null
+          user_id: string
+          vaga_id?: string | null
+        }
+        Update: {
+          assunto?: string
+          candidato_id?: string
+          corpo?: string
+          created_at?: string
+          enviado_em?: string | null
+          erro?: string | null
+          id?: string
+          status?: string | null
+          template_id?: string | null
+          user_id?: string
+          vaga_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "emails_recrutamento_candidato_id_fkey"
+            columns: ["candidato_id"]
+            isOneToOne: false
+            referencedRelation: "candidatos"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "emails_recrutamento_template_id_fkey"
+            columns: ["template_id"]
+            isOneToOne: false
+            referencedRelation: "email_templates_recrutamento"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "emails_recrutamento_vaga_id_fkey"
+            columns: ["vaga_id"]
+            isOneToOne: false
+            referencedRelation: "vagas_recrutamento"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       formatos_origem: {
         Row: {
@@ -380,6 +759,50 @@ export type Database = {
           updated_at?: string
         }
         Relationships: []
+      }
+      historico_candidato: {
+        Row: {
+          candidato_vaga_id: string
+          created_at: string
+          id: string
+          observacao: string | null
+          status_anterior:
+            | Database["public"]["Enums"]["candidato_status"]
+            | null
+          status_novo: Database["public"]["Enums"]["candidato_status"]
+          user_id: string
+        }
+        Insert: {
+          candidato_vaga_id: string
+          created_at?: string
+          id?: string
+          observacao?: string | null
+          status_anterior?:
+            | Database["public"]["Enums"]["candidato_status"]
+            | null
+          status_novo: Database["public"]["Enums"]["candidato_status"]
+          user_id: string
+        }
+        Update: {
+          candidato_vaga_id?: string
+          created_at?: string
+          id?: string
+          observacao?: string | null
+          status_anterior?:
+            | Database["public"]["Enums"]["candidato_status"]
+            | null
+          status_novo?: Database["public"]["Enums"]["candidato_status"]
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "historico_candidato_candidato_vaga_id_fkey"
+            columns: ["candidato_vaga_id"]
+            isOneToOne: false
+            referencedRelation: "candidato_vaga"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       holidays: {
         Row: {
@@ -877,6 +1300,87 @@ export type Database = {
         }
         Relationships: []
       }
+      vagas_recrutamento: {
+        Row: {
+          created_at: string
+          descricao: string | null
+          experiencia_minima_anos: number | null
+          formacao_minima: string | null
+          hard_skills_desejaveis: string[] | null
+          hard_skills_obrigatorias: string[] | null
+          id: string
+          modalidade: Database["public"]["Enums"]["modalidade_trabalho"]
+          peso_cursos: number | null
+          peso_experiencia: number | null
+          peso_fit_cultural: number | null
+          peso_formacao: number | null
+          peso_soft_skills: number | null
+          responsabilidades: string | null
+          salario_max: number | null
+          salario_min: number | null
+          senioridade: Database["public"]["Enums"]["senioridade"]
+          setor: string
+          soft_skills: string[] | null
+          status: Database["public"]["Enums"]["vaga_status"]
+          tipo_contrato: Database["public"]["Enums"]["tipo_contrato"]
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          descricao?: string | null
+          experiencia_minima_anos?: number | null
+          formacao_minima?: string | null
+          hard_skills_desejaveis?: string[] | null
+          hard_skills_obrigatorias?: string[] | null
+          id?: string
+          modalidade?: Database["public"]["Enums"]["modalidade_trabalho"]
+          peso_cursos?: number | null
+          peso_experiencia?: number | null
+          peso_fit_cultural?: number | null
+          peso_formacao?: number | null
+          peso_soft_skills?: number | null
+          responsabilidades?: string | null
+          salario_max?: number | null
+          salario_min?: number | null
+          senioridade?: Database["public"]["Enums"]["senioridade"]
+          setor: string
+          soft_skills?: string[] | null
+          status?: Database["public"]["Enums"]["vaga_status"]
+          tipo_contrato?: Database["public"]["Enums"]["tipo_contrato"]
+          titulo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          descricao?: string | null
+          experiencia_minima_anos?: number | null
+          formacao_minima?: string | null
+          hard_skills_desejaveis?: string[] | null
+          hard_skills_obrigatorias?: string[] | null
+          id?: string
+          modalidade?: Database["public"]["Enums"]["modalidade_trabalho"]
+          peso_cursos?: number | null
+          peso_experiencia?: number | null
+          peso_fit_cultural?: number | null
+          peso_formacao?: number | null
+          peso_soft_skills?: number | null
+          responsabilidades?: string | null
+          salario_max?: number | null
+          salario_min?: number | null
+          senioridade?: Database["public"]["Enums"]["senioridade"]
+          setor?: string
+          soft_skills?: string[] | null
+          status?: Database["public"]["Enums"]["vaga_status"]
+          tipo_contrato?: Database["public"]["Enums"]["tipo_contrato"]
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -897,6 +1401,18 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "user" | "marketing_manager"
+      candidato_status:
+        | "triagem_ia"
+        | "entrevista_rh"
+        | "entrevista_tecnica"
+        | "proposta"
+        | "contratado"
+        | "reprovado"
+        | "banco_talentos"
+      modalidade_trabalho: "presencial" | "hibrido" | "remoto"
+      senioridade: "junior" | "pleno" | "senior"
+      tipo_contrato: "clt" | "pj" | "estagio"
+      vaga_status: "aberta" | "em_analise" | "encerrada"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1025,6 +1541,19 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "user", "marketing_manager"],
+      candidato_status: [
+        "triagem_ia",
+        "entrevista_rh",
+        "entrevista_tecnica",
+        "proposta",
+        "contratado",
+        "reprovado",
+        "banco_talentos",
+      ],
+      modalidade_trabalho: ["presencial", "hibrido", "remoto"],
+      senioridade: ["junior", "pleno", "senior"],
+      tipo_contrato: ["clt", "pj", "estagio"],
+      vaga_status: ["aberta", "em_analise", "encerrada"],
     },
   },
 } as const

@@ -14,3 +14,6 @@ verify_jwt = false
 
 [functions.analyze-gestao]
 verify_jwt = false
+ 
+ [functions.analyze-curriculum]
+ verify_jwt = false
