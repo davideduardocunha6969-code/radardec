@@ -384,7 +384,7 @@ IMPORTANTE: Extraia APENAS informações que realmente existem no documento. Nã
           arquivo_nome: fileName || "curriculo",
           arquivo_url: arquivoUrlParaSalvar,
           arquivo_tipo: (fileName || "").includes(".") ? (fileName || "").split(".").pop() : null,
-         texto_extraido: extractContent,
+         texto_extraido: JSON.stringify(candidatoData, null, 2),
          processado: true,
          user_id: user.id,
        })
