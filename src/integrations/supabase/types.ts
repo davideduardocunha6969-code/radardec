@@ -1549,7 +1549,7 @@ export type Database = {
         | "proposta_recusada"
       modalidade_trabalho: "presencial" | "hibrido" | "remoto"
       senioridade: "junior" | "pleno" | "senior"
-      tipo_contrato: "clt" | "pj" | "estagio"
+      tipo_contrato: "clt" | "pj" | "estagio" | "associado"
       vaga_status: "aberta" | "em_analise" | "encerrada"
     }
     CompositeTypes: {
@@ -1695,7 +1695,7 @@ export const Constants = {
       ],
       modalidade_trabalho: ["presencial", "hibrido", "remoto"],
       senioridade: ["junior", "pleno", "senior"],
-      tipo_contrato: ["clt", "pj", "estagio"],
+      tipo_contrato: ["clt", "pj", "estagio", "associado"],
       vaga_status: ["aberta", "em_analise", "encerrada"],
     },
   },

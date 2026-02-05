@@ -4,7 +4,7 @@
  
  // Types
  export type VagaStatus = "aberta" | "em_analise" | "encerrada";
- export type TipoContrato = "clt" | "pj" | "estagio";
+export type TipoContrato = "clt" | "pj" | "estagio" | "associado";
  export type Modalidade = "presencial" | "hibrido" | "remoto";
  export type Senioridade = "junior" | "pleno" | "senior";
 export type CandidatoStatus = "triagem_ia" | "entrevista_rh" | "entrevista_tecnica" | "proposta" | "contratado" | "reprovado" | "banco_talentos" | "agendar_entrevista" | "entrevista_agendada" | "entrevista_coordenador" | "proposta_enviada" | "proposta_recusada";
