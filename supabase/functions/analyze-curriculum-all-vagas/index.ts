@@ -6,37 +6,43 @@
    "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
  };
 
-  function parseStorageObjectUrl(fileUrl: string): { bucket: string; path: string } | null {
-    try {
-      const url = new URL(fileUrl);
-      // Supports both:
-      // /storage/v1/object/public/<bucket>/<path>
-      // /storage/v1/object/<bucket>/<path>
-      const match = url.pathname.match(/\/storage\/v1\/object\/(?:public\/)?([^/]+)\/(.+)$/);
-      if (!match) return null;
-      return {
-        bucket: decodeURIComponent(match[1]),
-        path: decodeURIComponent(match[2]),
-      };
-    } catch {
-      return null;
-    }
+function parseStorageObjectUrl(fileUrl: string): { bucket: string; path: string } | null {
+  try {
+    const url = new URL(fileUrl);
+    const match = url.pathname.match(/\/storage\/v1\/object\/(?:public\/)?([^/]+)\/(.+)$/);
+    if (!match) return null;
+    return {
+      bucket: decodeURIComponent(match[1]),
+      path: decodeURIComponent(match[2]),
+    };
+  } catch {
+    return null;
   }
+}
 
-  function bytesToBase64(bytes: Uint8Array): string {
-    const chunkSize = 0x8000; // 32k
-    let binary = "";
-    for (let i = 0; i < bytes.length; i += chunkSize) {
-      binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
-    }
-    return btoa(binary);
+function bytesToBase64(bytes: Uint8Array): string {
+  const chunkSize = 0x8000;
+  let binary = "";
+  for (let i = 0; i < bytes.length; i += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
   }
+  return btoa(binary);
+}
 
-  function arrayBufferToBase64Prefix(buffer: ArrayBuffer, maxBytes: number): string {
-    const slice = buffer.byteLength > maxBytes ? buffer.slice(0, maxBytes) : buffer;
-    return bytesToBase64(new Uint8Array(slice));
+function arrayBufferToBase64(buffer: ArrayBuffer): string {
+  return bytesToBase64(new Uint8Array(buffer));
+}
+
+function getMimeType(fileName: string): string {
+  const ext = fileName.toLowerCase().split('.').pop();
+  switch (ext) {
+    case 'pdf': return 'application/pdf';
+    case 'doc': return 'application/msword';
+    case 'docx': return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+    default: return 'application/octet-stream';
   }
- 
+}
+
  interface Vaga {
    id: string;
    titulo: string;
