@@ -1,4 +1,4 @@
-import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, CalendarDays, Megaphone, Lightbulb, Wand2, Package, ClipboardList, Phone, UserCog, Copy } from "lucide-react";
+ import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, CalendarDays, Megaphone, Lightbulb, Wand2, Package, ClipboardList, Phone, UserCog, Copy, Users } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import logoEscritorio from "@/assets/logo-escritorio.webp";
@@ -38,6 +38,15 @@ const radarItems = [
 const comercialItems = [
   { title: "Atendimentos", url: "/comercial/atendimentos", icon: Phone, pageKey: "comercial-atendimentos" },
 ];
+ 
+ // Recrutamento
+ const recrutamentoItems = [
+   { title: "Vagas", url: "/recrutamento/vagas", icon: Briefcase, pageKey: "recrutamento" },
+   { title: "Banco de Talentos", url: "/recrutamento/banco-talentos", icon: Users, pageKey: "recrutamento" },
+   { title: "Triagem IA", url: "/recrutamento/triagem-ia", icon: Bot, pageKey: "recrutamento" },
+   { title: "Pipeline", url: "/recrutamento/pipeline", icon: ClipboardList, pageKey: "recrutamento" },
+   { title: "Relatórios", url: "/recrutamento/relatorios", icon: TrendingUp, pageKey: "recrutamento" },
+ ];
 
 // Robôs subitems
 const robosItems = [
@@ -78,6 +87,9 @@ export function AppSidebar() {
   // Filtra marketing visíveis baseado em permissões
   const visibleMarketingItems = marketingItems.filter(item => hasPageAccess(item.pageKey));
 
+   // Filtra recrutamento visíveis baseado em permissões
+   const visibleRecrutamentoItems = recrutamentoItems.filter(item => hasPageAccess(item.pageKey));
+ 
   // Verifica se algum radar está ativo para manter o menu aberto
   const isAnyRadarActive = useMemo(() => {
     return radarItems.some(item => isActive(item.url));
@@ -98,10 +110,16 @@ export function AppSidebar() {
     return marketingItems.some(item => isActive(item.url));
   }, [currentPath]);
 
+   // Verifica se algum item de recrutamento está ativo
+   const isAnyRecrutamentoActive = useMemo(() => {
+     return recrutamentoItems.some(item => isActive(item.url));
+   }, [currentPath]);
+ 
   const [radarOpen, setRadarOpen] = useState(isAnyRadarActive);
   const [comercialOpen, setComercialOpen] = useState(isAnyComercialActive);
   const [robosOpen, setRobosOpen] = useState(isAnyRobosActive);
   const [marketingOpen, setMarketingOpen] = useState(isAnyMarketingActive);
+   const [recrutamentoOpen, setRecrutamentoOpen] = useState(isAnyRecrutamentoActive);
 
   return (
     <Sidebar collapsible="icon" className="border-r border-primary/20 bg-primary">
@@ -295,6 +313,50 @@ export function AppSidebar() {
                   </SidebarMenuItem>
                 </Collapsible>
               )}
+
+               {/* Recrutamento */}
+               {visibleRecrutamentoItems.length > 0 && (
+                 <Collapsible
+                   open={recrutamentoOpen}
+                   onOpenChange={setRecrutamentoOpen}
+                   className="group/collapsible-recrutamento"
+                 >
+                   <SidebarMenuItem>
+                     <CollapsibleTrigger asChild>
+                       <SidebarMenuButton
+                         tooltip="Recrutamento"
+                         className="flex items-center gap-3 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
+                       >
+                         <Users className="h-4 w-4" />
+                         <span>Recrutamento</span>
+                         <ChevronDown className="ml-auto h-4 w-4 transition-transform duration-200 group-data-[state=open]/collapsible-recrutamento:rotate-180" />
+                       </SidebarMenuButton>
+                     </CollapsibleTrigger>
+                     <CollapsibleContent>
+                       <SidebarMenuSub>
+                         {visibleRecrutamentoItems.map((item) => (
+                           <SidebarMenuSubItem key={item.title}>
+                             <SidebarMenuSubButton
+                               asChild
+                               isActive={isActive(item.url)}
+                             >
+                               <NavLink 
+                                 to={item.url} 
+                                 end 
+                                 className="flex items-center gap-3 text-primary-foreground/70 hover:text-primary-foreground"
+                                 activeClassName="bg-accent text-primary font-medium"
+                               >
+                                 <item.icon className="h-3.5 w-3.5" />
+                                 <span>{item.title}</span>
+                               </NavLink>
+                             </SidebarMenuSubButton>
+                           </SidebarMenuSubItem>
+                         ))}
+                       </SidebarMenuSub>
+                     </CollapsibleContent>
+                   </SidebarMenuItem>
+                 </Collapsible>
+               )}
 
             </SidebarMenu>
           </SidebarGroupContent>
