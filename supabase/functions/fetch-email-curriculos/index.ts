@@ -49,7 +49,7 @@ serve(async (req) => {
       host: imapHost,
       port: 993,
       secure: true,
-      auth: { user: imapUser, pass: imapPassword },
+      auth: { user: imapUser, pass: imapPassword, loginMethod: "LOGIN" },
       logger: false,
       tls: {
         rejectUnauthorized: false,
