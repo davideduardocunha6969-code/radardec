@@ -155,14 +155,22 @@ class SimpleIMAP {
     });
     this.reader = this.conn.readable.getReader();
     // Read greeting
-    await this.readLine();
+    const greeting = await this.readLine();
+    console.log("IMAP greeting:", greeting);
+    
+    // Check server capabilities
+    const capResult = await this.sendCommand("CAPABILITY");
+    console.log("IMAP capabilities:", capResult.join(" | "));
   }
 
   async login(): Promise<void> {
-    const escapedUser = `"${this.user.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
-    const escapedPass = `"${this.pass.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+    // Try LOGIN command first
+    const escapedUser = `"${this.user}"`;
+    const escapedPass = `"${this.pass}"`;
+    console.log(`Sending LOGIN command for user: ${this.user}`);
     const result = await this.sendCommand(`LOGIN ${escapedUser} ${escapedPass}`);
     const lastLine = result[result.length - 1];
+    console.log("LOGIN response:", lastLine);
     if (!lastLine.includes("OK")) {
       throw new Error(`Login failed: ${lastLine}`);
     }
@@ -242,7 +250,7 @@ serve(async (req) => {
       throw new Error("IMAP credentials not configured (IMAP_HOST, IMAP_USER, IMAP_PASSWORD)");
     }
 
-    console.log(`Connecting to IMAP: ${imapHost} as ${imapUser}`);
+    console.log(`Connecting to IMAP: ${imapHost} as ${imapUser} (password length: ${imapPassword?.length}, first char: ${imapPassword?.[0]}, last char: ${imapPassword?.[imapPassword.length-1]})`);
 
     const client = new SimpleIMAP(imapHost, 993, imapUser, imapPassword);
     await client.connect();
