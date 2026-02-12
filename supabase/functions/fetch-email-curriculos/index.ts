@@ -1,7 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { ImapFlow } from "npm:imapflow@1.0.171";
-import { simpleParser } from "npm:mailparser@3.7.2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -15,6 +13,207 @@ function sanitizeFileName(fileName: string): string {
     .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^a-zA-Z0-9.-]/g, "_")
     .replace(/_+/g, "_");
+}
+
+// Simple base64 decode for attachment content
+function decodeBase64(data: string): Uint8Array {
+  const binaryString = atob(data.replace(/\s/g, ""));
+  const bytes = new Uint8Array(binaryString.length);
+  for (let i = 0; i < binaryString.length; i++) {
+    bytes[i] = binaryString.charCodeAt(i);
+  }
+  return bytes;
+}
+
+// Decode quoted-printable encoded strings
+function decodeQuotedPrintable(str: string): string {
+  return str
+    .replace(/=\r?\n/g, "")
+    .replace(/=([0-9A-Fa-f]{2})/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+}
+
+// Decode MIME encoded words (=?charset?encoding?text?=)
+function decodeMimeWord(str: string): string {
+  return str.replace(/=\?([^?]+)\?([BQ])\?([^?]+)\?=/gi, (_, _charset, encoding, text) => {
+    if (encoding.toUpperCase() === "B") {
+      try { return atob(text); } catch { return text; }
+    } else {
+      return decodeQuotedPrintable(text.replace(/_/g, " "));
+    }
+  });
+}
+
+// Parse a MIME email to extract attachments
+function parseMimeAttachments(source: string): Array<{ filename: string; content: Uint8Array; contentType: string }> {
+  const attachments: Array<{ filename: string; content: Uint8Array; contentType: string }> = [];
+
+  // Find boundary
+  const boundaryMatch = source.match(/boundary="?([^";\r\n]+)"?/i);
+  if (!boundaryMatch) return attachments;
+
+  const boundary = boundaryMatch[1];
+  const parts = source.split("--" + boundary);
+
+  for (const part of parts) {
+    if (part.trim() === "--" || part.trim() === "") continue;
+
+    // Check for attachment
+    const contentDisp = part.match(/Content-Disposition:\s*attachment[^]*?filename="?([^";\r\n]+)"?/i);
+    const contentDispInline = part.match(/Content-Disposition:\s*[^]*?filename="?([^";\r\n]+)"?/i);
+    const nameMatch = part.match(/name="?([^";\r\n]+)"?/i);
+
+    let filename = contentDisp?.[1] || contentDispInline?.[1] || nameMatch?.[1] || "";
+    filename = decodeMimeWord(filename).trim();
+
+    if (!filename) continue;
+
+    const lowerName = filename.toLowerCase();
+    if (!lowerName.endsWith(".pdf") && !lowerName.endsWith(".doc") && !lowerName.endsWith(".docx")) continue;
+
+    // Get content type
+    const ctMatch = part.match(/Content-Type:\s*([^;\r\n]+)/i);
+    const contentType = ctMatch?.[1]?.trim() || "application/octet-stream";
+
+    // Get transfer encoding
+    const encodingMatch = part.match(/Content-Transfer-Encoding:\s*(\S+)/i);
+    const encoding = encodingMatch?.[1]?.trim().toLowerCase() || "7bit";
+
+    // Extract body (after double newline)
+    const bodyStart = part.indexOf("\r\n\r\n");
+    if (bodyStart === -1) continue;
+    const body = part.substring(bodyStart + 4);
+
+    let content: Uint8Array;
+    if (encoding === "base64") {
+      try {
+        content = decodeBase64(body);
+      } catch {
+        continue;
+      }
+    } else {
+      const encoder = new TextEncoder();
+      content = encoder.encode(body);
+    }
+
+    attachments.push({ filename, content, contentType });
+  }
+
+  return attachments;
+}
+
+// Simple IMAP client using raw TCP
+class SimpleIMAP {
+  private conn!: Deno.TlsConn;
+  private reader!: ReadableStreamDefaultReader<Uint8Array>;
+  private buffer = "";
+  private tagCounter = 0;
+
+  constructor(
+    private host: string,
+    private port: number,
+    private user: string,
+    private pass: string
+  ) {}
+
+  private async readLine(): Promise<string> {
+    while (!this.buffer.includes("\r\n")) {
+      const { value, done } = await this.reader.read();
+      if (done) throw new Error("Connection closed");
+      this.buffer += new TextDecoder().decode(value);
+    }
+    const idx = this.buffer.indexOf("\r\n");
+    const line = this.buffer.substring(0, idx);
+    this.buffer = this.buffer.substring(idx + 2);
+    return line;
+  }
+
+  private async readUntilTag(tag: string): Promise<string[]> {
+    const lines: string[] = [];
+    while (true) {
+      const line = await this.readLine();
+      lines.push(line);
+      if (line.startsWith(tag + " ")) break;
+    }
+    return lines;
+  }
+
+  private async sendCommand(cmd: string): Promise<string[]> {
+    this.tagCounter++;
+    const tag = `A${String(this.tagCounter).padStart(4, "0")}`;
+    const fullCmd = `${tag} ${cmd}\r\n`;
+    const encoder = new TextEncoder();
+    const writer = this.conn.writable.getWriter();
+    await writer.write(encoder.encode(fullCmd));
+    writer.releaseLock();
+    return this.readUntilTag(tag);
+  }
+
+  async connect(): Promise<void> {
+    this.conn = await Deno.connectTls({
+      hostname: this.host,
+      port: this.port,
+    });
+    this.reader = this.conn.readable.getReader();
+    // Read greeting
+    await this.readLine();
+  }
+
+  async login(): Promise<void> {
+    const escapedUser = `"${this.user.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+    const escapedPass = `"${this.pass.replace(/\\/g, "\\\\").replace(/"/g, '\\"')}"`;
+    const result = await this.sendCommand(`LOGIN ${escapedUser} ${escapedPass}`);
+    const lastLine = result[result.length - 1];
+    if (!lastLine.includes("OK")) {
+      throw new Error(`Login failed: ${lastLine}`);
+    }
+  }
+
+  async selectInbox(): Promise<void> {
+    await this.sendCommand("SELECT INBOX");
+  }
+
+  async searchUnseen(): Promise<number[]> {
+    const result = await this.sendCommand("SEARCH UNSEEN");
+    const uids: number[] = [];
+    for (const line of result) {
+      if (line.startsWith("* SEARCH")) {
+        const parts = line.replace("* SEARCH", "").trim().split(/\s+/);
+        for (const p of parts) {
+          const num = parseInt(p, 10);
+          if (!isNaN(num)) uids.push(num);
+        }
+      }
+    }
+    return uids;
+  }
+
+  async fetchMessage(seqNum: number): Promise<string> {
+    const result = await this.sendCommand(`FETCH ${seqNum} BODY[]`);
+    // The response contains literal data
+    let fullBody = "";
+    for (const line of result) {
+      fullBody += line + "\r\n";
+    }
+    return fullBody;
+  }
+
+  async markAsRead(seqNum: number): Promise<void> {
+    await this.sendCommand(`STORE ${seqNum} +FLAGS (\\Seen)`);
+  }
+
+  async logout(): Promise<void> {
+    try {
+      await this.sendCommand("LOGOUT");
+    } catch {
+      // ignore
+    }
+    try {
+      this.reader.releaseLock();
+      this.conn.close();
+    } catch {
+      // ignore
+    }
+  }
 }
 
 serve(async (req) => {
@@ -45,135 +244,106 @@ serve(async (req) => {
 
     console.log(`Connecting to IMAP: ${imapHost} as ${imapUser}`);
 
-    const client = new ImapFlow({
-      host: imapHost,
-      port: 993,
-      secure: true,
-      auth: { user: imapUser, pass: imapPassword, loginMethod: "LOGIN" },
-      logger: false,
-      tls: {
-        rejectUnauthorized: false,
-        servername: imapHost,
-      },
-    });
-
+    const client = new SimpleIMAP(imapHost, 993, imapUser, imapPassword);
     await client.connect();
-    console.log("IMAP connected");
+    console.log("IMAP connected, logging in...");
 
-    const lock = await client.getMailboxLock("INBOX");
+    await client.login();
+    console.log("IMAP logged in");
+
+    await client.selectInbox();
+    console.log("INBOX selected");
+
+    const unseenMessages = await client.searchUnseen();
+    console.log(`Found ${unseenMessages.length} unread messages`);
+
+    if (unseenMessages.length === 0) {
+      await client.logout();
+      return new Response(
+        JSON.stringify({ success: true, message: "Nenhum email não lido encontrado", processedCount: 0 }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
     let processedCount = 0;
     let errorCount = 0;
     const errors: string[] = [];
     const processedEmails: string[] = [];
 
-    try {
-      // Search for unseen (unread) messages
-      const unseenMessages = await client.search({ seen: false });
-      console.log(`Found ${unseenMessages.length} unread messages`);
+    for (const seqNum of unseenMessages) {
+      try {
+        const source = await client.fetchMessage(seqNum);
+        
+        // Extract subject and from
+        const subjectMatch = source.match(/^Subject:\s*(.+)$/im);
+        const fromMatch = source.match(/^From:\s*(.+)$/im);
+        const subject = subjectMatch ? decodeMimeWord(subjectMatch[1].trim()) : "(sem assunto)";
+        const from = fromMatch ? decodeMimeWord(fromMatch[1].trim()) : "unknown";
 
-      if (unseenMessages.length === 0) {
-        lock.release();
-        await client.logout();
-        return new Response(
-          JSON.stringify({ success: true, message: "Nenhum email não lido encontrado", processedCount: 0 }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-        );
-      }
+        console.log(`Processing email from: ${from}, subject: ${subject}`);
 
-      // Process each unread message
-      for (const uid of unseenMessages) {
-        try {
-          // Fetch the full message source
-          const message = await client.fetchOne(uid, { source: true, envelope: true }, { uid: true });
-          
-          if (!message?.source) {
-            console.log(`Message ${uid}: no source, skipping`);
-            continue;
-          }
+        const attachments = parseMimeAttachments(source);
 
-          // Parse the email
-          const parsed = await simpleParser(message.source);
-          const subject = parsed.subject || "(sem assunto)";
-          const from = parsed.from?.text || "unknown";
-          
-          console.log(`Processing email from: ${from}, subject: ${subject}`);
-
-          // Filter attachments (PDF, DOC, DOCX only)
-          const validAttachments = (parsed.attachments || []).filter((att: any) => {
-            const name = (att.filename || "").toLowerCase();
-            return name.endsWith(".pdf") || name.endsWith(".doc") || name.endsWith(".docx");
-          });
-
-          if (validAttachments.length === 0) {
-            console.log(`Email "${subject}" has no CV attachments, skipping`);
-            // Still mark as read since we checked it
-            await client.messageFlagsAdd(uid, ["\\Seen"], { uid: true });
-            continue;
-          }
-
-          // Process each attachment
-          for (const attachment of validAttachments) {
-            try {
-              const fileName = attachment.filename || `curriculo-${Date.now()}.pdf`;
-              const sanitizedName = sanitizeFileName(fileName);
-              const filePath = `banco-talentos/${Date.now()}-${sanitizedName}`;
-
-              console.log(`Uploading attachment: ${fileName} -> ${filePath}`);
-
-              // Upload to storage
-              const fileBuffer = attachment.content;
-              const { error: uploadError } = await supabase.storage
-                .from("curriculos")
-                .upload(filePath, fileBuffer, {
-                  contentType: attachment.contentType || "application/pdf",
-                });
-
-              if (uploadError) {
-                console.error(`Upload error for ${fileName}:`, uploadError);
-                errors.push(`Upload falhou: ${fileName} - ${uploadError.message}`);
-                errorCount++;
-                continue;
-              }
-
-              // Call analyze-curriculum-all-vagas to process
-              const { data: result, error: analysisError } = await supabase.functions.invoke(
-                "analyze-curriculum-all-vagas",
-                {
-                  body: {
-                    bucket: "curriculos",
-                    filePath,
-                    fileName,
-                  },
-                }
-              );
-
-              if (analysisError) {
-                console.error(`Analysis error for ${fileName}:`, analysisError);
-                errors.push(`Análise falhou: ${fileName} - ${analysisError.message}`);
-                errorCount++;
-              } else {
-                processedCount++;
-                processedEmails.push(`${from}: ${fileName} (${result?.vagasAnalisadas || 0} vagas)`);
-                console.log(`Successfully processed: ${fileName}`);
-              }
-            } catch (attErr: any) {
-              console.error(`Error processing attachment:`, attErr);
-              errors.push(`Erro: ${attachment.filename} - ${attErr.message}`);
-              errorCount++;
-            }
-          }
-
-          // Mark email as read
-          await client.messageFlagsAdd(uid, ["\\Seen"], { uid: true });
-          console.log(`Marked email ${uid} as read`);
-        } catch (msgErr: any) {
-          console.error(`Error processing message ${uid}:`, msgErr);
-          errors.push(`Erro no email ${uid}: ${msgErr.message}`);
-          errorCount++;
+        if (attachments.length === 0) {
+          console.log(`Email "${subject}" has no CV attachments, skipping`);
+          await client.markAsRead(seqNum);
+          continue;
         }
+
+        for (const attachment of attachments) {
+          try {
+            const sanitizedName = sanitizeFileName(attachment.filename);
+            const filePath = `banco-talentos/${Date.now()}-${sanitizedName}`;
+
+            console.log(`Uploading attachment: ${attachment.filename} -> ${filePath}`);
+
+            const { error: uploadError } = await supabase.storage
+              .from("curriculos")
+              .upload(filePath, attachment.content, {
+                contentType: attachment.contentType,
+              });
+
+            if (uploadError) {
+              console.error(`Upload error for ${attachment.filename}:`, uploadError);
+              errors.push(`Upload falhou: ${attachment.filename} - ${uploadError.message}`);
+              errorCount++;
+              continue;
+            }
+
+            const { data: result, error: analysisError } = await supabase.functions.invoke(
+              "analyze-curriculum-all-vagas",
+              {
+                body: {
+                  bucket: "curriculos",
+                  filePath,
+                  fileName: attachment.filename,
+                },
+              }
+            );
+
+            if (analysisError) {
+              console.error(`Analysis error for ${attachment.filename}:`, analysisError);
+              errors.push(`Análise falhou: ${attachment.filename} - ${analysisError.message}`);
+              errorCount++;
+            } else {
+              processedCount++;
+              processedEmails.push(`${from}: ${attachment.filename} (${result?.vagasAnalisadas || 0} vagas)`);
+              console.log(`Successfully processed: ${attachment.filename}`);
+            }
+          } catch (attErr: any) {
+            console.error(`Error processing attachment:`, attErr);
+            errors.push(`Erro: ${attachment.filename} - ${attErr.message}`);
+            errorCount++;
+          }
+        }
+
+        await client.markAsRead(seqNum);
+        console.log(`Marked email ${seqNum} as read`);
+      } catch (msgErr: any) {
+        console.error(`Error processing message ${seqNum}:`, msgErr);
+        errors.push(`Erro no email ${seqNum}: ${msgErr.message}`);
+        errorCount++;
       }
-    } finally {
-      lock.release();
     }
 
     await client.logout();
