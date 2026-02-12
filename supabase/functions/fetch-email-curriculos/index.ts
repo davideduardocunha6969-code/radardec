@@ -51,6 +51,10 @@ serve(async (req) => {
       secure: true,
       auth: { user: imapUser, pass: imapPassword },
       logger: false,
+      tls: {
+        rejectUnauthorized: false,
+        servername: imapHost,
+      },
     });
 
     await client.connect();
