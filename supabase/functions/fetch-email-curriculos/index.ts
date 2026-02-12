@@ -235,65 +235,69 @@ serve(async (req) => {
 
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const supabaseKey = Deno.env.get("SUPABASE_ANON_KEY")!;
+    const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const supabase = createClient(supabaseUrl, supabaseKey, {
       global: { headers: { Authorization: authHeader } },
     });
+    const supabaseAdmin = createClient(supabaseUrl, serviceRoleKey);
 
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
+
+    let limit = 100;
+    try {
+      const body = await req.json();
+      if (body?.limit && typeof body.limit === "number") limit = Math.min(body.limit, 500);
+    } catch { /* no body, use default */ }
 
     const imapHost = Deno.env.get("IMAP_HOST");
     const imapUser = Deno.env.get("IMAP_USER");
     const imapPassword = Deno.env.get("IMAP_PASSWORD");
 
     if (!imapHost || !imapUser || !imapPassword) {
-      throw new Error("IMAP credentials not configured (IMAP_HOST, IMAP_USER, IMAP_PASSWORD)");
+      throw new Error("IMAP credentials not configured");
     }
 
-    console.log(`Connecting to IMAP: ${imapHost} as ${imapUser} (password length: ${imapPassword?.length}, first char: ${imapPassword?.[0]}, last char: ${imapPassword?.[imapPassword.length-1]})`);
+    console.log(`Connecting to IMAP: ${imapHost} as ${imapUser}`);
 
     const client = new SimpleIMAP(imapHost, 993, imapUser, imapPassword);
     await client.connect();
-    console.log("IMAP connected, logging in...");
-
     await client.login();
-    console.log("IMAP logged in");
-
     await client.selectInbox();
-    console.log("INBOX selected");
 
     const unseenMessages = await client.searchUnseen();
-    console.log(`Found ${unseenMessages.length} unread messages`);
+    console.log(`Found ${unseenMessages.length} unread, processing up to ${limit}`);
 
     if (unseenMessages.length === 0) {
       await client.logout();
       return new Response(
-        JSON.stringify({ success: true, message: "Nenhum email não lido encontrado", processedCount: 0 }),
+        JSON.stringify({ success: true, message: "Nenhum email não lido encontrado", processedCount: 0, remaining: 0 }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    let processedCount = 0;
+    const messagesToProcess = unseenMessages.slice(0, limit);
+    const remaining = unseenMessages.length - messagesToProcess.length;
+
+    let uploadedCount = 0;
+    let skippedCount = 0;
     let errorCount = 0;
     const errors: string[] = [];
-    const processedEmails: string[] = [];
+    const uploadedFiles: string[] = [];
+    const analysisPromises: Promise<void>[] = [];
 
-    for (const seqNum of unseenMessages) {
+    for (const seqNum of messagesToProcess) {
       try {
         const source = await client.fetchMessage(seqNum);
         
-        // Extract subject and from
         const subjectMatch = source.match(/^Subject:\s*(.+)$/im);
         const fromMatch = source.match(/^From:\s*(.+)$/im);
-        const subject = subjectMatch ? decodeMimeWord(subjectMatch[1].trim()) : "(sem assunto)";
         const from = fromMatch ? decodeMimeWord(fromMatch[1].trim()) : "unknown";
-
-        console.log(`Processing email from: ${from}, subject: ${subject}`);
 
         const attachments = parseMimeAttachments(source);
 
         if (attachments.length === 0) {
-          console.log(`Email "${subject}" has no CV attachments, skipping`);
+          skippedCount++;
           await client.markAsRead(seqNum);
           continue;
         }
@@ -303,66 +307,59 @@ serve(async (req) => {
             const sanitizedName = sanitizeFileName(attachment.filename);
             const filePath = `banco-talentos/${Date.now()}-${sanitizedName}`;
 
-            console.log(`Uploading attachment: ${attachment.filename} -> ${filePath}`);
-
-            const { error: uploadError } = await supabase.storage
+            const { error: uploadError } = await supabaseAdmin.storage
               .from("curriculos")
               .upload(filePath, attachment.content, {
                 contentType: attachment.contentType,
               });
 
             if (uploadError) {
-              console.error(`Upload error for ${attachment.filename}:`, uploadError);
               errors.push(`Upload falhou: ${attachment.filename} - ${uploadError.message}`);
               errorCount++;
               continue;
             }
 
-            const { data: result, error: analysisError } = await supabase.functions.invoke(
-              "analyze-curriculum-all-vagas",
-              {
-                body: {
-                  bucket: "curriculos",
-                  filePath,
-                  fileName: attachment.filename,
-                },
-              }
-            );
+            uploadedCount++;
+            uploadedFiles.push(`${from}: ${attachment.filename}`);
 
-            if (analysisError) {
-              console.error(`Analysis error for ${attachment.filename}:`, analysisError);
-              errors.push(`Análise falhou: ${attachment.filename} - ${analysisError.message}`);
-              errorCount++;
-            } else {
-              processedCount++;
-              processedEmails.push(`${from}: ${attachment.filename} (${result?.vagasAnalisadas || 0} vagas)`);
-              console.log(`Successfully processed: ${attachment.filename}`);
-            }
+            // Fire-and-forget analysis (don't block email processing)
+            const p = supabase.functions.invoke("analyze-curriculum-all-vagas", {
+              body: { bucket: "curriculos", filePath, fileName: attachment.filename },
+            }).then(({ error }) => {
+              if (error) console.error(`Analysis error: ${attachment.filename}:`, error);
+              else console.log(`Analysis done: ${attachment.filename}`);
+            }).catch((err) => console.error(`Analysis exception: ${attachment.filename}:`, err));
+            analysisPromises.push(p);
           } catch (attErr: any) {
-            console.error(`Error processing attachment:`, attErr);
             errors.push(`Erro: ${attachment.filename} - ${attErr.message}`);
             errorCount++;
           }
         }
 
         await client.markAsRead(seqNum);
-        console.log(`Marked email ${seqNum} as read`);
       } catch (msgErr: any) {
-        console.error(`Error processing message ${seqNum}:`, msgErr);
         errors.push(`Erro no email ${seqNum}: ${msgErr.message}`);
         errorCount++;
       }
     }
 
     await client.logout();
-    console.log("IMAP disconnected");
+    console.log(`Done. Uploaded: ${uploadedCount}, Skipped: ${skippedCount}, Errors: ${errorCount}, Remaining: ${remaining}`);
+
+    // Wait up to 45s for analyses (best-effort)
+    await Promise.race([
+      Promise.allSettled(analysisPromises),
+      new Promise(resolve => setTimeout(resolve, 45000)),
+    ]);
 
     return new Response(
       JSON.stringify({
         success: true,
-        processedCount,
+        uploadedCount,
+        skippedCount,
         errorCount,
-        processedEmails,
+        remaining,
+        uploadedFiles,
         errors: errors.length > 0 ? errors : undefined,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
