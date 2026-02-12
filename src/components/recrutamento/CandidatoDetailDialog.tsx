@@ -30,9 +30,15 @@ export function CandidatoDetailDialog({ open, onOpenChange, candidato }: Candida
     enabled: !!candidato && open,
   });
 
-  const getPublicUrl = (filePath: string) => {
-    const { data } = supabase.storage.from("curriculos").getPublicUrl(filePath);
-    return data.publicUrl;
+  const openCurriculo = async (filePath: string) => {
+    const { data, error } = await supabase.storage
+      .from("curriculos")
+      .createSignedUrl(filePath, 3600);
+    if (error || !data?.signedUrl) {
+      console.error("Error creating signed URL:", error);
+      return;
+    }
+    window.open(data.signedUrl, "_blank");
   };
 
   if (!candidato) return null;
@@ -200,7 +206,7 @@ export function CandidatoDetailDialog({ open, onOpenChange, candidato }: Candida
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => window.open(getPublicUrl(cv.arquivo_url), "_blank")}
+                          onClick={() => openCurriculo(cv.arquivo_url)}
                         >
                           <ExternalLink className="mr-1 h-3.5 w-3.5" />
                           Abrir
