@@ -53,29 +53,56 @@ import { supabase } from "@/integrations/supabase/client";
 
     const importFromEmail = async () => {
       setIsImportingEmail(true);
-      try {
-        const { data, error } = await supabase.functions.invoke("fetch-email-curriculos");
-        if (error) throw error;
+      let totalUploaded = 0;
+      let totalSkipped = 0;
+      let totalErrors = 0;
+      let hasMore = true;
 
-        if (data?.processedCount > 0) {
+      try {
+        while (hasMore) {
+          const { data, error } = await supabase.functions.invoke("fetch-email-curriculos", {
+            body: { limit: 200 },
+          });
+          if (error) throw error;
+
+          totalUploaded += data?.uploadedCount || 0;
+          totalSkipped += data?.skippedCount || 0;
+          totalErrors += data?.errorCount || 0;
+          const remaining = data?.remaining || 0;
+
+          toast({
+            title: `Importando... ${totalUploaded} currículos`,
+            description: `${remaining} emails restantes${totalErrors > 0 ? `, ${totalErrors} erros` : ""}`,
+          });
+
+          hasMore = remaining > 0 && (data?.uploadedCount > 0 || data?.skippedCount > 0);
+          
+          if (hasMore) {
+            refetch();
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          }
+        }
+
+        if (totalUploaded > 0) {
           toast({
             title: "Importação concluída",
-            description: `${data.processedCount} currículo(s) importado(s) do email${data.errorCount > 0 ? `, ${data.errorCount} com erro` : ""}`,
+            description: `${totalUploaded} currículo(s) importado(s)${totalErrors > 0 ? `, ${totalErrors} com erro` : ""}`,
           });
           refetch();
         } else {
           toast({
             title: "Nenhum currículo encontrado",
-            description: data?.message || "Não há emails não lidos com anexos PDF/DOCX",
+            description: "Não há emails não lidos com anexos PDF/DOCX",
           });
         }
       } catch (error: any) {
         console.error("Email import error:", error);
         toast({
           title: "Erro na importação",
-          description: error.message || "Falha ao buscar currículos do email",
+          description: `${totalUploaded} importados antes do erro: ${error.message}`,
           variant: "destructive",
         });
+        if (totalUploaded > 0) refetch();
       } finally {
         setIsImportingEmail(false);
       }
