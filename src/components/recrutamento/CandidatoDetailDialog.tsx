@@ -1,9 +1,12 @@
- import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
- import { Badge } from "@/components/ui/badge";
- import { Separator } from "@/components/ui/separator";
- import { Candidato } from "@/hooks/useRecrutamento";
- import { User, Mail, Phone, Linkedin, Briefcase, GraduationCap, Globe, Award } from "lucide-react";
- import { ScrollArea } from "@/components/ui/scroll-area";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { Candidato } from "@/hooks/useRecrutamento";
+import { User, Mail, Phone, Linkedin, Briefcase, GraduationCap, Globe, Award, FileText, ExternalLink, Loader2 } from "lucide-react";
+import { ScrollArea } from "@/components/ui/scroll-area";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
  
  interface CandidatoDetailDialogProps {
    open: boolean;
@@ -11,8 +14,28 @@
    candidato: Candidato | null;
  }
  
- export function CandidatoDetailDialog({ open, onOpenChange, candidato }: CandidatoDetailDialogProps) {
-   if (!candidato) return null;
+export function CandidatoDetailDialog({ open, onOpenChange, candidato }: CandidatoDetailDialogProps) {
+  const { data: curriculos = [], isLoading: loadingCurriculos } = useQuery({
+    queryKey: ["curriculos-candidato", candidato?.id],
+    queryFn: async () => {
+      if (!candidato) return [];
+      const { data, error } = await supabase
+        .from("curriculos")
+        .select("id, arquivo_nome, arquivo_url, arquivo_tipo, created_at")
+        .eq("candidato_id", candidato.id)
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data || [];
+    },
+    enabled: !!candidato && open,
+  });
+
+  const getPublicUrl = (filePath: string) => {
+    const { data } = supabase.storage.from("curriculos").getPublicUrl(filePath);
+    return data.publicUrl;
+  };
+
+  if (!candidato) return null;
  
    return (
      <Dialog open={open} onOpenChange={onOpenChange}>
@@ -147,8 +170,48 @@
                  </div>
                </div>
              )}
- 
-             {/* Metadata */}
+
+              {/* Curriculos */}
+              <div>
+                <h4 className="mb-2 flex items-center gap-2 font-medium">
+                  <FileText className="h-4 w-4" />
+                  Currículos
+                </h4>
+                {loadingCurriculos ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Carregando...
+                  </div>
+                ) : curriculos.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">Nenhum currículo encontrado</p>
+                ) : (
+                  <div className="space-y-2">
+                    {curriculos.map((cv) => (
+                      <div key={cv.id} className="flex items-center justify-between rounded-lg border p-3">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <FileText className="h-4 w-4 shrink-0 text-muted-foreground" />
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{cv.arquivo_nome}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {new Date(cv.created_at).toLocaleDateString("pt-BR")}
+                            </p>
+                          </div>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => window.open(getPublicUrl(cv.arquivo_url), "_blank")}
+                        >
+                          <ExternalLink className="mr-1 h-3.5 w-3.5" />
+                          Abrir
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+
              <Separator />
              <div className="text-xs text-muted-foreground">
                <p>Cadastrado em: {new Date(candidato.created_at).toLocaleDateString("pt-BR")}</p>
