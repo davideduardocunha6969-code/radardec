@@ -1,21 +1,24 @@
- import { useState } from "react";
- import { Search, Filter, Download, RefreshCw, User, Mail, Phone, Briefcase, GraduationCap, Upload } from "lucide-react";
+import { useState } from "react";
+import { Search, Filter, Download, RefreshCw, User, Mail, Phone, Briefcase, GraduationCap, Upload, Inbox, Loader2 } from "lucide-react";
  import { Button } from "@/components/ui/button";
  import { Input } from "@/components/ui/input";
  import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
  import { Badge } from "@/components/ui/badge";
  import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
- import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
- import { useCandidatos, Candidato } from "@/hooks/useRecrutamento";
- import { CandidatoDetailDialog } from "@/components/recrutamento/CandidatoDetailDialog";
- import { TalentBankUploader } from "@/components/recrutamento/TalentBankUploader";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { useCandidatos, Candidato } from "@/hooks/useRecrutamento";
+import { CandidatoDetailDialog } from "@/components/recrutamento/CandidatoDetailDialog";
+import { TalentBankUploader } from "@/components/recrutamento/TalentBankUploader";
+import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
  
  export default function BancoTalentos() {
    const [search, setSearch] = useState("");
    const [skillFilter, setSkillFilter] = useState<string>("all");
-   const [selectedCandidato, setSelectedCandidato] = useState<Candidato | null>(null);
-   const [showUploader, setShowUploader] = useState(false);
- 
+    const [selectedCandidato, setSelectedCandidato] = useState<Candidato | null>(null);
+    const [showUploader, setShowUploader] = useState(false);
+    const [isImportingEmail, setIsImportingEmail] = useState(false);
+    const { toast } = useToast();
    const { data: candidatos = [], isLoading, refetch } = useCandidatos(search || undefined);
  
    // Extract unique skills from all candidates
@@ -46,9 +49,39 @@
      link.href = URL.createObjectURL(blob);
      link.download = `banco-talentos-${new Date().toISOString().split("T")[0]}.csv`;
      link.click();
-   };
- 
-   return (
+    };
+
+    const importFromEmail = async () => {
+      setIsImportingEmail(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("fetch-email-curriculos");
+        if (error) throw error;
+
+        if (data?.processedCount > 0) {
+          toast({
+            title: "Importação concluída",
+            description: `${data.processedCount} currículo(s) importado(s) do email${data.errorCount > 0 ? `, ${data.errorCount} com erro` : ""}`,
+          });
+          refetch();
+        } else {
+          toast({
+            title: "Nenhum currículo encontrado",
+            description: data?.message || "Não há emails não lidos com anexos PDF/DOCX",
+          });
+        }
+      } catch (error: any) {
+        console.error("Email import error:", error);
+        toast({
+          title: "Erro na importação",
+          description: error.message || "Falha ao buscar currículos do email",
+          variant: "destructive",
+        });
+      } finally {
+        setIsImportingEmail(false);
+      }
+    };
+
+    return (
      <div className="space-y-6">
        {/* Header */}
        <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
@@ -58,11 +91,19 @@
              {candidatos.length} candidatos cadastrados
            </p>
          </div>
-         <div className="flex gap-2">
-             <Button onClick={() => setShowUploader(!showUploader)}>
-               <Upload className="mr-2 h-4 w-4" />
-               {showUploader ? "Fechar Upload" : "Adicionar Currículos"}
-             </Button>
+          <div className="flex flex-wrap gap-2">
+              <Button onClick={importFromEmail} disabled={isImportingEmail} variant="outline">
+                {isImportingEmail ? (
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                ) : (
+                  <Inbox className="mr-2 h-4 w-4" />
+                )}
+                {isImportingEmail ? "Importando..." : "Importar do Email"}
+              </Button>
+              <Button onClick={() => setShowUploader(!showUploader)}>
+                <Upload className="mr-2 h-4 w-4" />
+                {showUploader ? "Fechar Upload" : "Adicionar Currículos"}
+              </Button>
            <Button variant="outline" onClick={() => refetch()}>
              <RefreshCw className="mr-2 h-4 w-4" />
              Atualizar
