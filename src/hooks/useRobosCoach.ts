@@ -41,6 +41,8 @@ export function useRobosCoachAtivos() {
       if (error) throw error;
       return data as unknown as RoboCoach[];
     },
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

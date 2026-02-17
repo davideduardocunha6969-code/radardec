@@ -5,6 +5,7 @@ import { VoipDialer } from "@/components/crm/VoipDialer";
 import { WhatsAppCallRecorder } from "@/components/crm/WhatsAppCallRecorder";
 import { LeadContatosTab } from "@/components/crm/LeadContatosTab";
 import { RealtimeCoachingPanel } from "@/components/crm/RealtimeCoachingPanel";
+import { CoachingErrorBoundary } from "@/components/crm/coaching/CoachingErrorBoundary";
 import { useRobosCoachAtivos, type RoboCoach } from "@/hooks/useRobosCoach";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -471,13 +472,15 @@ export default function CrmFunilKanban() {
 
                     {/* Real-time coaching panel inside lead card */}
                     {activeRecording && getCoachForLead(detailLead) && (
-                      <RealtimeCoachingPanel
-                        coach={getCoachForLead(detailLead)!}
-                        leadNome={detailLead.nome}
-                        leadContext={detailLead.resumo_caso || undefined}
-                        isRecording={activeRecording}
-                        audioStream={activeAudioStream}
-                      />
+                      <CoachingErrorBoundary>
+                        <RealtimeCoachingPanel
+                          coach={getCoachForLead(detailLead)!}
+                          leadNome={detailLead.nome}
+                          leadContext={detailLead.resumo_caso || undefined}
+                          isRecording={activeRecording}
+                          audioStream={activeAudioStream}
+                        />
+                      </CoachingErrorBoundary>
                     )}
 
                     {detailLead.resumo_caso && <div><label className="text-sm font-medium text-muted-foreground">Resumo do Caso (IA)</label><p className="text-sm bg-muted p-3 rounded-md">{detailLead.resumo_caso}</p></div>}
