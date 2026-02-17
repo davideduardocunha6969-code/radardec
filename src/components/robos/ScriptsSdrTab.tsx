@@ -230,7 +230,7 @@ export default function ScriptsSdrTab() {
       )}
 
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
+        <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col overflow-hidden">
           <DialogHeader>
             <DialogTitle>{editing ? "Editar" : "Novo"} Script SDR</DialogTitle>
           </DialogHeader>
