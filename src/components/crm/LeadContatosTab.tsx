@@ -53,6 +53,7 @@ const statusMap: Record<string, { label: string; icon: typeof Phone; color: stri
   cancelada: { label: "Não atendida", icon: PhoneOff, color: "bg-destructive/10 text-destructive" },
   erro: { label: "Erro", icon: PhoneOff, color: "bg-destructive/10 text-destructive" },
   nao_atendida: { label: "Não atendida", icon: PhoneOff, color: "bg-destructive/10 text-destructive" },
+  interrompida: { label: "Interrompida", icon: PhoneOff, color: "bg-yellow-500/10 text-yellow-700" },
 };
 
 function wasAnswered(status: string) {
