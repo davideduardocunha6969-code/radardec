@@ -273,16 +273,51 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
             </DialogTitle>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh]">
-            <div className="text-sm whitespace-pre-wrap leading-relaxed space-y-2">
-              {((feedbackOpen as any)?.feedback_ia || "").split('\n').filter((l: string) => l.trim()).map((line: string, i: number) => {
-                const isSection = /^(📊|✅|⚠️|💡|NOTA:)/.test(line.trim());
-                const formatted = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+            <div className="text-sm leading-relaxed space-y-1 px-1">
+              {((feedbackOpen as any)?.feedback_ia || "").split('\n').map((line: string, i: number) => {
+                const trimmed = line.trim();
+                if (!trimmed) return <div key={i} className="h-2" />;
+
+                const isNota = /^NOTA:\s*\d/i.test(trimmed);
+                const isSection = /^(📊|✅|⚠️|💡)/.test(trimmed);
+                const isBullet = /^[-•–]/.test(trimmed);
+                const isNumbered = /^\d+[.)]\s/.test(trimmed);
+
+                const formatted = trimmed
+                  .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                  .replace(/\*(.*?)\*/g, '<em>$1</em>');
+
+                if (isNota) {
+                  return (
+                    <div key={i} className="flex items-center gap-2 mb-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
+                      <Star className="h-5 w-5 text-amber-500 fill-amber-500 shrink-0" />
+                      <span className="text-lg font-bold text-primary" dangerouslySetInnerHTML={{ __html: formatted }} />
+                    </div>
+                  );
+                }
+
+                if (isSection) {
+                  return (
+                    <div
+                      key={i}
+                      className="font-semibold text-base text-foreground mt-4 mb-1 border-b border-border/50 pb-1"
+                      dangerouslySetInnerHTML={{ __html: formatted }}
+                    />
+                  );
+                }
+
+                if (isBullet || isNumbered) {
+                  const bulletText = isBullet ? trimmed.replace(/^[-•–]\s*/, '') : trimmed;
+                  return (
+                    <div key={i} className="flex items-start gap-2 ml-2 py-0.5">
+                      <span className="text-muted-foreground mt-1 shrink-0">•</span>
+                      <span dangerouslySetInnerHTML={{ __html: isBullet ? bulletText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>') : formatted }} />
+                    </div>
+                  );
+                }
+
                 return (
-                  <p
-                    key={i}
-                    className={isSection ? 'font-semibold text-primary mt-3 first:mt-0' : 'ml-1'}
-                    dangerouslySetInnerHTML={{ __html: formatted }}
-                  />
+                  <p key={i} className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: formatted }} />
                 );
               })}
             </div>
