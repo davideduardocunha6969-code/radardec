@@ -19,6 +19,19 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useCrmChamadas, type CrmChamada } from "@/hooks/useCrmChamadas";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -43,19 +56,16 @@ function wasAnswered(status: string) {
 export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
   const { data: chamadas, isLoading } = useCrmChamadas(leadId);
   const [transcricaoOpen, setTranscricaoOpen] = useState<CrmChamada | null>(null);
+  const [resumoOpen, setResumoOpen] = useState<CrmChamada | null>(null);
 
   const handleDownloadAudio = async (chamada: CrmChamada) => {
     const url = chamada.audio_url || chamada.recording_url;
     if (!url) return;
-
-    // If it's a storage path (not full URL), get signed URL
     if (!url.startsWith("http")) {
       const { data } = await supabase.storage
         .from("atendimentos-audio")
         .createSignedUrl(url, 3600);
-      if (data?.signedUrl) {
-        window.open(data.signedUrl, "_blank");
-      }
+      if (data?.signedUrl) window.open(data.signedUrl, "_blank");
       return;
     }
     window.open(url, "_blank");
@@ -81,83 +91,96 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
   return (
     <>
       <ScrollArea className="max-h-[400px]">
-        <div className="space-y-3">
-          {chamadas.map((chamada) => {
-            const answered = wasAnswered(chamada.status);
-            const statusInfo = statusMap[chamada.status] || statusMap.iniciando;
-            const StatusIcon = statusInfo.icon;
-            const hasAudio = !!(chamada.audio_url || chamada.recording_url);
-            const hasTranscricao = !!chamada.transcricao;
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead className="text-xs">Data</TableHead>
+              <TableHead className="text-xs">Número</TableHead>
+              <TableHead className="text-xs">Status</TableHead>
+              <TableHead className="text-xs">Duração</TableHead>
+              <TableHead className="text-xs text-right">Ações</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {chamadas.map((chamada) => {
+              const statusInfo = statusMap[chamada.status] || statusMap.iniciando;
+              const hasAudio = !!(chamada.audio_url || chamada.recording_url);
+              const hasTranscricao = !!chamada.transcricao;
+              const hasResumo = !!(wasAnswered(chamada.status) && chamada.resumo_ia);
 
-            return (
-              <div
-                key={chamada.id}
-                className="border rounded-lg p-3 space-y-2"
-              >
-                {/* Header: date + status */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <StatusIcon className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm font-medium">
-                      {format(new Date(chamada.created_at), "dd/MM/yyyy 'às' HH:mm", { locale: ptBR })}
-                    </span>
-                  </div>
-                  <Badge variant="outline" className={statusInfo.color}>
-                    {statusInfo.label}
-                  </Badge>
-                </div>
-
-                {/* Phone number */}
-                <p className="text-xs text-muted-foreground">{chamada.numero_discado}</p>
-
-                {/* Duration */}
-                {chamada.duracao_segundos && (
-                  <p className="text-xs text-muted-foreground">
-                    Duração: {Math.floor(chamada.duracao_segundos / 60)}m {chamada.duracao_segundos % 60}s
-                  </p>
-                )}
-
-                {/* AI Summary */}
-                {answered && chamada.resumo_ia && (
-                  <div className="bg-muted rounded-md p-2">
-                    <div className="flex items-center gap-1 mb-1">
-                      <MessageSquare className="h-3 w-3 text-primary" />
-                      <span className="text-xs font-medium text-primary">Resumo IA</span>
+              return (
+                <TableRow key={chamada.id}>
+                  <TableCell className="text-xs whitespace-nowrap py-2">
+                    {format(new Date(chamada.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                  </TableCell>
+                  <TableCell className="text-xs py-2">{chamada.numero_discado}</TableCell>
+                  <TableCell className="py-2">
+                    <Badge variant="outline" className={`text-[10px] ${statusInfo.color}`}>
+                      {statusInfo.label}
+                    </Badge>
+                  </TableCell>
+                  <TableCell className="text-xs py-2">
+                    {chamada.duracao_segundos
+                      ? `${Math.floor(chamada.duracao_segundos / 60)}m${chamada.duracao_segundos % 60}s`
+                      : "-"}
+                  </TableCell>
+                  <TableCell className="text-right py-2">
+                    <div className="flex items-center justify-end gap-0.5">
+                      {hasResumo && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setResumoOpen(chamada)}>
+                              <MessageSquare className="h-3.5 w-3.5 text-primary" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Resumo IA</TooltipContent>
+                        </Tooltip>
+                      )}
+                      {hasTranscricao && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setTranscricaoOpen(chamada)}>
+                              <FileText className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Transcrição</TooltipContent>
+                        </Tooltip>
+                      )}
+                      {hasAudio && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => handleDownloadAudio(chamada)}>
+                              <Download className="h-3.5 w-3.5" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Download áudio</TooltipContent>
+                        </Tooltip>
+                      )}
                     </div>
-                    <p className="text-xs text-foreground leading-relaxed">{chamada.resumo_ia}</p>
-                  </div>
-                )}
-
-                {/* Actions */}
-                <div className="flex items-center gap-1 pt-1">
-                  {hasTranscricao && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => setTranscricaoOpen(chamada)}
-                    >
-                      <FileText className="h-3 w-3 mr-1" />
-                      Transcrição
-                    </Button>
-                  )}
-                  {hasAudio && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      className="h-7 text-xs"
-                      onClick={() => handleDownloadAudio(chamada)}
-                    >
-                      <Download className="h-3 w-3 mr-1" />
-                      Áudio
-                    </Button>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
+                  </TableCell>
+                </TableRow>
+              );
+            })}
+          </TableBody>
+        </Table>
       </ScrollArea>
+
+      {/* Resumo IA dialog */}
+      <Dialog open={!!resumoOpen} onOpenChange={(o) => !o && setResumoOpen(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <MessageSquare className="h-4 w-4 text-primary" />
+              Resumo da Ligação (IA)
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            <p className="text-sm whitespace-pre-wrap leading-relaxed">
+              {resumoOpen?.resumo_ia}
+            </p>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
 
       {/* Transcription dialog */}
       <Dialog open={!!transcricaoOpen} onOpenChange={(o) => !o && setTranscricaoOpen(null)}>
