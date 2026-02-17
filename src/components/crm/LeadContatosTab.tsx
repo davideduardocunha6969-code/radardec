@@ -189,9 +189,21 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
             <DialogTitle>Transcrição da Ligação</DialogTitle>
           </DialogHeader>
           <ScrollArea className="max-h-[60vh]">
-            <p className="text-sm whitespace-pre-wrap leading-relaxed">
-              {transcricaoOpen?.transcricao}
-            </p>
+            <div className="space-y-3">
+              {(transcricaoOpen?.transcricao || "").split("\n").filter(Boolean).map((line, i) => {
+                const match = line.match(/^\[(.+?)\]:\s*(.*)$/);
+                if (match) {
+                  const [, speaker, text] = match;
+                  return (
+                    <div key={i}>
+                      <span className="text-xs font-semibold text-primary">{speaker}</span>
+                      <p className="text-sm leading-relaxed mt-0.5">{text}</p>
+                    </div>
+                  );
+                }
+                return <p key={i} className="text-sm leading-relaxed">{line}</p>;
+              })}
+            </div>
           </ScrollArea>
         </DialogContent>
       </Dialog>

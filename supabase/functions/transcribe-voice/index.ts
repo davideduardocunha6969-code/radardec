@@ -20,20 +20,24 @@ Deno.serve(async (req) => {
 
     let audioFile: File | Blob | null = null;
     let fileName = "audio.webm";
+    let speakerNames: Record<string, string> = {};
 
     const contentType = req.headers.get("content-type") || "";
 
     if (contentType.includes("multipart/form-data")) {
-      // Direct file upload via formData
       const formData = await req.formData();
       audioFile = formData.get("audio") as File;
       if (audioFile && (audioFile as File).name) {
         fileName = (audioFile as File).name;
       }
+      const speakerNamesStr = formData.get("speakerNames") as string;
+      if (speakerNamesStr) {
+        try { speakerNames = JSON.parse(speakerNamesStr); } catch {}
+      }
     } else {
-      // JSON body with storage reference
       const body = await req.json();
       const { audioUrl, bucketName } = body;
+      if (body.speakerNames) speakerNames = body.speakerNames;
 
       if (!audioUrl || !bucketName) {
         throw new Error("audioUrl e bucketName são obrigatórios");
@@ -73,6 +77,7 @@ Deno.serve(async (req) => {
     elevenLabsFormData.append("file", audioFile, fileName);
     elevenLabsFormData.append("model_id", "scribe_v2");
     elevenLabsFormData.append("language_code", "por");
+    elevenLabsFormData.append("diarize", "true");
 
     const response = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
       method: "POST",
@@ -89,12 +94,40 @@ Deno.serve(async (req) => {
     }
 
     const transcriptionResult = await response.json();
-    const text = transcriptionResult.text || "";
+    const words = transcriptionResult.words || [];
+    const rawText = transcriptionResult.text || "";
 
-    console.log("Transcrição concluída:", text.substring(0, 100));
+    // Build structured transcription with speaker segments
+    let structuredText = "";
+    let currentSpeaker: string | null = null;
+    let currentSegment = "";
+
+    for (const word of words) {
+      const speaker = word.speaker_id || word.speaker || "unknown";
+      if (speaker !== currentSpeaker) {
+        if (currentSpeaker !== null && currentSegment.trim()) {
+          const name = speakerNames[currentSpeaker] || `Locutor ${currentSpeaker}`;
+          structuredText += `[${name}]: ${currentSegment.trim()}\n\n`;
+        }
+        currentSpeaker = speaker;
+        currentSegment = word.text || "";
+      } else {
+        currentSegment += word.text || "";
+      }
+    }
+    // Flush last segment
+    if (currentSpeaker !== null && currentSegment.trim()) {
+      const name = speakerNames[currentSpeaker] || `Locutor ${currentSpeaker}`;
+      structuredText += `[${name}]: ${currentSegment.trim()}\n`;
+    }
+
+    // If diarization didn't produce speakers, fall back to raw text
+    const finalText = structuredText.trim() || rawText;
+
+    console.log("Transcrição concluída:", finalText.substring(0, 100));
 
     return new Response(
-      JSON.stringify({ text }),
+      JSON.stringify({ text: finalText }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   } catch (error) {
