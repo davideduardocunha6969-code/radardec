@@ -353,15 +353,7 @@ export default function CrmFunilKanban() {
       <Dialog open={!!detailLead} onOpenChange={(o) => !o && setDetailLead(null)}>
         <DialogContent className="max-w-[1200px] w-[95vw] max-h-[90vh] overflow-hidden flex flex-col">
           <DialogHeader>
-            <div className="flex items-center gap-2">
-              <DialogTitle className="flex-1">{detailLead?.nome}</DialogTitle>
-              {detailLead && (
-                <div className="flex items-center gap-1 shrink-0">
-                  <WhatsAppCallRecorder leadId={detailLead.id} leadNome={detailLead.nome} telefones={detailLead.telefones} />
-                  <VoipDialer lead={detailLead} />
-                </div>
-              )}
-            </div>
+            <DialogTitle>{detailLead?.nome}</DialogTitle>
           </DialogHeader>
           {detailLead && (
             <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
@@ -392,7 +384,10 @@ export default function CrmFunilKanban() {
                         <Phone className="h-4 w-4 text-muted-foreground" />
                         <span className="text-sm">{t.numero}</span>
                         <Badge variant="outline" className="text-xs">{t.tipo}</Badge>
-                        <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto text-primary"><Phone className="h-4 w-4" /></Button>
+                        <div className="flex items-center gap-1 ml-auto">
+                          <WhatsAppCallRecorder leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} />
+                          <VoipDialer leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} />
+                        </div>
                       </div>
                     ))}
                   </div>
