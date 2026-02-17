@@ -27,6 +27,7 @@ import AtendimentosClosers from "./pages/AtendimentosClosers";
 import CrmOutbound from "./pages/CrmOutbound";
 import CrmFunilKanban from "./pages/CrmFunilKanban";
  import PerfilIA from "./pages/PerfilIA";
+ import RobosCoach from "./pages/RobosCoach";
  import RecrutamentoLayout from "./pages/recrutamento";
  import Vagas from "./pages/recrutamento/Vagas";
  import BancoTalentos from "./pages/recrutamento/BancoTalentos";
@@ -57,6 +58,7 @@ const App = () => (
               <Route path="/crm-outbound" element={<ProtectedRoute pageKey="crm-outbound"><CrmOutbound /></ProtectedRoute>} />
               <Route path="/crm-outbound/:funilId" element={<ProtectedRoute pageKey="crm-outbound"><CrmFunilKanban /></ProtectedRoute>} />
               <Route path="/robos/perfil-ia" element={<ProtectedRoute pageKey="robos-perfil-ia"><PerfilIA /></ProtectedRoute>} />
+              <Route path="/robos/coach" element={<ProtectedRoute pageKey="robos-coach"><RobosCoach /></ProtectedRoute>} />
               <Route path="/robos/transcricao" element={<ProtectedRoute pageKey="robos-transcricao"><Transcricao /></ProtectedRoute>} />
               <Route path="/robos/prompts" element={<ProtectedRoute pageKey="robos-prompts"><AiPrompts /></ProtectedRoute>} />
               <Route path="/robos/prompts-modelador" element={<ProtectedRoute pageKey="robos-prompts-modelador"><PromptsModelador /></ProtectedRoute>} />

@@ -25,6 +25,7 @@ interface WhatsAppCallRecorderProps {
   leadId: string;
   leadNome: string;
   numero: string;
+  onRecordingStateChange?: (isRecording: boolean, audioStream: MediaStream | null) => void;
 }
 
 type RecordingStatus = "idle" | "recording" | "paused" | "processing" | "done" | "error";
@@ -37,7 +38,7 @@ const formatPhone = (numero: string): string => {
   return `55${digits}`;
 };
 
-export function WhatsAppCallRecorder({ leadId, leadNome, numero }: WhatsAppCallRecorderProps) {
+export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStateChange }: WhatsAppCallRecorderProps) {
   const [status, setStatus] = useState<RecordingStatus>("idle");
   const [duration, setDuration] = useState(0);
   const [hasSystemAudio, setHasSystemAudio] = useState(false);
@@ -55,6 +56,7 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero }: WhatsAppCallR
   const animationFrameRef = useRef<number | null>(null);
   const streamsRef = useRef<MediaStream[]>([]);
   const chamadaIdRef = useRef<string | null>(null);
+  const mixedStreamRef = useRef<MediaStream | null>(null);
 
   const createChamada = useCreateChamada();
   const updateChamada = useUpdateChamada();
@@ -250,6 +252,8 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero }: WhatsAppCallR
       setDuration(0);
       timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000);
       updateLevels();
+      mixedStreamRef.current = destination.stream;
+      onRecordingStateChange?.(true, destination.stream);
 
       // 5. Create chamada record
       const chamada = await createChamada.mutateAsync({
@@ -294,8 +298,10 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero }: WhatsAppCallR
       setHasMicAudio(false);
       setMicLevel(0);
       setSystemLevel(0);
+      mixedStreamRef.current = null;
+      onRecordingStateChange?.(false, null);
     }
-  }, [status, stopAllStreams]);
+  }, [status, stopAllStreams, onRecordingStateChange]);
 
   const togglePause = () => {
     if (!mediaRecorderRef.current) return;
