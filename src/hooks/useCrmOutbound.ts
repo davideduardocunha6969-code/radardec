@@ -20,6 +20,7 @@ export interface CrmColuna {
   nome: string;
   cor: string | null;
   ordem: number;
+  robo_coach_id: string | null;
   created_at: string;
 }
 

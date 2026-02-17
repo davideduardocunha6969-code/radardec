@@ -4,6 +4,8 @@ import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useDeleteColu
 import { VoipDialer } from "@/components/crm/VoipDialer";
 import { WhatsAppCallRecorder } from "@/components/crm/WhatsAppCallRecorder";
 import { LeadContatosTab } from "@/components/crm/LeadContatosTab";
+import { RealtimeCoachingPanel } from "@/components/crm/RealtimeCoachingPanel";
+import { useRobosCoachAtivos, type RoboCoach } from "@/hooks/useRobosCoach";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,6 +25,7 @@ export default function CrmFunilKanban() {
   const funil = funis?.find((f) => f.id === funilId);
   const { data: colunas, isLoading: colunasLoading } = useCrmColunas(funilId);
   const { data: leads, isLoading: leadsLoading } = useCrmLeads(funilId);
+  const { data: robosCoach } = useRobosCoachAtivos();
   const createColuna = useCreateColuna();
   const deleteColuna = useDeleteColuna();
   const createLead = useCreateLead();
@@ -33,11 +36,25 @@ export default function CrmFunilKanban() {
   const [newColunaDialog, setNewColunaDialog] = useState(false);
   const [newColunaName, setNewColunaName] = useState("");
   const [newColunaColor, setNewColunaColor] = useState("#6366f1");
+  const [newColunaCoachId, setNewColunaCoachId] = useState("");
 
   const [leadDialog, setLeadDialog] = useState(false);
   const [leadForm, setLeadForm] = useState({ nome: "", endereco: "", telefones: [{ numero: "", tipo: "celular" }] as LeadTelefone[], coluna_id: "" });
 
   const [detailLead, setDetailLead] = useState<CrmLead | null>(null);
+  const [activeRecording, setActiveRecording] = useState(false);
+  const [activeAudioStream, setActiveAudioStream] = useState<MediaStream | null>(null);
+
+  const getCoachForLead = useCallback((lead: CrmLead): RoboCoach | null => {
+    const coluna = colunas?.find(c => c.id === lead.coluna_id);
+    if (!coluna?.robo_coach_id || !robosCoach) return null;
+    return robosCoach.find(r => r.id === coluna.robo_coach_id) || null;
+  }, [colunas, robosCoach]);
+
+  const handleRecordingStateChange = useCallback((isRecording: boolean, stream: MediaStream | null) => {
+    setActiveRecording(isRecording);
+    setActiveAudioStream(stream);
+  }, []);
 
   const [uploadDialog, setUploadDialog] = useState(false);
   const [uploadColunaId, setUploadColunaId] = useState("");
@@ -52,8 +69,8 @@ export default function CrmFunilKanban() {
 
   const handleCreateColuna = () => {
     if (!newColunaName || !funilId) return;
-    createColuna.mutate({ funil_id: funilId, nome: newColunaName, cor: newColunaColor, ordem: (colunas?.length || 0) }, {
-      onSuccess: () => { setNewColunaDialog(false); setNewColunaName(""); },
+    createColuna.mutate({ funil_id: funilId, nome: newColunaName, cor: newColunaColor, ordem: (colunas?.length || 0), robo_coach_id: newColunaCoachId || null } as any, {
+      onSuccess: () => { setNewColunaDialog(false); setNewColunaName(""); setNewColunaCoachId(""); },
     });
   };
 
@@ -229,6 +246,14 @@ export default function CrmFunilKanban() {
           <div className="space-y-4">
             <div><label className="text-sm font-medium">Nome</label><Input value={newColunaName} onChange={(e) => setNewColunaName(e.target.value)} placeholder="Ex: Primeiro Contato" /></div>
             <div><label className="text-sm font-medium">Cor</label><Input type="color" value={newColunaColor} onChange={(e) => setNewColunaColor(e.target.value)} className="h-10 w-20" /></div>
+            <div>
+              <label className="text-sm font-medium">Robô Coach (opcional)</label>
+              <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={newColunaCoachId} onChange={(e) => setNewColunaCoachId(e.target.value)}>
+                <option value="">Nenhum</option>
+                {robosCoach?.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+              </select>
+              <p className="text-xs text-muted-foreground mt-1">A IA coach auxiliará SDRs durante ligações com leads nesta coluna.</p>
+            </div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setNewColunaDialog(false)}>Cancelar</Button><Button onClick={handleCreateColuna} disabled={!newColunaName}>Criar</Button></DialogFooter>
         </DialogContent>
@@ -385,12 +410,22 @@ export default function CrmFunilKanban() {
                         <span className="text-sm">{t.numero}</span>
                         <Badge variant="outline" className="text-xs">{t.tipo}</Badge>
                         <div className="flex items-center gap-1 ml-auto">
-                          <WhatsAppCallRecorder leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} />
+                          <WhatsAppCallRecorder leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} onRecordingStateChange={handleRecordingStateChange} />
                           <VoipDialer leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} />
                         </div>
                       </div>
                     ))}
                   </div>
+                  {/* Real-time coaching panel */}
+                  {activeRecording && getCoachForLead(detailLead) && (
+                    <RealtimeCoachingPanel
+                      coach={getCoachForLead(detailLead)!}
+                      leadNome={detailLead.nome}
+                      leadContext={detailLead.resumo_caso || undefined}
+                      isRecording={activeRecording}
+                      audioStream={activeAudioStream}
+                    />
+                  )}
                   {detailLead.resumo_caso && <div><label className="text-sm font-medium text-muted-foreground">Resumo do Caso (IA)</label><p className="text-sm bg-muted p-3 rounded-md">{detailLead.resumo_caso}</p></div>}
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Mover para coluna</label>

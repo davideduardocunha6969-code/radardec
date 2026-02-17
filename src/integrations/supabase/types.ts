@@ -605,6 +605,7 @@ export type Database = {
           id: string
           nome: string
           ordem: number
+          robo_coach_id: string | null
         }
         Insert: {
           cor?: string | null
@@ -613,6 +614,7 @@ export type Database = {
           id?: string
           nome: string
           ordem?: number
+          robo_coach_id?: string | null
         }
         Update: {
           cor?: string | null
@@ -621,6 +623,7 @@ export type Database = {
           id?: string
           nome?: string
           ordem?: number
+          robo_coach_id?: string | null
         }
         Relationships: [
           {
@@ -628,6 +631,13 @@ export type Database = {
             columns: ["funil_id"]
             isOneToOne: false
             referencedRelation: "crm_funis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_colunas_robo_coach_id_fkey"
+            columns: ["robo_coach_id"]
+            isOneToOne: false
+            referencedRelation: "robos_coach"
             referencedColumns: ["id"]
           },
         ]
@@ -1360,6 +1370,39 @@ export type Database = {
           created_at?: string
           display_name?: string
           id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      robos_coach: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          id: string
+          instrucoes: string
+          nome: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          instrucoes: string
+          nome: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          instrucoes?: string
+          nome?: string
           updated_at?: string
           user_id?: string
         }
