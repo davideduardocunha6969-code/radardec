@@ -188,6 +188,7 @@ export function RealtimeCoachingPanel({
             iconColor="text-emerald-500"
             items={apresentacaoItems}
             completedIds={apresentacaoDone}
+            className="flex-none"
           />
         )}
         <ChecklistCard
