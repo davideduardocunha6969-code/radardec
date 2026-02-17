@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useDeleteColuna, useCreateLead, useUpdateLead, useDeleteLead, useBulkCreateLeads, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
 import { Button } from "@/components/ui/button";
@@ -6,10 +6,11 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, FileSpreadsheet, AlertCircle } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
+import * as XLSX from "xlsx";
 
 export default function CrmFunilKanban() {
   const { funilId } = useParams<{ funilId: string }>();
@@ -37,6 +38,9 @@ export default function CrmFunilKanban() {
   const [uploadDialog, setUploadDialog] = useState(false);
   const [uploadColunaId, setUploadColunaId] = useState("");
   const [csvText, setCsvText] = useState("");
+  const [uploadMode, setUploadMode] = useState<"text" | "file">("file");
+  const [parsedPreview, setParsedPreview] = useState<{ nome: string; endereco?: string; telefones: LeadTelefone[] }[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const leadsByColuna = useCallback((colunaId: string) => {
     return (leads || []).filter((l) => l.coluna_id === colunaId);
@@ -57,25 +61,56 @@ export default function CrmFunilKanban() {
     });
   };
 
-  const handleCsvImport = () => {
-    if (!csvText.trim() || !uploadColunaId || !funilId) return;
-    const lines = csvText.trim().split("\n");
-    const parsedLeads: { nome: string; endereco?: string; telefones: LeadTelefone[] }[] = [];
-    
-    for (const line of lines) {
-      const parts = line.split(";").map((s) => s.trim());
-      if (!parts[0]) continue;
+  const parseLeadsFromRows = (rows: string[][]): { nome: string; endereco?: string; telefones: LeadTelefone[] }[] => {
+    const parsed: { nome: string; endereco?: string; telefones: LeadTelefone[] }[] = [];
+    for (const parts of rows) {
+      if (!parts[0]?.trim()) continue;
       const telefones: LeadTelefone[] = [];
-      // parts[0] = nome, parts[1] = endereco, parts[2..] = telefones
       for (let i = 2; i < parts.length; i++) {
-        if (parts[i]) telefones.push({ numero: parts[i], tipo: "celular" });
+        if (parts[i]?.trim()) telefones.push({ numero: parts[i].trim(), tipo: "celular" });
       }
-      parsedLeads.push({ nome: parts[0], endereco: parts[1] || undefined, telefones });
+      parsed.push({ nome: parts[0].trim(), endereco: parts[1]?.trim() || undefined, telefones });
     }
+    return parsed;
+  };
 
-    if (!parsedLeads.length) { toast.error("Nenhum lead encontrado no CSV"); return; }
-    bulkCreate.mutate({ funilId, colunaId: uploadColunaId, leads: parsedLeads }, {
-      onSuccess: () => { setUploadDialog(false); setCsvText(""); },
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (evt) => {
+      try {
+        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
+        const workbook = XLSX.read(data, { type: "array" });
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows: string[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
+        // Skip header row if first cell matches expected header
+        const startIdx = rows[0]?.[0]?.toString().toLowerCase().includes("nome") ? 1 : 0;
+        const dataRows = rows.slice(startIdx).map(r => r.map(c => String(c)));
+        const leads = parseLeadsFromRows(dataRows);
+        setParsedPreview(leads);
+        if (!leads.length) toast.error("Nenhum lead encontrado na planilha");
+        else toast.success(`${leads.length} leads encontrados na planilha`);
+      } catch {
+        toast.error("Erro ao ler a planilha. Verifique o formato.");
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  };
+
+  const handleCsvImport = () => {
+    if (!uploadColunaId || !funilId) return;
+    let leadsToImport = parsedPreview;
+    if (uploadMode === "text") {
+      if (!csvText.trim()) return;
+      const lines = csvText.trim().split("\n");
+      const rows = lines.map(l => l.split(";").map(s => s.trim()));
+      leadsToImport = parseLeadsFromRows(rows);
+    }
+    if (!leadsToImport.length) { toast.error("Nenhum lead encontrado"); return; }
+    bulkCreate.mutate({ funilId, colunaId: uploadColunaId, leads: leadsToImport }, {
+      onSuccess: () => { setUploadDialog(false); setCsvText(""); setParsedPreview([]); },
     });
   };
 
@@ -194,10 +229,29 @@ export default function CrmFunilKanban() {
       </Dialog>
 
       {/* Dialog Upload CSV */}
-      <Dialog open={uploadDialog} onOpenChange={setUploadDialog}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader><DialogTitle>Importar Lista de Leads</DialogTitle><DialogDescription>Cole os dados no formato: Nome;Endereço;Telefone1;Telefone2;...</DialogDescription></DialogHeader>
+      <Dialog open={uploadDialog} onOpenChange={(o) => { setUploadDialog(o); if (!o) { setCsvText(""); setParsedPreview([]); setUploadMode("file"); } }}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Importar Lista de Leads</DialogTitle>
+            <DialogDescription>Envie uma planilha Excel ou cole os dados manualmente.</DialogDescription>
+          </DialogHeader>
           <div className="space-y-4">
+            {/* Instruções de formato */}
+            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2">
+              <div className="flex items-center gap-2 font-semibold text-sm text-primary">
+                <AlertCircle className="h-4 w-4" />
+                Formato obrigatório das colunas (nesta ordem):
+              </div>
+              <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
+                <Badge variant="outline" className="justify-center">Coluna A</Badge><span>Nome do lead <span className="text-destructive">*</span></span>
+                <Badge variant="outline" className="justify-center">Coluna B</Badge><span>Endereço</span>
+                <Badge variant="outline" className="justify-center">Coluna C</Badge><span>Telefone 1</span>
+                <Badge variant="outline" className="justify-center">Coluna D</Badge><span>Telefone 2 (opcional)</span>
+                <Badge variant="outline" className="justify-center">Coluna E+</Badge><span>Telefones adicionais (opcional)</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-1">A primeira linha pode ser o cabeçalho (será ignorada automaticamente se começar com "Nome").</p>
+            </div>
+
             {colunas && colunas.length > 0 && (
               <div>
                 <label className="text-sm font-medium">Coluna de destino</label>
@@ -206,11 +260,51 @@ export default function CrmFunilKanban() {
                 </select>
               </div>
             )}
-            <Textarea rows={10} value={csvText} onChange={(e) => setCsvText(e.target.value)} placeholder={"João Silva;Rua A, 123;(11)99999-0001\nMaria Santos;Rua B, 456;(11)99999-0002;(11)99999-0003"} />
+
+            {/* Tabs: File vs Text */}
+            <div className="flex gap-2">
+              <Button variant={uploadMode === "file" ? "default" : "outline"} size="sm" onClick={() => setUploadMode("file")}>
+                <FileSpreadsheet className="h-4 w-4 mr-1" />Planilha Excel
+              </Button>
+              <Button variant={uploadMode === "text" ? "default" : "outline"} size="sm" onClick={() => setUploadMode("text")}>
+                <Upload className="h-4 w-4 mr-1" />Colar Texto
+              </Button>
+            </div>
+
+            {uploadMode === "file" ? (
+              <div className="space-y-3">
+                <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors" onClick={() => fileInputRef.current?.click()}>
+                  <FileSpreadsheet className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
+                  <p className="text-sm font-medium">Clique para selecionar a planilha</p>
+                  <p className="text-xs text-muted-foreground">.xlsx, .xls, .csv</p>
+                </div>
+                <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFileUpload} />
+                {parsedPreview.length > 0 && (
+                  <div className="rounded-md border p-3 space-y-2">
+                    <p className="text-sm font-medium text-primary">{parsedPreview.length} leads encontrados</p>
+                    <div className="max-h-40 overflow-y-auto space-y-1">
+                      {parsedPreview.slice(0, 5).map((l, i) => (
+                        <div key={i} className="text-xs flex gap-2">
+                          <span className="font-medium">{l.nome}</span>
+                          {l.endereco && <span className="text-muted-foreground">• {l.endereco}</span>}
+                          {l.telefones.map((t, j) => <Badge key={j} variant="secondary" className="text-xs">{t.numero}</Badge>)}
+                        </div>
+                      ))}
+                      {parsedPreview.length > 5 && <p className="text-xs text-muted-foreground">... e mais {parsedPreview.length - 5} leads</p>}
+                    </div>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <Textarea rows={8} value={csvText} onChange={(e) => setCsvText(e.target.value)} placeholder={"João Silva;Rua A, 123;(11)99999-0001\nMaria Santos;Rua B, 456;(11)99999-0002;(11)99999-0003"} />
+            )}
           </div>
-          <DialogFooter><Button variant="outline" onClick={() => setUploadDialog(false)}>Cancelar</Button><Button onClick={handleCsvImport} disabled={bulkCreate.isPending || !csvText.trim()}>
-            {bulkCreate.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Importar
-          </Button></DialogFooter>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setUploadDialog(false)}>Cancelar</Button>
+            <Button onClick={handleCsvImport} disabled={bulkCreate.isPending || (uploadMode === "file" ? !parsedPreview.length : !csvText.trim())}>
+              {bulkCreate.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Importar
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
