@@ -26,6 +26,7 @@ import AtividadesMarketing from "./pages/AtividadesMarketing";
 import AtendimentosClosers from "./pages/AtendimentosClosers";
 import CrmOutbound from "./pages/CrmOutbound";
 import CrmFunilKanban from "./pages/CrmFunilKanban";
+import RadarOutbound from "./pages/RadarOutbound";
  import PerfilIA from "./pages/PerfilIA";
  import RobosCoach from "./pages/RobosCoach";
  import RecrutamentoLayout from "./pages/recrutamento";
@@ -55,6 +56,7 @@ const App = () => (
               <Route path="/radar-previdenciario" element={<ProtectedRoute pageKey="radar-previdenciario"><RadarPrevidenciario /></ProtectedRoute>} />
               <Route path="/radar-trabalhista" element={<ProtectedRoute pageKey="radar-trabalhista"><RadarTrabalhista /></ProtectedRoute>} />
               <Route path="/comercial/atendimentos" element={<ProtectedRoute pageKey="comercial-atendimentos"><AtendimentosClosers /></ProtectedRoute>} />
+              <Route path="/radar-outbound" element={<ProtectedRoute pageKey="radar-outbound"><RadarOutbound /></ProtectedRoute>} />
               <Route path="/crm-outbound" element={<ProtectedRoute pageKey="crm-outbound"><CrmOutbound /></ProtectedRoute>} />
               <Route path="/crm-outbound/:funilId" element={<ProtectedRoute pageKey="crm-outbound"><CrmFunilKanban /></ProtectedRoute>} />
               <Route path="/robos/perfil-ia" element={<ProtectedRoute pageKey="robos-perfil-ia"><PerfilIA /></ProtectedRoute>} />
