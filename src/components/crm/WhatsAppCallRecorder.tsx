@@ -118,9 +118,26 @@ export function WhatsAppCallRecorder({ leadId, leadNome, telefones }: WhatsAppCa
         });
       }
 
-      // Transcribe
+      // Transcribe with speaker names
+      const { data: userData } = await supabase.auth.getUser();
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("display_name")
+        .eq("user_id", userData.user?.id || "")
+        .single();
+      const userName = profileData?.display_name || "Operador";
+
       const { data: transcData, error: transcErr } = await supabase.functions.invoke("transcribe-voice", {
-        body: { audioUrl: fileName, bucketName: "atendimentos-audio" },
+        body: {
+          audioUrl: fileName,
+          bucketName: "atendimentos-audio",
+          speakerNames: {
+            "speaker_0": userName,
+            "speaker_1": leadNome,
+            "0": userName,
+            "1": leadNome,
+          },
+        },
       });
 
       if (transcErr) {
