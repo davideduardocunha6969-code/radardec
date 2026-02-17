@@ -544,8 +544,10 @@ export type Database = {
           canal: string
           created_at: string
           duracao_segundos: number | null
+          feedback_ia: string | null
           id: string
           lead_id: string
+          nota_ia: number | null
           numero_discado: string
           recording_url: string | null
           resumo_ia: string | null
@@ -560,8 +562,10 @@ export type Database = {
           canal?: string
           created_at?: string
           duracao_segundos?: number | null
+          feedback_ia?: string | null
           id?: string
           lead_id: string
+          nota_ia?: number | null
           numero_discado: string
           recording_url?: string | null
           resumo_ia?: string | null
@@ -576,8 +580,10 @@ export type Database = {
           canal?: string
           created_at?: string
           duracao_segundos?: number | null
+          feedback_ia?: string | null
           id?: string
           lead_id?: string
+          nota_ia?: number | null
           numero_discado?: string
           recording_url?: string | null
           resumo_ia?: string | null
@@ -1383,6 +1389,7 @@ export type Database = {
           id: string
           instrucoes: string
           nome: string
+          tipo: string
           updated_at: string
           user_id: string
         }
@@ -1393,6 +1400,7 @@ export type Database = {
           id?: string
           instrucoes: string
           nome: string
+          tipo?: string
           updated_at?: string
           user_id: string
         }
@@ -1403,6 +1411,7 @@ export type Database = {
           id?: string
           instrucoes?: string
           nome?: string
+          tipo?: string
           updated_at?: string
           user_id?: string
         }

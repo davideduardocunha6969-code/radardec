@@ -1,0 +1,180 @@
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers":
+    "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
+};
+
+serve(async (req) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { headers: corsHeaders });
+  }
+
+  try {
+    const { chamadaId } = await req.json();
+    if (!chamadaId) {
+      return new Response(JSON.stringify({ error: "chamadaId is required" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+    if (!LOVABLE_API_KEY) {
+      return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
+    const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // Fetch the chamada
+    const { data: chamada, error: chamadaErr } = await supabase
+      .from("crm_chamadas")
+      .select("*")
+      .eq("id", chamadaId)
+      .single();
+
+    if (chamadaErr || !chamada) {
+      return new Response(JSON.stringify({ error: "Chamada not found" }), {
+        status: 404,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    if (!chamada.transcricao) {
+      return new Response(JSON.stringify({ error: "No transcription available" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // Fetch the lead info
+    const { data: lead } = await supabase
+      .from("crm_leads")
+      .select("nome, coluna_id")
+      .eq("id", chamada.lead_id)
+      .single();
+
+    // Fetch the feedback coach instructions
+    const { data: feedbackCoach } = await supabase
+      .from("robos_coach")
+      .select("instrucoes")
+      .eq("tipo", "feedback_sdr")
+      .eq("ativo", true)
+      .limit(1)
+      .single();
+
+    const coachInstructions = feedbackCoach?.instrucoes || "";
+
+    const systemPrompt = `Você é um avaliador de atendimentos de SDR (Sales Development Representative).
+
+${coachInstructions ? `INSTRUÇÕES ESPECÍFICAS DO GESTOR:\n${coachInstructions}\n` : ""}
+
+Analise a transcrição da ligação abaixo e forneça:
+
+1. Uma NOTA de 0 a 10 para o atendimento do SDR
+2. Um FEEDBACK detalhado e construtivo
+
+REGRAS:
+- Responda em português, de forma direta e profissional.
+- NÃO use jargões internos, siglas ou metodologias (como RECA, RALOCA, RAPOVECA, etc.).
+- Use linguagem simples e ações concretas.
+- Responda SEMPRE e SOMENTE neste formato:
+
+NOTA: [número de 0 a 10]
+
+📊 **Resumo do Atendimento**
+[Breve resumo do que aconteceu na ligação em 2-3 frases]
+
+✅ **Pontos Positivos**
+[Liste os pontos positivos do SDR durante a ligação]
+
+⚠️ **Pontos de Melhoria**
+[Liste os pontos que o SDR precisa melhorar, com sugestões práticas]
+
+💡 **Dicas para Próxima Ligação**
+[Sugestões concretas do que fazer diferente na próxima abordagem]
+
+CONTEXTO:
+- Lead: ${lead?.nome || "Desconhecido"}
+- Canal: ${chamada.canal}
+- Duração: ${chamada.duracao_segundos ? `${Math.floor(chamada.duracao_segundos / 60)}m${chamada.duracao_segundos % 60}s` : "N/A"}`;
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Transcrição da ligação:\n\n${chamada.transcricao}` },
+        ],
+        stream: false,
+      }),
+    });
+
+    if (!response.ok) {
+      if (response.status === 429) {
+        return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+          status: 429,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      if (response.status === 402) {
+        return new Response(JSON.stringify({ error: "Payment required" }), {
+          status: 402,
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+      const t = await response.text();
+      console.error("AI error:", response.status, t);
+      return new Response(JSON.stringify({ error: "AI gateway error" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const result = await response.json();
+    const feedback = result.choices?.[0]?.message?.content || "";
+
+    // Extract nota from feedback
+    const notaMatch = feedback.match(/NOTA:\s*(\d+)/i);
+    const nota = notaMatch ? parseInt(notaMatch[1], 10) : null;
+
+    // Update the chamada with feedback
+    const { error: updateErr } = await supabase
+      .from("crm_chamadas")
+      .update({
+        feedback_ia: feedback,
+        nota_ia: nota,
+      })
+      .eq("id", chamadaId);
+
+    if (updateErr) {
+      console.error("Update error:", updateErr);
+      return new Response(JSON.stringify({ error: "Failed to save feedback" }), {
+        status: 500,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    return new Response(JSON.stringify({ feedback, nota }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  } catch (e) {
+    console.error("feedback-chamada error:", e);
+    return new Response(JSON.stringify({ error: e.message }), {
+      status: 500,
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+    });
+  }
+});
