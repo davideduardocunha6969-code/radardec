@@ -37,6 +37,7 @@ const radarItems = [
 // Comercial subitems
 const comercialItems = [
   { title: "Atendimentos", url: "/comercial/atendimentos", icon: Phone, pageKey: "comercial-atendimentos" },
+  { title: "CRM Outbound", url: "/crm-outbound", icon: TrendingUp, pageKey: "crm-outbound" },
 ];
  
  // Recrutamento
@@ -97,7 +98,7 @@ export function AppSidebar() {
 
   // Verifica se algum item comercial está ativo
   const isAnyComercialActive = useMemo(() => {
-    return comercialItems.some(item => isActive(item.url));
+    return comercialItems.some(item => isActive(item.url)) || currentPath.startsWith("/crm-outbound");
   }, [currentPath]);
 
   // Verifica se algum robô está ativo
