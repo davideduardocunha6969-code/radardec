@@ -225,13 +225,14 @@ export function useBulkCreateLeads() {
   const queryClient = useQueryClient();
   const { user } = useAuthContext();
   return useMutation({
-    mutationFn: async ({ funilId, colunaId, leads }: { funilId: string; colunaId: string; leads: { nome: string; endereco?: string; telefones: LeadTelefone[] }[] }) => {
+    mutationFn: async ({ funilId, colunaId, leads }: { funilId: string; colunaId: string; leads: { nome: string; endereco?: string; telefones: LeadTelefone[]; dados_extras?: Record<string, string> }[] }) => {
       const rows = leads.map((l, i) => ({
         funil_id: funilId,
         coluna_id: colunaId,
         nome: l.nome,
         endereco: l.endereco || null,
         telefones: JSON.parse(JSON.stringify(l.telefones)),
+        dados_extras: l.dados_extras ? JSON.parse(JSON.stringify(l.dados_extras)) : null,
         ordem: i,
         user_id: user!.id,
       }));

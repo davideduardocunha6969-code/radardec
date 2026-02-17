@@ -39,7 +39,7 @@ export default function CrmFunilKanban() {
   const [uploadColunaId, setUploadColunaId] = useState("");
   const [csvText, setCsvText] = useState("");
   const [uploadMode, setUploadMode] = useState<"text" | "file">("file");
-  const [parsedPreview, setParsedPreview] = useState<{ nome: string; endereco?: string; telefones: LeadTelefone[] }[]>([]);
+  const [parsedPreview, setParsedPreview] = useState<{ nome: string; endereco?: string; telefones: LeadTelefone[]; dados_extras?: Record<string, string> }[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const leadsByColuna = useCallback((colunaId: string) => {
@@ -61,15 +61,25 @@ export default function CrmFunilKanban() {
     });
   };
 
-  const parseLeadsFromRows = (rows: string[][]): { nome: string; endereco?: string; telefones: LeadTelefone[] }[] => {
-    const parsed: { nome: string; endereco?: string; telefones: LeadTelefone[] }[] = [];
+  const parseLeadsFromRows = (rows: string[][]): { nome: string; endereco?: string; telefones: LeadTelefone[]; dados_extras?: Record<string, string> }[] => {
+    const parsed: { nome: string; endereco?: string; telefones: LeadTelefone[]; dados_extras?: Record<string, string> }[] = [];
     for (const parts of rows) {
       if (!parts[0]?.trim()) continue;
       const telefones: LeadTelefone[] = [];
-      for (let i = 2; i < parts.length; i++) {
+      // K=10, L=11, M=12, N=13, O=14
+      for (let i = 10; i <= 14; i++) {
         if (parts[i]?.trim()) telefones.push({ numero: parts[i].trim(), tipo: "celular" });
       }
-      parsed.push({ nome: parts[0].trim(), endereco: parts[1]?.trim() || undefined, telefones });
+      const dados_extras: Record<string, string> = {};
+      if (parts[1]?.trim()) dados_extras.empresa = parts[1].trim();
+      if (parts[2]?.trim()) dados_extras.data_admissao = parts[2].trim();
+      if (parts[3]?.trim()) dados_extras.data_demissao = parts[3].trim();
+      if (parts[4]?.trim()) dados_extras.motivo_demissao = parts[4].trim();
+      if (parts[7]?.trim()) dados_extras.municipio = parts[7].trim();
+      if (parts[8]?.trim()) dados_extras.uf = parts[8].trim();
+      if (parts[9]?.trim()) dados_extras.cpf = parts[9].trim();
+      const municipioUf = [dados_extras.municipio, dados_extras.uf].filter(Boolean).join(" - ");
+      parsed.push({ nome: parts[0].trim(), endereco: municipioUf || undefined, telefones, dados_extras: Object.keys(dados_extras).length ? dados_extras : undefined });
     }
     return parsed;
   };
@@ -109,7 +119,7 @@ export default function CrmFunilKanban() {
       leadsToImport = parseLeadsFromRows(rows);
     }
     if (!leadsToImport.length) { toast.error("Nenhum lead encontrado"); return; }
-    bulkCreate.mutate({ funilId, colunaId: uploadColunaId, leads: leadsToImport }, {
+    bulkCreate.mutate({ funilId, colunaId: uploadColunaId, leads: leadsToImport.map(l => ({ nome: l.nome, endereco: l.endereco, telefones: l.telefones, dados_extras: l.dados_extras })) }, {
       onSuccess: () => { setUploadDialog(false); setCsvText(""); setParsedPreview([]); },
     });
   };
@@ -243,11 +253,20 @@ export default function CrmFunilKanban() {
                 Formato obrigatório das colunas (nesta ordem):
               </div>
               <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                <Badge variant="outline" className="justify-center">Coluna A</Badge><span>Nome do lead <span className="text-destructive">*</span></span>
-                <Badge variant="outline" className="justify-center">Coluna B</Badge><span>Endereço</span>
-                <Badge variant="outline" className="justify-center">Coluna C</Badge><span>Telefone 1</span>
-                <Badge variant="outline" className="justify-center">Coluna D</Badge><span>Telefone 2 (opcional)</span>
-                <Badge variant="outline" className="justify-center">Coluna E+</Badge><span>Telefones adicionais (opcional)</span>
+                <Badge variant="outline" className="justify-center">A</Badge><span>Nome do lead <span className="text-destructive">*</span></span>
+                <Badge variant="outline" className="justify-center">B</Badge><span>Empresa que trabalhou</span>
+                <Badge variant="outline" className="justify-center">C</Badge><span>Data de admissão</span>
+                <Badge variant="outline" className="justify-center">D</Badge><span>Data de demissão</span>
+                <Badge variant="outline" className="justify-center">E</Badge><span>Motivo da demissão</span>
+                <Badge variant="outline" className="justify-center">F-G</Badge><span className="text-muted-foreground italic">Reservado</span>
+                <Badge variant="outline" className="justify-center">H</Badge><span>Município</span>
+                <Badge variant="outline" className="justify-center">I</Badge><span>UF</span>
+                <Badge variant="outline" className="justify-center">J</Badge><span>CPF</span>
+                <Badge variant="outline" className="justify-center">K</Badge><span>Telefone 1</span>
+                <Badge variant="outline" className="justify-center">L</Badge><span>Telefone 2</span>
+                <Badge variant="outline" className="justify-center">M</Badge><span>Telefone 3</span>
+                <Badge variant="outline" className="justify-center">N</Badge><span>Telefone 4</span>
+                <Badge variant="outline" className="justify-center">O</Badge><span>Telefone 5</span>
               </div>
               <p className="text-xs text-muted-foreground mt-1">A primeira linha pode ser o cabeçalho (será ignorada automaticamente se começar com "Nome").</p>
             </div>
@@ -284,10 +303,13 @@ export default function CrmFunilKanban() {
                     <p className="text-sm font-medium text-primary">{parsedPreview.length} leads encontrados</p>
                     <div className="max-h-40 overflow-y-auto space-y-1">
                       {parsedPreview.slice(0, 5).map((l, i) => (
-                        <div key={i} className="text-xs flex gap-2">
-                          <span className="font-medium">{l.nome}</span>
-                          {l.endereco && <span className="text-muted-foreground">• {l.endereco}</span>}
-                          {l.telefones.map((t, j) => <Badge key={j} variant="secondary" className="text-xs">{t.numero}</Badge>)}
+                        <div key={i} className="text-xs space-y-0.5">
+                          <div className="flex gap-2 flex-wrap">
+                            <span className="font-medium">{l.nome}</span>
+                            {l.dados_extras?.empresa && <span className="text-muted-foreground">• {l.dados_extras.empresa}</span>}
+                            {l.dados_extras?.municipio && <span className="text-muted-foreground">• {l.dados_extras.municipio}/{l.dados_extras?.uf}</span>}
+                            {l.telefones.map((t, j) => <Badge key={j} variant="secondary" className="text-xs">{t.numero}</Badge>)}
+                          </div>
                         </div>
                       ))}
                       {parsedPreview.length > 5 && <p className="text-xs text-muted-foreground">... e mais {parsedPreview.length - 5} leads</p>}
@@ -296,7 +318,7 @@ export default function CrmFunilKanban() {
                 )}
               </div>
             ) : (
-              <Textarea rows={8} value={csvText} onChange={(e) => setCsvText(e.target.value)} placeholder={"João Silva;Rua A, 123;(11)99999-0001\nMaria Santos;Rua B, 456;(11)99999-0002;(11)99999-0003"} />
+              <Textarea rows={8} value={csvText} onChange={(e) => setCsvText(e.target.value)} placeholder={"João Silva;Empresa X;01/01/2020;31/12/2023;Pedido de demissão;;;São Paulo;SP;123.456.789-00;(11)99999-0001\nMaria Santos;Empresa Y;15/03/2019;20/06/2024;Sem justa causa;;;Campinas;SP;987.654.321-00;(11)99999-0002;(11)99999-0003"} />
             )}
           </div>
           <DialogFooter>
@@ -314,6 +336,16 @@ export default function CrmFunilKanban() {
           <DialogHeader><DialogTitle>{detailLead?.nome}</DialogTitle></DialogHeader>
           {detailLead && (
             <div className="space-y-4">
+              {detailLead.dados_extras && (
+                <div className="grid grid-cols-2 gap-3">
+                  {(detailLead.dados_extras as Record<string, string>).empresa && <div><label className="text-xs font-medium text-muted-foreground">Empresa</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).empresa}</p></div>}
+                  {(detailLead.dados_extras as Record<string, string>).data_admissao && <div><label className="text-xs font-medium text-muted-foreground">Admissão</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).data_admissao}</p></div>}
+                  {(detailLead.dados_extras as Record<string, string>).data_demissao && <div><label className="text-xs font-medium text-muted-foreground">Demissão</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).data_demissao}</p></div>}
+                  {(detailLead.dados_extras as Record<string, string>).motivo_demissao && <div><label className="text-xs font-medium text-muted-foreground">Motivo</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).motivo_demissao}</p></div>}
+                  {(detailLead.dados_extras as Record<string, string>).cpf && <div><label className="text-xs font-medium text-muted-foreground">CPF</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).cpf}</p></div>}
+                  {(detailLead.dados_extras as Record<string, string>).municipio && <div><label className="text-xs font-medium text-muted-foreground">Município/UF</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).municipio}/{(detailLead.dados_extras as Record<string, string>).uf}</p></div>}
+                </div>
+              )}
               {detailLead.endereco && <div><label className="text-sm font-medium text-muted-foreground">Endereço</label><p className="text-sm">{detailLead.endereco}</p></div>}
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Telefones</label>
