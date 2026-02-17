@@ -141,10 +141,10 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
           audioUrl: fileName,
           bucketName: "atendimentos-audio",
           speakerNames: {
-            "speaker_0": userName,
-            "speaker_1": leadNome,
-            "0": userName,
-            "1": leadNome,
+            "speaker_0": leadNome,
+            "speaker_1": userName,
+            "0": leadNome,
+            "1": userName,
           },
         },
       });
