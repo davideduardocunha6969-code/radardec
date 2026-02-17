@@ -272,17 +272,11 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
               )}
             </DialogTitle>
           </DialogHeader>
-          <ScrollArea className="max-h-[60vh]">
-            <div className="text-sm leading-relaxed space-y-1 px-1">
+          <ScrollArea className="max-h-[70vh]">
+            <div className="text-sm leading-relaxed space-y-1 px-2">
               {((feedbackOpen as any)?.feedback_ia || "").split('\n').map((line: string, i: number) => {
                 const trimmed = line.trim();
                 if (!trimmed) return <div key={i} className="h-2" />;
-
-                const isNota = /^NOTA:\s*\d/i.test(trimmed);
-                const isSection = /^(📊|✅|⚠️|💡)/.test(trimmed);
-                // Detect bullets: -, •, –, or markdown * followed by space(s)
-                const isBullet = /^[-•–]\s/.test(trimmed) || /^\*\s{1,}/.test(trimmed);
-                const isNumbered = /^\d+[.)]\s/.test(trimmed);
 
                 const formatText = (text: string) =>
                   text
@@ -291,7 +285,11 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
 
                 const formatted = formatText(trimmed);
 
-                if (isNota) {
+                // Nota Final: XX/100 or NOTA: X
+                const isNotaFinal = /^Nota\s*Final:\s*\d+/i.test(trimmed);
+                const isNota = /^NOTA:\s*\d/i.test(trimmed);
+
+                if (isNotaFinal || isNota) {
                   return (
                     <div key={i} className="flex items-center gap-2 mb-2 p-3 rounded-lg bg-primary/5 border border-primary/20">
                       <Star className="h-5 w-5 text-amber-500 fill-amber-500 shrink-0" />
@@ -300,7 +298,16 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
                   );
                 }
 
-                if (isSection) {
+                // Separator lines
+                const isSeparator = /^={3,}$/.test(trimmed) || /^-{3,}$/.test(trimmed);
+                if (isSeparator) return <hr key={i} className="my-3 border-border/50" />;
+
+                // Section headers
+                const isSectionHeader = /^(📊|✅|⚠️|💡|🎯|➡️|🏁)/.test(trimmed)
+                  || /^\d+\)\s+[A-ZÁÉÍÓÚÃÕÂÊÎÔÛ]/.test(trimmed)
+                  || /^(Classificação|Resumo executivo|Penalidades|Estado predominante|Integração estratégica|Tipo de fechamento|Timing|Construção de valor|Probabilidade estimada)/i.test(trimmed);
+
+                if (isSectionHeader) {
                   return (
                     <div
                       key={i}
@@ -310,6 +317,28 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
                   );
                 }
 
+                // Table rows
+                const isTableRow = /^\|.*\|$/.test(trimmed);
+                const isTableSeparator = /^\|[\s\-:|]+\|$/.test(trimmed);
+                if (isTableSeparator) return null;
+                if (isTableRow) {
+                  const cells = trimmed.split('|').filter(Boolean).map(c => c.trim());
+                  return (
+                    <div key={i} className="grid grid-cols-4 gap-1 py-1 px-1 text-xs border-b border-border/30">
+                      {cells.map((cell, ci) => (
+                        <span
+                          key={ci}
+                          className={ci === 0 ? 'font-medium text-foreground' : 'text-muted-foreground'}
+                          dangerouslySetInnerHTML={{ __html: formatText(cell) }}
+                        />
+                      ))}
+                    </div>
+                  );
+                }
+
+                // Bullets
+                const isBullet = /^[-•–]\s/.test(trimmed) || /^\*\s{1,}/.test(trimmed);
+                const isNumbered = /^\d+[.)]\s/.test(trimmed) && !/^\d+\)\s+[A-ZÁÉÍÓÚÃÕÂÊÎÔÛ]/.test(trimmed);
                 if (isBullet || isNumbered) {
                   const bulletText = isBullet ? trimmed.replace(/^[-•–*]\s+/, '') : trimmed;
                   return (
@@ -317,6 +346,14 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
                       <span className="text-muted-foreground mt-0.5 shrink-0">•</span>
                       <span dangerouslySetInnerHTML={{ __html: formatText(bulletText) }} />
                     </div>
+                  );
+                }
+
+                // Labels
+                const isLabel = /^(Momento|O que poderia|Trecho original|Versão melhorada|Oportunidade|RECA|RALOCA|RAPOVECA|Justificativa).*:/i.test(trimmed);
+                if (isLabel) {
+                  return (
+                    <p key={i} className="font-medium text-foreground mt-2" dangerouslySetInnerHTML={{ __html: formatted }} />
                   );
                 }
 
