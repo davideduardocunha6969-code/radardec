@@ -109,12 +109,37 @@ export function RealtimeCoachingPanel({
     [coach.instrucoes, leadNome, leadContext, qualificationItems]
   );
 
+  // Filter out STT hallucinations that occur during silence
+  const isHallucination = useCallback((text: string): boolean => {
+    const cleaned = text.trim().toLowerCase();
+    if (!cleaned) return true;
+    // Known hallucination patterns from Scribe model during silence
+    const hallucinationPatterns = [
+      /p[ií]lulas\s+do\s+evangelho/i,
+      /colabore\s+conosco/i,
+      /nosso\s+time\s+de\s+colaboradores/i,
+      /seja\s+voc[êe]\s+tamb[ée]m\s+um\s+volunt[áa]rio/i,
+      /acesse\s+nosso\s+grupo/i,
+      /tradu[çc][ãa]o/i,
+      /transcri[çc][ãa]o.*facebook/i,
+      /o\s+que\s+[ée]\s+o\s+que\s+[ée]/i,
+      /legendas?\s+por\s+comunidade/i,
+      /inscreva[\s-]*se/i,
+      /obrigad[oa]\s+por\s+assistir/i,
+      /amara\.org/i,
+    ];
+    for (const pattern of hallucinationPatterns) {
+      if (pattern.test(cleaned)) return true;
+    }
+    return false;
+  }, []);
+
   const scribe = useScribe({
     modelId: "scribe_v2_realtime",
     languageCode: "por",
     commitStrategy: CommitStrategy.VAD,
     onCommittedTranscript: (data) => {
-      if (data.text?.trim()) {
+      if (data.text?.trim() && !isHallucination(data.text)) {
         allTranscriptsRef.current = [...allTranscriptsRef.current, data.text];
         const fullTranscript = allTranscriptsRef.current.join("\n");
         requestAnalysis(fullTranscript);
@@ -244,9 +269,11 @@ export function RealtimeCoachingPanel({
           {connectionError && <p className="text-[10px] text-destructive mb-1">{connectionError}</p>}
           <ScrollArea className="h-full">
             <div className="space-y-1 text-xs">
-              {scribe.committedTranscripts.map((t) => (
-                <p key={t.id} className="text-foreground">{t.text}</p>
-              ))}
+              {scribe.committedTranscripts
+                .filter((t) => !isHallucination(t.text))
+                .map((t) => (
+                  <p key={t.id} className="text-foreground">{t.text}</p>
+                ))}
               {scribe.partialTranscript && (
                 <p className="text-muted-foreground italic">{scribe.partialTranscript}</p>
               )}
