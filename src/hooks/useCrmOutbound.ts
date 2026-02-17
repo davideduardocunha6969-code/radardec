@@ -21,6 +21,7 @@ export interface CrmColuna {
   cor: string | null;
   ordem: number;
   robo_coach_id: string | null;
+  robo_feedback_id: string | null;
   created_at: string;
 }
 
@@ -149,7 +150,7 @@ export function useCreateColuna() {
 export function useUpdateColuna() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, funilId, ...data }: { id: string; funilId: string; nome?: string; cor?: string; robo_coach_id?: string | null }) => {
+    mutationFn: async ({ id, funilId, ...data }: { id: string; funilId: string; nome?: string; cor?: string; robo_coach_id?: string | null; robo_feedback_id?: string | null }) => {
       const { error } = await supabase.from("crm_colunas").update(data).eq("id", id);
       if (error) throw error;
       return funilId;

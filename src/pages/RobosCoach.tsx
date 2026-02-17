@@ -20,7 +20,7 @@ export default function RobosCoach() {
   const [form, setForm] = useState({ nome: "", descricao: "", instrucoes: "", tipo: "coaching" });
 
   const coachingRobos = robos?.filter((r) => r.tipo !== "feedback_sdr") || [];
-  const feedbackRobo = robos?.find((r) => r.tipo === "feedback_sdr") || null;
+  const feedbackRobos = robos?.filter((r) => r.tipo === "feedback_sdr") || [];
 
   const openNew = (tipo: string = "coaching") => {
     setEditing(null);
@@ -62,46 +62,21 @@ export default function RobosCoach() {
 
       {/* Feedback SDR Section */}
       <div>
-        <h2 className="text-lg font-semibold flex items-center gap-2 mb-3">
-          <ClipboardCheck className="h-5 w-5 text-amber-600" />
-          Coach Feedback SDR
-        </h2>
-        <p className="text-sm text-muted-foreground mb-3">
-          Configure as instruções para a IA que avalia automaticamente o atendimento do SDR após cada ligação finalizada.
-        </p>
-        {feedbackRobo ? (
-          <Card className="border-amber-500/20">
-            <CardHeader className="pb-2">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-2">
-                  <ClipboardCheck className="h-5 w-5 text-amber-600" />
-                  <CardTitle className="text-base">{feedbackRobo.nome}</CardTitle>
-                </div>
-                <div className="flex items-center gap-1">
-                  <Badge variant={feedbackRobo.ativo ? "default" : "secondary"} className="text-[10px]">
-                    {feedbackRobo.ativo ? "Ativo" : "Inativo"}
-                  </Badge>
-                  <Switch
-                    checked={feedbackRobo.ativo}
-                    onCheckedChange={(ativo) => updateRobo.mutate({ id: feedbackRobo.id, ativo })}
-                    className="scale-75"
-                  />
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              {feedbackRobo.descricao && <p className="text-sm text-muted-foreground">{feedbackRobo.descricao}</p>}
-              <div className="bg-muted rounded-md p-3 max-h-32 overflow-auto">
-                <p className="text-xs whitespace-pre-wrap">{feedbackRobo.instrucoes.slice(0, 300)}{feedbackRobo.instrucoes.length > 300 ? "..." : ""}</p>
-              </div>
-              <div className="flex justify-end gap-1">
-                <Button variant="ghost" size="sm" onClick={() => openEdit(feedbackRobo)}>
-                  <Pencil className="h-3.5 w-3.5 mr-1" />Editar
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ) : (
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <h2 className="text-lg font-semibold flex items-center gap-2">
+              <ClipboardCheck className="h-5 w-5 text-amber-600" />
+              Coaches Feedback SDR
+            </h2>
+            <p className="text-sm text-muted-foreground">
+              Configure IAs que avaliam automaticamente o atendimento do SDR após cada ligação. Vincule-os às colunas do CRM.
+            </p>
+          </div>
+          <Button size="sm" onClick={() => openNew("feedback_sdr")}>
+            <Plus className="h-4 w-4 mr-2" />Novo Coach Feedback
+          </Button>
+        </div>
+        {!feedbackRobos.length ? (
           <Card className="border-dashed border-amber-500/30">
             <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground">
               <ClipboardCheck className="h-10 w-10 mb-2 text-amber-600/50" />
@@ -112,6 +87,45 @@ export default function RobosCoach() {
               </Button>
             </CardContent>
           </Card>
+        ) : (
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+            {feedbackRobos.map((r) => (
+              <Card key={r.id} className="border-amber-500/20">
+                <CardHeader className="pb-2">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <ClipboardCheck className="h-5 w-5 text-amber-600" />
+                      <CardTitle className="text-base">{r.nome}</CardTitle>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <Badge variant={r.ativo ? "default" : "secondary"} className="text-[10px]">
+                        {r.ativo ? "Ativo" : "Inativo"}
+                      </Badge>
+                      <Switch
+                        checked={r.ativo}
+                        onCheckedChange={(ativo) => updateRobo.mutate({ id: r.id, ativo })}
+                        className="scale-75"
+                      />
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {r.descricao && <p className="text-sm text-muted-foreground">{r.descricao}</p>}
+                  <div className="bg-muted rounded-md p-3 max-h-32 overflow-auto">
+                    <p className="text-xs whitespace-pre-wrap">{r.instrucoes.slice(0, 300)}{r.instrucoes.length > 300 ? "..." : ""}</p>
+                  </div>
+                  <div className="flex justify-end gap-1">
+                    <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
+                      <Pencil className="h-3.5 w-3.5 mr-1" />Editar
+                    </Button>
+                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteRobo.mutate(r.id)}>
+                      <Trash2 className="h-3.5 w-3.5 mr-1" />Excluir
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
         )}
       </div>
 

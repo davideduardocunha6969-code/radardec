@@ -612,6 +612,7 @@ export type Database = {
           nome: string
           ordem: number
           robo_coach_id: string | null
+          robo_feedback_id: string | null
         }
         Insert: {
           cor?: string | null
@@ -621,6 +622,7 @@ export type Database = {
           nome: string
           ordem?: number
           robo_coach_id?: string | null
+          robo_feedback_id?: string | null
         }
         Update: {
           cor?: string | null
@@ -630,6 +632,7 @@ export type Database = {
           nome?: string
           ordem?: number
           robo_coach_id?: string | null
+          robo_feedback_id?: string | null
         }
         Relationships: [
           {
@@ -642,6 +645,13 @@ export type Database = {
           {
             foreignKeyName: "crm_colunas_robo_coach_id_fkey"
             columns: ["robo_coach_id"]
+            isOneToOne: false
+            referencedRelation: "robos_coach"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_colunas_robo_feedback_id_fkey"
+            columns: ["robo_feedback_id"]
             isOneToOne: false
             referencedRelation: "robos_coach"
             referencedColumns: ["id"]

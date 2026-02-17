@@ -38,9 +38,10 @@ export default function CrmFunilKanban() {
   const [newColunaName, setNewColunaName] = useState("");
   const [newColunaColor, setNewColunaColor] = useState("#6366f1");
   const [newColunaCoachId, setNewColunaCoachId] = useState("");
+  const [newColunaFeedbackId, setNewColunaFeedbackId] = useState("");
 
   const [editColunaDialog, setEditColunaDialog] = useState(false);
-  const [editingColuna, setEditingColuna] = useState<{ id: string; nome: string; cor: string; robo_coach_id: string } | null>(null);
+  const [editingColuna, setEditingColuna] = useState<{ id: string; nome: string; cor: string; robo_coach_id: string; robo_feedback_id: string } | null>(null);
   const [leadDialog, setLeadDialog] = useState(false);
   const [leadForm, setLeadForm] = useState({ nome: "", endereco: "", telefones: [{ numero: "", tipo: "celular" }] as LeadTelefone[], coluna_id: "" });
 
@@ -72,8 +73,8 @@ export default function CrmFunilKanban() {
 
   const handleCreateColuna = () => {
     if (!newColunaName || !funilId) return;
-    createColuna.mutate({ funil_id: funilId, nome: newColunaName, cor: newColunaColor, ordem: (colunas?.length || 0), robo_coach_id: newColunaCoachId || null } as any, {
-      onSuccess: () => { setNewColunaDialog(false); setNewColunaName(""); setNewColunaCoachId(""); },
+    createColuna.mutate({ funil_id: funilId, nome: newColunaName, cor: newColunaColor, ordem: (colunas?.length || 0), robo_coach_id: newColunaCoachId || null, robo_feedback_id: newColunaFeedbackId || null } as any, {
+      onSuccess: () => { setNewColunaDialog(false); setNewColunaName(""); setNewColunaCoachId(""); setNewColunaFeedbackId(""); },
     });
   };
 
@@ -208,7 +209,7 @@ export default function CrmFunilKanban() {
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setLeadForm({ ...leadForm, coluna_id: col.id }); setLeadDialog(true); }}>
                       <Plus className="h-3.5 w-3.5" />
                     </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingColuna({ id: col.id, nome: col.nome, cor: col.cor || "#6366f1", robo_coach_id: col.robo_coach_id || "" }); setEditColunaDialog(true); }}>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingColuna({ id: col.id, nome: col.nome, cor: col.cor || "#6366f1", robo_coach_id: col.robo_coach_id || "", robo_feedback_id: col.robo_feedback_id || "" }); setEditColunaDialog(true); }}>
                       <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteColuna.mutate({ id: col.id, funilId: funilId! })}>
@@ -253,12 +254,20 @@ export default function CrmFunilKanban() {
             <div><label className="text-sm font-medium">Nome</label><Input value={newColunaName} onChange={(e) => setNewColunaName(e.target.value)} placeholder="Ex: Primeiro Contato" /></div>
             <div><label className="text-sm font-medium">Cor</label><Input type="color" value={newColunaColor} onChange={(e) => setNewColunaColor(e.target.value)} className="h-10 w-20" /></div>
             <div>
-              <label className="text-sm font-medium">Robô Coach (opcional)</label>
+              <label className="text-sm font-medium">Robô Coach Tempo Real (opcional)</label>
               <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={newColunaCoachId} onChange={(e) => setNewColunaCoachId(e.target.value)}>
                 <option value="">Nenhum</option>
-                {robosCoach?.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+                {robosCoach?.filter(r => r.tipo !== "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
               </select>
-              <p className="text-xs text-muted-foreground mt-1">A IA coach auxiliará SDRs durante ligações com leads nesta coluna.</p>
+              <p className="text-xs text-muted-foreground mt-1">IA que auxilia o SDR durante ligações em tempo real.</p>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Coach Feedback SDR (opcional)</label>
+              <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={newColunaFeedbackId} onChange={(e) => setNewColunaFeedbackId(e.target.value)}>
+                <option value="">Nenhum</option>
+                {robosCoach?.filter(r => r.tipo === "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+              </select>
+              <p className="text-xs text-muted-foreground mt-1">IA que avalia o atendimento do SDR automaticamente após cada ligação.</p>
             </div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setNewColunaDialog(false)}>Cancelar</Button><Button onClick={handleCreateColuna} disabled={!newColunaName}>Criar</Button></DialogFooter>
@@ -274,10 +283,17 @@ export default function CrmFunilKanban() {
               <div><label className="text-sm font-medium">Nome</label><Input value={editingColuna.nome} onChange={(e) => setEditingColuna({ ...editingColuna, nome: e.target.value })} /></div>
               <div><label className="text-sm font-medium">Cor</label><Input type="color" value={editingColuna.cor} onChange={(e) => setEditingColuna({ ...editingColuna, cor: e.target.value })} className="h-10 w-20" /></div>
               <div>
-                <label className="text-sm font-medium">Robô Coach (opcional)</label>
+                <label className="text-sm font-medium">Robô Coach Tempo Real (opcional)</label>
                 <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={editingColuna.robo_coach_id} onChange={(e) => setEditingColuna({ ...editingColuna, robo_coach_id: e.target.value })}>
                   <option value="">Nenhum</option>
-                  {robosCoach?.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+                  {robosCoach?.filter(r => r.tipo !== "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="text-sm font-medium">Coach Feedback SDR (opcional)</label>
+                <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={editingColuna.robo_feedback_id} onChange={(e) => setEditingColuna({ ...editingColuna, robo_feedback_id: e.target.value })}>
+                  <option value="">Nenhum</option>
+                  {robosCoach?.filter(r => r.tipo === "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
                 </select>
               </div>
             </div>
@@ -286,7 +302,7 @@ export default function CrmFunilKanban() {
             <Button variant="outline" onClick={() => setEditColunaDialog(false)}>Cancelar</Button>
             <Button onClick={() => {
               if (!editingColuna || !funilId) return;
-              updateColuna.mutate({ id: editingColuna.id, funilId, nome: editingColuna.nome, cor: editingColuna.cor, robo_coach_id: editingColuna.robo_coach_id || null }, {
+              updateColuna.mutate({ id: editingColuna.id, funilId, nome: editingColuna.nome, cor: editingColuna.cor, robo_coach_id: editingColuna.robo_coach_id || null, robo_feedback_id: editingColuna.robo_feedback_id || null }, {
                 onSuccess: () => setEditColunaDialog(false),
               });
             }} disabled={!editingColuna?.nome}>Salvar</Button>
