@@ -17,8 +17,8 @@ export function ChecklistCard({ title, icon: Icon, iconColor = "text-primary", i
   const total = items.length;
 
   return (
-    <Card className="border-border/60 flex flex-col min-h-0">
-      <CardHeader className="pb-1.5 px-3 pt-2.5 shrink-0">
+    <Card className="border-border/60 flex flex-col min-h-0 flex-1">
+      <CardHeader className="pb-1 px-2.5 pt-2 shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xs flex items-center gap-1.5">
             <Icon className={`h-3.5 w-3.5 ${iconColor}`} />
@@ -29,15 +29,15 @@ export function ChecklistCard({ title, icon: Icon, iconColor = "text-primary", i
           </span>
         </div>
       </CardHeader>
-      <CardContent className="px-3 pb-2.5 flex-1 min-h-0">
+      <CardContent className="px-2.5 pb-2 flex-1 min-h-0">
         <ScrollArea className="h-full">
-          <div className="space-y-1">
+          <div className="space-y-0.5">
             {items.map((item) => {
               const done = completedIds.includes(item.id);
               return (
                 <div
                   key={item.id}
-                  className={`flex items-start gap-2 rounded-md px-2 py-1.5 text-xs transition-colors ${
+                  className={`flex items-start gap-1.5 rounded px-1.5 py-1 text-xs transition-colors ${
                     done ? "bg-primary/8 text-foreground" : "text-muted-foreground"
                   }`}
                 >
