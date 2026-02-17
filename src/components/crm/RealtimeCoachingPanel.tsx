@@ -12,13 +12,13 @@ import { Progress } from "@/components/ui/progress";
 import { useScribe, CommitStrategy } from "@elevenlabs/react";
 import { ChecklistCard } from "./coaching/ChecklistCard";
 import { ObjectionsCard } from "./coaching/ObjectionsCard";
+import { DynamicChecklistCard } from "./coaching/DynamicChecklistCard";
 import {
   QUALIFICATION_QUESTIONS,
-  RECA_ITEMS,
-  RALOCA_ITEMS,
   INSTRUCTIONS_TEXT,
   type CoachingAnalysis,
   type Objection,
+  type DynamicItem,
   type ChecklistItem,
 } from "./coaching/coachingData";
 import ReactMarkdown from "react-markdown";
@@ -41,8 +41,8 @@ export function RealtimeCoachingPanel({
 
   const [qualificationDone, setQualificationDone] = useState<string[]>([]);
   const [objections, setObjections] = useState<Objection[]>([]);
-  const [recaDone, setRecaDone] = useState<string[]>([]);
-  const [ralocaDone, setRalocaDone] = useState<string[]>([]);
+  const [recaItems, setRecaItems] = useState<DynamicItem[]>([]);
+  const [ralocaItems, setRalocaItems] = useState<DynamicItem[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [micLevel, setMicLevel] = useState(0);
@@ -52,16 +52,16 @@ export function RealtimeCoachingPanel({
   const allTranscriptsRef = useRef<string[]>([]);
   const animFrameRef = useRef<number | null>(null);
 
-  // Use script from DB if available, fallback to hardcoded
+  // Qualification items from script or fallback
   const qualificationItems: ChecklistItem[] = activeScript?.qualificacao?.length
     ? activeScript.qualificacao
     : QUALIFICATION_QUESTIONS;
-  const recaItems: ChecklistItem[] = activeScript?.reca?.length
-    ? activeScript.reca
-    : RECA_ITEMS;
-  const ralocaItems: ChecklistItem[] = activeScript?.raloca?.length
-    ? activeScript.raloca
-    : RALOCA_ITEMS;
+  
+  // Apresentacao items from script
+  const apresentacaoItems: ChecklistItem[] = activeScript?.apresentacao?.length
+    ? activeScript.apresentacao
+    : [];
+
   const instructionsText = activeScript?.instrucoes_gerais || INSTRUCTIONS_TEXT;
 
   const requestAnalysis = useCallback(
@@ -80,8 +80,6 @@ export function RealtimeCoachingPanel({
             leadContext,
             scriptItems: {
               qualificacao: qualificationItems,
-              reca: recaItems,
-              raloca: ralocaItems,
             },
           },
         });
@@ -95,8 +93,8 @@ export function RealtimeCoachingPanel({
         if (analysis) {
           setQualificationDone(analysis.qualification_done || []);
           setObjections(analysis.objections || []);
-          setRecaDone(analysis.reca_done || []);
-          setRalocaDone(analysis.raloca_done || []);
+          setRecaItems(analysis.reca_items || []);
+          setRalocaItems(analysis.raloca_items || []);
         }
       } catch (e) {
         console.error("[Coaching] Request error:", e);
@@ -105,7 +103,7 @@ export function RealtimeCoachingPanel({
         isAnalyzingRef.current = false;
       }
     },
-    [coach.instrucoes, leadNome, leadContext, qualificationItems, recaItems, ralocaItems]
+    [coach.instrucoes, leadNome, leadContext, qualificationItems]
   );
 
   const scribe = useScribe({
@@ -188,19 +186,19 @@ export function RealtimeCoachingPanel({
           completedIds={qualificationDone}
         />
         <ObjectionsCard objections={objections} />
-        <ChecklistCard
+        <DynamicChecklistCard
           title="RECA — Razões Emocionais"
           icon={Heart}
           iconColor="text-red-500"
           items={recaItems}
-          completedIds={recaDone}
+          emptyMessage="A IA identificará gatilhos emocionais relevantes para este lead..."
         />
-        <ChecklistCard
+        <DynamicChecklistCard
           title="RALOCA — Razões Lógicas"
           icon={Brain}
           iconColor="text-purple-500"
           items={ralocaItems}
-          completedIds={ralocaDone}
+          emptyMessage="A IA identificará argumentos lógicos relevantes para este lead..."
         />
       </div>
 
