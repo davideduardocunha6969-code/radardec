@@ -57,6 +57,7 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
   const streamsRef = useRef<MediaStream[]>([]);
   const chamadaIdRef = useRef<string | null>(null);
   const mixedStreamRef = useRef<MediaStream | null>(null);
+  const durationRef = useRef(0);
 
   const createChamada = useCreateChamada();
   const updateChamada = useUpdateChamada();
@@ -240,7 +241,8 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
 
       recorder.onstop = () => {
         const blob = new Blob(chunksRef.current, { type: mimeType });
-        handleRecordingComplete(blob, duration);
+        // Use durationRef to avoid stale closure capturing initial duration (0)
+        handleRecordingComplete(blob, durationRef.current);
       };
 
       displayStream.getVideoTracks()[0]?.addEventListener("ended", () => {
@@ -250,7 +252,11 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       recorder.start(1000);
       setStatus("recording");
       setDuration(0);
-      timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000);
+      durationRef.current = 0;
+      timerRef.current = setInterval(() => {
+        durationRef.current += 1;
+        setDuration((d) => d + 1);
+      }, 1000);
       updateLevels();
       mixedStreamRef.current = destination.stream;
       onRecordingStateChange?.(true, destination.stream);
@@ -307,7 +313,10 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
     if (!mediaRecorderRef.current) return;
     if (status === "paused") {
       mediaRecorderRef.current.resume();
-      timerRef.current = setInterval(() => setDuration((d) => d + 1), 1000);
+      timerRef.current = setInterval(() => {
+        durationRef.current += 1;
+        setDuration((d) => d + 1);
+      }, 1000);
       updateLevels();
       setStatus("recording");
     } else if (status === "recording") {

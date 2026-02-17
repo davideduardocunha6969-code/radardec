@@ -43,10 +43,12 @@ export function RealtimeCoachingPanel({
   const audioContextRef = useRef<AudioContext | null>(null);
   const animFrameRef = useRef<number | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const committedTranscriptsRef = useRef<string[]>([]);
 
-  const getFullTranscript = useCallback(() => {
-    return [...committedTranscripts, partialTranscript].filter(Boolean).join("\n");
-  }, [committedTranscripts, partialTranscript]);
+  // Keep ref in sync with state
+  useEffect(() => {
+    committedTranscriptsRef.current = committedTranscripts;
+  }, [committedTranscripts]);
 
   // Request coaching insight from AI
   const requestInsight = useCallback(async (transcript: string) => {
@@ -120,11 +122,16 @@ export function RealtimeCoachingPanel({
           } else if (msg.type === "committed_transcript") {
             const text = msg.text || "";
             if (text.trim()) {
-              setCommittedTranscripts((prev) => [...prev, text]);
+              setCommittedTranscripts((prev) => {
+                const updated = [...prev, text];
+                // Use ref to avoid stale closure
+                committedTranscriptsRef.current = updated;
+                // Trigger AI analysis on each committed segment
+                const fullTranscript = updated.join("\n");
+                requestInsight(fullTranscript);
+                return updated;
+              });
               setPartialTranscript("");
-              // Trigger AI analysis on each committed segment
-              const fullTranscript = [...committedTranscripts, text].join("\n");
-              requestInsight(fullTranscript);
             }
           }
         } catch (e) {
@@ -191,7 +198,7 @@ export function RealtimeCoachingPanel({
     } catch (e) {
       console.error("Scribe connection error:", e);
     }
-  }, [audioStream, requestInsight, committedTranscripts]);
+  }, [audioStream, requestInsight]);
 
   // Cleanup
   const disconnectScribe = useCallback(() => {
