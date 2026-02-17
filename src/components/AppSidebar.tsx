@@ -32,6 +32,7 @@ const radarItems = [
   { title: "Radar Bancário", url: "/radar-bancario", icon: Landmark, pageKey: "radar-bancario" },
   { title: "Radar Previdenciário", url: "/radar-previdenciario", icon: Scale, pageKey: "radar-previdenciario" },
   { title: "Radar Trabalhista", url: "/radar-trabalhista", icon: Briefcase, pageKey: "radar-trabalhista" },
+  { title: "Radar Outbound", url: "/radar-outbound", icon: Phone, pageKey: "radar-outbound" },
 ];
 
 // Comercial subitems
