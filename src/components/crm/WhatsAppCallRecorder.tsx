@@ -322,24 +322,23 @@ export function WhatsAppCallRecorder({ leadId, leadNome, telefones }: WhatsAppCa
     );
   }
 
+  if (status === "idle") {
+    return (
+      <Button
+        size="sm"
+        className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+        onClick={startWhatsAppCall}
+        disabled={!selectedPhone}
+      >
+        <MessageCircle className="h-3.5 w-3.5" />
+        Ligar pelo WhatsApp
+      </Button>
+    );
+  }
+
   return (
     <Card className="border-green-500/20">
       <CardContent className="p-3 space-y-3">
-        {/* Phone selector */}
-        {telefones.length > 1 && status === "idle" && (
-          <select
-            className="w-full rounded-md border bg-background px-3 py-1.5 text-sm"
-            value={selectedPhone}
-            onChange={(e) => setSelectedPhone(e.target.value)}
-          >
-            {telefones.map((t, i) => (
-              <option key={i} value={t.numero}>
-                {t.numero} ({t.tipo})
-              </option>
-            ))}
-          </select>
-        )}
-
         {error && (
           <Alert variant="destructive" className="py-2">
             <AlertTriangle className="h-4 w-4" />
@@ -377,37 +376,14 @@ export function WhatsAppCallRecorder({ leadId, leadNome, telefones }: WhatsAppCa
           </div>
         )}
 
-        {/* Controls */}
-        <div className="flex items-center justify-between">
-          <Badge className="bg-green-500/20 text-green-700">
-            <MessageCircle className="h-3 w-3 mr-1" />
-            WhatsApp
-          </Badge>
-
-          <div className="flex gap-1">
-            {status === "idle" ? (
-              <Button
-                size="sm"
-                className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
-                onClick={startWhatsAppCall}
-                disabled={!selectedPhone}
-              >
-                <MessageCircle className="h-3.5 w-3.5" />
-                Ligar pelo WhatsApp
-              </Button>
-            ) : (
-              <>
-                <Button variant="outline" size="sm" className="gap-1" onClick={togglePause}>
-                  {status === "paused" ? <><Play className="h-3.5 w-3.5" />Retomar</> : <><Pause className="h-3.5 w-3.5" />Pausar</>}
-                </Button>
-                <Button variant="destructive" size="sm" className="gap-1" onClick={stopRecording}>
-                  <Square className="h-3.5 w-3.5" />Finalizar
-                </Button>
-              </>
-            )}
-          </div>
+        <div className="flex gap-1">
+          <Button variant="outline" size="sm" className="gap-1" onClick={togglePause}>
+            {status === "paused" ? <><Play className="h-3.5 w-3.5" />Retomar</> : <><Pause className="h-3.5 w-3.5" />Pausar</>}
+          </Button>
+          <Button variant="destructive" size="sm" className="gap-1" onClick={stopRecording}>
+            <Square className="h-3.5 w-3.5" />Finalizar
+          </Button>
         </div>
-
       </CardContent>
     </Card>
   );

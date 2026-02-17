@@ -226,25 +226,23 @@ export function VoipDialer({ lead, onCallStatusChange }: VoipDialerProps) {
 
   const isInCall = callStatus === "in-progress" || callStatus === "ringing" || callStatus === "connecting";
 
+  if (callStatus === "idle") {
+    return (
+      <Button
+        size="sm"
+        className="gap-1.5"
+        onClick={startCall}
+        disabled={!selectedPhone}
+      >
+        <Phone className="h-3.5 w-3.5" />
+        Ligar
+      </Button>
+    );
+  }
+
   return (
     <Card className="border-primary/20">
       <CardContent className="p-3 space-y-3">
-        {/* Phone selector */}
-        {lead.telefones.length > 1 && callStatus === "idle" && (
-          <select
-            className="w-full rounded-md border bg-background px-3 py-1.5 text-sm"
-            value={selectedPhone}
-            onChange={(e) => setSelectedPhone(e.target.value)}
-          >
-            {lead.telefones.map((t: LeadTelefone, i: number) => (
-              <option key={i} value={t.numero}>
-                {t.numero} ({t.tipo})
-              </option>
-            ))}
-          </select>
-        )}
-
-        {/* Status and controls */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Badge className={statusColors[callStatus]}>
@@ -273,17 +271,7 @@ export function VoipDialer({ lead, onCallStatusChange }: VoipDialerProps) {
               </Button>
             )}
 
-            {callStatus === "idle" ? (
-              <Button
-                size="sm"
-                className="gap-1.5"
-                onClick={startCall}
-                disabled={!selectedPhone}
-              >
-                <Phone className="h-3.5 w-3.5" />
-                Ligar
-              </Button>
-            ) : isInCall ? (
+            {isInCall ? (
               <Button
                 size="sm"
                 variant="destructive"
