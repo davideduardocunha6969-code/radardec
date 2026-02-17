@@ -75,6 +75,7 @@ export default function CrmFunilKanban() {
       if (parts[2]?.trim()) dados_extras.data_admissao = parts[2].trim();
       if (parts[3]?.trim()) dados_extras.data_demissao = parts[3].trim();
       if (parts[4]?.trim()) dados_extras.motivo_demissao = parts[4].trim();
+      if (parts[5]?.trim()) dados_extras.cargo = parts[5].trim();
       if (parts[7]?.trim()) dados_extras.municipio = parts[7].trim();
       if (parts[8]?.trim()) dados_extras.uf = parts[8].trim();
       if (parts[9]?.trim()) dados_extras.cpf = parts[9].trim();
@@ -258,7 +259,8 @@ export default function CrmFunilKanban() {
                 <Badge variant="outline" className="justify-center">C</Badge><span>Data de admissão</span>
                 <Badge variant="outline" className="justify-center">D</Badge><span>Data de demissão</span>
                 <Badge variant="outline" className="justify-center">E</Badge><span>Motivo da demissão</span>
-                <Badge variant="outline" className="justify-center">F-G</Badge><span className="text-muted-foreground italic">Reservado</span>
+                <Badge variant="outline" className="justify-center">F</Badge><span>Cargo na última empresa</span>
+                <Badge variant="outline" className="justify-center">G</Badge><span className="text-muted-foreground italic">Reservado</span>
                 <Badge variant="outline" className="justify-center">H</Badge><span>Município</span>
                 <Badge variant="outline" className="justify-center">I</Badge><span>UF</span>
                 <Badge variant="outline" className="justify-center">J</Badge><span>CPF</span>
@@ -339,6 +341,7 @@ export default function CrmFunilKanban() {
               {detailLead.dados_extras && (
                 <div className="grid grid-cols-2 gap-3">
                   {(detailLead.dados_extras as Record<string, string>).empresa && <div><label className="text-xs font-medium text-muted-foreground">Empresa</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).empresa}</p></div>}
+                  {(detailLead.dados_extras as Record<string, string>).cargo && <div><label className="text-xs font-medium text-muted-foreground">Cargo</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).cargo}</p></div>}
                   {(detailLead.dados_extras as Record<string, string>).data_admissao && <div><label className="text-xs font-medium text-muted-foreground">Admissão</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).data_admissao}</p></div>}
                   {(detailLead.dados_extras as Record<string, string>).data_demissao && <div><label className="text-xs font-medium text-muted-foreground">Demissão</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).data_demissao}</p></div>}
                   {(detailLead.dados_extras as Record<string, string>).motivo_demissao && <div><label className="text-xs font-medium text-muted-foreground">Motivo</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).motivo_demissao}</p></div>}
