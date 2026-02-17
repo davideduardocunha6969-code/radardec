@@ -287,12 +287,12 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
 
       // 6. Open WhatsApp call - use top window to avoid iframe blocking
       const formattedPhone = formatPhone(numero);
-      const waUrl = `https://wa.me/${formattedPhone}`;
+      // Use whatsapp:// protocol to open the native desktop app directly
+      const waUrl = `whatsapp://send?phone=${formattedPhone}`;
       try {
-        (window.top || window).open(waUrl, "_blank");
+        (window.top || window).location.assign(waUrl);
       } catch {
-        // Cross-origin restriction on window.top - fallback
-        window.open(waUrl, "_blank");
+        window.location.assign(waUrl);
       }
 
       toast.success("WhatsApp aberto! Inicie a ligação e o áudio será gravado.");
