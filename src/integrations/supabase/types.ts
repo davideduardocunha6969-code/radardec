@@ -538,6 +538,62 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_chamadas: {
+        Row: {
+          audio_url: string | null
+          created_at: string
+          duracao_segundos: number | null
+          id: string
+          lead_id: string
+          numero_discado: string
+          recording_url: string | null
+          resumo_ia: string | null
+          status: string
+          transcricao: string | null
+          twilio_call_sid: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          audio_url?: string | null
+          created_at?: string
+          duracao_segundos?: number | null
+          id?: string
+          lead_id: string
+          numero_discado: string
+          recording_url?: string | null
+          resumo_ia?: string | null
+          status?: string
+          transcricao?: string | null
+          twilio_call_sid?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          audio_url?: string | null
+          created_at?: string
+          duracao_segundos?: number | null
+          id?: string
+          lead_id?: string
+          numero_discado?: string
+          recording_url?: string | null
+          resumo_ia?: string | null
+          status?: string
+          transcricao?: string | null
+          twilio_call_sid?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_chamadas_lead_id_fkey"
+            columns: ["lead_id"]
+            isOneToOne: false
+            referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_colunas: {
         Row: {
           cor: string | null

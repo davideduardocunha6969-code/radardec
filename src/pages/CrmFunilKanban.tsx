@@ -1,6 +1,7 @@
 import { useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useDeleteColuna, useCreateLead, useUpdateLead, useDeleteLead, useBulkCreateLeads, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
+import { VoipDialer } from "@/components/crm/VoipDialer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -375,6 +376,13 @@ export default function CrmFunilKanban() {
                 ))}
               </div>
               {detailLead.resumo_caso && <div><label className="text-sm font-medium text-muted-foreground">Resumo do Caso (IA)</label><p className="text-sm bg-muted p-3 rounded-md">{detailLead.resumo_caso}</p></div>}
+              {/* VoIP Dialer */}
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Discador VoIP</label>
+                <div className="mt-1">
+                  <VoipDialer lead={detailLead} />
+                </div>
+              </div>
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Mover para coluna</label>
                 <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={detailLead.coluna_id} onChange={(e) => { handleMoveLead(detailLead, e.target.value); setDetailLead({ ...detailLead, coluna_id: e.target.value }); }}>
