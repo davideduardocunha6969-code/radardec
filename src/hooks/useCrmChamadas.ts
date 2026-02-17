@@ -45,6 +45,7 @@ export function useCreateChamada() {
       lead_id: string;
       numero_discado: string;
       twilio_call_sid?: string;
+      canal?: string;
     }) => {
       const { data: chamada, error } = await supabase
         .from("crm_chamadas")
@@ -54,6 +55,7 @@ export function useCreateChamada() {
           twilio_call_sid: data.twilio_call_sid || null,
           user_id: user!.id,
           status: "iniciando",
+          canal: data.canal || "voip",
         })
         .select()
         .single();

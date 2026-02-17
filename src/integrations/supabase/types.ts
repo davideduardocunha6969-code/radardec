@@ -541,6 +541,7 @@ export type Database = {
       crm_chamadas: {
         Row: {
           audio_url: string | null
+          canal: string
           created_at: string
           duracao_segundos: number | null
           id: string
@@ -556,6 +557,7 @@ export type Database = {
         }
         Insert: {
           audio_url?: string | null
+          canal?: string
           created_at?: string
           duracao_segundos?: number | null
           id?: string
@@ -571,6 +573,7 @@ export type Database = {
         }
         Update: {
           audio_url?: string | null
+          canal?: string
           created_at?: string
           duracao_segundos?: number | null
           id?: string

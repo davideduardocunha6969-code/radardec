@@ -9,6 +9,7 @@ import {
   FileText,
   Loader2,
   MessageSquare,
+  MessageCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -95,6 +96,7 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
           <TableHeader>
             <TableRow>
               <TableHead className="text-xs">Data</TableHead>
+              <TableHead className="text-xs">Canal</TableHead>
               <TableHead className="text-xs">Número</TableHead>
               <TableHead className="text-xs">Status</TableHead>
               <TableHead className="text-xs">Duração</TableHead>
@@ -112,6 +114,19 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
                 <TableRow key={chamada.id}>
                   <TableCell className="text-xs whitespace-nowrap py-2">
                     {format(new Date(chamada.created_at), "dd/MM/yy HH:mm", { locale: ptBR })}
+                  </TableCell>
+                  <TableCell className="py-2">
+                    {(chamada as any).canal === "whatsapp" ? (
+                      <Badge variant="outline" className="text-[10px] bg-green-500/10 text-green-700">
+                        <MessageCircle className="h-3 w-3 mr-0.5" />
+                        WhatsApp
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-700">
+                        <Phone className="h-3 w-3 mr-0.5" />
+                        VoIP
+                      </Badge>
+                    )}
                   </TableCell>
                   <TableCell className="text-xs py-2">{chamada.numero_discado}</TableCell>
                   <TableCell className="py-2">

@@ -236,6 +236,7 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero }: WhatsAppCallR
       const chamada = await createChamada.mutateAsync({
         lead_id: leadId,
         numero_discado: numero,
+        canal: "whatsapp",
       });
       chamadaIdRef.current = chamada.id;
       updateChamada.mutate({ id: chamada.id, leadId, status: "em_chamada" });
