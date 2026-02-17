@@ -140,26 +140,6 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
   }, [leadId]);
 
-  const detectIfAnswered = (transcriptionText: string): boolean => {
-    if (!transcriptionText || transcriptionText.trim().length < 20) return false;
-    // Check if there are at least 2 different speakers in the transcription
-    const speakerMatches = transcriptionText.match(/^\[(.+?)\]:/gm);
-    if (!speakerMatches) return false;
-    const uniqueSpeakers = new Set(speakerMatches.map(m => m.replace(/[\[\]:]/g, '').trim()));
-    return uniqueSpeakers.size >= 2;
-  };
-
-  const triggerFeedback = useCallback(async (chamadaId: string) => {
-    try {
-      console.log("[Feedback] Triggering AI feedback for chamada:", chamadaId);
-      await supabase.functions.invoke("feedback-chamada", {
-        body: { chamadaId },
-      });
-      console.log("[Feedback] Feedback generated successfully");
-    } catch (e) {
-      console.error("[Feedback] Error:", e);
-    }
-  }, []);
 
   const handleRecordingComplete = useCallback(async (audioBlob: Blob, durationSecs: number) => {
     setStatus("processing");
@@ -167,7 +147,7 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado");
 
-      // Upload audio
+      // Upload final audio
       const fileName = `whatsapp_${leadId}_${Date.now()}.webm`;
       const { error: uploadErr } = await supabase.storage
         .from("atendimentos-audio")
@@ -175,16 +155,17 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       if (uploadErr) throw uploadErr;
 
       // Update chamada record with audio
-      if (chamadaIdRef.current) {
+      const currentChamadaId = chamadaIdRef.current;
+      if (currentChamadaId) {
         updateChamada.mutate({
-          id: chamadaIdRef.current,
+          id: currentChamadaId,
           leadId,
           duracao_segundos: durationSecs,
           audio_url: fileName,
         });
       }
 
-      // Transcribe with speaker names
+      // Get user display name for transcription speaker labels
       const { data: profileData } = await supabase
         .from("profiles")
         .select("display_name")
@@ -192,46 +173,21 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
         .single();
       const userName = profileData?.display_name || "Operador";
 
-      const { data: transcData, error: transcErr } = await supabase.functions.invoke("transcribe-voice", {
-        body: {
-          audioUrl: fileName,
-          bucketName: "atendimentos-audio",
-          speakerNames: {
-            "speaker_0": leadNome,
-            "speaker_1": userName,
-            "0": leadNome,
-            "1": userName,
+      // Fire-and-forget: trigger background processing (transcription + feedback)
+      // The edge function runs server-side, so user can navigate away
+      if (currentChamadaId) {
+        supabase.functions.invoke("process-chamada-background", {
+          body: {
+            chamadaId: currentChamadaId,
+            leadId,
+            leadNome,
+            audioFileName: fileName,
+            userName,
           },
-        },
-      });
-
-      const transcriptionText = transcData?.text || "";
-      const wasAnswered = detectIfAnswered(transcriptionText);
-      const finalStatus = wasAnswered ? "finalizada" : "nao_atendida";
-      const currentChamadaId = chamadaIdRef.current;
-
-      if (transcErr) {
-        console.error("Transcription error:", transcErr);
-        toast.error("Gravação salva, mas houve erro na transcrição.");
-        if (currentChamadaId) {
-          updateChamada.mutate({ id: currentChamadaId, leadId, status: "finalizada" });
-        }
-      } else if (currentChamadaId) {
-        updateChamada.mutate({
-          id: currentChamadaId,
-          leadId,
-          transcricao: transcriptionText,
-          status: finalStatus,
-        });
-        if (wasAnswered) {
-          toast.success("Chamada atendida — gravação transcrita com sucesso!");
-          // Auto-trigger AI feedback
-          triggerFeedback(currentChamadaId);
-        } else {
-          toast.warning("Chamada não atendida — nenhuma conversa detectada na transcrição.");
-        }
+        }).catch((e) => console.error("[Background] Failed to trigger:", e));
       }
 
+      toast.success("Gravação salva! A transcrição será processada em segundo plano.");
       setStatus("done");
       chamadaIdRef.current = null;
     } catch (err: any) {
@@ -240,7 +196,7 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       setStatus("error");
       setError(err.message);
     }
-  }, [leadId, leadNome, updateChamada, triggerFeedback]);
+  }, [leadId, leadNome, updateChamada]);
 
   const startWhatsAppCall = async () => {
     if (!numero) {
