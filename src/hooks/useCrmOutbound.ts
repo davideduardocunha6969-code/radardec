@@ -146,6 +146,22 @@ export function useCreateColuna() {
   });
 }
 
+export function useUpdateColuna() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, funilId, ...data }: { id: string; funilId: string; nome?: string; cor?: string; robo_coach_id?: string | null }) => {
+      const { error } = await supabase.from("crm_colunas").update(data).eq("id", id);
+      if (error) throw error;
+      return funilId;
+    },
+    onSuccess: (funilId) => {
+      queryClient.invalidateQueries({ queryKey: ["crm_colunas", funilId] });
+      toast.success("Coluna atualizada!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
 export function useDeleteColuna() {
   const queryClient = useQueryClient();
   return useMutation({

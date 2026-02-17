@@ -1,6 +1,6 @@
 import { useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useDeleteColuna, useCreateLead, useUpdateLead, useDeleteLead, useBulkCreateLeads, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
+import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useUpdateColuna, useDeleteColuna, useCreateLead, useUpdateLead, useDeleteLead, useBulkCreateLeads, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
 import { VoipDialer } from "@/components/crm/VoipDialer";
 import { WhatsAppCallRecorder } from "@/components/crm/WhatsAppCallRecorder";
 import { LeadContatosTab } from "@/components/crm/LeadContatosTab";
@@ -12,7 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, FileSpreadsheet, AlertCircle, History } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, FileSpreadsheet, AlertCircle, History, Pencil } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
@@ -27,6 +27,7 @@ export default function CrmFunilKanban() {
   const { data: leads, isLoading: leadsLoading } = useCrmLeads(funilId);
   const { data: robosCoach } = useRobosCoachAtivos();
   const createColuna = useCreateColuna();
+  const updateColuna = useUpdateColuna();
   const deleteColuna = useDeleteColuna();
   const createLead = useCreateLead();
   const updateLead = useUpdateLead();
@@ -38,6 +39,8 @@ export default function CrmFunilKanban() {
   const [newColunaColor, setNewColunaColor] = useState("#6366f1");
   const [newColunaCoachId, setNewColunaCoachId] = useState("");
 
+  const [editColunaDialog, setEditColunaDialog] = useState(false);
+  const [editingColuna, setEditingColuna] = useState<{ id: string; nome: string; cor: string; robo_coach_id: string } | null>(null);
   const [leadDialog, setLeadDialog] = useState(false);
   const [leadForm, setLeadForm] = useState({ nome: "", endereco: "", telefones: [{ numero: "", tipo: "celular" }] as LeadTelefone[], coluna_id: "" });
 
@@ -201,9 +204,12 @@ export default function CrmFunilKanban() {
                     <h3 className="font-semibold text-sm">{col.nome}</h3>
                     <Badge variant="secondary" className="text-xs">{leadsByColuna(col.id).length}</Badge>
                   </div>
-                  <div className="flex gap-1">
+                   <div className="flex gap-1">
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setLeadForm({ ...leadForm, coluna_id: col.id }); setLeadDialog(true); }}>
                       <Plus className="h-3.5 w-3.5" />
+                    </Button>
+                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingColuna({ id: col.id, nome: col.nome, cor: col.cor || "#6366f1", robo_coach_id: col.robo_coach_id || "" }); setEditColunaDialog(true); }}>
+                      <Pencil className="h-3.5 w-3.5" />
                     </Button>
                     <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteColuna.mutate({ id: col.id, funilId: funilId! })}>
                       <Trash2 className="h-3.5 w-3.5 text-destructive" />
@@ -256,6 +262,35 @@ export default function CrmFunilKanban() {
             </div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setNewColunaDialog(false)}>Cancelar</Button><Button onClick={handleCreateColuna} disabled={!newColunaName}>Criar</Button></DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Editar Coluna */}
+      <Dialog open={editColunaDialog} onOpenChange={setEditColunaDialog}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Editar Coluna</DialogTitle></DialogHeader>
+          {editingColuna && (
+            <div className="space-y-4">
+              <div><label className="text-sm font-medium">Nome</label><Input value={editingColuna.nome} onChange={(e) => setEditingColuna({ ...editingColuna, nome: e.target.value })} /></div>
+              <div><label className="text-sm font-medium">Cor</label><Input type="color" value={editingColuna.cor} onChange={(e) => setEditingColuna({ ...editingColuna, cor: e.target.value })} className="h-10 w-20" /></div>
+              <div>
+                <label className="text-sm font-medium">Robô Coach (opcional)</label>
+                <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={editingColuna.robo_coach_id} onChange={(e) => setEditingColuna({ ...editingColuna, robo_coach_id: e.target.value })}>
+                  <option value="">Nenhum</option>
+                  {robosCoach?.map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+                </select>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditColunaDialog(false)}>Cancelar</Button>
+            <Button onClick={() => {
+              if (!editingColuna || !funilId) return;
+              updateColuna.mutate({ id: editingColuna.id, funilId, nome: editingColuna.nome, cor: editingColuna.cor, robo_coach_id: editingColuna.robo_coach_id || null }, {
+                onSuccess: () => setEditColunaDialog(false),
+              });
+            }} disabled={!editingColuna?.nome}>Salvar</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
