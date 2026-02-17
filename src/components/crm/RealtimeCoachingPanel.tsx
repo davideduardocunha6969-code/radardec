@@ -81,6 +81,7 @@ export function RealtimeCoachingPanel({
   // Use the ElevenLabs useScribe hook
   const scribe = useScribe({
     modelId: "scribe_v2_realtime",
+    languageCode: "por",
     commitStrategy: CommitStrategy.VAD,
     onPartialTranscript: (data) => {
       console.log("[Scribe] Partial:", data.text?.substring(0, 60));
