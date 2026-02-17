@@ -135,6 +135,8 @@ export function VoipDialer({ leadId, leadNome, numero, onCallStatusChange }: Voi
       call.on("disconnect", () => {
         setCallStatus("completed");
         updateChamada.mutate({ id: chamada.id, leadId, status: "finalizada", duracao_segundos: duration });
+        // Auto-trigger AI feedback
+        supabase.functions.invoke("feedback-chamada", { body: { chamadaId: chamada.id } }).catch(console.error);
         cleanupCall();
       });
 

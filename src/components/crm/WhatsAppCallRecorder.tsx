@@ -105,6 +105,18 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
     return uniqueSpeakers.size >= 2;
   };
 
+  const triggerFeedback = useCallback(async (chamadaId: string) => {
+    try {
+      console.log("[Feedback] Triggering AI feedback for chamada:", chamadaId);
+      await supabase.functions.invoke("feedback-chamada", {
+        body: { chamadaId },
+      });
+      console.log("[Feedback] Feedback generated successfully");
+    } catch (e) {
+      console.error("[Feedback] Error:", e);
+    }
+  }, []);
+
   const handleRecordingComplete = useCallback(async (audioBlob: Blob, durationSecs: number) => {
     setStatus("processing");
     try {
@@ -152,22 +164,25 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       const transcriptionText = transcData?.text || "";
       const wasAnswered = detectIfAnswered(transcriptionText);
       const finalStatus = wasAnswered ? "finalizada" : "nao_atendida";
+      const currentChamadaId = chamadaIdRef.current;
 
       if (transcErr) {
         console.error("Transcription error:", transcErr);
         toast.error("Gravação salva, mas houve erro na transcrição.");
-        if (chamadaIdRef.current) {
-          updateChamada.mutate({ id: chamadaIdRef.current, leadId, status: "finalizada" });
+        if (currentChamadaId) {
+          updateChamada.mutate({ id: currentChamadaId, leadId, status: "finalizada" });
         }
-      } else if (chamadaIdRef.current) {
+      } else if (currentChamadaId) {
         updateChamada.mutate({
-          id: chamadaIdRef.current,
+          id: currentChamadaId,
           leadId,
           transcricao: transcriptionText,
           status: finalStatus,
         });
         if (wasAnswered) {
           toast.success("Chamada atendida — gravação transcrita com sucesso!");
+          // Auto-trigger AI feedback
+          triggerFeedback(currentChamadaId);
         } else {
           toast.warning("Chamada não atendida — nenhuma conversa detectada na transcrição.");
         }
@@ -181,7 +196,7 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       setStatus("error");
       setError(err.message);
     }
-  }, [leadId, leadNome, updateChamada]);
+  }, [leadId, leadNome, updateChamada, triggerFeedback]);
 
   const startWhatsAppCall = async () => {
     if (!numero) {

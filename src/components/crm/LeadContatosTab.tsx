@@ -10,6 +10,8 @@ import {
   Loader2,
   MessageSquare,
   MessageCircle,
+  Star,
+  ClipboardCheck,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,10 +56,17 @@ function wasAnswered(status: string) {
   return ["completada", "finalizada"].includes(status);
 }
 
+function getNotaColor(nota: number): string {
+  if (nota >= 8) return "bg-green-500/10 text-green-700 border-green-500/30";
+  if (nota >= 5) return "bg-yellow-500/10 text-yellow-700 border-yellow-500/30";
+  return "bg-red-500/10 text-red-700 border-red-500/30";
+}
+
 export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
   const { data: chamadas, isLoading } = useCrmChamadas(leadId);
   const [transcricaoOpen, setTranscricaoOpen] = useState<CrmChamada | null>(null);
   const [resumoOpen, setResumoOpen] = useState<CrmChamada | null>(null);
+  const [feedbackOpen, setFeedbackOpen] = useState<CrmChamada | null>(null);
 
   const handleDownloadAudio = async (chamada: CrmChamada) => {
     const url = chamada.audio_url || chamada.recording_url;
@@ -100,6 +109,7 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
               <TableHead className="text-xs">Número</TableHead>
               <TableHead className="text-xs">Status</TableHead>
               <TableHead className="text-xs">Duração</TableHead>
+              <TableHead className="text-xs">Nota IA</TableHead>
               <TableHead className="text-xs text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -109,6 +119,8 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
               const hasAudio = !!(chamada.audio_url || chamada.recording_url);
               const hasTranscricao = !!chamada.transcricao;
               const hasResumo = !!(wasAnswered(chamada.status) && chamada.resumo_ia);
+              const hasFeedback = !!(chamada as any).feedback_ia;
+              const nota = (chamada as any).nota_ia as number | null;
 
               return (
                 <TableRow key={chamada.id}>
@@ -139,8 +151,28 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
                       ? `${Math.floor(chamada.duracao_segundos / 60)}m${chamada.duracao_segundos % 60}s`
                       : "-"}
                   </TableCell>
+                  <TableCell className="py-2">
+                    {nota !== null && nota !== undefined ? (
+                      <Badge variant="outline" className={`text-[10px] font-bold ${getNotaColor(nota)}`}>
+                        <Star className="h-3 w-3 mr-0.5 fill-current" />
+                        {nota}/10
+                      </Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">-</span>
+                    )}
+                  </TableCell>
                   <TableCell className="text-right py-2">
                     <div className="flex items-center justify-end gap-0.5">
+                      {hasFeedback && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setFeedbackOpen(chamada)}>
+                              <ClipboardCheck className="h-3.5 w-3.5 text-amber-600" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Feedback IA</TooltipContent>
+                        </Tooltip>
+                      )}
                       {hasResumo && (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -179,6 +211,39 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
           </TableBody>
         </Table>
       </ScrollArea>
+
+      {/* Feedback IA dialog */}
+      <Dialog open={!!feedbackOpen} onOpenChange={(o) => !o && setFeedbackOpen(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <ClipboardCheck className="h-4 w-4 text-amber-600" />
+              Feedback do Atendimento (IA)
+              {(feedbackOpen as any)?.nota_ia !== null && (feedbackOpen as any)?.nota_ia !== undefined && (
+                <Badge variant="outline" className={`ml-2 ${getNotaColor((feedbackOpen as any).nota_ia)}`}>
+                  <Star className="h-3 w-3 mr-0.5 fill-current" />
+                  {(feedbackOpen as any).nota_ia}/10
+                </Badge>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+          <ScrollArea className="max-h-[60vh]">
+            <div className="text-sm whitespace-pre-wrap leading-relaxed space-y-2">
+              {((feedbackOpen as any)?.feedback_ia || "").split('\n').filter((l: string) => l.trim()).map((line: string, i: number) => {
+                const isSection = /^(📊|✅|⚠️|💡|NOTA:)/.test(line.trim());
+                const formatted = line.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                return (
+                  <p
+                    key={i}
+                    className={isSection ? 'font-semibold text-primary mt-3 first:mt-0' : 'ml-1'}
+                    dangerouslySetInnerHTML={{ __html: formatted }}
+                  />
+                );
+              })}
+            </div>
+          </ScrollArea>
+        </DialogContent>
+      </Dialog>
 
       {/* Resumo IA dialog */}
       <Dialog open={!!resumoOpen} onOpenChange={(o) => !o && setResumoOpen(null)}>

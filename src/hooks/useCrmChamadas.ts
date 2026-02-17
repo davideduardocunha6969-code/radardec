@@ -15,6 +15,8 @@ export interface CrmChamada {
   audio_url: string | null;
   transcricao: string | null;
   resumo_ia: string | null;
+  feedback_ia: string | null;
+  nota_ia: number | null;
   created_at: string;
   updated_at: string;
 }

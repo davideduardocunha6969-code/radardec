@@ -9,6 +9,7 @@ export interface RoboCoach {
   descricao: string | null;
   instrucoes: string;
   ativo: boolean;
+  tipo: string;
   user_id: string;
   created_at: string;
   updated_at: string;
@@ -47,10 +48,10 @@ export function useCreateRoboCoach() {
   const qc = useQueryClient();
   const { user } = useAuthContext();
   return useMutation({
-    mutationFn: async (data: { nome: string; descricao?: string; instrucoes: string }) => {
+    mutationFn: async (data: { nome: string; descricao?: string; instrucoes: string; tipo?: string }) => {
       const { data: result, error } = await supabase
         .from("robos_coach" as any)
-        .insert({ ...data, user_id: user!.id })
+        .insert({ ...data, tipo: data.tipo || "coaching", user_id: user!.id })
         .select()
         .single();
       if (error) throw error;
