@@ -106,7 +106,7 @@ export function RealtimeCoachingPanel({
         isAnalyzingRef.current = false;
       }
     },
-    [coach.instrucoes, leadNome, leadContext, qualificationItems]
+    [coach.instrucoes, leadNome, leadContext, qualificationItems, apresentacaoItems]
   );
 
   // Filter out STT hallucinations that occur during silence
@@ -203,9 +203,9 @@ export function RealtimeCoachingPanel({
   const isConnected = scribe.isConnected;
 
   return (
-    <div className="flex gap-2 mt-3 min-h-0 flex-1" style={{ height: 'calc(100vh - 260px)' }}>
+    <div className="flex gap-2 mt-3 overflow-y-auto" style={{ height: 'calc(100vh - 260px)' }}>
       {/* Column 1: Apresentação + Qualificação */}
-      <div className="flex-1 flex flex-col gap-2 min-h-0">
+      <div className="flex-1 flex flex-col gap-2">
         {apresentacaoItems.length > 0 && (
           <ChecklistCard
             title="Apresentação"
@@ -226,7 +226,7 @@ export function RealtimeCoachingPanel({
       </div>
 
       {/* Column 2: Objeções + RECA + RALOCA */}
-      <div className="flex-1 flex flex-col gap-2 min-h-0">
+      <div className="flex-1 flex flex-col gap-2">
         <ObjectionsCard objections={objections} />
         <DynamicChecklistCard
           title="RECA — Emocionais"
@@ -245,7 +245,7 @@ export function RealtimeCoachingPanel({
       </div>
 
       {/* Column 3: Transcrição */}
-      <Card className="border-primary/20 flex-1 flex flex-col min-h-0">
+      <Card className="border-primary/20 flex-1 flex flex-col min-h-[0] self-stretch">
         <CardHeader className="pb-1 px-3 pt-2 shrink-0">
           <div className="flex items-center justify-between">
             <CardTitle className="text-xs flex items-center gap-1.5">
