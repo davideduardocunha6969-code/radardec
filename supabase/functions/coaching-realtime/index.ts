@@ -6,91 +6,64 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const SYSTEM_PROMPT = `Você é um assistente de análise em tempo real de ligações SDR para um escritório de advocacia trabalhista que atende motoristas de caminhão demitidos.
+interface ScriptItem {
+  id: string;
+  label: string;
+  description: string;
+}
 
-O objetivo do SDR é agendar uma ANÁLISE GRATUITA por vídeo, focada em checagem de rescisão e análise de cálculos.
+function buildSystemPrompt(
+  qualificacao: ScriptItem[],
+  reca: ScriptItem[],
+  raloca: ScriptItem[],
+  coachInstructions: string,
+  leadName: string,
+  leadContext?: string
+): string {
+  const qualList = qualificacao
+    .map((q) => `   - ${q.id}: ${q.description || q.label}`)
+    .join("\n");
+  const recaList = reca
+    .map((r) => `   - ${r.id}: ${r.description || r.label}`)
+    .join("\n");
+  const ralocaList = raloca
+    .map((r) => `   - ${r.id}: ${r.description || r.label}`)
+    .join("\n");
 
-Analise a transcrição da ligação e identifique com precisão:
+  const qualIds = qualificacao.map((q) => q.id).join(", ");
+  const recaIds = reca.map((r) => r.id).join(", ");
+  const ralocaIds = raloca.map((r) => r.id).join(", ");
 
-1. QUALIFICAÇÃO — Quais perguntas de qualificação o SDR JÁ FEZ (use APENAS os IDs listados):
-   - jornada: Perguntou sobre jornada diária de trabalho
-   - descanso_11h: Perguntou sobre descanso de 11 horas entre jornadas
-   - tempo_espera: Perguntou sobre tempo de espera para carga/descarga
-   - diarias: Perguntou sobre diárias ou ajuda de custo
-   - holerite: Perguntou sobre holerite detalhado
-   - controle_jornada: Perguntou sobre controle de jornada (tacógrafo, planilha)
-   - tempo_empresa: Perguntou sobre tempo na empresa
-   - tipo_demissao: Perguntou sobre tipo de demissão
-   - rotina_estrada: Perguntou sobre rotina na estrada (pernoites, refeições)
+  return `Você é um assistente de análise em tempo real de ligações SDR.
 
-2. OBJEÇÕES — Identifique TODAS as objeções do lead (explícitas ou implícitas). Para cada objeção:
+CONTEXTO:
+- Lead: ${leadName}
+${leadContext ? `- Info: ${leadContext}` : ""}
+
+Analise a transcrição e identifique com precisão:
+
+1. QUALIFICAÇÃO — Quais perguntas o SDR JÁ FEZ (IDs válidos: ${qualIds}):
+${qualList}
+
+2. OBJEÇÕES — Identifique TODAS as objeções do lead. Para cada:
    - Crie um ID único em snake_case
-   - Descreva a objeção de forma curta
-   - Sugira uma resposta ou pergunta para o SDR usar (linguagem simples, sem jargão)
-   - Indique se o SDR JÁ respondeu essa objeção adequadamente
+   - Descreva a objeção
+   - Sugira uma resposta/pergunta para o SDR (linguagem simples, prefira perguntas que levem o lead a encontrar a resposta sozinho)
+   - Indique se o SDR JÁ respondeu adequadamente
 
-3. RECA — Quais gatilhos emocionais o SDR JÁ ATIVOU (use APENAS os IDs listados):
-   - justica: Explorou senso de justiça/injustiça
-   - encerramento: Explorou desejo de resolver/encerrar
-   - seguranca: Explorou segurança financeira/tranquilidade
-   - alivio: Explorou alívio emocional
-   - prejuizo: Alertou sobre possível prejuízo/perda
+3. RECA — Gatilhos emocionais ativados pelo SDR (IDs válidos: ${recaIds}):
+${recaList}
 
-4. RALOCA — Quais argumentos lógicos o SDR JÁ USOU (use APENAS os IDs listados):
-   - metodo: Explicou método (transformar rotina em cálculo)
-   - analise: Reforçou necessidade de análise dos números
-   - sem_compromisso: Mencionou que é gratuito/sem compromisso
-   - decisao_cliente: Reforçou que decisão é do cliente
-   - revisao_calculo: Explicou que pode revisar mesmo tendo assinado rescisão
+4. RALOCA — Argumentos lógicos usados pelo SDR (IDs válidos: ${ralocaIds}):
+${ralocaList}
 
 REGRAS:
 - Só marque como feito se houver evidência CLARA na transcrição.
 - Não invente. Se não está claro, não marque.
-- Para objeções, seja criativo nas sugestões de resposta — prefira perguntas que levem o lead a encontrar sozinho a resposta.`;
+- Para objeções, seja criativo nas sugestões.
 
-const tools = [
-  {
-    type: "function",
-    function: {
-      name: "analyze_call",
-      description: "Return structured analysis of the SDR call transcript",
-      parameters: {
-        type: "object",
-        properties: {
-          qualification_done: {
-            type: "array",
-            items: { type: "string" },
-            description: "IDs of qualification questions already asked by the SDR",
-          },
-          objections: {
-            type: "array",
-            items: {
-              type: "object",
-              properties: {
-                id: { type: "string", description: "Unique snake_case ID for this objection" },
-                objection: { type: "string", description: "Short description of the objection" },
-                suggested_response: { type: "string", description: "Suggested response/question for the SDR" },
-                addressed: { type: "boolean", description: "Whether the SDR has adequately addressed this" },
-              },
-              required: ["id", "objection", "suggested_response", "addressed"],
-            },
-          },
-          reca_done: {
-            type: "array",
-            items: { type: "string" },
-            description: "IDs of emotional triggers (RECA) that the SDR has activated",
-          },
-          raloca_done: {
-            type: "array",
-            items: { type: "string" },
-            description: "IDs of logical arguments (RALOCA) that the SDR has used",
-          },
-        },
-        required: ["qualification_done", "objections", "reca_done", "raloca_done"],
-      },
-    },
-  },
-];
+${coachInstructions ? `INSTRUÇÕES ADICIONAIS DO COACH:\n${coachInstructions}` : ""}`;
+}
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -98,7 +71,7 @@ serve(async (req) => {
   }
 
   try {
-    const { transcript, coachInstructions, leadName, leadContext } = await req.json();
+    const { transcript, coachInstructions, leadName, leadContext, scriptItems } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -108,7 +81,73 @@ serve(async (req) => {
       });
     }
 
-    const contextBlock = `\nCONTEXTO:\n- Lead: ${leadName}${leadContext ? `\n- Info: ${leadContext}` : ""}${coachInstructions ? `\n\nINSTRUÇÕES ADICIONAIS DO COACH:\n${coachInstructions}` : ""}`;
+    const qualificacao: ScriptItem[] = scriptItems?.qualificacao || [];
+    const reca: ScriptItem[] = scriptItems?.reca || [];
+    const raloca: ScriptItem[] = scriptItems?.raloca || [];
+
+    if (!qualificacao.length && !reca.length && !raloca.length) {
+      return new Response(JSON.stringify({ error: "No script items provided" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    const qualIds = qualificacao.map((q: ScriptItem) => q.id).join(", ");
+    const recaIds = reca.map((r: ScriptItem) => r.id).join(", ");
+    const ralocaIds = raloca.map((r: ScriptItem) => r.id).join(", ");
+
+    const tools = [
+      {
+        type: "function",
+        function: {
+          name: "analyze_call",
+          description: "Return structured analysis of the SDR call transcript",
+          parameters: {
+            type: "object",
+            properties: {
+              qualification_done: {
+                type: "array",
+                items: { type: "string" },
+                description: `IDs of qualification questions already asked. Valid IDs: ${qualIds}`,
+              },
+              objections: {
+                type: "array",
+                items: {
+                  type: "object",
+                  properties: {
+                    id: { type: "string" },
+                    objection: { type: "string" },
+                    suggested_response: { type: "string" },
+                    addressed: { type: "boolean" },
+                  },
+                  required: ["id", "objection", "suggested_response", "addressed"],
+                },
+              },
+              reca_done: {
+                type: "array",
+                items: { type: "string" },
+                description: `IDs of emotional triggers activated. Valid IDs: ${recaIds}`,
+              },
+              raloca_done: {
+                type: "array",
+                items: { type: "string" },
+                description: `IDs of logical arguments used. Valid IDs: ${ralocaIds}`,
+              },
+            },
+            required: ["qualification_done", "objections", "reca_done", "raloca_done"],
+          },
+        },
+      },
+    ];
+
+    const systemPrompt = buildSystemPrompt(
+      qualificacao,
+      reca,
+      raloca,
+      coachInstructions || "",
+      leadName || "Desconhecido",
+      leadContext
+    );
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -119,7 +158,7 @@ serve(async (req) => {
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: SYSTEM_PROMPT + contextBlock },
+          { role: "system", content: systemPrompt },
           { role: "user", content: `Transcrição atual da ligação:\n\n${transcript}` },
         ],
         tools,
@@ -150,8 +189,6 @@ serve(async (req) => {
     }
 
     const result = await response.json();
-
-    // Extract tool call arguments
     const toolCall = result.choices?.[0]?.message?.tool_calls?.[0];
     if (!toolCall) {
       console.error("No tool call in response:", JSON.stringify(result));

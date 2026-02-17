@@ -7,6 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Mic, MicOff, Loader2, ClipboardList, Heart, Brain, BookOpen } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type RoboCoach } from "@/hooks/useRobosCoach";
+import { useActiveScriptSdr } from "@/hooks/useScriptsSdr";
 import { Progress } from "@/components/ui/progress";
 import { useScribe, CommitStrategy } from "@elevenlabs/react";
 import { ChecklistCard } from "./coaching/ChecklistCard";
@@ -18,6 +19,7 @@ import {
   INSTRUCTIONS_TEXT,
   type CoachingAnalysis,
   type Objection,
+  type ChecklistItem,
 } from "./coaching/coachingData";
 import ReactMarkdown from "react-markdown";
 
@@ -35,6 +37,8 @@ export function RealtimeCoachingPanel({
   leadContext,
   isRecording,
 }: RealtimeCoachingPanelProps) {
+  const { data: activeScript } = useActiveScriptSdr();
+
   const [qualificationDone, setQualificationDone] = useState<string[]>([]);
   const [objections, setObjections] = useState<Objection[]>([]);
   const [recaDone, setRecaDone] = useState<string[]>([]);
@@ -47,6 +51,18 @@ export function RealtimeCoachingPanel({
   const isAnalyzingRef = useRef(false);
   const allTranscriptsRef = useRef<string[]>([]);
   const animFrameRef = useRef<number | null>(null);
+
+  // Use script from DB if available, fallback to hardcoded
+  const qualificationItems: ChecklistItem[] = activeScript?.qualificacao?.length
+    ? activeScript.qualificacao
+    : QUALIFICATION_QUESTIONS;
+  const recaItems: ChecklistItem[] = activeScript?.reca?.length
+    ? activeScript.reca
+    : RECA_ITEMS;
+  const ralocaItems: ChecklistItem[] = activeScript?.raloca?.length
+    ? activeScript.raloca
+    : RALOCA_ITEMS;
+  const instructionsText = activeScript?.instrucoes_gerais || INSTRUCTIONS_TEXT;
 
   const requestAnalysis = useCallback(
     async (transcript: string) => {
@@ -62,6 +78,11 @@ export function RealtimeCoachingPanel({
             coachInstructions: coach.instrucoes,
             leadName: leadNome,
             leadContext,
+            scriptItems: {
+              qualificacao: qualificationItems,
+              reca: recaItems,
+              raloca: ralocaItems,
+            },
           },
         });
 
@@ -84,7 +105,7 @@ export function RealtimeCoachingPanel({
         isAnalyzingRef.current = false;
       }
     },
-    [coach.instrucoes, leadNome, leadContext]
+    [coach.instrucoes, leadNome, leadContext, qualificationItems, recaItems, ralocaItems]
   );
 
   const scribe = useScribe({
@@ -163,7 +184,7 @@ export function RealtimeCoachingPanel({
           title="Qualificação"
           icon={ClipboardList}
           iconColor="text-blue-500"
-          items={QUALIFICATION_QUESTIONS}
+          items={qualificationItems}
           completedIds={qualificationDone}
         />
         <ObjectionsCard objections={objections} />
@@ -171,14 +192,14 @@ export function RealtimeCoachingPanel({
           title="RECA — Razões Emocionais"
           icon={Heart}
           iconColor="text-red-500"
-          items={RECA_ITEMS}
+          items={recaItems}
           completedIds={recaDone}
         />
         <ChecklistCard
           title="RALOCA — Razões Lógicas"
           icon={Brain}
           iconColor="text-purple-500"
-          items={RALOCA_ITEMS}
+          items={ralocaItems}
           completedIds={ralocaDone}
         />
       </div>
@@ -220,7 +241,6 @@ export function RealtimeCoachingPanel({
             </div>
           </ScrollArea>
         </CardContent>
-        {/* Instructions sheet trigger */}
         <div className="px-3 pb-2.5 shrink-0">
           <Sheet>
             <SheetTrigger asChild>
@@ -234,7 +254,7 @@ export function RealtimeCoachingPanel({
                 <SheetTitle>Instruções de Qualificação</SheetTitle>
               </SheetHeader>
               <div className="prose prose-sm dark:prose-invert mt-4 max-w-none">
-                <ReactMarkdown>{INSTRUCTIONS_TEXT}</ReactMarkdown>
+                <ReactMarkdown>{instructionsText}</ReactMarkdown>
               </div>
             </SheetContent>
           </Sheet>
