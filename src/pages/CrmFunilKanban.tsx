@@ -3,12 +3,14 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useDeleteColuna, useCreateLead, useUpdateLead, useDeleteLead, useBulkCreateLeads, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
 import { VoipDialer } from "@/components/crm/VoipDialer";
 import { WhatsAppCallRecorder } from "@/components/crm/WhatsAppCallRecorder";
+import { LeadContatosTab } from "@/components/crm/LeadContatosTab";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, FileSpreadsheet, AlertCircle } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, FileSpreadsheet, AlertCircle, History } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
@@ -349,60 +351,73 @@ export default function CrmFunilKanban() {
 
       {/* Dialog Detalhe Lead */}
       <Dialog open={!!detailLead} onOpenChange={(o) => !o && setDetailLead(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader><DialogTitle>{detailLead?.nome}</DialogTitle></DialogHeader>
           {detailLead && (
-            <div className="space-y-4">
-              {detailLead.dados_extras && (
-                <div className="grid grid-cols-2 gap-3">
-                  {(detailLead.dados_extras as Record<string, string>).empresa && <div><label className="text-xs font-medium text-muted-foreground">Empresa</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).empresa}</p></div>}
-                  {(detailLead.dados_extras as Record<string, string>).cargo && <div><label className="text-xs font-medium text-muted-foreground">Cargo</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).cargo}</p></div>}
-                  {(detailLead.dados_extras as Record<string, string>).data_admissao && <div><label className="text-xs font-medium text-muted-foreground">Admissão</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).data_admissao}</p></div>}
-                  {(detailLead.dados_extras as Record<string, string>).data_demissao && <div><label className="text-xs font-medium text-muted-foreground">Demissão</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).data_demissao}</p></div>}
-                  {(detailLead.dados_extras as Record<string, string>).motivo_demissao && <div><label className="text-xs font-medium text-muted-foreground">Motivo</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).motivo_demissao}</p></div>}
-                  {(detailLead.dados_extras as Record<string, string>).cpf && <div><label className="text-xs font-medium text-muted-foreground">CPF</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).cpf}</p></div>}
-                  {(detailLead.dados_extras as Record<string, string>).municipio && <div><label className="text-xs font-medium text-muted-foreground">Município/UF</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).municipio}/{(detailLead.dados_extras as Record<string, string>).uf}</p></div>}
-                </div>
-              )}
-              {detailLead.endereco && <div><label className="text-sm font-medium text-muted-foreground">Endereço</label><p className="text-sm">{detailLead.endereco}</p></div>}
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Telefones</label>
-                {detailLead.telefones.map((t, i) => (
-                  <div key={i} className="flex items-center gap-2 mt-1">
-                    <Phone className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">{t.numero}</span>
-                    <Badge variant="outline" className="text-xs">{t.tipo}</Badge>
-                    <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto text-primary"><Phone className="h-4 w-4" /></Button>
+            <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
+              <TabsList className="w-full">
+                <TabsTrigger value="dados" className="flex-1">Dados</TabsTrigger>
+                <TabsTrigger value="contatos" className="flex-1">
+                  <History className="h-3.5 w-3.5 mr-1" />Contatos
+                </TabsTrigger>
+              </TabsList>
+              <TabsContent value="dados" className="flex-1 overflow-auto">
+                <div className="space-y-4">
+                  {detailLead.dados_extras && (
+                    <div className="grid grid-cols-2 gap-3">
+                      {(detailLead.dados_extras as Record<string, string>).empresa && <div><label className="text-xs font-medium text-muted-foreground">Empresa</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).empresa}</p></div>}
+                      {(detailLead.dados_extras as Record<string, string>).cargo && <div><label className="text-xs font-medium text-muted-foreground">Cargo</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).cargo}</p></div>}
+                      {(detailLead.dados_extras as Record<string, string>).data_admissao && <div><label className="text-xs font-medium text-muted-foreground">Admissão</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).data_admissao}</p></div>}
+                      {(detailLead.dados_extras as Record<string, string>).data_demissao && <div><label className="text-xs font-medium text-muted-foreground">Demissão</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).data_demissao}</p></div>}
+                      {(detailLead.dados_extras as Record<string, string>).motivo_demissao && <div><label className="text-xs font-medium text-muted-foreground">Motivo</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).motivo_demissao}</p></div>}
+                      {(detailLead.dados_extras as Record<string, string>).cpf && <div><label className="text-xs font-medium text-muted-foreground">CPF</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).cpf}</p></div>}
+                      {(detailLead.dados_extras as Record<string, string>).municipio && <div><label className="text-xs font-medium text-muted-foreground">Município/UF</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).municipio}/{(detailLead.dados_extras as Record<string, string>).uf}</p></div>}
+                    </div>
+                  )}
+                  {detailLead.endereco && <div><label className="text-sm font-medium text-muted-foreground">Endereço</label><p className="text-sm">{detailLead.endereco}</p></div>}
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Telefones</label>
+                    {detailLead.telefones.map((t, i) => (
+                      <div key={i} className="flex items-center gap-2 mt-1">
+                        <Phone className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">{t.numero}</span>
+                        <Badge variant="outline" className="text-xs">{t.tipo}</Badge>
+                        <Button variant="ghost" size="icon" className="h-7 w-7 ml-auto text-primary"><Phone className="h-4 w-4" /></Button>
+                      </div>
+                    ))}
                   </div>
-                ))}
-              </div>
-              {detailLead.resumo_caso && <div><label className="text-sm font-medium text-muted-foreground">Resumo do Caso (IA)</label><p className="text-sm bg-muted p-3 rounded-md">{detailLead.resumo_caso}</p></div>}
-              {/* WhatsApp Call + Recording */}
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Ligação WhatsApp</label>
-                <div className="mt-1">
-                  <WhatsAppCallRecorder leadId={detailLead.id} leadNome={detailLead.nome} telefones={detailLead.telefones} />
+                  {detailLead.resumo_caso && <div><label className="text-sm font-medium text-muted-foreground">Resumo do Caso (IA)</label><p className="text-sm bg-muted p-3 rounded-md">{detailLead.resumo_caso}</p></div>}
+                  {/* WhatsApp Call + Recording */}
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Ligação WhatsApp</label>
+                    <div className="mt-1">
+                      <WhatsAppCallRecorder leadId={detailLead.id} leadNome={detailLead.nome} telefones={detailLead.telefones} />
+                    </div>
+                  </div>
+                  {/* VoIP Dialer */}
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Discador VoIP</label>
+                    <div className="mt-1">
+                      <VoipDialer lead={detailLead} />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium text-muted-foreground">Mover para coluna</label>
+                    <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={detailLead.coluna_id} onChange={(e) => { handleMoveLead(detailLead, e.target.value); setDetailLead({ ...detailLead, coluna_id: e.target.value }); }}>
+                      {colunas?.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
+                    </select>
+                  </div>
+                  <div className="flex justify-end">
+                    <Button variant="destructive" size="sm" onClick={() => { deleteLead.mutate({ id: detailLead.id, funilId: funilId! }); setDetailLead(null); }}>
+                      <Trash2 className="h-4 w-4 mr-2" />Excluir Lead
+                    </Button>
+                  </div>
                 </div>
-              </div>
-              {/* VoIP Dialer */}
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Discador VoIP</label>
-                <div className="mt-1">
-                  <VoipDialer lead={detailLead} />
-                </div>
-              </div>
-              <div>
-                <label className="text-sm font-medium text-muted-foreground">Mover para coluna</label>
-                <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={detailLead.coluna_id} onChange={(e) => { handleMoveLead(detailLead, e.target.value); setDetailLead({ ...detailLead, coluna_id: e.target.value }); }}>
-                  {colunas?.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                </select>
-              </div>
-              <div className="flex justify-end">
-                <Button variant="destructive" size="sm" onClick={() => { deleteLead.mutate({ id: detailLead.id, funilId: funilId! }); setDetailLead(null); }}>
-                  <Trash2 className="h-4 w-4 mr-2" />Excluir Lead
-                </Button>
-              </div>
-            </div>
+              </TabsContent>
+              <TabsContent value="contatos" className="flex-1 overflow-auto">
+                <LeadContatosTab leadId={detailLead.id} />
+              </TabsContent>
+            </Tabs>
           )}
         </DialogContent>
       </Dialog>
