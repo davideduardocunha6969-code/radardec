@@ -61,16 +61,37 @@ serve(async (req) => {
       .eq("id", chamada.lead_id)
       .single();
 
-    // Fetch the feedback coach instructions
-    const { data: feedbackCoach } = await supabase
-      .from("robos_coach")
-      .select("instrucoes")
-      .eq("tipo", "feedback_sdr")
-      .eq("ativo", true)
-      .limit(1)
+    // Find the column's specific feedback coach via lead's coluna_id
+    const { data: coluna } = await supabase
+      .from("crm_colunas")
+      .select("robo_feedback_id")
+      .eq("id", lead?.coluna_id)
       .single();
 
-    const coachInstructions = feedbackCoach?.instrucoes || "";
+    let coachInstructions = "";
+    if (coluna?.robo_feedback_id) {
+      const { data: feedbackCoach } = await supabase
+        .from("robos_coach")
+        .select("instrucoes")
+        .eq("id", coluna.robo_feedback_id)
+        .eq("ativo", true)
+        .single();
+      coachInstructions = feedbackCoach?.instrucoes || "";
+    }
+
+    // Fallback: if no column-specific coach, try any active feedback_sdr coach
+    if (!coachInstructions) {
+      const { data: fallbackCoach } = await supabase
+        .from("robos_coach")
+        .select("instrucoes")
+        .eq("tipo", "feedback_sdr")
+        .eq("ativo", true)
+        .limit(1)
+        .single();
+      coachInstructions = fallbackCoach?.instrucoes || "";
+    }
+
+    
 
     const systemPrompt = `Você é um avaliador de atendimentos de SDR (Sales Development Representative).
 
