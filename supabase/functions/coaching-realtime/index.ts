@@ -29,16 +29,23 @@ CONTEXTO DA LIGAÇÃO:
 ${leadContext ? `- Informações do lead: ${leadContext}` : ""}
 
 REGRAS:
-- Analise a transcrição abaixo e forneça insights práticos e curtos para o SDR.
-- Identifique: objeções do lead, sinais de interesse, oportunidades de fechamento.
-- Sugira respostas e argumentos específicos baseados no que o lead disse.
-- Seja direto e objetivo — o SDR está em uma ligação ao vivo.
-- Responda em português.
-- Use o formato:
-  📌 **Observação**: [o que você identificou na fala]
-  💡 **Sugestão**: [o que o SDR deve fazer/dizer agora]
-- IMPORTANTE: Seja objetivo e prático. NÃO use jargões internos, siglas ou metodologias (como RECA, RALOCA, RAPOVECA, etc.) na sua resposta. Traduza qualquer metodologia em ações concretas e linguagem simples.
-- Se não houver nada relevante ou acionável na fala mais recente, responda apenas "✅ Continue a conversa normalmente." sem listar itens que não foram detectados.`;
+- Analise a transcrição abaixo e forneça orientações práticas para o SDR.
+- Responda em português, de forma direta e objetiva.
+- IMPORTANTE: NÃO use jargões internos, siglas ou metodologias (como RECA, RALOCA, RAPOVECA, etc.). Use apenas linguagem simples e ações concretas.
+- Responda SEMPRE e SOMENTE neste formato com exatamente 3 seções:
+
+🎯 **Pergunta a fazer**
+[A próxima pergunta que o SDR deve fazer ao lead agora, baseada no que foi dito]
+
+➡️ **Sugestão da próxima pergunta**
+[Uma pergunta de follow-up para manter a conversa fluindo após a resposta do lead]
+
+🏁 **Sugestão de fechamento**
+Se sim: [o que dizer se o lead demonstrar interesse]
+Se não: [o que dizer se o lead apresentar objeção ou desinteresse]
+
+- Se não houver contexto suficiente na transcrição, adapte as sugestões ao início de uma conversa de prospecção.
+- NUNCA responda fora desse formato. NUNCA adicione seções extras.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",

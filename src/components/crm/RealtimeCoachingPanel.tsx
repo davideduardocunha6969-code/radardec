@@ -66,8 +66,8 @@ export function RealtimeCoachingPanel({
       if (data?.insight && data.insight !== "✅ Continue a conversa normalmente.") {
         insightIdRef.current += 1;
         setInsights((prev) => [
-          ...prev,
           { id: insightIdRef.current, text: data.insight, timestamp: new Date() },
+          ...prev,
         ]);
       }
     } catch (e) {
@@ -171,10 +171,10 @@ export function RealtimeCoachingPanel({
     };
   }, [isRecording, scribe.isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Auto-scroll insights
+  // Scroll to top on new insight (newest first)
   useEffect(() => {
     if (scrollRef.current) {
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+      scrollRef.current.scrollTop = 0;
     }
   }, [insights]);
 
@@ -198,21 +198,24 @@ export function RealtimeCoachingPanel({
         <CardContent className="px-3 pb-3 flex-1 min-h-0">
           <ScrollArea className="h-full" ref={scrollRef}>
             <div className="space-y-3">
-              {insights.map((insight) => (
-                <div key={insight.id} className="bg-primary/5 rounded-lg p-3 border border-primary/10">
-                  <div className="text-sm whitespace-pre-wrap leading-relaxed prose prose-sm max-w-none [&_strong]:text-primary [&_strong]:font-semibold">
-                    {insight.text.split('\n').map((line, i) => {
+              {insights.map((insight, index) => (
+                <div key={insight.id} className={`rounded-lg p-4 border ${index === 0 ? 'bg-primary/10 border-primary/30 ring-1 ring-primary/20' : 'bg-muted/30 border-border/50 opacity-60'}`}>
+                  <div className="text-sm whitespace-pre-wrap leading-relaxed space-y-2">
+                    {insight.text.split('\n').filter(l => l.trim()).map((line, i) => {
+                      const isSection = /^(🎯|➡️|🏁)/.test(line.trim());
                       const formatted = line
-                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                        .replace(/📌/g, '<span class="text-base">📌</span>')
-                        .replace(/💡/g, '<span class="text-base">💡</span>')
-                        .replace(/✅/g, '<span class="text-base">✅</span>')
-                        .replace(/⚠️/g, '<span class="text-base">⚠️</span>');
-                      return <p key={i} className="mb-1 last:mb-0" dangerouslySetInnerHTML={{ __html: formatted }} />;
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                      return (
+                        <p
+                          key={i}
+                          className={isSection ? 'font-semibold text-primary mt-3 first:mt-0' : 'ml-1'}
+                          dangerouslySetInnerHTML={{ __html: formatted }}
+                        />
+                      );
                     })}
                   </div>
-                  <span className="text-[10px] text-muted-foreground mt-2 block border-t border-primary/5 pt-1">
-                    {insight.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
+                  <span className="text-[10px] text-muted-foreground mt-2 block border-t border-border/30 pt-1">
+                    {index === 0 ? '✨ Mais recente — ' : ''}{insight.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                   </span>
                 </div>
               ))}
