@@ -2,6 +2,7 @@ import { useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useDeleteColuna, useCreateLead, useUpdateLead, useDeleteLead, useBulkCreateLeads, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
 import { VoipDialer } from "@/components/crm/VoipDialer";
+import { WhatsAppCallRecorder } from "@/components/crm/WhatsAppCallRecorder";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -376,6 +377,13 @@ export default function CrmFunilKanban() {
                 ))}
               </div>
               {detailLead.resumo_caso && <div><label className="text-sm font-medium text-muted-foreground">Resumo do Caso (IA)</label><p className="text-sm bg-muted p-3 rounded-md">{detailLead.resumo_caso}</p></div>}
+              {/* WhatsApp Call + Recording */}
+              <div>
+                <label className="text-sm font-medium text-muted-foreground">Ligação WhatsApp</label>
+                <div className="mt-1">
+                  <WhatsAppCallRecorder leadId={detailLead.id} leadNome={detailLead.nome} telefones={detailLead.telefones} />
+                </div>
+              </div>
               {/* VoIP Dialer */}
               <div>
                 <label className="text-sm font-medium text-muted-foreground">Discador VoIP</label>

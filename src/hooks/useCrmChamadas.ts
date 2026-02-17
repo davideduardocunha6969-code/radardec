@@ -82,6 +82,7 @@ export function useUpdateChamada() {
       twilio_call_sid?: string;
       duracao_segundos?: number;
       recording_url?: string;
+      audio_url?: string;
       transcricao?: string;
       resumo_ia?: string;
     }) => {
