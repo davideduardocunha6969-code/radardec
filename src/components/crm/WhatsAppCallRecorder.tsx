@@ -224,9 +224,15 @@ export function WhatsAppCallRecorder({ leadId, leadNome, telefones }: WhatsAppCa
       chamadaIdRef.current = chamada.id;
       updateChamada.mutate({ id: chamada.id, leadId, status: "em_chamada" });
 
-      // 6. Open WhatsApp call
+      // 6. Open WhatsApp call via anchor element to avoid popup blocker
       const formattedPhone = formatPhone(selectedPhone);
-      window.open(`https://wa.me/${formattedPhone}`, "_blank");
+      const link = document.createElement("a");
+      link.href = `https://wa.me/${formattedPhone}`;
+      link.target = "_blank";
+      link.rel = "noopener noreferrer";
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
 
       toast.success("WhatsApp aberto! Inicie a ligação e o áudio será gravado.");
     } catch (err: any) {
