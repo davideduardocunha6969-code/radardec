@@ -10,14 +10,15 @@ interface ChecklistCardProps {
   iconColor?: string;
   items: ChecklistItem[];
   completedIds: string[];
+  className?: string;
 }
 
-export function ChecklistCard({ title, icon: Icon, iconColor = "text-primary", items, completedIds }: ChecklistCardProps) {
+export function ChecklistCard({ title, icon: Icon, iconColor = "text-primary", items, completedIds, className }: ChecklistCardProps) {
   const doneCount = completedIds.length;
   const total = items.length;
 
   return (
-    <Card className="border-border/60 flex flex-col min-h-0 flex-1">
+    <Card className={`border-border/60 flex flex-col min-h-0 flex-1 ${className || ""}`}>
       <CardHeader className="pb-1 px-2.5 pt-2 shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xs flex items-center gap-1.5">
