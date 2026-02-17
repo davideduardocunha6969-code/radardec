@@ -410,8 +410,8 @@ export default function CrmFunilKanban() {
       </Dialog>
 
       {/* Dialog Detalhe Lead */}
-      <Dialog open={!!detailLead} onOpenChange={(o) => !o && setDetailLead(null)}>
-        <DialogContent className="max-w-[1200px] w-[95vw] max-h-[90vh] overflow-hidden flex flex-col">
+      <Dialog open={!!detailLead} onOpenChange={(o) => { if (!o && !activeRecording) setDetailLead(null); }}>
+        <DialogContent className="max-w-[1200px] w-[95vw] max-h-[90vh] overflow-hidden flex flex-col" onInteractOutside={(e) => { if (activeRecording) e.preventDefault(); }} onPointerDownOutside={(e) => { if (activeRecording) e.preventDefault(); }}>
           <DialogHeader>
             <DialogTitle>{detailLead?.nome}</DialogTitle>
           </DialogHeader>
@@ -451,16 +451,7 @@ export default function CrmFunilKanban() {
                       </div>
                     ))}
                   </div>
-                  {/* Real-time coaching panel */}
-                  {activeRecording && getCoachForLead(detailLead) && (
-                    <RealtimeCoachingPanel
-                      coach={getCoachForLead(detailLead)!}
-                      leadNome={detailLead.nome}
-                      leadContext={detailLead.resumo_caso || undefined}
-                      isRecording={activeRecording}
-                      audioStream={activeAudioStream}
-                    />
-                  )}
+                  {/* Coaching panel moved outside dialog */}
                   {detailLead.resumo_caso && <div><label className="text-sm font-medium text-muted-foreground">Resumo do Caso (IA)</label><p className="text-sm bg-muted p-3 rounded-md">{detailLead.resumo_caso}</p></div>}
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Mover para coluna</label>
@@ -482,6 +473,19 @@ export default function CrmFunilKanban() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Real-time coaching panel - rendered outside dialog to survive focus changes */}
+      {activeRecording && detailLead && getCoachForLead(detailLead) && (
+        <div className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[90vw] max-w-[1100px] z-[60] shadow-2xl rounded-lg">
+          <RealtimeCoachingPanel
+            coach={getCoachForLead(detailLead)!}
+            leadNome={detailLead.nome}
+            leadContext={detailLead.resumo_caso || undefined}
+            isRecording={activeRecording}
+            audioStream={activeAudioStream}
+          />
+        </div>
+      )}
     </div>
   );
 }
