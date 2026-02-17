@@ -280,12 +280,16 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
 
                 const isNota = /^NOTA:\s*\d/i.test(trimmed);
                 const isSection = /^(📊|✅|⚠️|💡)/.test(trimmed);
-                const isBullet = /^[-•–]/.test(trimmed);
+                // Detect bullets: -, •, –, or markdown * followed by space(s)
+                const isBullet = /^[-•–]\s/.test(trimmed) || /^\*\s{1,}/.test(trimmed);
                 const isNumbered = /^\d+[.)]\s/.test(trimmed);
 
-                const formatted = trimmed
-                  .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-                  .replace(/\*(.*?)\*/g, '<em>$1</em>');
+                const formatText = (text: string) =>
+                  text
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/g, '<em>$1</em>');
+
+                const formatted = formatText(trimmed);
 
                 if (isNota) {
                   return (
@@ -307,11 +311,11 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
                 }
 
                 if (isBullet || isNumbered) {
-                  const bulletText = isBullet ? trimmed.replace(/^[-•–]\s*/, '') : trimmed;
+                  const bulletText = isBullet ? trimmed.replace(/^[-•–*]\s+/, '') : trimmed;
                   return (
-                    <div key={i} className="flex items-start gap-2 ml-2 py-0.5">
-                      <span className="text-muted-foreground mt-1 shrink-0">•</span>
-                      <span dangerouslySetInnerHTML={{ __html: isBullet ? bulletText.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>') : formatted }} />
+                    <div key={i} className="flex items-start gap-2 ml-3 py-0.5">
+                      <span className="text-muted-foreground mt-0.5 shrink-0">•</span>
+                      <span dangerouslySetInnerHTML={{ __html: formatText(bulletText) }} />
                     </div>
                   );
                 }
