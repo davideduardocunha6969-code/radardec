@@ -19,12 +19,12 @@ import { Progress } from "@/components/ui/progress";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreateChamada, useUpdateChamada } from "@/hooks/useCrmChamadas";
 import { toast } from "sonner";
-import type { LeadTelefone } from "@/hooks/useCrmOutbound";
+
 
 interface WhatsAppCallRecorderProps {
   leadId: string;
   leadNome: string;
-  telefones: LeadTelefone[];
+  numero: string;
 }
 
 type RecordingStatus = "idle" | "recording" | "paused" | "processing" | "done" | "error";
@@ -37,14 +37,13 @@ const formatPhone = (numero: string): string => {
   return `55${digits}`;
 };
 
-export function WhatsAppCallRecorder({ leadId, leadNome, telefones }: WhatsAppCallRecorderProps) {
+export function WhatsAppCallRecorder({ leadId, leadNome, numero }: WhatsAppCallRecorderProps) {
   const [status, setStatus] = useState<RecordingStatus>("idle");
   const [duration, setDuration] = useState(0);
   const [hasSystemAudio, setHasSystemAudio] = useState(false);
   const [hasMicAudio, setHasMicAudio] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
   const [systemLevel, setSystemLevel] = useState(0);
-  const [selectedPhone, setSelectedPhone] = useState(telefones[0]?.numero || "");
   const [error, setError] = useState<string | null>(null);
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
@@ -163,8 +162,8 @@ export function WhatsAppCallRecorder({ leadId, leadNome, telefones }: WhatsAppCa
   }, [leadId, updateChamada]);
 
   const startWhatsAppCall = async () => {
-    if (!selectedPhone) {
-      toast.error("Selecione um telefone");
+    if (!numero) {
+      toast.error("Telefone não informado");
       return;
     }
     setError(null);
@@ -236,13 +235,13 @@ export function WhatsAppCallRecorder({ leadId, leadNome, telefones }: WhatsAppCa
       // 5. Create chamada record
       const chamada = await createChamada.mutateAsync({
         lead_id: leadId,
-        numero_discado: selectedPhone,
+        numero_discado: numero,
       });
       chamadaIdRef.current = chamada.id;
       updateChamada.mutate({ id: chamada.id, leadId, status: "em_chamada" });
 
       // 6. Open WhatsApp call - use top window to avoid iframe blocking
-      const formattedPhone = formatPhone(selectedPhone);
+      const formattedPhone = formatPhone(numero);
       const waUrl = `https://wa.me/${formattedPhone}`;
       try {
         (window.top || window).open(waUrl, "_blank");
@@ -328,7 +327,7 @@ export function WhatsAppCallRecorder({ leadId, leadNome, telefones }: WhatsAppCa
         size="sm"
         className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
         onClick={startWhatsAppCall}
-        disabled={!selectedPhone}
+        disabled={!numero}
       >
         <MessageCircle className="h-3.5 w-3.5" />
         Ligar pelo WhatsApp

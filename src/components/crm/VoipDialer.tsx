@@ -6,10 +6,12 @@ import { Phone, PhoneOff, Mic, MicOff, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useCreateChamada, useUpdateChamada } from "@/hooks/useCrmChamadas";
 import { toast } from "sonner";
-import type { CrmLead, LeadTelefone } from "@/hooks/useCrmOutbound";
+
 
 interface VoipDialerProps {
-  lead: CrmLead;
+  leadId: string;
+  leadNome: string;
+  numero: string;
   onCallStatusChange?: (status: string) => void;
 }
 
@@ -37,13 +39,10 @@ const statusColors: Record<CallStatus, string> = {
   "no-answer": "bg-orange-500/20 text-orange-700",
 };
 
-export function VoipDialer({ lead, onCallStatusChange }: VoipDialerProps) {
+export function VoipDialer({ leadId, leadNome, numero, onCallStatusChange }: VoipDialerProps) {
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [isMuted, setIsMuted] = useState(false);
   const [duration, setDuration] = useState(0);
-  const [selectedPhone, setSelectedPhone] = useState<string>(
-    lead.telefones[0]?.numero || ""
-  );
   const [chamadaId, setChamadaId] = useState<string | null>(null);
 
   const deviceRef = useRef<any>(null);
@@ -93,105 +92,68 @@ export function VoipDialer({ lead, onCallStatusChange }: VoipDialerProps) {
   };
 
   const startCall = useCallback(async () => {
-    if (!selectedPhone) {
-      toast.error("Selecione um telefone para discar");
+    if (!numero) {
+      toast.error("Telefone não informado");
       return;
     }
 
     try {
       setCallStatus("connecting");
 
-      // Get Twilio token
       const { data: tokenData, error: tokenError } = await supabase.functions.invoke("twilio-token");
 
       if (tokenError || !tokenData?.token) {
         throw new Error(tokenError?.message || "Erro ao obter token do Twilio");
       }
 
-      // Dynamic import of Twilio Voice SDK
       const { Device } = await import("@twilio/voice-sdk");
-
-      // Initialize device
       const device = new Device(tokenData.token);
-
       deviceRef.current = device;
 
-      // Create chamada record
       const chamada = await createChamada.mutateAsync({
-        lead_id: lead.id,
-        numero_discado: selectedPhone,
+        lead_id: leadId,
+        numero_discado: numero,
       });
       setChamadaId(chamada.id);
 
-      // Connect the call
       const call = await device.connect({
-        params: {
-          To: selectedPhone,
-        },
+        params: { To: numero },
       });
 
       callRef.current = call;
 
-      // Call event listeners
       call.on("ringing", () => {
         setCallStatus("ringing");
-        updateChamada.mutate({
-          id: chamada.id,
-          leadId: lead.id,
-          status: "discando",
-          twilio_call_sid: call.parameters?.CallSid || "",
-        });
+        updateChamada.mutate({ id: chamada.id, leadId, status: "discando", twilio_call_sid: call.parameters?.CallSid || "" });
       });
 
       call.on("accept", () => {
         setCallStatus("in-progress");
-        updateChamada.mutate({
-          id: chamada.id,
-          leadId: lead.id,
-          status: "em_chamada",
-          twilio_call_sid: call.parameters?.CallSid || "",
-        });
+        updateChamada.mutate({ id: chamada.id, leadId, status: "em_chamada", twilio_call_sid: call.parameters?.CallSid || "" });
       });
 
       call.on("disconnect", () => {
         setCallStatus("completed");
-        updateChamada.mutate({
-          id: chamada.id,
-          leadId: lead.id,
-          status: "finalizada",
-          duracao_segundos: duration,
-        });
+        updateChamada.mutate({ id: chamada.id, leadId, status: "finalizada", duracao_segundos: duration });
         cleanupCall();
       });
 
       call.on("cancel", () => {
         setCallStatus("completed");
-        updateChamada.mutate({
-          id: chamada.id,
-          leadId: lead.id,
-          status: "cancelada",
-        });
+        updateChamada.mutate({ id: chamada.id, leadId, status: "cancelada" });
         cleanupCall();
       });
 
       call.on("reject", () => {
         setCallStatus("busy");
-        updateChamada.mutate({
-          id: chamada.id,
-          leadId: lead.id,
-          status: "ocupado",
-        });
+        updateChamada.mutate({ id: chamada.id, leadId, status: "ocupado" });
         cleanupCall();
       });
 
       call.on("error", (error: any) => {
         console.error("Call error:", error);
         setCallStatus("failed");
-        updateChamada.mutate({
-          id: chamada.id,
-          leadId: lead.id,
-          status: "falhou",
-        });
+        updateChamada.mutate({ id: chamada.id, leadId, status: "falhou" });
         toast.error("Erro na chamada: " + (error.message || "Erro desconhecido"));
         cleanupCall();
       });
@@ -199,10 +161,9 @@ export function VoipDialer({ lead, onCallStatusChange }: VoipDialerProps) {
       console.error("Error starting call:", error);
       setCallStatus("failed");
       toast.error("Erro ao iniciar chamada: " + (error.message || "Erro desconhecido"));
-
       setTimeout(() => setCallStatus("idle"), 3000);
     }
-  }, [selectedPhone, lead.id, createChamada, updateChamada, duration]);
+  }, [numero, leadId, createChamada, updateChamada, duration]);
 
   const cleanupCall = () => {
     callRef.current = null;
@@ -232,7 +193,7 @@ export function VoipDialer({ lead, onCallStatusChange }: VoipDialerProps) {
         size="sm"
         className="gap-1.5"
         onClick={startCall}
-        disabled={!selectedPhone}
+        disabled={!numero}
       >
         <Phone className="h-3.5 w-3.5" />
         Ligar
