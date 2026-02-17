@@ -12,6 +12,7 @@ import {
   MessageCircle,
   Star,
   ClipboardCheck,
+  RefreshCw,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -37,6 +38,8 @@ import {
 } from "@/components/ui/tooltip";
 import { useCrmChamadas, type CrmChamada } from "@/hooks/useCrmChamadas";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { useQueryClient } from "@tanstack/react-query";
 
 interface LeadContatosTabProps {
   leadId: string;
@@ -64,9 +67,31 @@ function getNotaColor(nota: number): string {
 
 export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
   const { data: chamadas, isLoading } = useCrmChamadas(leadId);
+  const queryClient = useQueryClient();
   const [transcricaoOpen, setTranscricaoOpen] = useState<CrmChamada | null>(null);
   const [resumoOpen, setResumoOpen] = useState<CrmChamada | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState<CrmChamada | null>(null);
+  const [runningFeedbackIds, setRunningFeedbackIds] = useState<Set<string>>(new Set());
+
+  const handleRunFeedback = async (chamadaId: string) => {
+    setRunningFeedbackIds(prev => new Set(prev).add(chamadaId));
+    try {
+      const { data, error } = await supabase.functions.invoke("feedback-chamada", {
+        body: { chamadaId },
+      });
+      if (error) throw error;
+      toast.success(`Feedback gerado! Nota: ${data?.nota ?? "-"}/10`);
+      queryClient.invalidateQueries({ queryKey: ["crm_chamadas", leadId] });
+    } catch (e: any) {
+      toast.error("Erro ao gerar feedback: " + (e.message || "Erro desconhecido"));
+    } finally {
+      setRunningFeedbackIds(prev => {
+        const next = new Set(prev);
+        next.delete(chamadaId);
+        return next;
+      });
+    }
+  };
 
   const handleDownloadAudio = async (chamada: CrmChamada) => {
     const url = chamada.audio_url || chamada.recording_url;
@@ -163,6 +188,26 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
                   </TableCell>
                   <TableCell className="text-right py-2">
                     <div className="flex items-center justify-end gap-0.5">
+                      {hasTranscricao && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              disabled={runningFeedbackIds.has(chamada.id)}
+                              onClick={() => handleRunFeedback(chamada.id)}
+                            >
+                              {runningFeedbackIds.has(chamada.id) ? (
+                                <Loader2 className="h-3.5 w-3.5 animate-spin text-amber-600" />
+                              ) : (
+                                <RefreshCw className="h-3.5 w-3.5 text-amber-600" />
+                              )}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>{hasFeedback ? "Regerar Feedback IA" : "Gerar Feedback IA"}</TooltipContent>
+                        </Tooltip>
+                      )}
                       {hasFeedback && (
                         <Tooltip>
                           <TooltipTrigger asChild>
