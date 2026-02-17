@@ -13,6 +13,7 @@ export interface ScriptSdr {
   id: string;
   nome: string;
   descricao: string | null;
+  apresentacao: ScriptItem[];
   qualificacao: ScriptItem[];
   reca: ScriptItem[];
   raloca: ScriptItem[];
@@ -34,6 +35,7 @@ export function useScriptsSdr() {
       if (error) throw error;
       return (data as unknown as ScriptSdr[]).map((s) => ({
         ...s,
+        apresentacao: Array.isArray(s.apresentacao) ? s.apresentacao : [],
         qualificacao: Array.isArray(s.qualificacao) ? s.qualificacao : [],
         reca: Array.isArray(s.reca) ? s.reca : [],
         raloca: Array.isArray(s.raloca) ? s.raloca : [],
@@ -57,6 +59,7 @@ export function useActiveScriptSdr() {
       if (!s) return null;
       return {
         ...s,
+        apresentacao: Array.isArray(s.apresentacao) ? s.apresentacao : [],
         qualificacao: Array.isArray(s.qualificacao) ? s.qualificacao : [],
         reca: Array.isArray(s.reca) ? s.reca : [],
         raloca: Array.isArray(s.raloca) ? s.raloca : [],
@@ -72,6 +75,7 @@ export function useCreateScriptSdr() {
     mutationFn: async (data: {
       nome: string;
       descricao?: string;
+      apresentacao: ScriptItem[];
       qualificacao: ScriptItem[];
       reca: ScriptItem[];
       raloca: ScriptItem[];
@@ -80,6 +84,7 @@ export function useCreateScriptSdr() {
       const { error } = await supabase.from("scripts_sdr" as any).insert({
         nome: data.nome,
         descricao: data.descricao || null,
+        apresentacao: JSON.parse(JSON.stringify(data.apresentacao)),
         qualificacao: JSON.parse(JSON.stringify(data.qualificacao)),
         reca: JSON.parse(JSON.stringify(data.reca)),
         raloca: JSON.parse(JSON.stringify(data.raloca)),
@@ -103,6 +108,7 @@ export function useUpdateScriptSdr() {
       id: string;
       nome?: string;
       descricao?: string;
+      apresentacao?: ScriptItem[];
       qualificacao?: ScriptItem[];
       reca?: ScriptItem[];
       raloca?: ScriptItem[];
@@ -111,6 +117,7 @@ export function useUpdateScriptSdr() {
     }) => {
       const { id, ...rest } = data;
       const updateData: Record<string, unknown> = { ...rest };
+      if (rest.apresentacao) updateData.apresentacao = JSON.parse(JSON.stringify(rest.apresentacao));
       if (rest.qualificacao) updateData.qualificacao = JSON.parse(JSON.stringify(rest.qualificacao));
       if (rest.reca) updateData.reca = JSON.parse(JSON.stringify(rest.reca));
       if (rest.raloca) updateData.raloca = JSON.parse(JSON.stringify(rest.raloca));
