@@ -408,11 +408,6 @@ export function WhatsAppCallRecorder({ leadId, leadNome, telefones }: WhatsAppCa
           </div>
         </div>
 
-        {status === "idle" && (
-          <p className="text-xs text-muted-foreground">
-            Ao clicar, o sistema pedirá para compartilhar a tela (marque "Compartilhar áudio"), depois abrirá o WhatsApp para iniciar a ligação. O áudio será gravado automaticamente.
-          </p>
-        )}
       </CardContent>
     </Card>
   );
