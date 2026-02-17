@@ -18,7 +18,7 @@ export function ChecklistCard({ title, icon: Icon, iconColor = "text-primary", i
   const total = items.length;
 
   return (
-    <Card className={`border-border/60 flex flex-col min-h-0 flex-1 ${className || ""}`}>
+    <Card className={`border-border/60 flex flex-col ${className || ""}`}>
       <CardHeader className="pb-1 px-2.5 pt-2 shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xs flex items-center gap-1.5">
@@ -30,9 +30,8 @@ export function ChecklistCard({ title, icon: Icon, iconColor = "text-primary", i
           </span>
         </div>
       </CardHeader>
-      <CardContent className="px-2.5 pb-2 flex-1 min-h-0">
-        <ScrollArea className="h-full">
-          <div className="space-y-0.5">
+      <CardContent className="px-2.5 pb-2">
+        <div className="space-y-0.5">
             {items.map((item) => {
               const done = completedIds.includes(item.id);
               return (
@@ -60,8 +59,7 @@ export function ChecklistCard({ title, icon: Icon, iconColor = "text-primary", i
                 </div>
               );
             })}
-          </div>
-        </ScrollArea>
+        </div>
       </CardContent>
     </Card>
   );
