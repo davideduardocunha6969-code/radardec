@@ -126,7 +126,10 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
 
   return (
     <>
-      <ScrollArea className="max-h-[400px]">
+      <div className="flex items-center justify-between mb-2">
+        <span className="text-xs text-muted-foreground">{chamadas.length} contato(s) registrado(s)</span>
+      </div>
+      <ScrollArea className="max-h-[600px]">
         <Table>
           <TableHeader>
             <TableRow>
