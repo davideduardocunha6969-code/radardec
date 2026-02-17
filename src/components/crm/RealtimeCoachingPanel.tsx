@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Bot, Mic, MicOff, Loader2, Volume2 } from "lucide-react";
+import { Bot, Mic, MicOff, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type RoboCoach } from "@/hooks/useRobosCoach";
 import { Progress } from "@/components/ui/progress";
@@ -34,6 +34,7 @@ export function RealtimeCoachingPanel({
   const [isConnected, setIsConnected] = useState(false);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [micLevel, setMicLevel] = useState(0);
+  const [connectionError, setConnectionError] = useState<string | null>(null);
 
   const wsRef = useRef<WebSocket | null>(null);
   const insightIdRef = useRef(0);
@@ -44,19 +45,26 @@ export function RealtimeCoachingPanel({
   const animFrameRef = useRef<number | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const committedTranscriptsRef = useRef<string[]>([]);
+  const isAnalyzingRef = useRef(false);
 
-  // Keep ref in sync with state
+  // Keep refs in sync
   useEffect(() => {
     committedTranscriptsRef.current = committedTranscripts;
   }, [committedTranscripts]);
 
+  useEffect(() => {
+    isAnalyzingRef.current = isAnalyzing;
+  }, [isAnalyzing]);
+
   // Request coaching insight from AI
   const requestInsight = useCallback(async (transcript: string) => {
-    if (!transcript || transcript === lastAnalyzedRef.current || isAnalyzing) return;
+    if (!transcript || transcript === lastAnalyzedRef.current || isAnalyzingRef.current) return;
     lastAnalyzedRef.current = transcript;
     setIsAnalyzing(true);
+    isAnalyzingRef.current = true;
 
     try {
+      console.log("[Coaching] Requesting AI insight...");
       const { data, error } = await supabase.functions.invoke("coaching-realtime", {
         body: {
           transcript,
@@ -67,7 +75,7 @@ export function RealtimeCoachingPanel({
       });
 
       if (error) {
-        console.error("Coaching error:", error);
+        console.error("[Coaching] AI error:", error);
         return;
       }
 
@@ -79,30 +87,40 @@ export function RealtimeCoachingPanel({
         ]);
       }
     } catch (e) {
-      console.error("Coaching request error:", e);
+      console.error("[Coaching] Request error:", e);
     } finally {
       setIsAnalyzing(false);
+      isAnalyzingRef.current = false;
     }
-  }, [coach.instrucoes, leadNome, leadContext, isAnalyzing]);
+  }, [coach.instrucoes, leadNome, leadContext]);
 
   // Connect to ElevenLabs Scribe WebSocket
   const connectScribe = useCallback(async () => {
-    if (!audioStream || wsRef.current) return;
+    if (!audioStream || wsRef.current) {
+      console.log("[Scribe] Skipping connect:", !audioStream ? "no audioStream" : "ws already exists");
+      return;
+    }
 
     try {
+      console.log("[Scribe] Getting token...");
+      setConnectionError(null);
       const { data, error } = await supabase.functions.invoke("elevenlabs-scribe-token");
       if (error || !data?.token) {
-        console.error("Failed to get scribe token:", error);
+        const errMsg = error?.message || "No token received";
+        console.error("[Scribe] Token error:", errMsg);
+        setConnectionError("Erro ao obter token de transcrição: " + errMsg);
         return;
       }
 
+      console.log("[Scribe] Token received, connecting WebSocket...");
       const ws = new WebSocket(
         `wss://api.elevenlabs.io/v1/speech-to-text/realtime?model_id=scribe_v2_realtime&token=${data.token}&language_code=por`
       );
 
       ws.onopen = () => {
+        console.log("[Scribe] WebSocket connected!");
         setIsConnected(true);
-        // Send initial config
+        setConnectionError(null);
         ws.send(JSON.stringify({
           type: "configure",
           audio_format: {
@@ -117,6 +135,7 @@ export function RealtimeCoachingPanel({
       ws.onmessage = (event) => {
         try {
           const msg = JSON.parse(event.data);
+          console.log("[Scribe] Message:", msg.type, msg.text?.substring(0, 50));
           if (msg.type === "partial_transcript") {
             setPartialTranscript(msg.text || "");
           } else if (msg.type === "committed_transcript") {
@@ -124,15 +143,16 @@ export function RealtimeCoachingPanel({
             if (text.trim()) {
               setCommittedTranscripts((prev) => {
                 const updated = [...prev, text];
-                // Use ref to avoid stale closure
                 committedTranscriptsRef.current = updated;
-                // Trigger AI analysis on each committed segment
                 const fullTranscript = updated.join("\n");
                 requestInsight(fullTranscript);
                 return updated;
               });
               setPartialTranscript("");
             }
+          } else if (msg.type === "error") {
+            console.error("[Scribe] Error message:", msg);
+            setConnectionError("Erro na transcrição: " + (msg.message || JSON.stringify(msg)));
           }
         } catch (e) {
           // Ignore parse errors
@@ -140,10 +160,12 @@ export function RealtimeCoachingPanel({
       };
 
       ws.onerror = (e) => {
-        console.error("Scribe WS error:", e);
+        console.error("[Scribe] WS error:", e);
+        setConnectionError("Erro de conexão WebSocket");
       };
 
-      ws.onclose = () => {
+      ws.onclose = (e) => {
+        console.log("[Scribe] WS closed:", e.code, e.reason);
         setIsConnected(false);
         wsRef.current = null;
       };
@@ -153,7 +175,7 @@ export function RealtimeCoachingPanel({
       // Set up audio processing to send PCM data
       audioContextRef.current = new AudioContext({ sampleRate: 16000 });
       const source = audioContextRef.current.createMediaStreamSource(audioStream);
-      
+
       // Analyser for level visualization
       analyserRef.current = audioContextRef.current.createAnalyser();
       analyserRef.current.fftSize = 256;
@@ -168,13 +190,11 @@ export function RealtimeCoachingPanel({
       processor.onaudioprocess = (e) => {
         if (ws.readyState !== WebSocket.OPEN) return;
         const inputData = e.inputBuffer.getChannelData(0);
-        // Convert float32 to int16
         const int16 = new Int16Array(inputData.length);
         for (let i = 0; i < inputData.length; i++) {
           const s = Math.max(-1, Math.min(1, inputData[i]));
           int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
         }
-        // Send as base64
         const bytes = new Uint8Array(int16.buffer);
         let binary = "";
         for (let i = 0; i < bytes.length; i++) {
@@ -195,8 +215,9 @@ export function RealtimeCoachingPanel({
         animFrameRef.current = requestAnimationFrame(updateLevel);
       };
       updateLevel();
-    } catch (e) {
-      console.error("Scribe connection error:", e);
+    } catch (e: any) {
+      console.error("[Scribe] Connection error:", e);
+      setConnectionError("Erro ao conectar: " + (e.message || ""));
     }
   }, [audioStream, requestInsight]);
 
@@ -222,6 +243,7 @@ export function RealtimeCoachingPanel({
   }, []);
 
   useEffect(() => {
+    console.log("[Coaching] Effect triggered - isRecording:", isRecording, "audioStream:", !!audioStream);
     if (isRecording && audioStream) {
       connectScribe();
     } else {
@@ -250,12 +272,15 @@ export function RealtimeCoachingPanel({
               Transcrição ao Vivo
             </CardTitle>
             <Badge variant={isConnected ? "default" : "secondary"} className="text-[10px]">
-              {isConnected ? "Conectado" : "Desconectado"}
+              {isConnected ? "Conectado" : "Conectando..."}
             </Badge>
           </div>
           <Progress value={micLevel} className="h-1 mt-1" />
         </CardHeader>
         <CardContent className="px-3 pb-3">
+          {connectionError && (
+            <p className="text-xs text-destructive mb-2">{connectionError}</p>
+          )}
           <ScrollArea className="h-[200px]">
             <div className="space-y-1.5 text-sm">
               {committedTranscripts.map((t, i) => (
