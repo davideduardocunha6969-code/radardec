@@ -65,6 +65,8 @@ export function useActiveScriptSdr() {
         raloca: Array.isArray(s.raloca) ? s.raloca : [],
       };
     },
+    refetchOnWindowFocus: false,
+    staleTime: 5 * 60 * 1000,
   });
 }
 

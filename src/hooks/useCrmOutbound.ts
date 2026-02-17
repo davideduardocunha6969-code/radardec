@@ -56,6 +56,7 @@ export function useCrmFunis() {
       if (error) throw error;
       return data as CrmFunil[];
     },
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -73,6 +74,7 @@ export function useCrmColunas(funilId: string | undefined) {
       return data as CrmColuna[];
     },
     enabled: !!funilId,
+    refetchOnWindowFocus: false,
   });
 }
 
@@ -94,6 +96,7 @@ export function useCrmLeads(funilId: string | undefined) {
       }));
     },
     enabled: !!funilId,
+    refetchOnWindowFocus: false,
   });
 }
 

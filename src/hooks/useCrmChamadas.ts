@@ -35,6 +35,7 @@ export function useCrmChamadas(leadId: string | undefined) {
       return data as CrmChamada[];
     },
     enabled: !!leadId,
+    refetchOnWindowFocus: false,
   });
 }
 
