@@ -352,7 +352,17 @@ export default function CrmFunilKanban() {
       {/* Dialog Detalhe Lead */}
       <Dialog open={!!detailLead} onOpenChange={(o) => !o && setDetailLead(null)}>
         <DialogContent className="max-w-[1200px] w-[95vw] max-h-[90vh] overflow-hidden flex flex-col">
-          <DialogHeader><DialogTitle>{detailLead?.nome}</DialogTitle></DialogHeader>
+          <DialogHeader>
+            <div className="flex items-center gap-2">
+              <DialogTitle className="flex-1">{detailLead?.nome}</DialogTitle>
+              {detailLead && (
+                <div className="flex items-center gap-1 shrink-0">
+                  <WhatsAppCallRecorder leadId={detailLead.id} leadNome={detailLead.nome} telefones={detailLead.telefones} />
+                  <VoipDialer lead={detailLead} />
+                </div>
+              )}
+            </div>
+          </DialogHeader>
           {detailLead && (
             <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
               <TabsList className="w-full">
@@ -387,20 +397,6 @@ export default function CrmFunilKanban() {
                     ))}
                   </div>
                   {detailLead.resumo_caso && <div><label className="text-sm font-medium text-muted-foreground">Resumo do Caso (IA)</label><p className="text-sm bg-muted p-3 rounded-md">{detailLead.resumo_caso}</p></div>}
-                  {/* WhatsApp Call + Recording */}
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Ligação WhatsApp</label>
-                    <div className="mt-1">
-                      <WhatsAppCallRecorder leadId={detailLead.id} leadNome={detailLead.nome} telefones={detailLead.telefones} />
-                    </div>
-                  </div>
-                  {/* VoIP Dialer */}
-                  <div>
-                    <label className="text-sm font-medium text-muted-foreground">Discador VoIP</label>
-                    <div className="mt-1">
-                      <VoipDialer lead={detailLead} />
-                    </div>
-                  </div>
                   <div>
                     <label className="text-sm font-medium text-muted-foreground">Mover para coluna</label>
                     <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={detailLead.coluna_id} onChange={(e) => { handleMoveLead(detailLead, e.target.value); setDetailLead({ ...detailLead, coluna_id: e.target.value }); }}>
