@@ -61,19 +61,32 @@ export default function CrmFunilKanban() {
     });
   };
 
+  const excelDateToString = (value: string): string => {
+    const num = Number(value);
+    if (!isNaN(num) && num > 1000 && num < 100000) {
+      const date = XLSX.SSF.parse_date_code(num);
+      if (date) {
+        const dd = String(date.d).padStart(2, "0");
+        const mm = String(date.m).padStart(2, "0");
+        const yyyy = date.y;
+        return `${dd}/${mm}/${yyyy}`;
+      }
+    }
+    return value;
+  };
+
   const parseLeadsFromRows = (rows: string[][]): { nome: string; endereco?: string; telefones: LeadTelefone[]; dados_extras?: Record<string, string> }[] => {
     const parsed: { nome: string; endereco?: string; telefones: LeadTelefone[]; dados_extras?: Record<string, string> }[] = [];
     for (const parts of rows) {
       if (!parts[0]?.trim()) continue;
       const telefones: LeadTelefone[] = [];
-      // K=10, L=11, M=12, N=13, O=14
       for (let i = 10; i <= 14; i++) {
         if (parts[i]?.trim()) telefones.push({ numero: parts[i].trim(), tipo: "celular" });
       }
       const dados_extras: Record<string, string> = {};
       if (parts[1]?.trim()) dados_extras.empresa = parts[1].trim();
-      if (parts[2]?.trim()) dados_extras.data_admissao = parts[2].trim();
-      if (parts[3]?.trim()) dados_extras.data_demissao = parts[3].trim();
+      if (parts[2]?.trim()) dados_extras.data_admissao = excelDateToString(parts[2].trim());
+      if (parts[3]?.trim()) dados_extras.data_demissao = excelDateToString(parts[3].trim());
       if (parts[4]?.trim()) dados_extras.motivo_demissao = parts[4].trim();
       if (parts[5]?.trim()) dados_extras.cargo = parts[5].trim();
       if (parts[7]?.trim()) dados_extras.municipio = parts[7].trim();
