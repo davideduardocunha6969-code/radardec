@@ -117,6 +117,7 @@ export default function ScriptsSdrTab() {
   const [form, setForm] = useState({
     nome: "",
     descricao: "",
+    apresentacao: [] as ScriptItem[],
     qualificacao: [] as ScriptItem[],
     reca: [] as ScriptItem[],
     raloca: [] as ScriptItem[],
@@ -125,7 +126,7 @@ export default function ScriptsSdrTab() {
 
   const openNew = () => {
     setEditing(null);
-    setForm({ nome: "", descricao: "", qualificacao: [], reca: [], raloca: [], instrucoes_gerais: "" });
+    setForm({ nome: "", descricao: "", apresentacao: [], qualificacao: [], reca: [], raloca: [], instrucoes_gerais: "" });
     setFormOpen(true);
   };
 
@@ -134,6 +135,7 @@ export default function ScriptsSdrTab() {
     setForm({
       nome: s.nome,
       descricao: s.descricao || "",
+      apresentacao: s.apresentacao,
       qualificacao: s.qualificacao,
       reca: s.reca,
       raloca: s.raloca,
@@ -147,6 +149,7 @@ export default function ScriptsSdrTab() {
     const payload = {
       nome: form.nome,
       descricao: form.descricao,
+      apresentacao: form.apresentacao.filter((i) => i.label.trim()),
       qualificacao: form.qualificacao.filter((i) => i.label.trim()),
       reca: form.reca.filter((i) => i.label.trim()),
       raloca: form.raloca.filter((i) => i.label.trim()),
@@ -257,6 +260,15 @@ export default function ScriptsSdrTab() {
                   <Input value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Breve descrição" />
                 </div>
               </div>
+
+              <Separator />
+
+              <ScriptItemEditor
+                title="Falas de Apresentação"
+                icon={<FileText className="h-4 w-4 text-emerald-500" />}
+                items={form.apresentacao}
+                onChange={(apresentacao) => setForm({ ...form, apresentacao })}
+              />
 
               <Separator />
 

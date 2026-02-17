@@ -1429,6 +1429,7 @@ export type Database = {
       }
       scripts_sdr: {
         Row: {
+          apresentacao: Json
           ativo: boolean
           created_at: string
           descricao: string | null
@@ -1442,6 +1443,7 @@ export type Database = {
           user_id: string
         }
         Insert: {
+          apresentacao?: Json
           ativo?: boolean
           created_at?: string
           descricao?: string | null
@@ -1455,6 +1457,7 @@ export type Database = {
           user_id: string
         }
         Update: {
+          apresentacao?: Json
           ativo?: boolean
           created_at?: string
           descricao?: string | null
