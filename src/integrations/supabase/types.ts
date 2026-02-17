@@ -1427,6 +1427,48 @@ export type Database = {
         }
         Relationships: []
       }
+      scripts_sdr: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          descricao: string | null
+          id: string
+          instrucoes_gerais: string | null
+          nome: string
+          qualificacao: Json
+          raloca: Json
+          reca: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          instrucoes_gerais?: string | null
+          nome: string
+          qualificacao?: Json
+          raloca?: Json
+          reca?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          instrucoes_gerais?: string | null
+          nome?: string
+          qualificacao?: Json
+          raloca?: Json
+          reca?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       sugestoes_contratacao: {
         Row: {
           anuidade_oab: number | null

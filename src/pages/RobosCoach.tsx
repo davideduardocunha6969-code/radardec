@@ -1,3 +1,4 @@
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useState } from "react";
 import { useRobosCoach, useCreateRoboCoach, useUpdateRoboCoach, useDeleteRoboCoach, type RoboCoach } from "@/hooks/useRobosCoach";
 import { Button } from "@/components/ui/button";
@@ -7,7 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Bot, Loader2, ClipboardCheck } from "lucide-react";
+import { Plus, Pencil, Trash2, Bot, Loader2, ClipboardCheck, FileText } from "lucide-react";
+import ScriptsSdrTab from "@/components/robos/ScriptsSdrTab";
 
 export default function RobosCoach() {
   const { data: robos, isLoading } = useRobosCoach();
@@ -50,145 +52,128 @@ export default function RobosCoach() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold">Robô Coach</h1>
-          <p className="text-sm text-muted-foreground">Cadastre IAs de coaching para auxiliar SDRs durante ligações em tempo real.</p>
-        </div>
-        <Button onClick={() => openNew("coaching")}>
-          <Plus className="h-4 w-4 mr-2" />Novo Coach
-        </Button>
-      </div>
-
-      {/* Feedback SDR Section */}
       <div>
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <h2 className="text-lg font-semibold flex items-center gap-2">
-              <ClipboardCheck className="h-5 w-5 text-amber-600" />
-              Coaches Feedback SDR
-            </h2>
-            <p className="text-sm text-muted-foreground">
-              Configure IAs que avaliam automaticamente o atendimento do SDR após cada ligação. Vincule-os às colunas do CRM.
-            </p>
-          </div>
-          <Button size="sm" onClick={() => openNew("feedback_sdr")}>
-            <Plus className="h-4 w-4 mr-2" />Novo Coach Feedback
-          </Button>
-        </div>
-        {!feedbackRobos.length ? (
-          <Card className="border-dashed border-amber-500/30">
-            <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-              <ClipboardCheck className="h-10 w-10 mb-2 text-amber-600/50" />
-              <p className="font-medium text-sm">Nenhum Coach Feedback SDR configurado</p>
-              <p className="text-xs">Configure as instruções para avaliação automática dos atendimentos.</p>
-              <Button className="mt-3" size="sm" onClick={() => openNew("feedback_sdr")}>
-                <Plus className="h-4 w-4 mr-2" />Criar Coach Feedback SDR
-              </Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {feedbackRobos.map((r) => (
-              <Card key={r.id} className="border-amber-500/20">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <ClipboardCheck className="h-5 w-5 text-amber-600" />
-                      <CardTitle className="text-base">{r.nome}</CardTitle>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Badge variant={r.ativo ? "default" : "secondary"} className="text-[10px]">
-                        {r.ativo ? "Ativo" : "Inativo"}
-                      </Badge>
-                      <Switch
-                        checked={r.ativo}
-                        onCheckedChange={(ativo) => updateRobo.mutate({ id: r.id, ativo })}
-                        className="scale-75"
-                      />
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {r.descricao && <p className="text-sm text-muted-foreground">{r.descricao}</p>}
-                  <div className="bg-muted rounded-md p-3 max-h-32 overflow-auto">
-                    <p className="text-xs whitespace-pre-wrap">{r.instrucoes.slice(0, 300)}{r.instrucoes.length > 300 ? "..." : ""}</p>
-                  </div>
-                  <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
-                      <Pencil className="h-3.5 w-3.5 mr-1" />Editar
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteRobo.mutate(r.id)}>
-                      <Trash2 className="h-3.5 w-3.5 mr-1" />Excluir
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
-          </div>
-        )}
+        <h1 className="text-2xl font-bold">Robô Coach</h1>
+        <p className="text-sm text-muted-foreground">Gerencie coaches de IA e scripts para SDRs.</p>
       </div>
 
-      {/* Coaching Realtime Section */}
-      <div>
-        <h2 className="text-lg font-semibold flex items-center gap-2 mb-3">
-          <Bot className="h-5 w-5 text-primary" />
-          Coaches de Tempo Real
-        </h2>
+      <Tabs defaultValue="coaching" className="w-full">
+        <TabsList>
+          <TabsTrigger value="coaching" className="gap-1.5">
+            <Bot className="h-4 w-4" />Coaches Tempo Real
+          </TabsTrigger>
+          <TabsTrigger value="feedback" className="gap-1.5">
+            <ClipboardCheck className="h-4 w-4" />Coaches Feedback
+          </TabsTrigger>
+          <TabsTrigger value="scripts" className="gap-1.5">
+            <FileText className="h-4 w-4" />Scripts SDR
+          </TabsTrigger>
+        </TabsList>
 
-        {isLoading ? (
-          <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-        ) : !coachingRobos.length ? (
-          <Card className="border-dashed">
-            <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
-              <Bot className="h-12 w-12 mb-3" />
-              <p className="font-medium">Nenhum Robô Coach cadastrado</p>
-              <p className="text-sm">Crie um coach com instruções específicas para auxiliar SDRs durante ligações.</p>
-              <Button className="mt-4" onClick={() => openNew("coaching")}><Plus className="h-4 w-4 mr-2" />Criar Coach</Button>
-            </CardContent>
-          </Card>
-        ) : (
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-            {coachingRobos.map((r) => (
-              <Card key={r.id} className="relative">
-                <CardHeader className="pb-2">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <Bot className="h-5 w-5 text-primary" />
-                      <CardTitle className="text-base">{r.nome}</CardTitle>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <Badge variant={r.ativo ? "default" : "secondary"} className="text-[10px]">
-                        {r.ativo ? "Ativo" : "Inativo"}
-                      </Badge>
-                      <Switch
-                        checked={r.ativo}
-                        onCheckedChange={(ativo) => updateRobo.mutate({ id: r.id, ativo })}
-                        className="scale-75"
-                      />
-                    </div>
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-3">
-                  {r.descricao && <p className="text-sm text-muted-foreground">{r.descricao}</p>}
-                  <div className="bg-muted rounded-md p-3 max-h-32 overflow-auto">
-                    <p className="text-xs whitespace-pre-wrap">{r.instrucoes.slice(0, 300)}{r.instrucoes.length > 300 ? "..." : ""}</p>
-                  </div>
-                  <div className="flex justify-end gap-1">
-                    <Button variant="ghost" size="sm" onClick={() => openEdit(r)}>
-                      <Pencil className="h-3.5 w-3.5 mr-1" />Editar
-                    </Button>
-                    <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteRobo.mutate(r.id)}>
-                      <Trash2 className="h-3.5 w-3.5 mr-1" />Excluir
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
-            ))}
+        {/* Coaching Realtime Tab */}
+        <TabsContent value="coaching" className="space-y-4 mt-4">
+          <div className="flex justify-end">
+            <Button onClick={() => openNew("coaching")}>
+              <Plus className="h-4 w-4 mr-2" />Novo Coach
+            </Button>
           </div>
-        )}
-      </div>
+          {isLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+          ) : !coachingRobos.length ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Bot className="h-12 w-12 mb-3" />
+                <p className="font-medium">Nenhum Robô Coach cadastrado</p>
+                <p className="text-sm">Crie um coach com instruções específicas para auxiliar SDRs durante ligações.</p>
+                <Button className="mt-4" onClick={() => openNew("coaching")}><Plus className="h-4 w-4 mr-2" />Criar Coach</Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {coachingRobos.map((r) => (
+                <Card key={r.id} className="relative">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Bot className="h-5 w-5 text-primary" />
+                        <CardTitle className="text-base">{r.nome}</CardTitle>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge variant={r.ativo ? "default" : "secondary"} className="text-[10px]">{r.ativo ? "Ativo" : "Inativo"}</Badge>
+                        <Switch checked={r.ativo} onCheckedChange={(ativo) => updateRobo.mutate({ id: r.id, ativo })} className="scale-75" />
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {r.descricao && <p className="text-sm text-muted-foreground">{r.descricao}</p>}
+                    <div className="bg-muted rounded-md p-3 max-h-32 overflow-auto">
+                      <p className="text-xs whitespace-pre-wrap">{r.instrucoes.slice(0, 300)}{r.instrucoes.length > 300 ? "..." : ""}</p>
+                    </div>
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(r)}><Pencil className="h-3.5 w-3.5 mr-1" />Editar</Button>
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteRobo.mutate(r.id)}><Trash2 className="h-3.5 w-3.5 mr-1" />Excluir</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
 
+        {/* Feedback Tab */}
+        <TabsContent value="feedback" className="space-y-4 mt-4">
+          <div className="flex justify-end">
+            <Button size="sm" onClick={() => openNew("feedback_sdr")}>
+              <Plus className="h-4 w-4 mr-2" />Novo Coach Feedback
+            </Button>
+          </div>
+          {!feedbackRobos.length ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                <ClipboardCheck className="h-10 w-10 mb-2 opacity-50" />
+                <p className="font-medium text-sm">Nenhum Coach Feedback SDR configurado</p>
+                <Button className="mt-3" size="sm" onClick={() => openNew("feedback_sdr")}><Plus className="h-4 w-4 mr-2" />Criar Coach Feedback SDR</Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {feedbackRobos.map((r) => (
+                <Card key={r.id}>
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <ClipboardCheck className="h-5 w-5 text-amber-600" />
+                        <CardTitle className="text-base">{r.nome}</CardTitle>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge variant={r.ativo ? "default" : "secondary"} className="text-[10px]">{r.ativo ? "Ativo" : "Inativo"}</Badge>
+                        <Switch checked={r.ativo} onCheckedChange={(ativo) => updateRobo.mutate({ id: r.id, ativo })} className="scale-75" />
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {r.descricao && <p className="text-sm text-muted-foreground">{r.descricao}</p>}
+                    <div className="bg-muted rounded-md p-3 max-h-32 overflow-auto">
+                      <p className="text-xs whitespace-pre-wrap">{r.instrucoes.slice(0, 300)}{r.instrucoes.length > 300 ? "..." : ""}</p>
+                    </div>
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(r)}><Pencil className="h-3.5 w-3.5 mr-1" />Editar</Button>
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteRobo.mutate(r.id)}><Trash2 className="h-3.5 w-3.5 mr-1" />Excluir</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Scripts SDR Tab */}
+        <TabsContent value="scripts" className="mt-4">
+          <ScriptsSdrTab />
+        </TabsContent>
+      </Tabs>
+
+      {/* Shared form dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
@@ -201,21 +186,14 @@ export default function RobosCoach() {
             </div>
             <div>
               <label className="text-sm font-medium">Descrição</label>
-              <Input value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Breve descrição do objetivo deste coach" />
+              <Input value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Breve descrição do objetivo" />
             </div>
             <div>
               <label className="text-sm font-medium">Instruções da IA *</label>
-              <p className="text-xs text-muted-foreground mb-1">
-                {form.tipo === "feedback_sdr"
-                  ? "Defina os critérios de avaliação que a IA usará para dar nota e feedback ao SDR após cada ligação."
-                  : "Defina as instruções detalhadas que a IA usará para analisar as conversas e dar sugestões ao SDR."}
-              </p>
               <Textarea
                 value={form.instrucoes}
                 onChange={(e) => setForm({ ...form, instrucoes: e.target.value })}
-                placeholder={form.tipo === "feedback_sdr"
-                  ? "Avalie o SDR considerando: tom de voz, rapport, qualificação do lead, tratamento de objeções..."
-                  : "Você é um assistente de vendas especializado em direito trabalhista..."}
+                placeholder={form.tipo === "feedback_sdr" ? "Avalie o SDR considerando..." : "Você é um assistente de vendas..."}
                 rows={12}
               />
             </div>

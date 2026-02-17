@@ -1,0 +1,141 @@
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuthContext } from "@/contexts/AuthContext";
+import { toast } from "sonner";
+
+export interface ScriptItem {
+  id: string;
+  label: string;
+  description: string;
+}
+
+export interface ScriptSdr {
+  id: string;
+  nome: string;
+  descricao: string | null;
+  qualificacao: ScriptItem[];
+  reca: ScriptItem[];
+  raloca: ScriptItem[];
+  instrucoes_gerais: string | null;
+  ativo: boolean;
+  user_id: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export function useScriptsSdr() {
+  return useQuery({
+    queryKey: ["scripts_sdr"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("scripts_sdr" as any)
+        .select("*")
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return (data as unknown as ScriptSdr[]).map((s) => ({
+        ...s,
+        qualificacao: Array.isArray(s.qualificacao) ? s.qualificacao : [],
+        reca: Array.isArray(s.reca) ? s.reca : [],
+        raloca: Array.isArray(s.raloca) ? s.raloca : [],
+      }));
+    },
+  });
+}
+
+export function useActiveScriptSdr() {
+  return useQuery({
+    queryKey: ["scripts_sdr", "active"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("scripts_sdr" as any)
+        .select("*")
+        .eq("ativo", true)
+        .order("created_at", { ascending: true })
+        .limit(1);
+      if (error) throw error;
+      const s = (data as unknown as ScriptSdr[])?.[0];
+      if (!s) return null;
+      return {
+        ...s,
+        qualificacao: Array.isArray(s.qualificacao) ? s.qualificacao : [],
+        reca: Array.isArray(s.reca) ? s.reca : [],
+        raloca: Array.isArray(s.raloca) ? s.raloca : [],
+      };
+    },
+  });
+}
+
+export function useCreateScriptSdr() {
+  const qc = useQueryClient();
+  const { user } = useAuthContext();
+  return useMutation({
+    mutationFn: async (data: {
+      nome: string;
+      descricao?: string;
+      qualificacao: ScriptItem[];
+      reca: ScriptItem[];
+      raloca: ScriptItem[];
+      instrucoes_gerais?: string;
+    }) => {
+      const { error } = await supabase.from("scripts_sdr" as any).insert({
+        nome: data.nome,
+        descricao: data.descricao || null,
+        qualificacao: JSON.parse(JSON.stringify(data.qualificacao)),
+        reca: JSON.parse(JSON.stringify(data.reca)),
+        raloca: JSON.parse(JSON.stringify(data.raloca)),
+        instrucoes_gerais: data.instrucoes_gerais || null,
+        user_id: user!.id,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["scripts_sdr"] });
+      toast.success("Script SDR criado!");
+    },
+    onError: (e: any) => toast.error("Erro: " + e.message),
+  });
+}
+
+export function useUpdateScriptSdr() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (data: {
+      id: string;
+      nome?: string;
+      descricao?: string;
+      qualificacao?: ScriptItem[];
+      reca?: ScriptItem[];
+      raloca?: ScriptItem[];
+      instrucoes_gerais?: string;
+      ativo?: boolean;
+    }) => {
+      const { id, ...rest } = data;
+      const updateData: Record<string, unknown> = { ...rest };
+      if (rest.qualificacao) updateData.qualificacao = JSON.parse(JSON.stringify(rest.qualificacao));
+      if (rest.reca) updateData.reca = JSON.parse(JSON.stringify(rest.reca));
+      if (rest.raloca) updateData.raloca = JSON.parse(JSON.stringify(rest.raloca));
+      const { error } = await supabase.from("scripts_sdr" as any).update(updateData).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["scripts_sdr"] });
+      toast.success("Script SDR atualizado!");
+    },
+    onError: (e: any) => toast.error("Erro: " + e.message),
+  });
+}
+
+export function useDeleteScriptSdr() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("scripts_sdr" as any).delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ["scripts_sdr"] });
+      toast.success("Script SDR excluído!");
+    },
+    onError: (e: any) => toast.error("Erro: " + e.message),
+  });
+}
