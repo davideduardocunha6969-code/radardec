@@ -184,44 +184,8 @@ export function RealtimeCoachingPanel({
 
   return (
     <div className="flex gap-3 mt-3 min-h-0 flex-1">
-      {/* Left 2/3: Live Transcription */}
+      {/* Left 2/3: AI Coaching Insights */}
       <Card className="border-primary/20 flex-[2] flex flex-col min-h-0">
-        <CardHeader className="pb-2 px-3 pt-3 shrink-0">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-sm flex items-center gap-2">
-              {isConnected ? <Mic className="h-3.5 w-3.5 text-primary" /> : <MicOff className="h-3.5 w-3.5 text-muted-foreground" />}
-              Transcrição ao Vivo
-            </CardTitle>
-            <Badge variant={isConnected ? "default" : "secondary"} className="text-[10px]">
-              {isConnected ? "Conectado" : "Conectando..."}
-            </Badge>
-          </div>
-          <Progress value={micLevel} className="h-1 mt-1" />
-        </CardHeader>
-        <CardContent className="px-3 pb-3 flex-1 min-h-0">
-          {connectionError && (
-            <p className="text-xs text-destructive mb-2">{connectionError}</p>
-          )}
-          <ScrollArea className="h-full">
-            <div className="space-y-1.5 text-sm">
-              {scribe.committedTranscripts.map((t) => (
-                <p key={t.id} className="text-foreground">{t.text}</p>
-              ))}
-              {scribe.partialTranscript && (
-                <p className="text-muted-foreground italic">{scribe.partialTranscript}</p>
-              )}
-              {!scribe.committedTranscripts.length && !scribe.partialTranscript && (
-                <p className="text-muted-foreground text-xs text-center py-8">
-                  Aguardando fala...
-                </p>
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-      </Card>
-
-      {/* Right 1/3: AI Coaching Insights */}
-      <Card className="border-primary/20 flex-[1] flex flex-col min-h-0">
         <CardHeader className="pb-2 px-3 pt-3 shrink-0">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
@@ -235,9 +199,19 @@ export function RealtimeCoachingPanel({
           <ScrollArea className="h-full" ref={scrollRef}>
             <div className="space-y-3">
               {insights.map((insight) => (
-                <div key={insight.id} className="bg-primary/5 rounded-md p-2.5 border border-primary/10">
-                  <p className="text-xs whitespace-pre-wrap leading-relaxed">{insight.text}</p>
-                  <span className="text-[10px] text-muted-foreground mt-1 block">
+                <div key={insight.id} className="bg-primary/5 rounded-lg p-3 border border-primary/10">
+                  <div className="text-sm whitespace-pre-wrap leading-relaxed prose prose-sm max-w-none [&_strong]:text-primary [&_strong]:font-semibold">
+                    {insight.text.split('\n').map((line, i) => {
+                      const formatted = line
+                        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                        .replace(/📌/g, '<span class="text-base">📌</span>')
+                        .replace(/💡/g, '<span class="text-base">💡</span>')
+                        .replace(/✅/g, '<span class="text-base">✅</span>')
+                        .replace(/⚠️/g, '<span class="text-base">⚠️</span>');
+                      return <p key={i} className="mb-1 last:mb-0" dangerouslySetInnerHTML={{ __html: formatted }} />;
+                    })}
+                  </div>
+                  <span className="text-[10px] text-muted-foreground mt-2 block border-t border-primary/5 pt-1">
                     {insight.timestamp.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}
                   </span>
                 </div>
@@ -249,6 +223,42 @@ export function RealtimeCoachingPanel({
                     Insights aparecerão aqui conforme a conversa avança.
                   </p>
                 </div>
+              )}
+            </div>
+          </ScrollArea>
+        </CardContent>
+      </Card>
+
+      {/* Right 1/3: Live Transcription */}
+      <Card className="border-primary/20 flex-[1] flex flex-col min-h-0">
+        <CardHeader className="pb-2 px-3 pt-3 shrink-0">
+          <div className="flex items-center justify-between">
+            <CardTitle className="text-sm flex items-center gap-2">
+              {isConnected ? <Mic className="h-3.5 w-3.5 text-primary" /> : <MicOff className="h-3.5 w-3.5 text-muted-foreground" />}
+              Transcrição
+            </CardTitle>
+            <Badge variant={isConnected ? "default" : "secondary"} className="text-[10px]">
+              {isConnected ? "Ao vivo" : "Conectando..."}
+            </Badge>
+          </div>
+          <Progress value={micLevel} className="h-1 mt-1" />
+        </CardHeader>
+        <CardContent className="px-3 pb-3 flex-1 min-h-0">
+          {connectionError && (
+            <p className="text-xs text-destructive mb-2">{connectionError}</p>
+          )}
+          <ScrollArea className="h-full">
+            <div className="space-y-1.5 text-xs">
+              {scribe.committedTranscripts.map((t) => (
+                <p key={t.id} className="text-foreground">{t.text}</p>
+              ))}
+              {scribe.partialTranscript && (
+                <p className="text-muted-foreground italic">{scribe.partialTranscript}</p>
+              )}
+              {!scribe.committedTranscripts.length && !scribe.partialTranscript && (
+                <p className="text-muted-foreground text-xs text-center py-8">
+                  Aguardando fala...
+                </p>
               )}
             </div>
           </ScrollArea>

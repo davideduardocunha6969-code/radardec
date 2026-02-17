@@ -33,10 +33,12 @@ REGRAS:
 - Identifique: objeções do lead, sinais de interesse, oportunidades de fechamento.
 - Sugira respostas e argumentos específicos baseados no que o lead disse.
 - Seja direto e objetivo — o SDR está em uma ligação ao vivo.
-- Responda em português, no formato:
-  📌 **Observação**: [o que você identificou]
-  💡 **Sugestão**: [o que o SDR deve fazer/dizer]
-- Se não houver nada relevante na fala mais recente, responda apenas "✅ Continue a conversa normalmente."`;
+- Responda em português.
+- Use o formato:
+  📌 **Observação**: [o que você identificou na fala]
+  💡 **Sugestão**: [o que o SDR deve fazer/dizer agora]
+- IMPORTANTE: Seja objetivo e prático. NÃO use jargões internos, siglas ou metodologias (como RECA, RALOCA, RAPOVECA, etc.) na sua resposta. Traduza qualquer metodologia em ações concretas e linguagem simples.
+- Se não houver nada relevante ou acionável na fala mais recente, responda apenas "✅ Continue a conversa normalmente." sem listar itens que não foram detectados.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
