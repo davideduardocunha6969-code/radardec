@@ -93,9 +93,21 @@ serve(async (req) => {
 
     
 
-    const systemPrompt = `Você é um avaliador de atendimentos de SDR (Sales Development Representative).
+    let systemPrompt: string;
 
-${coachInstructions ? `INSTRUÇÕES ESPECÍFICAS DO GESTOR:\n${coachInstructions}\n` : ""}
+    if (coachInstructions) {
+      // Use the coach's full instructions as-is, only append context metadata
+      systemPrompt = `${coachInstructions}
+
+CONTEXTO DA LIGAÇÃO:
+- Lead: ${lead?.nome || "Desconhecido"}
+- Canal: ${chamada.canal}
+- Duração: ${chamada.duracao_segundos ? `${Math.floor(chamada.duracao_segundos / 60)}m${chamada.duracao_segundos % 60}s` : "N/A"}
+
+IMPORTANTE: Siga EXATAMENTE o formato obrigatório descrito nas instruções acima. Não omita nenhuma seção.`;
+    } else {
+      // Fallback generic prompt when no coach is configured
+      systemPrompt = `Você é um avaliador de atendimentos de SDR (Sales Development Representative).
 
 Analise a transcrição da ligação abaixo e forneça:
 
@@ -104,28 +116,13 @@ Analise a transcrição da ligação abaixo e forneça:
 
 REGRAS:
 - Responda em português, de forma direta e profissional.
-- NÃO use jargões internos, siglas ou metodologias (como RECA, RALOCA, RAPOVECA, etc.).
 - Use linguagem simples e ações concretas.
-- Responda SEMPRE e SOMENTE neste formato:
-
-NOTA: [número de 0 a 10]
-
-📊 **Resumo do Atendimento**
-[Breve resumo do que aconteceu na ligação em 2-3 frases]
-
-✅ **Pontos Positivos**
-[Liste os pontos positivos do SDR durante a ligação]
-
-⚠️ **Pontos de Melhoria**
-[Liste os pontos que o SDR precisa melhorar, com sugestões práticas]
-
-💡 **Dicas para Próxima Ligação**
-[Sugestões concretas do que fazer diferente na próxima abordagem]
 
 CONTEXTO:
 - Lead: ${lead?.nome || "Desconhecido"}
 - Canal: ${chamada.canal}
 - Duração: ${chamada.duracao_segundos ? `${Math.floor(chamada.duracao_segundos / 60)}m${chamada.duracao_segundos % 60}s` : "N/A"}`;
+    }
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -167,9 +164,16 @@ CONTEXTO:
     const result = await response.json();
     const feedback = result.choices?.[0]?.message?.content || "";
 
-    // Extract nota from feedback
-    const notaMatch = feedback.match(/NOTA:\s*(\d+)/i);
-    const nota = notaMatch ? parseInt(notaMatch[1], 10) : null;
+    // Extract nota - support both "NOTA: X" (0-10) and "Nota Final: XX/100" (0-100) formats
+    const notaMatch100 = feedback.match(/Nota\s*Final:\s*(\d+)\s*\/\s*100/i);
+    const notaMatch10 = feedback.match(/NOTA:\s*(\d+)/i);
+    let nota: number | null = null;
+    if (notaMatch100) {
+      // Convert 0-100 scale to 0-10
+      nota = Math.round(parseInt(notaMatch100[1], 10) / 10);
+    } else if (notaMatch10) {
+      nota = parseInt(notaMatch10[1], 10);
+    }
 
     // Update the chamada with feedback
     const { error: updateErr } = await supabase
