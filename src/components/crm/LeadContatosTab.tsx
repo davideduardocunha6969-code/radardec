@@ -259,7 +259,7 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
 
       {/* Feedback IA dialog */}
       <Dialog open={!!feedbackOpen} onOpenChange={(o) => !o && setFeedbackOpen(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <ClipboardCheck className="h-4 w-4 text-amber-600" />
@@ -292,7 +292,7 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
 
       {/* Resumo IA dialog */}
       <Dialog open={!!resumoOpen} onOpenChange={(o) => !o && setResumoOpen(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-5xl">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <MessageSquare className="h-4 w-4 text-primary" />
@@ -309,7 +309,7 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
 
       {/* Transcription dialog */}
       <Dialog open={!!transcricaoOpen} onOpenChange={(o) => !o && setTranscricaoOpen(null)}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-5xl">
           <DialogHeader>
             <DialogTitle>Transcrição da Ligação</DialogTitle>
           </DialogHeader>
