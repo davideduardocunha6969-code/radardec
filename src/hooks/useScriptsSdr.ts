@@ -15,9 +15,6 @@ export interface ScriptSdr {
   descricao: string | null;
   apresentacao: ScriptItem[];
   qualificacao: ScriptItem[];
-  reca: ScriptItem[];
-  raloca: ScriptItem[];
-  instrucoes_gerais: string | null;
   ativo: boolean;
   user_id: string;
   created_at: string;
@@ -37,8 +34,6 @@ export function useScriptsSdr() {
         ...s,
         apresentacao: Array.isArray(s.apresentacao) ? s.apresentacao : [],
         qualificacao: Array.isArray(s.qualificacao) ? s.qualificacao : [],
-        reca: Array.isArray(s.reca) ? s.reca : [],
-        raloca: Array.isArray(s.raloca) ? s.raloca : [],
       }));
     },
   });
@@ -61,8 +56,6 @@ export function useActiveScriptSdr() {
         ...s,
         apresentacao: Array.isArray(s.apresentacao) ? s.apresentacao : [],
         qualificacao: Array.isArray(s.qualificacao) ? s.qualificacao : [],
-        reca: Array.isArray(s.reca) ? s.reca : [],
-        raloca: Array.isArray(s.raloca) ? s.raloca : [],
       };
     },
     refetchOnWindowFocus: false,
@@ -79,18 +72,12 @@ export function useCreateScriptSdr() {
       descricao?: string;
       apresentacao: ScriptItem[];
       qualificacao: ScriptItem[];
-      reca: ScriptItem[];
-      raloca: ScriptItem[];
-      instrucoes_gerais?: string;
     }) => {
       const { error } = await supabase.from("scripts_sdr" as any).insert({
         nome: data.nome,
         descricao: data.descricao || null,
         apresentacao: JSON.parse(JSON.stringify(data.apresentacao)),
         qualificacao: JSON.parse(JSON.stringify(data.qualificacao)),
-        reca: JSON.parse(JSON.stringify(data.reca)),
-        raloca: JSON.parse(JSON.stringify(data.raloca)),
-        instrucoes_gerais: data.instrucoes_gerais || null,
         user_id: user!.id,
       });
       if (error) throw error;
@@ -112,17 +99,12 @@ export function useUpdateScriptSdr() {
       descricao?: string;
       apresentacao?: ScriptItem[];
       qualificacao?: ScriptItem[];
-      reca?: ScriptItem[];
-      raloca?: ScriptItem[];
-      instrucoes_gerais?: string;
       ativo?: boolean;
     }) => {
       const { id, ...rest } = data;
       const updateData: Record<string, unknown> = { ...rest };
       if (rest.apresentacao) updateData.apresentacao = JSON.parse(JSON.stringify(rest.apresentacao));
       if (rest.qualificacao) updateData.qualificacao = JSON.parse(JSON.stringify(rest.qualificacao));
-      if (rest.reca) updateData.reca = JSON.parse(JSON.stringify(rest.reca));
-      if (rest.raloca) updateData.raloca = JSON.parse(JSON.stringify(rest.raloca));
       const { error } = await supabase.from("scripts_sdr" as any).update(updateData).eq("id", id);
       if (error) throw error;
     },

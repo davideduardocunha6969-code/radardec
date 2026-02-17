@@ -23,8 +23,6 @@ import {
   FileText,
   Loader2,
   ClipboardList,
-  Heart,
-  Brain,
   X,
   GripVertical,
 } from "lucide-react";
@@ -119,14 +117,11 @@ export default function ScriptsSdrTab() {
     descricao: "",
     apresentacao: [] as ScriptItem[],
     qualificacao: [] as ScriptItem[],
-    reca: [] as ScriptItem[],
-    raloca: [] as ScriptItem[],
-    instrucoes_gerais: "",
   });
 
   const openNew = () => {
     setEditing(null);
-    setForm({ nome: "", descricao: "", apresentacao: [], qualificacao: [], reca: [], raloca: [], instrucoes_gerais: "" });
+    setForm({ nome: "", descricao: "", apresentacao: [], qualificacao: [] });
     setFormOpen(true);
   };
 
@@ -137,9 +132,6 @@ export default function ScriptsSdrTab() {
       descricao: s.descricao || "",
       apresentacao: s.apresentacao,
       qualificacao: s.qualificacao,
-      reca: s.reca,
-      raloca: s.raloca,
-      instrucoes_gerais: s.instrucoes_gerais || "",
     });
     setFormOpen(true);
   };
@@ -151,9 +143,6 @@ export default function ScriptsSdrTab() {
       descricao: form.descricao,
       apresentacao: form.apresentacao.filter((i) => i.label.trim()),
       qualificacao: form.qualificacao.filter((i) => i.label.trim()),
-      reca: form.reca.filter((i) => i.label.trim()),
-      raloca: form.raloca.filter((i) => i.label.trim()),
-      instrucoes_gerais: form.instrucoes_gerais,
     };
     if (editing) {
       updateScript.mutate({ id: editing.id, ...payload }, { onSuccess: () => setFormOpen(false) });
@@ -171,7 +160,7 @@ export default function ScriptsSdrTab() {
             Scripts SDR
           </h2>
           <p className="text-sm text-muted-foreground">
-            Configure os scripts com perguntas de qualificação, gatilhos emocionais e lógicos que o SDR deve seguir.
+            Configure os scripts com falas de apresentação e perguntas de qualificação que o SDR deve seguir.
           </p>
         </div>
         <Button onClick={openNew}>
@@ -220,13 +209,10 @@ export default function ScriptsSdrTab() {
                 {s.descricao && <p className="text-sm text-muted-foreground">{s.descricao}</p>}
                 <div className="flex flex-wrap gap-1.5 text-[10px]">
                   <Badge variant="outline" className="gap-1">
+                    <FileText className="h-3 w-3" />{s.apresentacao.length} apresentação
+                  </Badge>
+                  <Badge variant="outline" className="gap-1">
                     <ClipboardList className="h-3 w-3" />{s.qualificacao.length} qualificação
-                  </Badge>
-                  <Badge variant="outline" className="gap-1">
-                    <Heart className="h-3 w-3" />{s.reca.length} RECA
-                  </Badge>
-                  <Badge variant="outline" className="gap-1">
-                    <Brain className="h-3 w-3" />{s.raloca.length} RALOCA
                   </Badge>
                 </div>
                 <div className="flex justify-end gap-1">
@@ -279,38 +265,6 @@ export default function ScriptsSdrTab() {
                 onChange={(qualificacao) => setForm({ ...form, qualificacao })}
               />
 
-              <Separator />
-
-              <ScriptItemEditor
-                title="RECA — Gatilhos Emocionais"
-                icon={<Heart className="h-4 w-4 text-red-500" />}
-                items={form.reca}
-                onChange={(reca) => setForm({ ...form, reca })}
-              />
-
-              <Separator />
-
-              <ScriptItemEditor
-                title="RALOCA — Argumentos Lógicos"
-                icon={<Brain className="h-4 w-4 text-purple-500" />}
-                items={form.raloca}
-                onChange={(raloca) => setForm({ ...form, raloca })}
-              />
-
-              <Separator />
-
-              <div>
-                <label className="text-sm font-medium">Instruções Gerais (opcional)</label>
-                <p className="text-xs text-muted-foreground mb-1">
-                  Instruções adicionais que aparecerão no painel de referência durante a ligação.
-                </p>
-                <Textarea
-                  value={form.instrucoes_gerais}
-                  onChange={(e) => setForm({ ...form, instrucoes_gerais: e.target.value })}
-                  placeholder="Regras gerais, perfil do lead, objetivo da ligação..."
-                  rows={5}
-                />
-              </div>
             </div>
           </ScrollArea>
           <DialogFooter>

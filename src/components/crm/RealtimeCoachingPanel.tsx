@@ -62,7 +62,7 @@ export function RealtimeCoachingPanel({
     ? activeScript.apresentacao
     : [];
 
-  const instructionsText = activeScript?.instrucoes_gerais || INSTRUCTIONS_TEXT;
+  const instructionsText = INSTRUCTIONS_TEXT;
 
   const requestAnalysis = useCallback(
     async (transcript: string) => {
