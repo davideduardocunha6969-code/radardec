@@ -32,3 +32,12 @@ verify_jwt = false
 
  [functions.fetch-email-curriculos]
  verify_jwt = false
+
+ [functions.twilio-token]
+ verify_jwt = false
+
+ [functions.twilio-twiml]
+ verify_jwt = false
+
+ [functions.twilio-webhook]
+ verify_jwt = false
