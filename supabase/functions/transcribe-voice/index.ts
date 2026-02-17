@@ -43,14 +43,22 @@ Deno.serve(async (req) => {
       const supabaseKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
       const supabase = createClient(supabaseUrl, supabaseKey);
 
+      console.log(`Downloading from bucket: ${bucketName}, path: ${audioUrl}`);
+
       const { data, error } = await supabase.storage
         .from(bucketName)
         .download(audioUrl);
 
-      if (error || !data) {
-        throw new Error(`Erro ao baixar áudio do storage: ${error?.message}`);
+      if (error) {
+        console.error("Storage download error:", JSON.stringify(error));
+        throw new Error(`Erro ao baixar áudio do storage: ${error.message || JSON.stringify(error)}`);
+      }
+      
+      if (!data) {
+        throw new Error("Arquivo não encontrado no storage");
       }
 
+      console.log(`Downloaded file size: ${data.size} bytes`);
       audioFile = data;
       fileName = audioUrl;
     }
