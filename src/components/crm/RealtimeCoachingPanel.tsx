@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Mic, MicOff, Loader2, ClipboardList, Heart, Brain, BookOpen } from "lucide-react";
+import { Mic, MicOff, Loader2, ClipboardList, Heart, Brain, BookOpen, Presentation } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type RoboCoach } from "@/hooks/useRobosCoach";
 import { useActiveScriptSdr } from "@/hooks/useScriptsSdr";
@@ -39,6 +39,7 @@ export function RealtimeCoachingPanel({
 }: RealtimeCoachingPanelProps) {
   const { data: activeScript } = useActiveScriptSdr();
 
+  const [apresentacaoDone, setApresentacaoDone] = useState<string[]>([]);
   const [qualificationDone, setQualificationDone] = useState<string[]>([]);
   const [objections, setObjections] = useState<Objection[]>([]);
   const [recaItems, setRecaItems] = useState<DynamicItem[]>([]);
@@ -80,6 +81,7 @@ export function RealtimeCoachingPanel({
             leadContext,
             scriptItems: {
               qualificacao: qualificationItems,
+              apresentacao: apresentacaoItems,
             },
           },
         });
@@ -91,6 +93,7 @@ export function RealtimeCoachingPanel({
 
         const analysis: CoachingAnalysis | undefined = data?.analysis;
         if (analysis) {
+          setApresentacaoDone(analysis.apresentacao_done || []);
           setQualificationDone(analysis.qualification_done || []);
           setObjections(analysis.objections || []);
           setRecaItems(analysis.reca_items || []);
@@ -176,8 +179,17 @@ export function RealtimeCoachingPanel({
 
   return (
     <div className="flex gap-3 mt-3 min-h-0 flex-1">
-      {/* Left: 4 coaching cards in 2x2 grid */}
-      <div className="flex-[2] grid grid-cols-2 grid-rows-2 gap-2 min-h-0">
+      {/* Left: 5 coaching cards */}
+      <div className="flex-[2] grid grid-cols-2 gap-2 min-h-0 auto-rows-fr" style={{ gridTemplateRows: 'repeat(3, 1fr)' }}>
+        {apresentacaoItems.length > 0 && (
+          <ChecklistCard
+            title="Apresentação"
+            icon={Presentation}
+            iconColor="text-emerald-500"
+            items={apresentacaoItems}
+            completedIds={apresentacaoDone}
+          />
+        )}
         <ChecklistCard
           title="Qualificação"
           icon={ClipboardList}
