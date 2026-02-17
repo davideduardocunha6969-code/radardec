@@ -173,7 +173,10 @@ export function RealtimeCoachingPanel({
       wsRef.current = ws;
 
       // Set up audio processing to send PCM data
-      audioContextRef.current = new AudioContext({ sampleRate: 16000 });
+      // Use default sample rate from the stream's AudioContext, then resample to 16kHz
+      audioContextRef.current = new AudioContext();
+      const nativeSampleRate = audioContextRef.current.sampleRate;
+      console.log("[Scribe] AudioContext sampleRate:", nativeSampleRate);
       const source = audioContextRef.current.createMediaStreamSource(audioStream);
 
       // Analyser for level visualization
@@ -190,11 +193,19 @@ export function RealtimeCoachingPanel({
       processor.onaudioprocess = (e) => {
         if (ws.readyState !== WebSocket.OPEN) return;
         const inputData = e.inputBuffer.getChannelData(0);
-        const int16 = new Int16Array(inputData.length);
-        for (let i = 0; i < inputData.length; i++) {
-          const s = Math.max(-1, Math.min(1, inputData[i]));
+        
+        // Resample from native rate to 16kHz
+        const targetRate = 16000;
+        const ratio = nativeSampleRate / targetRate;
+        const targetLength = Math.round(inputData.length / ratio);
+        const int16 = new Int16Array(targetLength);
+        
+        for (let i = 0; i < targetLength; i++) {
+          const srcIndex = Math.min(Math.round(i * ratio), inputData.length - 1);
+          const s = Math.max(-1, Math.min(1, inputData[srcIndex]));
           int16[i] = s < 0 ? s * 0x8000 : s * 0x7fff;
         }
+        
         const bytes = new Uint8Array(int16.buffer);
         let binary = "";
         for (let i = 0; i < bytes.length; i++) {
