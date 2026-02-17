@@ -183,10 +183,10 @@ export function RealtimeCoachingPanel({
   const isConnected = scribe.isConnected;
 
   return (
-    <div className="grid grid-cols-2 gap-3 mt-3">
-      {/* Left: Live Transcription */}
-      <Card className="border-primary/20">
-        <CardHeader className="pb-2 px-3 pt-3">
+    <div className="flex gap-3 mt-3 min-h-0 flex-1">
+      {/* Left 2/3: Live Transcription */}
+      <Card className="border-primary/20 flex-[2] flex flex-col min-h-0">
+        <CardHeader className="pb-2 px-3 pt-3 shrink-0">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
               {isConnected ? <Mic className="h-3.5 w-3.5 text-primary" /> : <MicOff className="h-3.5 w-3.5 text-muted-foreground" />}
@@ -198,11 +198,11 @@ export function RealtimeCoachingPanel({
           </div>
           <Progress value={micLevel} className="h-1 mt-1" />
         </CardHeader>
-        <CardContent className="px-3 pb-3">
+        <CardContent className="px-3 pb-3 flex-1 min-h-0">
           {connectionError && (
             <p className="text-xs text-destructive mb-2">{connectionError}</p>
           )}
-          <ScrollArea className="h-[200px]">
+          <ScrollArea className="h-full">
             <div className="space-y-1.5 text-sm">
               {scribe.committedTranscripts.map((t) => (
                 <p key={t.id} className="text-foreground">{t.text}</p>
@@ -220,9 +220,9 @@ export function RealtimeCoachingPanel({
         </CardContent>
       </Card>
 
-      {/* Right: AI Coaching Insights */}
-      <Card className="border-primary/20">
-        <CardHeader className="pb-2 px-3 pt-3">
+      {/* Right 1/3: AI Coaching Insights */}
+      <Card className="border-primary/20 flex-[1] flex flex-col min-h-0">
+        <CardHeader className="pb-2 px-3 pt-3 shrink-0">
           <div className="flex items-center justify-between">
             <CardTitle className="text-sm flex items-center gap-2">
               <Bot className="h-3.5 w-3.5 text-primary" />
@@ -231,8 +231,8 @@ export function RealtimeCoachingPanel({
             {isAnalyzing && <Loader2 className="h-3.5 w-3.5 animate-spin text-primary" />}
           </div>
         </CardHeader>
-        <CardContent className="px-3 pb-3">
-          <ScrollArea className="h-[200px]" ref={scrollRef}>
+        <CardContent className="px-3 pb-3 flex-1 min-h-0">
+          <ScrollArea className="h-full" ref={scrollRef}>
             <div className="space-y-3">
               {insights.map((insight) => (
                 <div key={insight.id} className="bg-primary/5 rounded-md p-2.5 border border-primary/10">
