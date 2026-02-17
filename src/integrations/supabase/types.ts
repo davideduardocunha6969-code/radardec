@@ -538,6 +538,134 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_colunas: {
+        Row: {
+          cor: string | null
+          created_at: string
+          funil_id: string
+          id: string
+          nome: string
+          ordem: number
+        }
+        Insert: {
+          cor?: string | null
+          created_at?: string
+          funil_id: string
+          id?: string
+          nome: string
+          ordem?: number
+        }
+        Update: {
+          cor?: string | null
+          created_at?: string
+          funil_id?: string
+          id?: string
+          nome?: string
+          ordem?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_colunas_funil_id_fkey"
+            columns: ["funil_id"]
+            isOneToOne: false
+            referencedRelation: "crm_funis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_funis: {
+        Row: {
+          area_atuacao: string
+          created_at: string
+          descricao: string | null
+          id: string
+          nome: string
+          tipo_acao: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          area_atuacao: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome: string
+          tipo_acao?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          area_atuacao?: string
+          created_at?: string
+          descricao?: string | null
+          id?: string
+          nome?: string
+          tipo_acao?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      crm_leads: {
+        Row: {
+          coluna_id: string
+          created_at: string
+          dados_extras: Json | null
+          endereco: string | null
+          funil_id: string
+          id: string
+          nome: string
+          ordem: number
+          resumo_caso: string | null
+          telefones: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          coluna_id: string
+          created_at?: string
+          dados_extras?: Json | null
+          endereco?: string | null
+          funil_id: string
+          id?: string
+          nome: string
+          ordem?: number
+          resumo_caso?: string | null
+          telefones?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          coluna_id?: string
+          created_at?: string
+          dados_extras?: Json | null
+          endereco?: string | null
+          funil_id?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          resumo_caso?: string | null
+          telefones?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_leads_coluna_id_fkey"
+            columns: ["coluna_id"]
+            isOneToOne: false
+            referencedRelation: "crm_colunas"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_leads_funil_id_fkey"
+            columns: ["funil_id"]
+            isOneToOne: false
+            referencedRelation: "crm_funis"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       curriculos: {
         Row: {
           arquivo_nome: string
