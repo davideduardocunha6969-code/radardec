@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Phone, PhoneOff, Clock, Star, Trophy, BarChart3, Filter } from "lucide-react";
+import { Loader2, Phone, PhoneOff, Clock, Star, Trophy, BarChart3, Filter, CalendarCheck, Target, AlertTriangle, TrendingUp } from "lucide-react";
 import { useRadarOutbound, filterByFunil } from "@/hooks/useRadarOutbound";
 import {
   BarChart,
@@ -20,6 +20,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import BestHoursInsight from "@/components/radar-outbound/BestHoursInsight";
+import PsychStateSection from "@/components/radar-outbound/PsychStateSection";
 
 function formatDuration(seconds: number) {
   const m = Math.floor(seconds / 60);
@@ -103,7 +105,7 @@ const RadarOutbound = () => {
       </div>
 
       {/* KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
         <Card>
           <CardContent className="pt-4 pb-3 px-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
@@ -134,6 +136,24 @@ const RadarOutbound = () => {
         <Card>
           <CardContent className="pt-4 pb-3 px-4">
             <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+              <Target className="h-3.5 w-3.5" />
+              Taxa Contato
+            </div>
+            <p className="text-2xl font-bold">{data.taxaContatoGeral}%</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3 px-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+              <CalendarCheck className="h-3.5 w-3.5" />
+              Taxa Agendamento
+            </div>
+            <p className="text-2xl font-bold text-blue-600">{data.taxaAgendamento}%</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3 px-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
               <Clock className="h-3.5 w-3.5" />
               Duração Média
             </div>
@@ -149,9 +169,52 @@ const RadarOutbound = () => {
             <p className="text-2xl font-bold">{data.notaMediaGeral ?? "—"}</p>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="pt-4 pb-3 px-4">
+            <div className="flex items-center gap-2 text-muted-foreground text-xs mb-1">
+              <AlertTriangle className="h-3.5 w-3.5" />
+              RAPOVECA Mal Gerida
+            </div>
+            <p className="text-2xl font-bold text-amber-600">{data.indiceRapovecaMalGerida}%</p>
+            <p className="text-[10px] text-muted-foreground">{data.totalMalGerida}/{data.totalComFeedback} ligações</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Hourly Analysis */}
+      {/* Daily Calls Chart */}
+      <Card>
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm flex items-center gap-2">
+            <TrendingUp className="h-4 w-4 text-primary" />
+            Ligações Realizadas por Dia
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {data.dailyData.length > 0 ? (
+            <ChartContainer
+              config={{
+                efetuadas: { label: "Efetuadas", color: "hsl(var(--primary))" },
+                atendidas: { label: "Atendidas", color: "hsl(var(--chart-2))" },
+              }}
+              className="h-[250px]"
+            >
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={data.dailyData}>
+                  <XAxis dataKey="dia" tick={{ fontSize: 10 }} />
+                  <YAxis tick={{ fontSize: 10 }} />
+                  <ChartTooltip content={<ChartTooltipContent />} />
+                  <Bar dataKey="efetuadas" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} barSize={16} />
+                  <Bar dataKey="atendidas" fill="hsl(var(--chart-2))" radius={[4, 4, 0, 0]} barSize={16} />
+                </BarChart>
+              </ResponsiveContainer>
+            </ChartContainer>
+          ) : (
+            <p className="text-sm text-muted-foreground text-center py-12">Sem dados</p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Hourly Analysis + Best Hours */}
       <div className="grid md:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -186,7 +249,6 @@ const RadarOutbound = () => {
           </CardContent>
         </Card>
 
-        {/* Best hours insight */}
         <Card>
           <CardHeader className="pb-2">
             <CardTitle className="text-sm flex items-center gap-2">
@@ -201,7 +263,10 @@ const RadarOutbound = () => {
         </Card>
       </div>
 
-      {/* Charts */}
+      {/* Psychological State Conversion */}
+      <PsychStateSection psychData={data.psychData} />
+
+      {/* Charts per SDR */}
       <div className="grid md:grid-cols-2 gap-4">
         <Card>
           <CardHeader className="pb-2">
@@ -280,6 +345,7 @@ const RadarOutbound = () => {
                 <TableHead className="text-center">Efetuadas</TableHead>
                 <TableHead className="text-center">Finalizadas</TableHead>
                 <TableHead className="text-center">Não Atendidas</TableHead>
+                <TableHead className="text-center">Taxa Contato</TableHead>
                 <TableHead className="text-center">Duração Média</TableHead>
                 <TableHead className="text-center">Nota Média IA</TableHead>
               </TableRow>
@@ -302,6 +368,11 @@ const RadarOutbound = () => {
                       {sdr.naoAtendidas}
                     </Badge>
                   </TableCell>
+                  <TableCell className="text-center">
+                    <Badge variant={sdr.taxaContato >= 50 ? "default" : "secondary"}>
+                      {sdr.taxaContato}%
+                    </Badge>
+                  </TableCell>
                   <TableCell className="text-center">{formatDuration(sdr.duracaoMediaSegundos)}</TableCell>
                   <TableCell className="text-center">
                     {sdr.notaMedia != null ? (
@@ -316,7 +387,7 @@ const RadarOutbound = () => {
               ))}
               {data.sdrStats.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={7} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={8} className="text-center text-muted-foreground py-8">
                     Nenhuma ligação registrada ainda.
                   </TableCell>
                 </TableRow>
@@ -368,76 +439,5 @@ const RadarOutbound = () => {
     </div>
   );
 };
-
-// Sub-component: Best hours insight card
-function BestHoursInsight({ hourlyData }: { hourlyData: { hora: string; efetuadas: number; atendidas: number }[] }) {
-  const insights = useMemo(() => {
-    const withRate = hourlyData
-      .filter((h) => h.efetuadas >= 2)
-      .map((h) => ({
-        ...h,
-        taxa: h.efetuadas > 0 ? (h.atendidas / h.efetuadas) * 100 : 0,
-      }))
-      .sort((a, b) => b.taxa - a.taxa);
-
-    const topEfetuadas = [...hourlyData].sort((a, b) => b.efetuadas - a.efetuadas).slice(0, 3);
-    const topAtendidas = [...hourlyData].sort((a, b) => b.atendidas - a.atendidas).slice(0, 3);
-
-    return { topTaxa: withRate.slice(0, 3), topEfetuadas, topAtendidas };
-  }, [hourlyData]);
-
-  if (insights.topEfetuadas.every((h) => h.efetuadas === 0)) {
-    return <p className="text-sm text-muted-foreground text-center py-12">Sem dados suficientes</p>;
-  }
-
-  return (
-    <div className="space-y-4">
-      <div>
-        <h4 className="text-xs font-semibold text-muted-foreground mb-2">🎯 Maior Taxa de Atendimento</h4>
-        <div className="space-y-1.5">
-          {insights.topTaxa.map((h, i) => (
-            <div key={h.hora} className="flex items-center justify-between text-sm">
-              <span className="font-medium">
-                {i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"} {h.hora}
-              </span>
-              <div className="flex items-center gap-3">
-                <span className="text-xs text-muted-foreground">
-                  {h.atendidas}/{h.efetuadas} ligações
-                </span>
-                <Badge variant={h.taxa >= 50 ? "default" : "secondary"}>
-                  {Math.round(h.taxa)}%
-                </Badge>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <h4 className="text-xs font-semibold text-muted-foreground mb-2">📞 Mais Ligações Efetuadas</h4>
-        <div className="space-y-1.5">
-          {insights.topEfetuadas.filter((h) => h.efetuadas > 0).map((h) => (
-            <div key={h.hora} className="flex items-center justify-between text-sm">
-              <span className="font-medium">{h.hora}</span>
-              <span className="text-muted-foreground">{h.efetuadas} ligações</span>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      <div>
-        <h4 className="text-xs font-semibold text-muted-foreground mb-2">✅ Mais Atendidas</h4>
-        <div className="space-y-1.5">
-          {insights.topAtendidas.filter((h) => h.atendidas > 0).map((h) => (
-            <div key={h.hora} className="flex items-center justify-between text-sm">
-              <span className="font-medium">{h.hora}</span>
-              <span className="text-muted-foreground">{h.atendidas} atendidas</span>
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  );
-}
 
 export default RadarOutbound;
