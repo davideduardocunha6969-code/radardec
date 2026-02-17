@@ -87,11 +87,11 @@ function ScriptItemEditor({ title, icon, items, onChange }: ScriptItemEditorProp
                 placeholder="Título (ex: Jornada diária)"
                 className="h-8 text-sm"
               />
-              <Input
+              <Textarea
                 value={item.description}
                 onChange={(e) => updateItem(i, "description", e.target.value)}
                 placeholder="Fala/pergunta sugerida (ex: Qual era sua jornada diária?)"
-                className="h-8 text-xs"
+                className="text-xs min-h-[60px] resize-y"
               />
             </div>
             <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => removeItem(i)}>
@@ -234,7 +234,7 @@ export default function ScriptsSdrTab() {
           <DialogHeader>
             <DialogTitle>{editing ? "Editar" : "Novo"} Script SDR</DialogTitle>
           </DialogHeader>
-          <ScrollArea className="flex-1 pr-4">
+          <div className="flex-1 overflow-y-auto pr-4" style={{ maxHeight: 'calc(90vh - 140px)' }}>
             <div className="space-y-5 pb-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
@@ -266,7 +266,7 @@ export default function ScriptsSdrTab() {
               />
 
             </div>
-          </ScrollArea>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button>
             <Button onClick={handleSave} disabled={!form.nome || createScript.isPending || updateScript.isPending}>
