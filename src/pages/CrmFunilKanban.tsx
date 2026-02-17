@@ -351,7 +351,7 @@ export default function CrmFunilKanban() {
 
       {/* Dialog Detalhe Lead */}
       <Dialog open={!!detailLead} onOpenChange={(o) => !o && setDetailLead(null)}>
-        <DialogContent className="max-w-3xl w-[95vw] max-h-[85vh] overflow-hidden flex flex-col">
+        <DialogContent className="max-w-4xl w-[95vw] max-h-[85vh] overflow-hidden flex flex-col">
           <DialogHeader><DialogTitle>{detailLead?.nome}</DialogTitle></DialogHeader>
           {detailLead && (
             <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
