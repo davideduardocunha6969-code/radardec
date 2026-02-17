@@ -7,6 +7,7 @@ import { LeadContatosTab } from "@/components/crm/LeadContatosTab";
 import { RealtimeCoachingPanel } from "@/components/crm/RealtimeCoachingPanel";
 import { CoachingErrorBoundary } from "@/components/crm/coaching/CoachingErrorBoundary";
 import { useRobosCoachAtivos, type RoboCoach } from "@/hooks/useRobosCoach";
+import { useCleanupOrphanedChamadas } from "@/hooks/useCrmChamadas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -27,6 +28,7 @@ export default function CrmFunilKanban() {
   const { data: colunas, isLoading: colunasLoading } = useCrmColunas(funilId);
   const { data: leads, isLoading: leadsLoading } = useCrmLeads(funilId);
   const { data: robosCoach } = useRobosCoachAtivos();
+  useCleanupOrphanedChamadas();
   const createColuna = useCreateColuna();
   const updateColuna = useUpdateColuna();
   const deleteColuna = useDeleteColuna();

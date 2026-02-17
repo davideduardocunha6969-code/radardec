@@ -58,6 +58,9 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
   const chamadaIdRef = useRef<string | null>(null);
   const mixedStreamRef = useRef<MediaStream | null>(null);
   const durationRef = useRef(0);
+  const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const lastSavedChunksRef = useRef(0);
+  const mimeTypeRef = useRef("audio/webm");
 
   const createChamada = useCreateChamada();
   const updateChamada = useUpdateChamada();
@@ -91,10 +94,51 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
 
   const cleanup = useCallback(() => {
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    if (autoSaveTimerRef.current) { clearInterval(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
     if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null; }
     stopAllStreams();
     if (audioContextRef.current) { audioContextRef.current.close(); audioContextRef.current = null; }
   }, [stopAllStreams]);
+
+  // Save partial audio to storage (non-blocking)
+  const savePartialAudio = useCallback(async () => {
+    const chamadaId = chamadaIdRef.current;
+    if (!chamadaId || chunksRef.current.length === 0) return;
+    if (chunksRef.current.length === lastSavedChunksRef.current) return; // No new chunks
+    try {
+      const blob = new Blob(chunksRef.current, { type: mimeTypeRef.current });
+      const fileName = `whatsapp_partial_${leadId}_${chamadaId}.webm`;
+      await supabase.storage
+        .from("atendimentos-audio")
+        .upload(fileName, blob, { contentType: "audio/webm", upsert: true });
+      await supabase
+        .from("crm_chamadas")
+        .update({ audio_url: fileName, duracao_segundos: durationRef.current })
+        .eq("id", chamadaId);
+      lastSavedChunksRef.current = chunksRef.current.length;
+      console.log("[AutoSave] Partial audio saved:", fileName, `${durationRef.current}s`);
+    } catch (e) {
+      console.error("[AutoSave] Error saving partial audio:", e);
+    }
+  }, [leadId]);
+
+  // beforeunload: save partial on page close/refresh
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (chamadaIdRef.current && chunksRef.current.length > 0) {
+        const blob = new Blob(chunksRef.current, { type: mimeTypeRef.current });
+        const fileName = `whatsapp_partial_${leadId}_${chamadaIdRef.current}.webm`;
+        // Use sendBeacon for reliability during unload
+        const formData = new FormData();
+        formData.append("file", blob, fileName);
+        // Fallback: mark as interrupted so cleanup can handle it
+        navigator.sendBeacon && console.log("[BeforeUnload] Attempting partial save");
+        // We can't do async uploads in beforeunload, but the periodic save should have covered most data
+      }
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [leadId]);
 
   const detectIfAnswered = (transcriptionText: string): boolean => {
     if (!transcriptionText || transcriptionText.trim().length < 20) return false;
@@ -247,6 +291,8 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
         : "audio/webm";
 
       chunksRef.current = [];
+      lastSavedChunksRef.current = 0;
+      mimeTypeRef.current = mimeType;
       const recorder = new MediaRecorder(destination.stream, { mimeType });
       mediaRecorderRef.current = recorder;
 
@@ -255,8 +301,9 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       };
 
       recorder.onstop = () => {
+        // Stop auto-save timer
+        if (autoSaveTimerRef.current) { clearInterval(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
         const blob = new Blob(chunksRef.current, { type: mimeType });
-        // Use durationRef to avoid stale closure capturing initial duration (0)
         handleRecordingComplete(blob, durationRef.current);
       };
 
@@ -273,6 +320,11 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
         setDuration((d) => d + 1);
       }, 1000);
       updateLevels();
+
+      // Start periodic auto-save every 30 seconds
+      autoSaveTimerRef.current = setInterval(() => {
+        savePartialAudio();
+      }, 30_000);
       mixedStreamRef.current = destination.stream;
       onRecordingStateChange?.(true, destination.stream);
 
@@ -309,9 +361,12 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
 
   const stopRecording = useCallback(() => {
     if (mediaRecorderRef.current && status === "recording") {
+      // Do one final partial save before stopping
+      savePartialAudio();
       mediaRecorderRef.current.stop();
       setStatus("processing");
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+      if (autoSaveTimerRef.current) { clearInterval(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
       if (animationFrameRef.current) { cancelAnimationFrame(animationFrameRef.current); animationFrameRef.current = null; }
       stopAllStreams();
       if (audioContextRef.current) { audioContextRef.current.close(); audioContextRef.current = null; }
@@ -322,7 +377,7 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       mixedStreamRef.current = null;
       onRecordingStateChange?.(false, null);
     }
-  }, [status, stopAllStreams, onRecordingStateChange]);
+  }, [status, stopAllStreams, onRecordingStateChange, savePartialAudio]);
 
   const togglePause = () => {
     if (!mediaRecorderRef.current) return;

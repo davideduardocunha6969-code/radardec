@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import { useEffect } from "react";
 
 export interface CrmChamada {
   id: string;
@@ -37,6 +38,32 @@ export function useCrmChamadas(leadId: string | undefined) {
     enabled: !!leadId,
     refetchOnWindowFocus: false,
   });
+}
+
+/**
+ * On mount, fix orphaned chamadas stuck in "em_chamada" or "iniciando"
+ * for more than 5 minutes (they were likely interrupted by a crash/refresh).
+ */
+export function useCleanupOrphanedChamadas() {
+  const { user } = useAuthContext();
+
+  useEffect(() => {
+    if (!user) return;
+    const cleanupOrphans = async () => {
+      const fiveMinutesAgo = new Date(Date.now() - 5 * 60 * 1000).toISOString();
+      const { data, error } = await supabase
+        .from("crm_chamadas")
+        .update({ status: "interrompida" })
+        .eq("user_id", user.id)
+        .in("status", ["em_chamada", "iniciando"])
+        .lt("updated_at", fiveMinutesAgo)
+        .select("id");
+      if (!error && data?.length) {
+        console.log(`[Cleanup] Fixed ${data.length} orphaned chamadas`);
+      }
+    };
+    cleanupOrphans();
+  }, [user]);
 }
 
 export function useCreateChamada() {
