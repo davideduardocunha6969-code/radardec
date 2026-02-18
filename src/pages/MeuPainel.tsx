@@ -9,7 +9,7 @@ export default function MeuPainel() {
         <p className="text-muted-foreground">Visão geral das suas atividades e configurações.</p>
       </div>
 
-      <div className="space-y-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
         <HorarioTrabalhoSection />
         <IndisponibilidadeSection />
       </div>
