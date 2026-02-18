@@ -108,7 +108,7 @@ Se o lead NÃO atendeu nenhuma chamada, foque em:
 Responda em português brasileiro, de forma direta e objetiva. Use markdown para formatação.`;
 
     const aiResponse = await fetch(
-      "https://llm-gateway.lovable.dev/v1/chat/completions",
+      "https://ai.gateway.lovable.dev/v1/chat/completions",
       {
         method: "POST",
         headers: {
