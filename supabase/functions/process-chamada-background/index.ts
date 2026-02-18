@@ -136,6 +136,18 @@ Deno.serve(async (req) => {
     const durationMin = (chamadaData?.duracao_segundos || 0) / 60;
     const audioSizeMB = audioData.size / (1024 * 1024);
     
+    // Fetch USD/BRL exchange rate
+    let cotacaoBrl = 5.50; // fallback
+    try {
+      const fxRes = await fetch("https://open.er-api.com/v6/latest/USD");
+      if (fxRes.ok) {
+        const fxData = await fxRes.json();
+        cotacaoBrl = fxData.rates?.BRL || 5.50;
+      }
+    } catch (e) {
+      console.warn("[Background] Failed to fetch exchange rate, using fallback:", e);
+    }
+
     // Cost rates (USD)
     const TWILIO_CALL_PER_MIN = 0.0663;  // Outbound to BR mobile
     const TWILIO_RECORDING_PER_MIN = 0.0025;
@@ -158,6 +170,7 @@ Deno.serve(async (req) => {
       edge_functions: parseFloat(custoEdgeFunctions.toFixed(6)),
       duracao_min: parseFloat(durationMin.toFixed(2)),
       audio_size_mb: parseFloat(audioSizeMB.toFixed(2)),
+      cotacao_brl: parseFloat(cotacaoBrl.toFixed(4)),
     };
 
     // 5. Update chamada with transcription + costs
