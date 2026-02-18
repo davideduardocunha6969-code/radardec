@@ -21,17 +21,26 @@ serve(async (req) => {
     let toNumber = "";
     const contentType = req.headers.get("content-type") || "";
 
+    console.log("[TwiML] Content-Type:", contentType);
+
     if (contentType.includes("application/x-www-form-urlencoded")) {
       const formData = await req.formData();
       toNumber = formData.get("To") as string || "";
+      console.log("[TwiML] Form data - To:", toNumber);
+      // Log all form fields for debugging
+      const allFields: Record<string, string> = {};
+      formData.forEach((v, k) => allFields[k] = v as string);
+      console.log("[TwiML] All form fields:", JSON.stringify(allFields));
     } else {
       try {
         const body = await req.json();
         toNumber = body.To || body.to || "";
+        console.log("[TwiML] JSON body - To:", toNumber);
       } catch {
         // If no body, use query params
         const url = new URL(req.url);
         toNumber = url.searchParams.get("To") || "";
+        console.log("[TwiML] Query params - To:", toNumber);
       }
     }
 
@@ -41,6 +50,7 @@ serve(async (req) => {
 
     // Clean the number - ensure it starts with +
     const cleanNumber = toNumber.startsWith("+") ? toNumber : `+${toNumber}`;
+    console.log("[TwiML] Clean number:", cleanNumber, "CallerID:", TWILIO_PHONE_NUMBER);
 
     // Generate TwiML for outbound call with recording
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
