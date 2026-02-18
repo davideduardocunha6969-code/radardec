@@ -1,13 +1,18 @@
 import { useState } from "react";
 import { useCrmFunis, useCreateFunil, useDeleteFunil } from "@/hooks/useCrmOutbound";
+import { useFunilMembros, useSetFunilMembros } from "@/hooks/useFunilMembros";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, Trash2, ChevronRight, Loader2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Trash2, ChevronRight, Loader2, Settings2, Users } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 
 const AREAS = [
   { value: "previdenciario", label: "Previdenciário" },
@@ -32,6 +37,45 @@ export default function CrmOutbound() {
   const navigate = useNavigate();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ nome: "", area_atuacao: "", tipo_acao: "", descricao: "" });
+
+  // Edit/members dialog
+  const [editFunilId, setEditFunilId] = useState<string | null>(null);
+  const { data: profiles } = useQuery({
+    queryKey: ["profiles_list"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("profiles").select("id, display_name").order("display_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+  const { data: membros, isLoading: membrosLoading } = useFunilMembros(editFunilId || undefined);
+  const setMembros = useSetFunilMembros();
+  const [selectedSdrs, setSelectedSdrs] = useState<string[]>([]);
+  const [selectedClosers, setSelectedClosers] = useState<string[]>([]);
+
+  const openEditDialog = (funilId: string) => {
+    setEditFunilId(funilId);
+  };
+
+  // Sync state when membros load
+  const syncedForFunil = useState<string | null>(null);
+  if (editFunilId && membros && syncedForFunil[0] !== editFunilId) {
+    setSelectedSdrs(membros.filter(m => m.papel === "sdr").map(m => m.profile_id));
+    setSelectedClosers(membros.filter(m => m.papel === "closer").map(m => m.profile_id));
+    syncedForFunil[1](editFunilId);
+  }
+
+  const handleSaveMembers = () => {
+    if (!editFunilId) return;
+    setMembros.mutate(
+      { funilId: editFunilId, sdrs: selectedSdrs, closers: selectedClosers },
+      { onSuccess: () => { setEditFunilId(null); syncedForFunil[1](null); } }
+    );
+  };
+
+  const toggleProfile = (list: string[], setList: (v: string[]) => void, profileId: string) => {
+    setList(list.includes(profileId) ? list.filter(id => id !== profileId) : [...list, profileId]);
+  };
 
   const handleCreate = () => {
     if (!form.nome || !form.area_atuacao) return;
@@ -70,6 +114,9 @@ export default function CrmOutbound() {
                   </span>
                 </div>
                 <div className="flex gap-1">
+                  <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); openEditDialog(f.id); }}>
+                    <Settings2 className="h-4 w-4 text-muted-foreground" />
+                  </Button>
                   <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); deleteFunil.mutate(f.id); }}>
                     <Trash2 className="h-4 w-4 text-destructive" />
                   </Button>
@@ -85,6 +132,7 @@ export default function CrmOutbound() {
         </div>
       )}
 
+      {/* Dialog Novo Funil */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent>
           <DialogHeader><DialogTitle>Novo Funil</DialogTitle></DialogHeader>
@@ -115,6 +163,68 @@ export default function CrmOutbound() {
             <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancelar</Button>
             <Button onClick={handleCreate} disabled={createFunil.isPending || !form.nome || !form.area_atuacao}>
               {createFunil.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Criar
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Editar Funil - Equipe */}
+      <Dialog open={!!editFunilId} onOpenChange={(o) => { if (!o) { setEditFunilId(null); syncedForFunil[1](null); } }}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Users className="h-5 w-5" />
+              Equipe do Funil
+            </DialogTitle>
+          </DialogHeader>
+          {membrosLoading ? (
+            <div className="flex justify-center py-8"><Loader2 className="h-6 w-6 animate-spin" /></div>
+          ) : (
+            <div className="space-y-6">
+              {/* SDRs */}
+              <div>
+                <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                  <Badge variant="secondary">SDRs</Badge>
+                  <span className="text-muted-foreground font-normal">Quem prospecta neste funil</span>
+                </h4>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {profiles?.map((p) => (
+                    <label key={p.id} className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-muted/50">
+                      <Checkbox
+                        checked={selectedSdrs.includes(p.id)}
+                        onCheckedChange={() => toggleProfile(selectedSdrs, setSelectedSdrs, p.id)}
+                      />
+                      <span className="text-sm">{p.display_name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              {/* Closers */}
+              <div>
+                <h4 className="text-sm font-semibold mb-2 flex items-center gap-2">
+                  <Badge variant="default">Closers</Badge>
+                  <span className="text-muted-foreground font-normal">Quem atende leads deste funil</span>
+                </h4>
+                <div className="space-y-2 max-h-40 overflow-y-auto">
+                  {profiles?.map((p) => (
+                    <label key={p.id} className="flex items-center gap-2 cursor-pointer p-2 rounded hover:bg-muted/50">
+                      <Checkbox
+                        checked={selectedClosers.includes(p.id)}
+                        onCheckedChange={() => toggleProfile(selectedClosers, setSelectedClosers, p.id)}
+                      />
+                      <span className="text-sm">{p.display_name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setEditFunilId(null); syncedForFunil[1](null); }}>Cancelar</Button>
+            <Button onClick={handleSaveMembers} disabled={setMembros.isPending}>
+              {setMembros.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Salvar Equipe
             </Button>
           </DialogFooter>
         </DialogContent>

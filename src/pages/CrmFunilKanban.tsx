@@ -518,7 +518,7 @@ export default function CrmFunilKanban() {
                   </div>
                 </TabsContent>
                 <TabsContent value="agenda-closers" className="flex-1 overflow-auto px-6 pb-6">
-                  <AgendaClosersTab leadId={detailLead.id} leadNome={detailLead.nome} />
+                  <AgendaClosersTab leadId={detailLead.id} leadNome={detailLead.nome} funilId={funilId} />
                 </TabsContent>
               </Tabs>
             </div>
