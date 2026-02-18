@@ -140,6 +140,7 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
               <TableHead className="text-xs">Número</TableHead>
               <TableHead className="text-xs">Status</TableHead>
               <TableHead className="text-xs">Duração</TableHead>
+              <TableHead className="text-xs">Encerrada por</TableHead>
               <TableHead className="text-xs">Nota IA</TableHead>
               <TableHead className="text-xs text-right">Ações</TableHead>
             </TableRow>
@@ -181,6 +182,15 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
                     {chamada.duracao_segundos
                       ? `${Math.floor(chamada.duracao_segundos / 60)}m${chamada.duracao_segundos % 60}s`
                       : "-"}
+                  </TableCell>
+                  <TableCell className="py-2">
+                    {(chamada as any).encerrado_por === "lead" ? (
+                      <Badge variant="outline" className="text-[10px] bg-orange-500/10 text-orange-700">Lead</Badge>
+                    ) : (chamada as any).encerrado_por === "sdr" ? (
+                      <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-700">SDR</Badge>
+                    ) : (
+                      <span className="text-xs text-muted-foreground">-</span>
+                    )}
                   </TableCell>
                   <TableCell className="py-2">
                     {nota !== null && nota !== undefined ? (

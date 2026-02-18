@@ -544,6 +544,7 @@ export type Database = {
           canal: string
           created_at: string
           duracao_segundos: number | null
+          encerrado_por: string | null
           feedback_ia: string | null
           id: string
           lead_id: string
@@ -562,6 +563,7 @@ export type Database = {
           canal?: string
           created_at?: string
           duracao_segundos?: number | null
+          encerrado_por?: string | null
           feedback_ia?: string | null
           id?: string
           lead_id: string
@@ -580,6 +582,7 @@ export type Database = {
           canal?: string
           created_at?: string
           duracao_segundos?: number | null
+          encerrado_por?: string | null
           feedback_ia?: string | null
           id?: string
           lead_id?: string
