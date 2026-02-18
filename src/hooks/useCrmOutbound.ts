@@ -42,6 +42,7 @@ export interface CrmLead {
   endereco: string | null;
   telefones: LeadTelefone[];
   resumo_caso: string | null;
+  resumo_ia_contatos: string | null;
   dados_extras: Record<string, unknown>;
   ordem: number;
   user_id: string;
