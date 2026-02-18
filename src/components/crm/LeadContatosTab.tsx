@@ -43,7 +43,8 @@ import {
 import { useCrmChamadas, type CrmChamada } from "@/hooks/useCrmChamadas";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQueryClient, useQuery } from "@tanstack/react-query";
+import { Bot, User } from "lucide-react";
 
 interface LeadContatosTabProps {
   leadId: string;
@@ -75,6 +76,27 @@ function getNotaColor(nota: number): string {
 export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
   const { data: chamadas, isLoading } = useCrmChamadas(leadId);
   const queryClient = useQueryClient();
+
+  // Fetch profiles for SDR names
+  const userIds = useMemo(() => {
+    if (!chamadas) return [];
+    return [...new Set(chamadas.map(c => c.user_id))];
+  }, [chamadas]);
+
+  const { data: profilesMap } = useQuery({
+    queryKey: ["profiles_map", userIds],
+    queryFn: async () => {
+      if (!userIds.length) return {} as Record<string, string>;
+      const { data } = await supabase
+        .from("profiles")
+        .select("user_id, display_name")
+        .in("user_id", userIds);
+      const map: Record<string, string> = {};
+      data?.forEach(p => { map[p.user_id] = p.display_name; });
+      return map;
+    },
+    enabled: userIds.length > 0,
+  });
   const [transcricaoOpen, setTranscricaoOpen] = useState<CrmChamada | null>(null);
   const [resumoOpen, setResumoOpen] = useState<CrmChamada | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState<CrmChamada | null>(null);
@@ -290,6 +312,7 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
             <TableRow>
               <TableHead className="text-xs">Data</TableHead>
               <TableHead className="text-xs">Canal</TableHead>
+              <TableHead className="text-xs">Responsável</TableHead>
               <TableHead className="text-xs">Número</TableHead>
               <TableHead className="text-xs">Status</TableHead>
               <TableHead className="text-xs">Duração</TableHead>
@@ -324,6 +347,19 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
                         <Phone className="h-3 w-3 mr-0.5" />
                         VoIP
                       </Badge>
+                    )}
+                  </TableCell>
+                  <TableCell className="py-2">
+                    {(chamada as any).canal === "ia" ? (
+                      <Badge variant="outline" className="text-[10px] bg-purple-500/10 text-purple-700">
+                        <Bot className="h-3 w-3 mr-0.5" />
+                        IA
+                      </Badge>
+                    ) : (
+                      <span className="text-xs flex items-center gap-1">
+                        <User className="h-3 w-3 text-muted-foreground" />
+                        {profilesMap?.[chamada.user_id] || "—"}
+                      </span>
                     )}
                   </TableCell>
                   <TableCell className="text-xs py-2">{chamada.numero_discado}</TableCell>
