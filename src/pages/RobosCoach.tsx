@@ -10,6 +10,8 @@ import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Bot, Loader2, ClipboardCheck, FileText } from "lucide-react";
 import ScriptsSdrTab from "@/components/robos/ScriptsSdrTab";
+import ScriptsCloserTab from "@/components/robos/ScriptsCloserTab";
+import { Briefcase } from "lucide-react";
 
 export default function RobosCoach() {
   const { data: robos, isLoading } = useRobosCoach();
@@ -67,6 +69,9 @@ export default function RobosCoach() {
           </TabsTrigger>
           <TabsTrigger value="scripts" className="gap-1.5">
             <FileText className="h-4 w-4" />Scripts SDR
+          </TabsTrigger>
+          <TabsTrigger value="scripts_closer" className="gap-1.5">
+            <Briefcase className="h-4 w-4" />Scripts Closers
           </TabsTrigger>
         </TabsList>
 
@@ -170,6 +175,11 @@ export default function RobosCoach() {
         {/* Scripts SDR Tab */}
         <TabsContent value="scripts" className="mt-4">
           <ScriptsSdrTab />
+        </TabsContent>
+
+        {/* Scripts Closer Tab */}
+        <TabsContent value="scripts_closer" className="mt-4">
+          <ScriptsCloserTab />
         </TabsContent>
       </Tabs>
 
