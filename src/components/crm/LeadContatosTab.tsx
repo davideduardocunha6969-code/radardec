@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -14,6 +14,9 @@ import {
   ClipboardCheck,
   RefreshCw,
   DollarSign,
+  Sparkles,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -77,6 +80,9 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
   const [feedbackOpen, setFeedbackOpen] = useState<CrmChamada | null>(null);
   const [runningFeedbackIds, setRunningFeedbackIds] = useState<Set<string>>(new Set());
   const [custoOpen, setCustoOpen] = useState<CrmChamada | null>(null);
+  const [resumoContatos, setResumoContatos] = useState<string | null>(null);
+  const [resumoContatosLoading, setResumoContatosLoading] = useState(false);
+  const [resumoContatosExpanded, setResumoContatosExpanded] = useState(true);
 
   const handleRunFeedback = async (chamadaId: string) => {
     setRunningFeedbackIds(prev => new Set(prev).add(chamadaId));
@@ -111,6 +117,22 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
     window.open(url, "_blank");
   };
 
+  const handleGerarResumoContatos = useCallback(async () => {
+    setResumoContatosLoading(true);
+    setResumoContatosExpanded(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("resumo-contatos-lead", {
+        body: { leadId },
+      });
+      if (error) throw error;
+      setResumoContatos(data?.resumo || "Não foi possível gerar o resumo.");
+    } catch (e: any) {
+      toast.error("Erro ao gerar resumo: " + (e.message || "Erro desconhecido"));
+    } finally {
+      setResumoContatosLoading(false);
+    }
+  }, [leadId]);
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -130,6 +152,82 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
 
   return (
     <>
+      {/* AI Summary Section */}
+      <div className="mb-4 border rounded-lg bg-muted/30">
+        <div className="flex items-center justify-between px-4 py-2.5">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-amber-500" />
+            <span className="text-sm font-medium">Resumo IA dos Contatos</span>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs gap-1.5"
+              onClick={handleGerarResumoContatos}
+              disabled={resumoContatosLoading}
+            >
+              {resumoContatosLoading ? (
+                <Loader2 className="h-3 w-3 animate-spin" />
+              ) : (
+                <RefreshCw className="h-3 w-3" />
+              )}
+              {resumoContatos ? "Atualizar" : "Gerar Resumo"}
+            </Button>
+            {resumoContatos && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setResumoContatosExpanded(!resumoContatosExpanded)}
+              >
+                {resumoContatosExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+              </Button>
+            )}
+          </div>
+        </div>
+        {resumoContatosLoading && !resumoContatos && (
+          <div className="px-4 pb-3 flex items-center gap-2 text-xs text-muted-foreground">
+            <Loader2 className="h-3 w-3 animate-spin" />
+            Analisando chamadas e transcrições...
+          </div>
+        )}
+        {resumoContatos && resumoContatosExpanded && (
+          <div className="px-4 pb-3 border-t border-border/50 pt-3">
+            <div className="text-sm leading-relaxed space-y-1 prose prose-sm max-w-none dark:prose-invert">
+              {resumoContatos.split('\n').map((line, i) => {
+                const trimmed = line.trim();
+                if (!trimmed) return <div key={i} className="h-1.5" />;
+                if (/^#{1,3}\s/.test(trimmed)) {
+                  const text = trimmed.replace(/^#{1,3}\s+/, '');
+                  return <p key={i} className="font-semibold text-foreground mt-2 mb-0.5">{text}</p>;
+                }
+                if (/^\*\*/.test(trimmed)) {
+                  const formatted = trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                  return <p key={i} className="text-foreground" dangerouslySetInnerHTML={{ __html: formatted }} />;
+                }
+                if (/^[-•]\s/.test(trimmed)) {
+                  const text = trimmed.replace(/^[-•]\s+/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                  return (
+                    <div key={i} className="flex items-start gap-2 ml-2">
+                      <span className="text-muted-foreground mt-0.5 shrink-0">•</span>
+                      <span className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: text }} />
+                    </div>
+                  );
+                }
+                const formatted = trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                return <p key={i} className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: formatted }} />;
+              })}
+            </div>
+          </div>
+        )}
+        {!resumoContatos && !resumoContatosLoading && (
+          <div className="px-4 pb-3 text-xs text-muted-foreground">
+            Clique em "Gerar Resumo" para analisar todos os contatos deste lead com IA.
+          </div>
+        )}
+      </div>
+
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-muted-foreground">{chamadas.length} contato(s) registrado(s)</span>
       </div>
