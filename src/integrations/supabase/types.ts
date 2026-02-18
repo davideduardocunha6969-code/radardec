@@ -14,6 +14,39 @@ export type Database = {
   }
   public: {
     Tables: {
+      agenda_tipos_evento: {
+        Row: {
+          ativo: boolean
+          cor: string
+          created_at: string
+          icone: string
+          id: string
+          nome: string
+          ordem: number
+          updated_at: string
+        }
+        Insert: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          icone?: string
+          id?: string
+          nome: string
+          ordem?: number
+          updated_at?: string
+        }
+        Update: {
+          ativo?: boolean
+          cor?: string
+          created_at?: string
+          icone?: string
+          id?: string
+          nome?: string
+          ordem?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       ai_prompts: {
         Row: {
           created_at: string
