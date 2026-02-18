@@ -1825,6 +1825,75 @@ export type Database = {
         }
         Relationships: []
       }
+      user_horario_trabalho: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          dia_semana: number
+          hora_fim: string
+          hora_inicio: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          dia_semana: number
+          hora_fim?: string
+          hora_inicio?: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          dia_semana?: number
+          hora_fim?: string
+          hora_inicio?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_indisponibilidades: {
+        Row: {
+          created_at: string
+          data: string
+          dia_inteiro: boolean
+          hora_fim: string | null
+          hora_inicio: string | null
+          id: string
+          motivo: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data: string
+          dia_inteiro?: boolean
+          hora_fim?: string | null
+          hora_inicio?: string | null
+          id?: string
+          motivo?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data?: string
+          dia_inteiro?: boolean
+          hora_fim?: string | null
+          hora_inicio?: string | null
+          id?: string
+          motivo?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_permissions: {
         Row: {
           created_at: string
