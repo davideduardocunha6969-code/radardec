@@ -170,6 +170,25 @@ export function useUpdateColuna() {
   });
 }
 
+export function useReorderColunas() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ funilId, ordens }: { funilId: string; ordens: { id: string; ordem: number }[] }) => {
+      const promises = ordens.map(({ id, ordem }) =>
+        supabase.from("crm_colunas").update({ ordem }).eq("id", id)
+      );
+      const results = await Promise.all(promises);
+      const err = results.find((r) => r.error);
+      if (err?.error) throw err.error;
+      return funilId;
+    },
+    onSuccess: (funilId) => {
+      queryClient.invalidateQueries({ queryKey: ["crm_colunas", funilId] });
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
 export function useDeleteColuna() {
   const queryClient = useQueryClient();
   return useMutation({

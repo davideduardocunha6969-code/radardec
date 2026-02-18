@@ -1,6 +1,9 @@
 import { useState, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useUpdateColuna, useDeleteColuna, useCreateLead, useUpdateLead, useDeleteLead, useBulkCreateLeads, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
+import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useUpdateColuna, useDeleteColuna, useCreateLead, useUpdateLead, useDeleteLead, useBulkCreateLeads, useReorderColunas, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { VoipDialer } from "@/components/crm/VoipDialer";
 import { WhatsAppCallRecorder } from "@/components/crm/WhatsAppCallRecorder";
 import { WhatsAppAICallButton } from "@/components/crm/WhatsAppAICallButton";
@@ -24,6 +27,71 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
 
+import type { CrmColuna } from "@/hooks/useCrmOutbound";
+
+function SortableColumn({ col, funilId, leadsByColuna, setLeadForm, setEditingColuna, deleteColuna, setDetailLead }: {
+  col: CrmColuna;
+  funilId: string;
+  leadsByColuna: (colunaId: string) => CrmLead[];
+  setLeadForm: (colId: string) => void;
+  setEditingColuna: (c: CrmColuna) => void;
+  deleteColuna: (id: string) => void;
+  setDetailLead: (lead: CrmLead) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: col.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  return (
+    <div ref={setNodeRef} style={style} className="flex-shrink-0 w-72">
+      <div className="rounded-lg border bg-card">
+        <div className="flex items-center justify-between p-3 border-b" style={{ borderTopColor: col.cor || "#6366f1", borderTopWidth: 3 }}>
+          <div className="flex items-center gap-2">
+            <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none">
+              <GripVertical className="h-4 w-4" />
+            </button>
+            <h3 className="font-semibold text-sm">{col.nome}</h3>
+            <Badge variant="secondary" className="text-xs">{leadsByColuna(col.id).length}</Badge>
+          </div>
+          <div className="flex gap-1">
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setLeadForm(col.id)}>
+              <Plus className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingColuna(col)}>
+              <Pencil className="h-3.5 w-3.5" />
+            </Button>
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteColuna(col.id)}>
+              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+            </Button>
+          </div>
+        </div>
+        <ScrollArea className="h-[calc(100vh-280px)]">
+          <div className="p-2 space-y-2">
+            {leadsByColuna(col.id).map((lead) => (
+              <Card key={lead.id} className="cursor-pointer hover:shadow-sm transition-shadow" onClick={() => setDetailLead(lead)}>
+                <CardContent className="p-3 space-y-2">
+                  <div className="flex items-start justify-between">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium text-sm">{lead.nome}</span>
+                    </div>
+                  </div>
+                  {(lead.telefones as any[])?.[0] && (
+                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                      <Phone className="h-3 w-3" />
+                      <span>{(lead.telefones as any[])[0].numero}</span>
+                    </div>
+                  )}
+                  {lead.resumo_caso && <p className="text-xs text-muted-foreground line-clamp-2">{lead.resumo_caso}</p>}
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+        </ScrollArea>
+      </div>
+    </div>
+  );
+}
+
 export default function CrmFunilKanban() {
   const { funilId } = useParams<{ funilId: string }>();
   const navigate = useNavigate();
@@ -42,6 +110,22 @@ export default function CrmFunilKanban() {
   const updateLead = useUpdateLead();
   const deleteLead = useDeleteLead();
   const bulkCreate = useBulkCreateLeads();
+  const reorderColunas = useReorderColunas();
+
+  const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
+
+  const handleColumnDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id || !colunas || !funilId) return;
+    const oldIndex = colunas.findIndex((c) => c.id === active.id);
+    const newIndex = colunas.findIndex((c) => c.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const reordered = [...colunas];
+    const [moved] = reordered.splice(oldIndex, 1);
+    reordered.splice(newIndex, 0, moved);
+    const ordens = reordered.map((c, i) => ({ id: c.id, ordem: i }));
+    reorderColunas.mutate({ funilId, ordens });
+  };
 
   const [newColunaDialog, setNewColunaDialog] = useState(false);
   const [newColunaName, setNewColunaName] = useState("");
@@ -218,54 +302,15 @@ export default function CrmFunilKanban() {
           <Button className="mt-4" onClick={() => setNewColunaDialog(true)}><Plus className="h-4 w-4 mr-2" />Criar Coluna</Button>
         </CardContent></Card>
       ) : (
-        <div className="flex gap-4 overflow-x-auto pb-4">
-          {colunas.map((col) => (
-            <div key={col.id} className="flex-shrink-0 w-72">
-              <div className="rounded-lg border bg-card">
-                <div className="flex items-center justify-between p-3 border-b" style={{ borderTopColor: col.cor || "#6366f1", borderTopWidth: 3 }}>
-                  <div className="flex items-center gap-2">
-                    <h3 className="font-semibold text-sm">{col.nome}</h3>
-                    <Badge variant="secondary" className="text-xs">{leadsByColuna(col.id).length}</Badge>
-                  </div>
-                   <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setLeadForm({ ...leadForm, coluna_id: col.id }); setLeadDialog(true); }}>
-                      <Plus className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => { setEditingColuna({ id: col.id, nome: col.nome, cor: col.cor || "#6366f1", robo_coach_id: col.robo_coach_id || "", robo_feedback_id: col.robo_feedback_id || "", script_sdr_id: col.script_sdr_id || "", robo_coach_closer_id: col.robo_coach_closer_id || "", robo_feedback_closer_id: col.robo_feedback_closer_id || "", script_closer_id: col.script_closer_id || "" }); setEditColunaDialog(true); }}>
-                      <Pencil className="h-3.5 w-3.5" />
-                    </Button>
-                    <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => deleteColuna.mutate({ id: col.id, funilId: funilId! })}>
-                      <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                    </Button>
-                  </div>
-                </div>
-                <ScrollArea className="h-[calc(100vh-280px)]">
-                  <div className="p-2 space-y-2">
-                    {leadsByColuna(col.id).map((lead) => (
-                      <Card key={lead.id} className="cursor-pointer hover:shadow-sm transition-shadow" onClick={() => setDetailLead(lead)}>
-                        <CardContent className="p-3 space-y-2">
-                          <div className="flex items-start justify-between">
-                            <div className="flex items-center gap-2">
-                              <User className="h-4 w-4 text-muted-foreground" />
-                              <span className="font-medium text-sm">{lead.nome}</span>
-                            </div>
-                          </div>
-                          {lead.telefones[0] && (
-                            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                              <Phone className="h-3 w-3" />
-                              <span>{lead.telefones[0].numero}</span>
-                            </div>
-                          )}
-                          {lead.resumo_caso && <p className="text-xs text-muted-foreground line-clamp-2">{lead.resumo_caso}</p>}
-                        </CardContent>
-                      </Card>
-                    ))}
-                  </div>
-                </ScrollArea>
-              </div>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleColumnDragEnd}>
+          <SortableContext items={colunas.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
+            <div className="flex gap-4 overflow-x-auto pb-4">
+              {colunas.map((col) => (
+                <SortableColumn key={col.id} col={col} funilId={funilId!} leadsByColuna={leadsByColuna} setLeadForm={(colId: string) => { setLeadForm({ ...leadForm, coluna_id: colId }); setLeadDialog(true); }} setEditingColuna={(c: typeof col) => { setEditingColuna({ id: c.id, nome: c.nome, cor: c.cor || "#6366f1", robo_coach_id: c.robo_coach_id || "", robo_feedback_id: c.robo_feedback_id || "", script_sdr_id: c.script_sdr_id || "", robo_coach_closer_id: c.robo_coach_closer_id || "", robo_feedback_closer_id: c.robo_feedback_closer_id || "", script_closer_id: c.script_closer_id || "" }); setEditColunaDialog(true); }} deleteColuna={(id: string) => deleteColuna.mutate({ id, funilId: funilId! })} setDetailLead={setDetailLead} />
+              ))}
             </div>
-          ))}
-        </div>
+          </SortableContext>
+        </DndContext>
       )}
 
       {/* Dialog Nova Coluna */}
