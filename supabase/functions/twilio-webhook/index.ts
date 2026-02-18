@@ -152,9 +152,20 @@ serve(async (req) => {
 
       const mappedStatus = statusMap[callStatus] || callStatus;
 
+      // Capture who ended the call (Twilio sends "TerminatedBy" field)
+      const terminatedBy = formData.get("TerminatedBy") as string | null;
+      const encerradoPorMap: Record<string, string> = {
+        "callee": "lead",
+        "caller": "sdr",
+      };
+      const encerradoPor = terminatedBy ? (encerradoPorMap[terminatedBy] || terminatedBy) : undefined;
+
+      const updatePayload: Record<string, unknown> = { status: mappedStatus };
+      if (encerradoPor) updatePayload.encerrado_por = encerradoPor;
+
       const { error: statusError } = await supabase
         .from("crm_chamadas")
-        .update({ status: mappedStatus })
+        .update(updatePayload)
         .eq("twilio_call_sid", callSid);
 
       if (statusError) {
