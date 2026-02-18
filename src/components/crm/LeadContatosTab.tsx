@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -83,6 +83,32 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
   const [resumoContatos, setResumoContatos] = useState<string | null>(null);
   const [resumoContatosLoading, setResumoContatosLoading] = useState(false);
   const [resumoContatosExpanded, setResumoContatosExpanded] = useState(true);
+  const [resumoSavedAt, setResumoSavedAt] = useState<string | null>(null);
+  const [initialLoadDone, setInitialLoadDone] = useState(false);
+
+  // Load saved summary from lead record
+  useEffect(() => {
+    const loadSavedResumo = async () => {
+      const { data } = await supabase
+        .from("crm_leads")
+        .select("resumo_ia_contatos, resumo_ia_contatos_at")
+        .eq("id", leadId)
+        .single();
+      if (data?.resumo_ia_contatos) {
+        setResumoContatos(data.resumo_ia_contatos);
+        setResumoSavedAt(data.resumo_ia_contatos_at);
+      }
+      setInitialLoadDone(true);
+    };
+    loadSavedResumo();
+  }, [leadId]);
+
+  // Detect if there are new contacts after the saved summary
+  const hasNewContacts = useMemo(() => {
+    if (!resumoSavedAt || !chamadas?.length) return false;
+    const savedDate = new Date(resumoSavedAt);
+    return chamadas.some((c) => new Date(c.created_at) > savedDate);
+  }, [resumoSavedAt, chamadas]);
 
   const handleRunFeedback = async (chamadaId: string) => {
     setRunningFeedbackIds(prev => new Set(prev).add(chamadaId));
@@ -125,7 +151,16 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
         body: { leadId },
       });
       if (error) throw error;
-      setResumoContatos(data?.resumo || "Não foi possível gerar o resumo.");
+      const resumo = data?.resumo || "Não foi possível gerar o resumo.";
+      setResumoContatos(resumo);
+
+      // Save to lead record
+      const now = new Date().toISOString();
+      await supabase
+        .from("crm_leads")
+        .update({ resumo_ia_contatos: resumo, resumo_ia_contatos_at: now } as any)
+        .eq("id", leadId);
+      setResumoSavedAt(now);
     } catch (e: any) {
       toast.error("Erro ao gerar resumo: " + (e.message || "Erro desconhecido"));
     } finally {
@@ -158,23 +193,14 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
           <div className="flex items-center gap-2">
             <Sparkles className="h-4 w-4 text-amber-500" />
             <span className="text-sm font-medium">Resumo IA dos Contatos</span>
+            {resumoSavedAt && (
+              <span className="text-[10px] text-muted-foreground">
+                (salvo em {format(new Date(resumoSavedAt), "dd/MM/yy HH:mm", { locale: ptBR })})
+              </span>
+            )}
           </div>
           <div className="flex items-center gap-1">
-            <Button
-              variant="outline"
-              size="sm"
-              className="h-7 text-xs gap-1.5"
-              onClick={handleGerarResumoContatos}
-              disabled={resumoContatosLoading}
-            >
-              {resumoContatosLoading ? (
-                <Loader2 className="h-3 w-3 animate-spin" />
-              ) : (
-                <RefreshCw className="h-3 w-3" />
-              )}
-              {resumoContatos ? "Atualizar" : "Gerar Resumo"}
-            </Button>
-            {resumoContatos && (
+            {resumoContatos && !resumoContatosLoading && (
               <Button
                 variant="ghost"
                 size="icon"
@@ -186,6 +212,23 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
             )}
           </div>
         </div>
+        {hasNewContacts && resumoContatos && (
+          <div className="mx-4 mb-2 flex items-center justify-between gap-2 rounded-md bg-amber-500/10 border border-amber-500/30 px-3 py-2">
+            <span className="text-xs text-amber-700">
+              ⚠️ Novos contatos realizados após o último resumo.
+            </span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-6 text-[10px] gap-1 border-amber-500/30 text-amber-700 hover:bg-amber-500/10"
+              onClick={handleGerarResumoContatos}
+              disabled={resumoContatosLoading}
+            >
+              {resumoContatosLoading ? <Loader2 className="h-3 w-3 animate-spin" /> : <RefreshCw className="h-3 w-3" />}
+              Atualizar Resumo
+            </Button>
+          </div>
+        )}
         {resumoContatosLoading && !resumoContatos && (
           <div className="px-4 pb-3 flex items-center gap-2 text-xs text-muted-foreground">
             <Loader2 className="h-3 w-3 animate-spin" />
@@ -221,9 +264,19 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
             </div>
           </div>
         )}
-        {!resumoContatos && !resumoContatosLoading && (
-          <div className="px-4 pb-3 text-xs text-muted-foreground">
-            Clique em "Gerar Resumo" para analisar todos os contatos deste lead com IA.
+        {!resumoContatos && !resumoContatosLoading && initialLoadDone && (
+          <div className="px-4 pb-3 flex items-center justify-between">
+            <span className="text-xs text-muted-foreground">Nenhum resumo gerado ainda.</span>
+            <Button
+              variant="outline"
+              size="sm"
+              className="h-7 text-xs gap-1.5"
+              onClick={handleGerarResumoContatos}
+              disabled={resumoContatosLoading}
+            >
+              <Sparkles className="h-3 w-3" />
+              Gerar Resumo
+            </Button>
           </div>
         )}
       </div>

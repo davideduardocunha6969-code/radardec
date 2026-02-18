@@ -708,6 +708,8 @@ export type Database = {
           nome: string
           ordem: number
           resumo_caso: string | null
+          resumo_ia_contatos: string | null
+          resumo_ia_contatos_at: string | null
           telefones: Json
           updated_at: string
           user_id: string
@@ -722,6 +724,8 @@ export type Database = {
           nome: string
           ordem?: number
           resumo_caso?: string | null
+          resumo_ia_contatos?: string | null
+          resumo_ia_contatos_at?: string | null
           telefones?: Json
           updated_at?: string
           user_id: string
@@ -736,6 +740,8 @@ export type Database = {
           nome?: string
           ordem?: number
           resumo_caso?: string | null
+          resumo_ia_contatos?: string | null
+          resumo_ia_contatos_at?: string | null
           telefones?: Json
           updated_at?: string
           user_id?: string
