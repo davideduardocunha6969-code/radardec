@@ -7,6 +7,7 @@ import { WhatsAppAICallButton } from "@/components/crm/WhatsAppAICallButton";
 import { LeadContatosTab } from "@/components/crm/LeadContatosTab";
 import { RealtimeCoachingPanel } from "@/components/crm/RealtimeCoachingPanel";
 import { CoachingErrorBoundary } from "@/components/crm/coaching/CoachingErrorBoundary";
+import { AgendaClosersTab } from "@/components/crm/AgendaClosersTab";
 import { useRobosCoachAtivos, type RoboCoach } from "@/hooks/useRobosCoach";
 import { useCleanupOrphanedChamadas } from "@/hooks/useCrmChamadas";
 import { Button } from "@/components/ui/button";
@@ -15,7 +16,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, FileSpreadsheet, AlertCircle, History, Pencil } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, FileSpreadsheet, AlertCircle, History, Pencil, CalendarDays } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
@@ -446,6 +447,9 @@ export default function CrmFunilKanban() {
                   <TabsTrigger value="atendimento-closer" className="flex-1">
                     <Phone className="h-3.5 w-3.5 mr-1" />Atendimento Closer
                   </TabsTrigger>
+                  <TabsTrigger value="agenda-closers" className="flex-1">
+                    <CalendarDays className="h-3.5 w-3.5 mr-1" />Agenda Closers
+                  </TabsTrigger>
                 </TabsList>
                 <TabsContent value="dados" className="flex-1 overflow-auto px-6 pb-6 min-h-0">
                   <div className="space-y-4">
@@ -512,6 +516,9 @@ export default function CrmFunilKanban() {
                     <Phone className="h-10 w-10 mb-3 opacity-50" />
                     <p className="text-sm">Aba Atendimento Closer — em breve</p>
                   </div>
+                </TabsContent>
+                <TabsContent value="agenda-closers" className="flex-1 overflow-auto px-6 pb-6">
+                  <AgendaClosersTab leadId={detailLead.id} leadNome={detailLead.nome} />
                 </TabsContent>
               </Tabs>
             </div>
