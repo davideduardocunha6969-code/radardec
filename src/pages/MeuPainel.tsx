@@ -6,10 +6,10 @@ export default function MeuPainel() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold tracking-tight">Meu Painel</h1>
-        <p className="text-muted-foreground">Gerencie seus horários de trabalho e indisponibilidades.</p>
+        <p className="text-muted-foreground">Visão geral das suas atividades e configurações.</p>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="space-y-2">
         <HorarioTrabalhoSection />
         <IndisponibilidadeSection />
       </div>
