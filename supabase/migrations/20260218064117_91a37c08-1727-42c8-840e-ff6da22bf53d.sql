@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_chamadas ADD COLUMN custo_detalhado jsonb;

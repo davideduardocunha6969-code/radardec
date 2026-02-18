@@ -163,6 +163,12 @@ CONTEXTO:
 
     const result = await response.json();
     const feedback = result.choices?.[0]?.message?.content || "";
+    const usage = result.usage || {};
+
+    // Estimate AI cost based on tokens (Gemini 2.5 Flash pricing ~$0.15/1M input, $0.60/1M output)
+    const inputTokens = usage.prompt_tokens || 0;
+    const outputTokens = usage.completion_tokens || 0;
+    const aiCost = (inputTokens * 0.00000015) + (outputTokens * 0.0000006);
 
     // Extract nota - support both "NOTA: X" (0-10) and "Nota Final: XX/100" (0-100) formats
     const notaMatch100 = feedback.match(/Nota\s*Final:\s*(\d+)\s*\/\s*100/i);
@@ -175,12 +181,25 @@ CONTEXTO:
       nota = parseInt(notaMatch10[1], 10);
     }
 
-    // Update the chamada with feedback
+    // Fetch existing custo_detalhado and update AI cost
+    const { data: existingChamada } = await supabase
+      .from("crm_chamadas")
+      .select("custo_detalhado")
+      .eq("id", chamadaId)
+      .single();
+
+    const custoDetalhado = (existingChamada?.custo_detalhado || {}) as Record<string, unknown>;
+    custoDetalhado.lovable_ia_feedback = parseFloat(aiCost.toFixed(6));
+    custoDetalhado.ia_tokens_input = inputTokens;
+    custoDetalhado.ia_tokens_output = outputTokens;
+
+    // Update the chamada with feedback + cost
     const { error: updateErr } = await supabase
       .from("crm_chamadas")
       .update({
         feedback_ia: feedback,
         nota_ia: nota,
+        custo_detalhado: custoDetalhado,
       })
       .eq("id", chamadaId);
 

@@ -13,6 +13,7 @@ import {
   Star,
   ClipboardCheck,
   RefreshCw,
+  DollarSign,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -75,6 +76,7 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
   const [resumoOpen, setResumoOpen] = useState<CrmChamada | null>(null);
   const [feedbackOpen, setFeedbackOpen] = useState<CrmChamada | null>(null);
   const [runningFeedbackIds, setRunningFeedbackIds] = useState<Set<string>>(new Set());
+  const [custoOpen, setCustoOpen] = useState<CrmChamada | null>(null);
 
   const handleRunFeedback = async (chamadaId: string) => {
     setRunningFeedbackIds(prev => new Set(prev).add(chamadaId));
@@ -142,6 +144,7 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
               <TableHead className="text-xs">Duração</TableHead>
               <TableHead className="text-xs">Encerrada por</TableHead>
               <TableHead className="text-xs">Nota IA</TableHead>
+              <TableHead className="text-xs">Custo</TableHead>
               <TableHead className="text-xs text-right">Ações</TableHead>
             </TableRow>
           </TableHeader>
@@ -201,6 +204,24 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
                     ) : (
                       <span className="text-xs text-muted-foreground">-</span>
                     )}
+                  </TableCell>
+                  <TableCell className="py-2">
+                    {(() => {
+                      const custo = (chamada as any).custo_detalhado as Record<string, number> | null;
+                      if (!custo) return <span className="text-xs text-muted-foreground">-</span>;
+                      const total = (custo.twilio_chamada || 0) + (custo.twilio_gravacao || 0) + (custo.elevenlabs_transcricao || 0) + (custo.lovable_ia_feedback || 0) + (custo.storage || 0) + (custo.edge_functions || 0);
+                      return (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-auto py-0.5 px-1.5 text-[10px] font-mono text-emerald-700 hover:text-emerald-800"
+                          onClick={() => setCustoOpen(chamada)}
+                        >
+                          <DollarSign className="h-3 w-3 mr-0.5" />
+                          {total.toFixed(4)}
+                        </Button>
+                      );
+                    })()}
                   </TableCell>
                   <TableCell className="text-right py-2">
                     <div className="flex items-center justify-end gap-0.5">
@@ -422,6 +443,56 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
               })}
             </div>
           </ScrollArea>
+        </DialogContent>
+      </Dialog>
+
+      {/* Cost breakdown dialog */}
+      <Dialog open={!!custoOpen} onOpenChange={(o) => !o && setCustoOpen(null)}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <DollarSign className="h-4 w-4 text-emerald-600" />
+              Detalhamento de Custos
+            </DialogTitle>
+          </DialogHeader>
+          {(() => {
+            const custo = (custoOpen as any)?.custo_detalhado as Record<string, number> | null;
+            if (!custo) return <p className="text-sm text-muted-foreground">Custos não calculados para esta chamada.</p>;
+
+            const items = [
+              { label: "Twilio — Chamada VoIP", desc: `${custo.duracao_min?.toFixed(1) || 0} min × $0.0663/min`, value: custo.twilio_chamada || 0 },
+              { label: "Twilio — Gravação", desc: `${custo.duracao_min?.toFixed(1) || 0} min × $0.0025/min`, value: custo.twilio_gravacao || 0 },
+              { label: "ElevenLabs — Transcrição", desc: `Scribe v2 (${custo.duracao_min?.toFixed(1) || 0} min)`, value: custo.elevenlabs_transcricao || 0 },
+              { label: "Lovable IA — Feedback", desc: `Gemini 2.5 Flash (${custo.ia_tokens_input || 0} in / ${custo.ia_tokens_output || 0} out tokens)`, value: custo.lovable_ia_feedback || 0 },
+              { label: "Storage — Áudio", desc: `${custo.audio_size_mb?.toFixed(2) || 0} MB armazenado`, value: custo.storage || 0 },
+              { label: "Edge Functions", desc: "Webhook + Processamento + Feedback", value: custo.edge_functions || 0 },
+            ];
+
+            const total = items.reduce((s, i) => s + i.value, 0);
+
+            return (
+              <div className="space-y-3">
+                <div className="space-y-2">
+                  {items.map((item, i) => (
+                    <div key={i} className="flex items-center justify-between py-1.5 border-b border-border/50 last:border-0">
+                      <div>
+                        <p className="text-sm font-medium">{item.label}</p>
+                        <p className="text-[10px] text-muted-foreground">{item.desc}</p>
+                      </div>
+                      <span className="text-sm font-mono text-foreground">${item.value.toFixed(4)}</span>
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between pt-2 border-t-2 border-border">
+                  <span className="text-sm font-bold">Total</span>
+                  <span className="text-base font-bold font-mono text-emerald-700">${total.toFixed(4)}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  * Valores estimados com base nas tarifas configuradas. Custos reais podem variar conforme seu plano.
+                </p>
+              </div>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </>
