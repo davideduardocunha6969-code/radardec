@@ -7,6 +7,7 @@ export interface AgendaEvento {
   id: string;
   user_id: string;
   tipo_evento_id: string | null;
+  responsavel_id: string | null;
   titulo: string;
   descricao: string | null;
   data_inicio: string;
@@ -20,6 +21,10 @@ export interface AgendaEvento {
     cor: string;
     icone: string;
   } | null;
+  profiles?: {
+    id: string;
+    display_name: string;
+  } | null;
 }
 
 export function useAgendaEventos(startDate?: string, endDate?: string) {
@@ -28,7 +33,7 @@ export function useAgendaEventos(startDate?: string, endDate?: string) {
     queryFn: async () => {
       let query = supabase
         .from("agenda_eventos")
-        .select("*, agenda_tipos_evento(id, nome, cor, icone)")
+        .select("*, agenda_tipos_evento(id, nome, cor, icone), profiles!agenda_eventos_responsavel_id_fkey(id, display_name)")
         .order("data_inicio");
 
       if (startDate) query = query.gte("data_inicio", startDate);
@@ -50,6 +55,7 @@ export function useCreateAgendaEvento() {
       titulo: string;
       descricao?: string;
       tipo_evento_id?: string;
+      responsavel_id?: string;
       data_inicio: string;
       data_fim: string;
       dia_inteiro?: boolean;
@@ -81,6 +87,7 @@ export function useUpdateAgendaEvento() {
       titulo?: string;
       descricao?: string;
       tipo_evento_id?: string;
+      responsavel_id?: string;
       data_inicio?: string;
       data_fim?: string;
       dia_inteiro?: boolean;
