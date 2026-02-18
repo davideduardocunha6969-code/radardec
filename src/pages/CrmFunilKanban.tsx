@@ -468,7 +468,7 @@ export default function CrmFunilKanban() {
                           <div className="flex items-center gap-1 ml-auto">
                             <WhatsAppAICallButton leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} />
                             <WhatsAppCallRecorder leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} onRecordingStateChange={handleRecordingStateChange} />
-                            <VoipDialer leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} />
+                            <VoipDialer leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} onRecordingStateChange={handleRecordingStateChange} />
                           </div>
                         </div>
                       ))}

@@ -48,6 +48,8 @@ interface LeadContatosTabProps {
 const statusMap: Record<string, { label: string; icon: typeof Phone; color: string }> = {
   completada: { label: "Atendida", icon: PhoneIncoming, color: "bg-green-500/10 text-green-700" },
   finalizada: { label: "Atendida", icon: PhoneIncoming, color: "bg-green-500/10 text-green-700" },
+  gravacao_pronta: { label: "Atendida", icon: PhoneIncoming, color: "bg-green-500/10 text-green-700" },
+  processando_transcricao: { label: "Processando", icon: Phone, color: "bg-yellow-500/10 text-yellow-700" },
   em_chamada: { label: "Em chamada", icon: Phone, color: "bg-blue-500/10 text-blue-700" },
   iniciando: { label: "Iniciando", icon: Phone, color: "bg-muted text-muted-foreground" },
   cancelada: { label: "Não atendida", icon: PhoneOff, color: "bg-destructive/10 text-destructive" },
@@ -57,7 +59,7 @@ const statusMap: Record<string, { label: string; icon: typeof Phone; color: stri
 };
 
 function wasAnswered(status: string) {
-  return ["completada", "finalizada"].includes(status);
+  return ["completada", "finalizada", "gravacao_pronta"].includes(status);
 }
 
 function getNotaColor(nota: number): string {
