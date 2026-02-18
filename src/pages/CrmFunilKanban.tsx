@@ -21,7 +21,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, FileSpreadsheet, AlertCircle, History, Pencil, CalendarDays } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, FileSpreadsheet, AlertCircle, History, Pencil, CalendarDays, Sparkles } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
@@ -646,6 +646,51 @@ export default function CrmFunilKanban() {
                 </TabsContent>
                 <TabsContent value="atendimento-closer" className="flex-1 overflow-auto px-6 pb-6">
                   <div className="space-y-4">
+                    {/* Resumo IA dos Contatos SDR */}
+                    {detailLead.resumo_ia_contatos ? (
+                      <div className="border rounded-lg bg-muted/30">
+                        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/50">
+                          <Sparkles className="h-4 w-4 text-amber-500" />
+                          <span className="text-sm font-medium">Resumo SDR</span>
+                        </div>
+                        <div className="px-4 py-3">
+                          <div className="text-sm leading-relaxed space-y-1">
+                            {(detailLead.resumo_ia_contatos as string).split('\n').map((line: string, i: number) => {
+                              const trimmed = line.trim();
+                              if (!trimmed) return <div key={i} className="h-1.5" />;
+                              if (/^#{1,3}\s/.test(trimmed)) return <p key={i} className="font-semibold text-foreground mt-2 mb-0.5">{trimmed.replace(/^#{1,3}\s+/, '')}</p>;
+                              if (/^[-•]\s/.test(trimmed)) {
+                                const text = trimmed.replace(/^[-•]\s+/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                                return <div key={i} className="flex items-start gap-2 ml-2"><span className="text-muted-foreground mt-0.5 shrink-0">•</span><span className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: text }} /></div>;
+                              }
+                              const formatted = trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                              return <p key={i} className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: formatted }} />;
+                            })}
+                          </div>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="border rounded-lg bg-muted/30 px-4 py-3 flex items-center gap-2 text-sm text-muted-foreground">
+                        <Sparkles className="h-4 w-4 text-amber-500" />
+                        Nenhum resumo SDR disponível. Gere na aba "Contatos SDR".
+                      </div>
+                    )}
+
+                    {/* Dados do Lead */}
+                    {detailLead.dados_extras && (
+                      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                        {(detailLead.dados_extras as Record<string, string>).empresa && <div><label className="text-xs font-medium text-muted-foreground">Empresa</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).empresa}</p></div>}
+                        {(detailLead.dados_extras as Record<string, string>).cargo && <div><label className="text-xs font-medium text-muted-foreground">Cargo</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).cargo}</p></div>}
+                        {(detailLead.dados_extras as Record<string, string>).data_admissao && <div><label className="text-xs font-medium text-muted-foreground">Admissão</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).data_admissao}</p></div>}
+                        {(detailLead.dados_extras as Record<string, string>).data_demissao && <div><label className="text-xs font-medium text-muted-foreground">Demissão</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).data_demissao}</p></div>}
+                        {(detailLead.dados_extras as Record<string, string>).motivo_demissao && <div><label className="text-xs font-medium text-muted-foreground">Motivo</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).motivo_demissao}</p></div>}
+                        {(detailLead.dados_extras as Record<string, string>).cpf && <div><label className="text-xs font-medium text-muted-foreground">CPF</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).cpf}</p></div>}
+                        {(detailLead.dados_extras as Record<string, string>).municipio && <div><label className="text-xs font-medium text-muted-foreground">Município/UF</label><p className="text-sm">{(detailLead.dados_extras as Record<string, string>).municipio}/{(detailLead.dados_extras as Record<string, string>).uf}</p></div>}
+                      </div>
+                    )}
+                    {detailLead.endereco && <div><label className="text-sm font-medium text-muted-foreground">Endereço</label><p className="text-sm">{detailLead.endereco}</p></div>}
+
+                    {/* Telefones com botões de ligação */}
                     <div>
                       <label className="text-sm font-medium text-muted-foreground">Telefones — Ligar como Closer</label>
                       {detailLead.telefones.map((t, i) => (
@@ -674,9 +719,6 @@ export default function CrmFunilKanban() {
                         />
                       </CoachingErrorBoundary>
                     )}
-
-                    {/* Closer contacts history - reuse same component */}
-                    <LeadContatosTab leadId={detailLead.id} />
                   </div>
                 </TabsContent>
                 <TabsContent value="agenda-closers" className="flex-1 overflow-auto px-6 pb-6">
