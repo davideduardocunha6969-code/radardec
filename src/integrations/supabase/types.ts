@@ -1614,6 +1614,7 @@ export type Database = {
           ativo: boolean
           created_at: string
           descricao: string | null
+          fechamento: Json
           id: string
           instrucoes_gerais: string | null
           nome: string
@@ -1629,6 +1630,7 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           descricao?: string | null
+          fechamento?: Json
           id?: string
           instrucoes_gerais?: string | null
           nome: string
@@ -1644,6 +1646,7 @@ export type Database = {
           ativo?: boolean
           created_at?: string
           descricao?: string | null
+          fechamento?: Json
           id?: string
           instrucoes_gerais?: string | null
           nome?: string

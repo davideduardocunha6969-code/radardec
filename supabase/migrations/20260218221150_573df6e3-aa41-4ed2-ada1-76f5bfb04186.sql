@@ -1,0 +1,1 @@
+ALTER TABLE public.scripts_sdr ADD COLUMN fechamento jsonb NOT NULL DEFAULT '[]'::jsonb;
