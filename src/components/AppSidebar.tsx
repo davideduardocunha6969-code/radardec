@@ -1,4 +1,4 @@
-import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, CalendarDays, Megaphone, Lightbulb, Wand2, Package, ClipboardList, Phone, UserCog, Copy, Users, FileQuestion } from "lucide-react";
+import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, CalendarDays, Megaphone, Lightbulb, Wand2, Package, ClipboardList, Phone, UserCog, Copy, Users, FileQuestion, Calendar } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import logoEscritorio from "@/assets/logo-escritorio.webp";
@@ -360,6 +360,25 @@ export function AppSidebar() {
                    </SidebarMenuItem>
                  </Collapsible>
                )}
+
+              {/* Agenda */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/agenda")}
+                  tooltip="Agenda"
+                >
+                  <NavLink
+                    to="/agenda"
+                    end
+                    className="flex items-center gap-3 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
+                    activeClassName="bg-accent text-primary font-medium"
+                  >
+                    <Calendar className="h-4 w-4" />
+                    <span>Agenda</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
 
             </SidebarMenu>
           </SidebarGroupContent>
