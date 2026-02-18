@@ -306,7 +306,8 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
       <div className="flex items-center justify-between mb-2">
         <span className="text-xs text-muted-foreground">{chamadas.length} contato(s) registrado(s)</span>
       </div>
-      <ScrollArea className="h-[500px]">
+      <div className="overflow-x-auto h-[500px]">
+        <div className="min-w-[1050px]">
         <Table>
           <TableHeader>
             <TableRow>
@@ -480,7 +481,8 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
             })}
           </TableBody>
         </Table>
-      </ScrollArea>
+        </div>
+      </div>
 
       {/* Feedback IA dialog */}
       <Dialog open={!!feedbackOpen} onOpenChange={(o) => !o && setFeedbackOpen(null)}>

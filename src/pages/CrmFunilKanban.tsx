@@ -432,12 +432,12 @@ export default function CrmFunilKanban() {
 
       {/* Dialog Detalhe Lead */}
       <Dialog open={!!detailLead} onOpenChange={(o) => { if (!o && !activeRecording) setDetailLead(null); }}>
-        <DialogContent className="max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] rounded-none border-0 overflow-hidden flex flex-col p-0" onInteractOutside={(e) => { if (activeRecording) e.preventDefault(); }} onPointerDownOutside={(e) => { if (activeRecording) e.preventDefault(); }}>
+        <DialogContent className="max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] rounded-none border-0 overflow-y-auto overflow-x-hidden flex flex-col p-0" onInteractOutside={(e) => { if (activeRecording) e.preventDefault(); }} onPointerDownOutside={(e) => { if (activeRecording) e.preventDefault(); }}>
           <DialogHeader className="px-6 pt-4 pb-2 shrink-0 border-b">
             <DialogTitle>{detailLead?.nome}</DialogTitle>
           </DialogHeader>
           {detailLead && (
-            <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
+            <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
               <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
                 <TabsList className="w-full shrink-0 mx-6" style={{ width: "calc(100% - 3rem)" }}>
                   <TabsTrigger value="dados" className="flex-1">Dados</TabsTrigger>
@@ -508,7 +508,7 @@ export default function CrmFunilKanban() {
                     </div>
                   </div>
                 </TabsContent>
-                <TabsContent value="contatos" className="flex-1 overflow-auto px-6 pb-6">
+                <TabsContent value="contatos" className="flex-1 overflow-auto px-3 pb-6 min-h-0">
                    <LeadContatosTab leadId={detailLead.id} />
                 </TabsContent>
                 <TabsContent value="atendimento-closer" className="flex-1 overflow-auto px-6 pb-6">
