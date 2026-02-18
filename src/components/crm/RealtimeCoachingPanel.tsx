@@ -67,7 +67,8 @@ export function RealtimeCoachingPanel({
 
   const requestAnalysis = useCallback(
     async (transcript: string) => {
-      if (!transcript || transcript === lastAnalyzedRef.current || isAnalyzingRef.current) return;
+      // Require at least 40 chars of real transcript to avoid analyzing noise/silence
+      if (!transcript || transcript.trim().length < 40 || transcript === lastAnalyzedRef.current || isAnalyzingRef.current) return;
       lastAnalyzedRef.current = transcript;
       setIsAnalyzing(true);
       isAnalyzingRef.current = true;
