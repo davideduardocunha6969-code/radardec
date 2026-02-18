@@ -707,8 +707,12 @@ export type Database = {
           id: string
           nome: string
           ordem: number
+          robo_coach_closer_id: string | null
           robo_coach_id: string | null
+          robo_feedback_closer_id: string | null
           robo_feedback_id: string | null
+          script_closer_id: string | null
+          script_sdr_id: string | null
         }
         Insert: {
           cor?: string | null
@@ -717,8 +721,12 @@ export type Database = {
           id?: string
           nome: string
           ordem?: number
+          robo_coach_closer_id?: string | null
           robo_coach_id?: string | null
+          robo_feedback_closer_id?: string | null
           robo_feedback_id?: string | null
+          script_closer_id?: string | null
+          script_sdr_id?: string | null
         }
         Update: {
           cor?: string | null
@@ -727,8 +735,12 @@ export type Database = {
           id?: string
           nome?: string
           ordem?: number
+          robo_coach_closer_id?: string | null
           robo_coach_id?: string | null
+          robo_feedback_closer_id?: string | null
           robo_feedback_id?: string | null
+          script_closer_id?: string | null
+          script_sdr_id?: string | null
         }
         Relationships: [
           {
@@ -739,8 +751,22 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "crm_colunas_robo_coach_closer_id_fkey"
+            columns: ["robo_coach_closer_id"]
+            isOneToOne: false
+            referencedRelation: "robos_coach"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "crm_colunas_robo_coach_id_fkey"
             columns: ["robo_coach_id"]
+            isOneToOne: false
+            referencedRelation: "robos_coach"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_colunas_robo_feedback_closer_id_fkey"
+            columns: ["robo_feedback_closer_id"]
             isOneToOne: false
             referencedRelation: "robos_coach"
             referencedColumns: ["id"]
@@ -750,6 +776,20 @@ export type Database = {
             columns: ["robo_feedback_id"]
             isOneToOne: false
             referencedRelation: "robos_coach"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_colunas_script_closer_id_fkey"
+            columns: ["script_closer_id"]
+            isOneToOne: false
+            referencedRelation: "scripts_sdr"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_colunas_script_sdr_id_fkey"
+            columns: ["script_sdr_id"]
+            isOneToOne: false
+            referencedRelation: "scripts_sdr"
             referencedColumns: ["id"]
           },
         ]
