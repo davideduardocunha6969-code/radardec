@@ -13,6 +13,7 @@ interface VoipDialerProps {
   leadNome: string;
   numero: string;
   onCallStatusChange?: (status: string) => void;
+  onRecordingStateChange?: (isRecording: boolean, audioStream: MediaStream | null) => void;
 }
 
 type CallStatus = "idle" | "connecting" | "ringing" | "in-progress" | "completed" | "failed" | "busy" | "no-answer";
@@ -39,7 +40,7 @@ const statusColors: Record<CallStatus, string> = {
   "no-answer": "bg-orange-500/20 text-orange-700",
 };
 
-export function VoipDialer({ leadId, leadNome, numero, onCallStatusChange }: VoipDialerProps) {
+export function VoipDialer({ leadId, leadNome, numero, onCallStatusChange, onRecordingStateChange }: VoipDialerProps) {
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [isMuted, setIsMuted] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -153,25 +154,31 @@ export function VoipDialer({ leadId, leadNome, numero, onCallStatusChange }: Voi
       call.on("accept", () => {
         setCallStatus("in-progress");
         updateChamada.mutate({ id: chamada.id, leadId, status: "em_chamada", twilio_call_sid: call.parameters?.CallSid || "" });
+        // Notify parent that call is active (enables coaching panel)
+        onRecordingStateChange?.(true, null);
       });
 
       call.on("disconnect", () => {
         setCallStatus("completed");
         updateChamada.mutate({ id: chamada.id, leadId, status: "finalizada", duracao_segundos: duration });
-        // Auto-trigger AI feedback
-        supabase.functions.invoke("feedback-chamada", { body: { chamadaId: chamada.id } }).catch(console.error);
+        // Notify parent that call ended
+        onRecordingStateChange?.(false, null);
+        // Note: transcription + feedback for VoIP is triggered server-side by twilio-webhook
+        // when the recording is ready
         cleanupCall();
       });
 
       call.on("cancel", () => {
         setCallStatus("completed");
         updateChamada.mutate({ id: chamada.id, leadId, status: "cancelada" });
+        onRecordingStateChange?.(false, null);
         cleanupCall();
       });
 
       call.on("reject", () => {
         setCallStatus("busy");
         updateChamada.mutate({ id: chamada.id, leadId, status: "ocupado" });
+        onRecordingStateChange?.(false, null);
         cleanupCall();
       });
 
@@ -179,6 +186,7 @@ export function VoipDialer({ leadId, leadNome, numero, onCallStatusChange }: Voi
         console.error("Call error:", error);
         setCallStatus("failed");
         updateChamada.mutate({ id: chamada.id, leadId, status: "falhou" });
+        onRecordingStateChange?.(false, null);
         toast.error("Erro na chamada: " + (error.message || "Erro desconhecido"));
         cleanupCall();
       });

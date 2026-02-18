@@ -15,6 +15,8 @@ serve(async (req) => {
   try {
     const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
     const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+    const TWILIO_ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID");
+    const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
     // Twilio sends form-encoded data
@@ -35,23 +37,62 @@ serve(async (req) => {
       recordingDuration,
     });
 
-    // Handle recording completed
+    // Handle recording completed — download, upload to storage, then trigger background processing
     if (recordingStatus === "completed" && recordingUrl && callSid) {
       // Find the chamada by twilio_call_sid
       const { data: chamada, error: findError } = await supabase
         .from("crm_chamadas")
-        .select("*")
+        .select("id, lead_id")
         .eq("twilio_call_sid", callSid)
         .single();
 
       if (findError || !chamada) {
         console.error("Chamada não encontrada para CallSid:", callSid);
       } else {
-        // Update with recording URL and duration
+        // Download the recording from Twilio
+        const audioUrl = `${recordingUrl}.mp3`;
+        console.log("[Webhook] Downloading recording from Twilio:", audioUrl);
+
+        let audioBlob: Blob | null = null;
+        try {
+          const authHeader = TWILIO_ACCOUNT_SID && TWILIO_AUTH_TOKEN
+            ? "Basic " + btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`)
+            : undefined;
+
+          const audioResponse = await fetch(audioUrl, {
+            headers: authHeader ? { Authorization: authHeader } : {},
+          });
+
+          if (audioResponse.ok) {
+            audioBlob = await audioResponse.blob();
+            console.log("[Webhook] Recording downloaded:", audioBlob.size, "bytes");
+          } else {
+            console.error("[Webhook] Failed to download recording:", audioResponse.status);
+          }
+        } catch (e) {
+          console.error("[Webhook] Error downloading recording:", e);
+        }
+
+        // Upload to Supabase storage
+        const fileName = `voip_${chamada.lead_id}_${chamada.id}.mp3`;
+        if (audioBlob && audioBlob.size > 0) {
+          const { error: uploadErr } = await supabase.storage
+            .from("atendimentos-audio")
+            .upload(fileName, audioBlob, { contentType: "audio/mpeg", upsert: true });
+
+          if (uploadErr) {
+            console.error("[Webhook] Error uploading to storage:", uploadErr);
+          } else {
+            console.log("[Webhook] Recording uploaded to storage:", fileName);
+          }
+        }
+
+        // Update chamada with recording info
         const { error: updateError } = await supabase
           .from("crm_chamadas")
           .update({
-            recording_url: `${recordingUrl}.mp3`,
+            recording_url: audioUrl,
+            audio_url: fileName,
             duracao_segundos: recordingDuration ? parseInt(recordingDuration) : null,
             status: "gravacao_pronta",
           })
@@ -61,6 +102,38 @@ serve(async (req) => {
           console.error("Erro ao atualizar chamada:", updateError);
         } else {
           console.log("Chamada atualizada com gravação:", chamada.id);
+        }
+
+        // Get lead info for transcription speaker labels
+        const { data: leadData } = await supabase
+          .from("crm_leads")
+          .select("nome")
+          .eq("id", chamada.lead_id)
+          .single();
+
+        // Trigger background processing (transcription + feedback) — same pipeline as WhatsApp
+        if (audioBlob && audioBlob.size > 0) {
+          console.log("[Webhook] Triggering process-chamada-background for:", chamada.id);
+          try {
+            const bgUrl = `${SUPABASE_URL}/functions/v1/process-chamada-background`;
+            await fetch(bgUrl, {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`,
+              },
+              body: JSON.stringify({
+                chamadaId: chamada.id,
+                leadId: chamada.lead_id,
+                leadNome: leadData?.nome || "Lead",
+                audioFileName: fileName,
+                userName: "Operador",
+              }),
+            });
+            console.log("[Webhook] Background processing triggered successfully");
+          } catch (e) {
+            console.error("[Webhook] Error triggering background processing:", e);
+          }
         }
       }
     }
