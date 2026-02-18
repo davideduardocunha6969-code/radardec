@@ -4,7 +4,9 @@ import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import type { ScriptItem, ScriptSdr } from "./useScriptsSdr";
 
-export type ScriptCloser = ScriptSdr;
+export interface ScriptCloser extends ScriptSdr {
+  fechamento: ScriptItem[];
+}
 
 export function useScriptsCloser() {
   return useQuery({
@@ -20,6 +22,7 @@ export function useScriptsCloser() {
         ...s,
         apresentacao: Array.isArray(s.apresentacao) ? s.apresentacao : [],
         qualificacao: Array.isArray(s.qualificacao) ? s.qualificacao : [],
+        fechamento: Array.isArray((s as any).fechamento) ? (s as any).fechamento : [],
       }));
     },
   });
@@ -34,12 +37,14 @@ export function useCreateScriptCloser() {
       descricao?: string;
       apresentacao: ScriptItem[];
       qualificacao: ScriptItem[];
+      fechamento: ScriptItem[];
     }) => {
       const { error } = await supabase.from("scripts_sdr" as any).insert({
         nome: data.nome,
         descricao: data.descricao || null,
         apresentacao: JSON.parse(JSON.stringify(data.apresentacao)),
         qualificacao: JSON.parse(JSON.stringify(data.qualificacao)),
+        fechamento: JSON.parse(JSON.stringify(data.fechamento)),
         tipo: "closer",
         user_id: user!.id,
       });
@@ -62,12 +67,14 @@ export function useUpdateScriptCloser() {
       descricao?: string;
       apresentacao?: ScriptItem[];
       qualificacao?: ScriptItem[];
+      fechamento?: ScriptItem[];
       ativo?: boolean;
     }) => {
       const { id, ...rest } = data;
       const updateData: Record<string, unknown> = { ...rest };
       if (rest.apresentacao) updateData.apresentacao = JSON.parse(JSON.stringify(rest.apresentacao));
       if (rest.qualificacao) updateData.qualificacao = JSON.parse(JSON.stringify(rest.qualificacao));
+      if (rest.fechamento) updateData.fechamento = JSON.parse(JSON.stringify(rest.fechamento));
       const { error } = await supabase.from("scripts_sdr" as any).update(updateData).eq("id", id);
       if (error) throw error;
     },

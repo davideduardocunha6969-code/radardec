@@ -25,6 +25,7 @@ import {
   X,
   GripVertical,
   Briefcase,
+  HandshakeIcon,
 } from "lucide-react";
 
 function generateId(label: string): string {
@@ -113,11 +114,12 @@ export default function ScriptsCloserTab() {
     descricao: "",
     apresentacao: [] as ScriptItem[],
     qualificacao: [] as ScriptItem[],
+    fechamento: [] as ScriptItem[],
   });
 
   const openNew = () => {
     setEditing(null);
-    setForm({ nome: "", descricao: "", apresentacao: [], qualificacao: [] });
+    setForm({ nome: "", descricao: "", apresentacao: [], qualificacao: [], fechamento: [] });
     setFormOpen(true);
   };
 
@@ -128,6 +130,7 @@ export default function ScriptsCloserTab() {
       descricao: s.descricao || "",
       apresentacao: s.apresentacao,
       qualificacao: s.qualificacao,
+      fechamento: (s as any).fechamento || [],
     });
     setFormOpen(true);
   };
@@ -139,6 +142,7 @@ export default function ScriptsCloserTab() {
       descricao: form.descricao,
       apresentacao: form.apresentacao.filter((i) => i.label.trim()),
       qualificacao: form.qualificacao.filter((i) => i.label.trim()),
+      fechamento: form.fechamento.filter((i) => i.label.trim()),
     };
     if (editing) {
       updateScript.mutate({ id: editing.id, ...payload }, { onSuccess: () => setFormOpen(false) });
@@ -210,6 +214,9 @@ export default function ScriptsCloserTab() {
                   <Badge variant="outline" className="gap-1">
                     <ClipboardList className="h-3 w-3" />{s.qualificacao.length} qualificação
                   </Badge>
+                  <Badge variant="outline" className="gap-1">
+                    <HandshakeIcon className="h-3 w-3" />{((s as any).fechamento || []).length} fechamento
+                  </Badge>
                 </div>
                 <div className="flex justify-end gap-1">
                   <Button variant="ghost" size="sm" onClick={() => openEdit(s)}>
@@ -255,6 +262,13 @@ export default function ScriptsCloserTab() {
                 icon={<ClipboardList className="h-4 w-4 text-blue-500" />}
                 items={form.qualificacao}
                 onChange={(qualificacao) => setForm({ ...form, qualificacao })}
+              />
+              <Separator />
+              <ScriptItemEditor
+                title="Fechamento"
+                icon={<HandshakeIcon className="h-4 w-4 text-emerald-500" />}
+                items={form.fechamento}
+                onChange={(fechamento) => setForm({ ...form, fechamento })}
               />
             </div>
           </div>
