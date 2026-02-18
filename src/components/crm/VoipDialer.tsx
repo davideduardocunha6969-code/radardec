@@ -100,24 +100,47 @@ export function VoipDialer({ leadId, leadNome, numero, onCallStatusChange }: Voi
     try {
       setCallStatus("connecting");
 
+      console.log("[VoIP] Requesting Twilio token...");
       const { data: tokenData, error: tokenError } = await supabase.functions.invoke("twilio-token");
 
       if (tokenError || !tokenData?.token) {
+        console.error("[VoIP] Token error:", tokenError, tokenData);
         throw new Error(tokenError?.message || "Erro ao obter token do Twilio");
       }
+      console.log("[VoIP] Token received, initializing device...");
 
       const { Device } = await import("@twilio/voice-sdk");
-      const device = new Device(tokenData.token);
+      const device = new Device(tokenData.token, {
+        logLevel: 1,
+      });
       deviceRef.current = device;
 
+      // Wait for device to be registered
+      await new Promise<void>((resolve, reject) => {
+        device.on("registered", () => {
+          console.log("[VoIP] Device registered");
+          resolve();
+        });
+        device.on("error", (err: any) => {
+          console.error("[VoIP] Device error:", err);
+          reject(err);
+        });
+        device.register();
+      });
+
+      console.log("[VoIP] Creating chamada record...");
       const chamada = await createChamada.mutateAsync({
         lead_id: leadId,
         numero_discado: numero,
       });
       setChamadaId(chamada.id);
 
+      // Format number for Brazil
+      const formattedNumber = numero.startsWith("+") ? numero : `+55${numero.replace(/\D/g, "")}`;
+      console.log("[VoIP] Connecting to:", formattedNumber);
+
       const call = await device.connect({
-        params: { To: numero },
+        params: { To: formattedNumber },
       });
 
       callRef.current = call;
