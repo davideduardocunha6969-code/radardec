@@ -14,6 +14,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      agenda_eventos: {
+        Row: {
+          created_at: string
+          data_fim: string
+          data_inicio: string
+          descricao: string | null
+          dia_inteiro: boolean
+          id: string
+          tipo_evento_id: string | null
+          titulo: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          data_fim: string
+          data_inicio: string
+          descricao?: string | null
+          dia_inteiro?: boolean
+          id?: string
+          tipo_evento_id?: string | null
+          titulo: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          data_fim?: string
+          data_inicio?: string
+          descricao?: string | null
+          dia_inteiro?: boolean
+          id?: string
+          tipo_evento_id?: string | null
+          titulo?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agenda_eventos_tipo_evento_id_fkey"
+            columns: ["tipo_evento_id"]
+            isOneToOne: false
+            referencedRelation: "agenda_tipos_evento"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agenda_tipos_evento: {
         Row: {
           ativo: boolean
