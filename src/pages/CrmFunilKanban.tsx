@@ -441,7 +441,10 @@ export default function CrmFunilKanban() {
                 <TabsList className="w-full shrink-0 mx-6" style={{ width: "calc(100% - 3rem)" }}>
                   <TabsTrigger value="dados" className="flex-1">Dados</TabsTrigger>
                   <TabsTrigger value="contatos" className="flex-1">
-                    <History className="h-3.5 w-3.5 mr-1" />Contatos
+                    <History className="h-3.5 w-3.5 mr-1" />Contatos SDR
+                  </TabsTrigger>
+                  <TabsTrigger value="atendimento-closer" className="flex-1">
+                    <Phone className="h-3.5 w-3.5 mr-1" />Atendimento Closer
                   </TabsTrigger>
                 </TabsList>
                 <TabsContent value="dados" className="flex-1 overflow-auto px-6 pb-6 min-h-0">
@@ -502,7 +505,13 @@ export default function CrmFunilKanban() {
                   </div>
                 </TabsContent>
                 <TabsContent value="contatos" className="flex-1 overflow-auto px-6 pb-6">
-                  <LeadContatosTab leadId={detailLead.id} />
+                   <LeadContatosTab leadId={detailLead.id} />
+                </TabsContent>
+                <TabsContent value="atendimento-closer" className="flex-1 overflow-auto px-6 pb-6">
+                  <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                    <Phone className="h-10 w-10 mb-3 opacity-50" />
+                    <p className="text-sm">Aba Atendimento Closer — em breve</p>
+                  </div>
                 </TabsContent>
               </Tabs>
             </div>
