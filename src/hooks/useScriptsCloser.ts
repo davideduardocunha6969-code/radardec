@@ -2,36 +2,21 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import type { ScriptItem, ScriptSdr } from "./useScriptsSdr";
 
-export interface ScriptItem {
-  id: string;
-  label: string;
-  description: string;
-}
+export type ScriptCloser = ScriptSdr;
 
-export interface ScriptSdr {
-  id: string;
-  nome: string;
-  descricao: string | null;
-  apresentacao: ScriptItem[];
-  qualificacao: ScriptItem[];
-  ativo: boolean;
-  user_id: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export function useScriptsSdr() {
+export function useScriptsCloser() {
   return useQuery({
-    queryKey: ["scripts_sdr"],
+    queryKey: ["scripts_sdr", "closer"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("scripts_sdr" as any)
         .select("*")
-        .eq("tipo", "sdr")
+        .eq("tipo", "closer")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return (data as unknown as ScriptSdr[]).map((s) => ({
+      return (data as unknown as ScriptCloser[]).map((s) => ({
         ...s,
         apresentacao: Array.isArray(s.apresentacao) ? s.apresentacao : [],
         qualificacao: Array.isArray(s.qualificacao) ? s.qualificacao : [],
@@ -40,31 +25,7 @@ export function useScriptsSdr() {
   });
 }
 
-export function useActiveScriptSdr() {
-  return useQuery({
-    queryKey: ["scripts_sdr", "active"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("scripts_sdr" as any)
-        .select("*")
-        .eq("ativo", true)
-        .order("created_at", { ascending: true })
-        .limit(1);
-      if (error) throw error;
-      const s = (data as unknown as ScriptSdr[])?.[0];
-      if (!s) return null;
-      return {
-        ...s,
-        apresentacao: Array.isArray(s.apresentacao) ? s.apresentacao : [],
-        qualificacao: Array.isArray(s.qualificacao) ? s.qualificacao : [],
-      };
-    },
-    refetchOnWindowFocus: false,
-    staleTime: 5 * 60 * 1000,
-  });
-}
-
-export function useCreateScriptSdr() {
+export function useCreateScriptCloser() {
   const qc = useQueryClient();
   const { user } = useAuthContext();
   return useMutation({
@@ -79,19 +40,20 @@ export function useCreateScriptSdr() {
         descricao: data.descricao || null,
         apresentacao: JSON.parse(JSON.stringify(data.apresentacao)),
         qualificacao: JSON.parse(JSON.stringify(data.qualificacao)),
+        tipo: "closer",
         user_id: user!.id,
       });
       if (error) throw error;
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["scripts_sdr"] });
-      toast.success("Script SDR criado!");
+      toast.success("Script Closer criado!");
     },
     onError: (e: any) => toast.error("Erro: " + e.message),
   });
 }
 
-export function useUpdateScriptSdr() {
+export function useUpdateScriptCloser() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (data: {
@@ -111,13 +73,13 @@ export function useUpdateScriptSdr() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["scripts_sdr"] });
-      toast.success("Script SDR atualizado!");
+      toast.success("Script Closer atualizado!");
     },
     onError: (e: any) => toast.error("Erro: " + e.message),
   });
 }
 
-export function useDeleteScriptSdr() {
+export function useDeleteScriptCloser() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (id: string) => {
@@ -126,7 +88,7 @@ export function useDeleteScriptSdr() {
     },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["scripts_sdr"] });
-      toast.success("Script SDR excluído!");
+      toast.success("Script Closer excluído!");
     },
     onError: (e: any) => toast.error("Erro: " + e.message),
   });
