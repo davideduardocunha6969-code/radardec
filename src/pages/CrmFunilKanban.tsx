@@ -21,7 +21,8 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, FileSpreadsheet, AlertCircle, History, Pencil, CalendarDays, Sparkles } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, FileSpreadsheet, AlertCircle, History, Pencil, CalendarDays, Sparkles, ChevronDown } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
@@ -648,27 +649,32 @@ export default function CrmFunilKanban() {
                   <div className="space-y-4">
                     {/* Resumo IA dos Contatos SDR */}
                     {detailLead.resumo_ia_contatos ? (
-                      <div className="border rounded-lg bg-muted/30">
-                        <div className="flex items-center gap-2 px-4 py-2.5 border-b border-border/50">
-                          <Sparkles className="h-4 w-4 text-amber-500" />
-                          <span className="text-sm font-medium">Resumo SDR</span>
-                        </div>
-                        <div className="px-4 py-3">
-                          <div className="text-sm leading-relaxed space-y-1">
-                            {(detailLead.resumo_ia_contatos as string).split('\n').map((line: string, i: number) => {
-                              const trimmed = line.trim();
-                              if (!trimmed) return <div key={i} className="h-1.5" />;
-                              if (/^#{1,3}\s/.test(trimmed)) return <p key={i} className="font-semibold text-foreground mt-2 mb-0.5">{trimmed.replace(/^#{1,3}\s+/, '')}</p>;
-                              if (/^[-•]\s/.test(trimmed)) {
-                                const text = trimmed.replace(/^[-•]\s+/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                                return <div key={i} className="flex items-start gap-2 ml-2"><span className="text-muted-foreground mt-0.5 shrink-0">•</span><span className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: text }} /></div>;
-                              }
-                              const formatted = trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                              return <p key={i} className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: formatted }} />;
-                            })}
+                      <Collapsible defaultOpen={false} className="border rounded-lg bg-muted/30">
+                        <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2.5 hover:bg-muted/50 transition-colors rounded-lg group">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-amber-500" />
+                            <span className="text-sm font-medium">Resumo SDR</span>
                           </div>
-                        </div>
-                      </div>
+                          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="px-4 py-3 border-t border-border/50">
+                            <div className="text-sm leading-relaxed space-y-1">
+                              {(detailLead.resumo_ia_contatos as string).split('\n').map((line: string, i: number) => {
+                                const trimmed = line.trim();
+                                if (!trimmed) return <div key={i} className="h-1.5" />;
+                                if (/^#{1,3}\s/.test(trimmed)) return <p key={i} className="font-semibold text-foreground mt-2 mb-0.5">{trimmed.replace(/^#{1,3}\s+/, '')}</p>;
+                                if (/^[-•]\s/.test(trimmed)) {
+                                  const text = trimmed.replace(/^[-•]\s+/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                                  return <div key={i} className="flex items-start gap-2 ml-2"><span className="text-muted-foreground mt-0.5 shrink-0">•</span><span className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: text }} /></div>;
+                                }
+                                const formatted = trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                                return <p key={i} className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: formatted }} />;
+                              })}
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
                     ) : (
                       <div className="border rounded-lg bg-muted/30 px-4 py-3 flex items-center gap-2 text-sm text-muted-foreground">
                         <Sparkles className="h-4 w-4 text-amber-500" />
