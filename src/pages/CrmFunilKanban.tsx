@@ -10,6 +10,7 @@ import { CoachingErrorBoundary } from "@/components/crm/coaching/CoachingErrorBo
 import { AgendaClosersTab } from "@/components/crm/AgendaClosersTab";
 import { useRobosCoachAtivos, type RoboCoach } from "@/hooks/useRobosCoach";
 import { useScriptsSdr } from "@/hooks/useScriptsSdr";
+import { useScriptsCloser } from "@/hooks/useScriptsCloser";
 import { useCleanupOrphanedChamadas } from "@/hooks/useCrmChamadas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -32,6 +33,7 @@ export default function CrmFunilKanban() {
   const { data: leads, isLoading: leadsLoading } = useCrmLeads(funilId);
   const { data: robosCoach } = useRobosCoachAtivos();
   const { data: scriptsSdr } = useScriptsSdr();
+  const { data: scriptsCloser } = useScriptsCloser();
   useCleanupOrphanedChamadas();
   const createColuna = useCreateColuna();
   const updateColuna = useUpdateColuna();
@@ -316,7 +318,7 @@ export default function CrmFunilKanban() {
               <label className="text-sm font-medium">Script Closer</label>
               <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={newColunaScriptCloserId} onChange={(e) => setNewColunaScriptCloserId(e.target.value)}>
                 <option value="">Nenhum</option>
-                {scriptsSdr?.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                {scriptsCloser?.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
               </select>
             </div>
           </div>
@@ -375,7 +377,7 @@ export default function CrmFunilKanban() {
                 <label className="text-sm font-medium">Script Closer</label>
                 <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={editingColuna.script_closer_id} onChange={(e) => setEditingColuna({ ...editingColuna, script_closer_id: e.target.value })}>
                   <option value="">Nenhum</option>
-                  {scriptsSdr?.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+                  {scriptsCloser?.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
                 </select>
               </div>
             </div>
