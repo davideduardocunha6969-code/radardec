@@ -543,6 +543,7 @@ export type Database = {
           audio_url: string | null
           canal: string
           created_at: string
+          custo_detalhado: Json | null
           duracao_segundos: number | null
           encerrado_por: string | null
           feedback_ia: string | null
@@ -562,6 +563,7 @@ export type Database = {
           audio_url?: string | null
           canal?: string
           created_at?: string
+          custo_detalhado?: Json | null
           duracao_segundos?: number | null
           encerrado_por?: string | null
           feedback_ia?: string | null
@@ -581,6 +583,7 @@ export type Database = {
           audio_url?: string | null
           canal?: string
           created_at?: string
+          custo_detalhado?: Json | null
           duracao_segundos?: number | null
           encerrado_por?: string | null
           feedback_ia?: string | null

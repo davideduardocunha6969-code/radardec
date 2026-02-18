@@ -38,6 +38,13 @@ Deno.serve(async (req) => {
 
   const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
 
+  // Fetch chamada data for duration info
+  const { data: chamadaData } = await supabase
+    .from("crm_chamadas")
+    .select("duracao_segundos")
+    .eq("id", chamadaId)
+    .single();
+
   // Update status to processing
   await supabase
     .from("crm_chamadas")
@@ -125,12 +132,41 @@ Deno.serve(async (req) => {
     const wasAnswered = uniqueSpeakers.size >= 2 && finalText.length >= 20;
     const finalStatus = wasAnswered ? "finalizada" : "nao_atendida";
 
-    // 4. Update chamada with transcription
+    // 4. Calculate costs
+    const durationMin = (chamadaData?.duracao_segundos || 0) / 60;
+    const audioSizeMB = audioData.size / (1024 * 1024);
+    
+    // Cost rates (USD)
+    const TWILIO_CALL_PER_MIN = 0.0663;  // Outbound to BR mobile
+    const TWILIO_RECORDING_PER_MIN = 0.0025;
+    const ELEVENLABS_SCRIBE_PER_MIN = 0.03; // ~$0.03/min estimate for scribe_v2
+    const SUPABASE_STORAGE_PER_GB = 0.021;  // $0.021/GB/month (amortized negligible)
+    const EDGE_FUNCTION_INVOCATION = 0.000002; // ~$2/1M invocations
+
+    const custoTwilioChamada = durationMin * TWILIO_CALL_PER_MIN;
+    const custoTwilioGravacao = durationMin * TWILIO_RECORDING_PER_MIN;
+    const custoElevenLabs = durationMin * ELEVENLABS_SCRIBE_PER_MIN;
+    const custoStorage = (audioSizeMB / 1024) * SUPABASE_STORAGE_PER_GB; // per month fraction
+    const custoEdgeFunctions = EDGE_FUNCTION_INVOCATION * 3; // webhook + process + feedback
+
+    const custoDetalhado = {
+      twilio_chamada: parseFloat(custoTwilioChamada.toFixed(6)),
+      twilio_gravacao: parseFloat(custoTwilioGravacao.toFixed(6)),
+      elevenlabs_transcricao: parseFloat(custoElevenLabs.toFixed(6)),
+      lovable_ia_feedback: 0, // will be updated by feedback-chamada
+      storage: parseFloat(custoStorage.toFixed(6)),
+      edge_functions: parseFloat(custoEdgeFunctions.toFixed(6)),
+      duracao_min: parseFloat(durationMin.toFixed(2)),
+      audio_size_mb: parseFloat(audioSizeMB.toFixed(2)),
+    };
+
+    // 5. Update chamada with transcription + costs
     await supabase
       .from("crm_chamadas")
       .update({
         transcricao: finalText,
         status: finalStatus,
+        custo_detalhado: custoDetalhado,
       })
       .eq("id", chamadaId);
 
