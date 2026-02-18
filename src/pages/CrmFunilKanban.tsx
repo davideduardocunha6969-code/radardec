@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useUpdateColuna, useDeleteColuna, useCreateLead, useUpdateLead, useDeleteLead, useBulkCreateLeads, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
 import { VoipDialer } from "@/components/crm/VoipDialer";
 import { WhatsAppCallRecorder } from "@/components/crm/WhatsAppCallRecorder";
+import { WhatsAppAICallButton } from "@/components/crm/WhatsAppAICallButton";
 import { LeadContatosTab } from "@/components/crm/LeadContatosTab";
 import { RealtimeCoachingPanel } from "@/components/crm/RealtimeCoachingPanel";
 import { CoachingErrorBoundary } from "@/components/crm/coaching/CoachingErrorBoundary";
@@ -465,6 +466,7 @@ export default function CrmFunilKanban() {
                           <span className="text-sm">{t.numero}</span>
                           <Badge variant="outline" className="text-xs">{t.tipo}</Badge>
                           <div className="flex items-center gap-1 ml-auto">
+                            <WhatsAppAICallButton leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} />
                             <WhatsAppCallRecorder leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} onRecordingStateChange={handleRecordingStateChange} />
                             <VoipDialer leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} />
                           </div>

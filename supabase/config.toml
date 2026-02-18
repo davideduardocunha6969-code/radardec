@@ -47,3 +47,6 @@ verify_jwt = false
 
  [functions.coaching-realtime]
  verify_jwt = false
+
+ [functions.elevenlabs-conversation-token]
+ verify_jwt = false
