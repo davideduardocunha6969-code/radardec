@@ -193,6 +193,19 @@ CONTEXTO:
     custoDetalhado.ia_tokens_input = inputTokens;
     custoDetalhado.ia_tokens_output = outputTokens;
 
+    // Ensure cotacao_brl exists (fetch if missing)
+    if (!custoDetalhado.cotacao_brl) {
+      try {
+        const fxRes = await fetch("https://open.er-api.com/v6/latest/USD");
+        if (fxRes.ok) {
+          const fxData = await fxRes.json();
+          custoDetalhado.cotacao_brl = parseFloat((fxData.rates?.BRL || 5.50).toFixed(4));
+        }
+      } catch (_e) {
+        custoDetalhado.cotacao_brl = 5.50;
+      }
+    }
+
     // Update the chamada with feedback + cost
     const { error: updateErr } = await supabase
       .from("crm_chamadas")
