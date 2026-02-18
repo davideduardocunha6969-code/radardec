@@ -1,4 +1,4 @@
-import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, CalendarDays, Megaphone, Lightbulb, Wand2, Package, ClipboardList, Phone, UserCog, Copy, Users, FileQuestion, Calendar } from "lucide-react";
+import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, CalendarDays, Megaphone, Lightbulb, Wand2, Package, ClipboardList, Phone, UserCog, Copy, Users, FileQuestion, Calendar, LayoutDashboard } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import logoEscritorio from "@/assets/logo-escritorio.webp";
@@ -376,6 +376,25 @@ export function AppSidebar() {
                   >
                     <Calendar className="h-4 w-4" />
                     <span>Agenda</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              {/* Meu Painel */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/meu-painel")}
+                  tooltip="Meu Painel"
+                >
+                  <NavLink
+                    to="/meu-painel"
+                    end
+                    className="flex items-center gap-3 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
+                    activeClassName="bg-accent text-primary font-medium"
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    <span>Meu Painel</span>
                   </NavLink>
                 </SidebarMenuButton>
               </SidebarMenuItem>

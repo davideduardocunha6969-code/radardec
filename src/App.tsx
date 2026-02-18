@@ -38,6 +38,7 @@ import RadarOutbound from "./pages/RadarOutbound";
  import SugestoesContratacao from "./pages/recrutamento/SugestoesContratacao";
  import NotFound from "./pages/NotFound";
  import Agenda from "./pages/Agenda";
+ import MeuPainel from "./pages/MeuPainel";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -72,6 +73,7 @@ const App = () => (
               <Route path="/marketing/modelador" element={<ProtectedRoute pageKey="marketing-modelador"><ModeladorConteudo /></ProtectedRoute>} />
               <Route path="/marketing/atividades" element={<ProtectedRoute pageKey="marketing-atividades"><AtividadesMarketing /></ProtectedRoute>} />
               <Route path="/agenda" element={<Agenda />} />
+              <Route path="/meu-painel" element={<MeuPainel />} />
               <Route path="/admin" element={<Admin />} />
                {/* Recrutamento Inteligente */}
                <Route path="/recrutamento" element={<ProtectedRoute pageKey="recrutamento"><RecrutamentoLayout /></ProtectedRoute>}>
