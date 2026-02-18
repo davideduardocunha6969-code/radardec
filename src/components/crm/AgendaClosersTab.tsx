@@ -8,43 +8,37 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { useAgendaEventos, useCreateAgendaEvento, type AgendaEvento } from "@/hooks/useAgendaEventos";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
+import { useFunilClosers } from "@/hooks/useFunilMembros";
 import { toast } from "sonner";
 
 interface AgendaClosersTabProps {
   leadId: string;
   leadNome: string;
+  funilId?: string;
 }
 
 const HOURS = Array.from({ length: 12 }, (_, i) => i + 8); // 8h - 19h
 
-export function AgendaClosersTab({ leadId, leadNome }: AgendaClosersTabProps) {
+export function AgendaClosersTab({ leadId, leadNome, funilId }: AgendaClosersTabProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedCloser, setSelectedCloser] = useState<string>("all");
   const [bookingSlot, setBookingSlot] = useState<{ date: Date; closerId: string } | null>(null);
   const [bookingTitle, setBookingTitle] = useState("");
   const [bookingDesc, setBookingDesc] = useState("");
 
-  // Fetch profiles (closers)
-  const { data: profiles } = useQuery({
-    queryKey: ["profiles_list"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("profiles")
-        .select("id, display_name")
-        .order("display_name");
-      if (error) throw error;
-      return data;
-    },
-  });
+  // Fetch closers assigned to this funnel
+  const { data: funilClosers } = useFunilClosers(funilId);
+
+  const closerProfiles = useMemo(() => {
+    if (!funilClosers?.length) return [];
+    return funilClosers.map(fc => fc.profiles).filter(Boolean);
+  }, [funilClosers]);
 
   const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
   const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
-  const weekDays = Array.from({ length: 5 }, (_, i) => addDays(weekStart, i)); // seg-sex only
+  const weekDays = Array.from({ length: 5 }, (_, i) => addDays(weekStart, i));
 
   const { data: eventos = [], isLoading } = useAgendaEventos(
     weekStart.toISOString(),
@@ -53,22 +47,23 @@ export function AgendaClosersTab({ leadId, leadNome }: AgendaClosersTabProps) {
 
   const createEvento = useCreateAgendaEvento();
 
-  // Filter events by selected closer
+  // Filter events by closers in this funnel and selected closer
   const filteredEventos = useMemo(() => {
-    if (selectedCloser === "all") return eventos;
-    return eventos.filter((ev) => ev.responsavel_id === selectedCloser);
-  }, [eventos, selectedCloser]);
+    const closerIds = funilClosers?.map(fc => fc.profile_id) || [];
+    let filtered = closerIds.length > 0
+      ? eventos.filter(ev => ev.responsavel_id && closerIds.includes(ev.responsavel_id))
+      : eventos;
+    if (selectedCloser !== "all") {
+      filtered = filtered.filter(ev => ev.responsavel_id === selectedCloser);
+    }
+    return filtered;
+  }, [eventos, selectedCloser, funilClosers]);
 
-  // Check if a slot is occupied
   const getSlotEvents = (day: Date, hour: number) => {
     return filteredEventos.filter((ev) => {
       const evStart = parseISO(ev.data_inicio);
       return isSameDay(evStart, day) && evStart.getHours() === hour;
     });
-  };
-
-  const isSlotFree = (day: Date, hour: number) => {
-    return getSlotEvents(day, hour).length === 0;
   };
 
   const handleSlotClick = (day: Date, hour: number) => {
@@ -97,7 +92,7 @@ export function AgendaClosersTab({ leadId, leadNome }: AgendaClosersTabProps) {
   };
 
   const closerName = (id: string) =>
-    profiles?.find((p) => p.id === id)?.display_name || "—";
+    closerProfiles.find((p) => p.id === id)?.display_name || "—";
 
   const isToday = (day: Date) => isSameDay(day, new Date());
   const isPast = (day: Date, hour: number) => {
@@ -106,6 +101,16 @@ export function AgendaClosersTab({ leadId, leadNome }: AgendaClosersTabProps) {
     slot.setHours(hour, 0, 0, 0);
     return slot < now;
   };
+
+  if (!funilClosers?.length) {
+    return (
+      <div className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+        <CalendarDays className="h-10 w-10 mb-3 opacity-50" />
+        <p className="text-sm font-medium">Nenhum closer cadastrado neste funil</p>
+        <p className="text-xs mt-1">Edite o funil na tela de CRM Outbound para adicionar closers.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -128,7 +133,7 @@ export function AgendaClosersTab({ leadId, leadNome }: AgendaClosersTabProps) {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">Todos os closers</SelectItem>
-              {profiles?.map((p) => (
+              {closerProfiles.map((p) => (
                 <SelectItem key={p.id} value={p.id}>
                   {p.display_name}
                 </SelectItem>
@@ -161,33 +166,23 @@ export function AgendaClosersTab({ leadId, leadNome }: AgendaClosersTabProps) {
         </div>
       ) : (
         <div className="border rounded-lg overflow-hidden bg-card">
-          {/* Header row */}
           <div className="grid grid-cols-[56px_repeat(5,1fr)] border-b">
             <div className="p-2 border-r bg-muted/30" />
             {weekDays.map((day) => (
               <div
                 key={day.toISOString()}
-                className={cn(
-                  "p-2 text-center border-r last:border-r-0",
-                  isToday(day) && "bg-primary/10"
-                )}
+                className={cn("p-2 text-center border-r last:border-r-0", isToday(day) && "bg-primary/10")}
               >
                 <div className="text-xs text-muted-foreground uppercase">
                   {format(day, "EEE", { locale: ptBR })}
                 </div>
-                <div
-                  className={cn(
-                    "text-base font-semibold mt-0.5 w-7 h-7 flex items-center justify-center mx-auto rounded-full",
-                    isToday(day) && "bg-primary text-primary-foreground"
-                  )}
-                >
+                <div className={cn("text-base font-semibold mt-0.5 w-7 h-7 flex items-center justify-center mx-auto rounded-full", isToday(day) && "bg-primary text-primary-foreground")}>
                   {format(day, "d")}
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Time slots */}
           <div className="max-h-[400px] overflow-y-auto">
             {HOURS.map((hour) => (
               <div key={hour} className="grid grid-cols-[56px_repeat(5,1fr)] min-h-[44px]">
@@ -208,9 +203,7 @@ export function AgendaClosersTab({ leadId, leadNome }: AgendaClosersTabProps) {
                         free && !past && "cursor-pointer hover:bg-green-50 dark:hover:bg-green-950/20",
                         past && "opacity-50"
                       )}
-                      onClick={() => {
-                        if (free && !past) handleSlotClick(day, hour);
-                      }}
+                      onClick={() => { if (free && !past) handleSlotClick(day, hour); }}
                     >
                       {slotEvents.map((ev) => {
                         const tipo = ev.agenda_tipos_evento;
@@ -219,11 +212,7 @@ export function AgendaClosersTab({ leadId, leadNome }: AgendaClosersTabProps) {
                           <div
                             key={ev.id}
                             className="text-[11px] p-1 rounded mb-0.5 truncate"
-                            style={{
-                              backgroundColor: cor + "22",
-                              borderLeft: `3px solid ${cor}`,
-                              color: cor,
-                            }}
+                            style={{ backgroundColor: cor + "22", borderLeft: `3px solid ${cor}`, color: cor }}
                           >
                             <div className="font-medium truncate">{ev.titulo}</div>
                             {ev.profiles && (
@@ -291,32 +280,17 @@ export function AgendaClosersTab({ leadId, leadNome }: AgendaClosersTabProps) {
 
               <div className="space-y-2">
                 <Label>Título *</Label>
-                <Input
-                  value={bookingTitle}
-                  onChange={(e) => setBookingTitle(e.target.value)}
-                  placeholder="Reunião de fechamento"
-                />
+                <Input value={bookingTitle} onChange={(e) => setBookingTitle(e.target.value)} placeholder="Reunião de fechamento" />
               </div>
 
               <div className="space-y-2">
                 <Label>Observações</Label>
-                <Textarea
-                  value={bookingDesc}
-                  onChange={(e) => setBookingDesc(e.target.value)}
-                  placeholder="Informações relevantes para o closer..."
-                  rows={3}
-                />
+                <Textarea value={bookingDesc} onChange={(e) => setBookingDesc(e.target.value)} placeholder="Informações relevantes para o closer..." rows={3} />
               </div>
 
               <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={() => setBookingSlot(null)}>
-                  Cancelar
-                </Button>
-                <Button
-                  onClick={handleConfirmBooking}
-                  disabled={createEvento.isPending || !bookingTitle}
-                  className="gap-2"
-                >
+                <Button variant="outline" onClick={() => setBookingSlot(null)}>Cancelar</Button>
+                <Button onClick={handleConfirmBooking} disabled={createEvento.isPending || !bookingTitle} className="gap-2">
                   <Check className="h-4 w-4" />
                   {createEvento.isPending ? "Agendando..." : "Confirmar Agendamento"}
                 </Button>

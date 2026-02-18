@@ -754,6 +754,45 @@ export type Database = {
           },
         ]
       }
+      crm_funil_membros: {
+        Row: {
+          created_at: string
+          funil_id: string
+          id: string
+          papel: string
+          profile_id: string
+        }
+        Insert: {
+          created_at?: string
+          funil_id: string
+          id?: string
+          papel: string
+          profile_id: string
+        }
+        Update: {
+          created_at?: string
+          funil_id?: string
+          id?: string
+          papel?: string
+          profile_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_funil_membros_funil_id_fkey"
+            columns: ["funil_id"]
+            isOneToOne: false
+            referencedRelation: "crm_funis"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_funil_membros_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       crm_funis: {
         Row: {
           area_atuacao: string
