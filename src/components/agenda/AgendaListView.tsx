@@ -1,6 +1,6 @@
 import { format, parseISO, isToday, isTomorrow, isPast } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Clock, Trash2, Edit2, Calendar } from "lucide-react";
+import { Clock, Trash2, Edit2, Calendar, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import type { AgendaEvento } from "@/hooks/useAgendaEventos";
@@ -84,6 +84,12 @@ export function AgendaListView({ eventos, onEventClick }: AgendaListViewProps) {
                         ? "Dia inteiro"
                         : `${format(inicio, "HH:mm")} - ${format(fim, "HH:mm")}`}
                     </div>
+                    {ev.profiles && (
+                      <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                        <User className="h-3 w-3" />
+                        {ev.profiles.display_name}
+                      </div>
+                    )}
                   </div>
                   <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <Button

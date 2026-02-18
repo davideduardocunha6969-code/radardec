@@ -8,6 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Switch } from "@/components/ui/switch";
 import { useAgendaTiposEvento } from "@/hooks/useAgendaTiposEvento";
 import { useCreateAgendaEvento, useUpdateAgendaEvento, type AgendaEvento } from "@/hooks/useAgendaEventos";
+import { useQuery } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import { format, addHours } from "date-fns";
 
 interface EventoFormDialogProps {
@@ -22,6 +24,18 @@ export function EventoFormDialog({ open, onOpenChange, evento, defaultDate }: Ev
   const createEvento = useCreateAgendaEvento();
   const updateEvento = useUpdateAgendaEvento();
 
+  const { data: profiles } = useQuery({
+    queryKey: ["profiles_list"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("profiles")
+        .select("id, display_name")
+        .order("display_name");
+      if (error) throw error;
+      return data;
+    },
+  });
+
   const now = defaultDate || new Date();
   const defaultStart = format(now, "yyyy-MM-dd'T'HH:mm");
   const defaultEnd = format(addHours(now, 1), "yyyy-MM-dd'T'HH:mm");
@@ -29,6 +43,7 @@ export function EventoFormDialog({ open, onOpenChange, evento, defaultDate }: Ev
   const [titulo, setTitulo] = useState("");
   const [descricao, setDescricao] = useState("");
   const [tipoEventoId, setTipoEventoId] = useState<string>("");
+  const [responsavelId, setResponsavelId] = useState<string>("");
   const [dataInicio, setDataInicio] = useState(defaultStart);
   const [dataFim, setDataFim] = useState(defaultEnd);
   const [diaInteiro, setDiaInteiro] = useState(false);
@@ -38,6 +53,7 @@ export function EventoFormDialog({ open, onOpenChange, evento, defaultDate }: Ev
       setTitulo(evento.titulo);
       setDescricao(evento.descricao || "");
       setTipoEventoId(evento.tipo_evento_id || "");
+      setResponsavelId(evento.responsavel_id || "");
       setDataInicio(format(new Date(evento.data_inicio), "yyyy-MM-dd'T'HH:mm"));
       setDataFim(format(new Date(evento.data_fim), "yyyy-MM-dd'T'HH:mm"));
       setDiaInteiro(evento.dia_inteiro);
@@ -45,6 +61,7 @@ export function EventoFormDialog({ open, onOpenChange, evento, defaultDate }: Ev
       setTitulo("");
       setDescricao("");
       setTipoEventoId("");
+      setResponsavelId("");
       setDataInicio(defaultStart);
       setDataFim(defaultEnd);
       setDiaInteiro(false);
@@ -57,6 +74,7 @@ export function EventoFormDialog({ open, onOpenChange, evento, defaultDate }: Ev
       titulo,
       descricao: descricao || undefined,
       tipo_evento_id: tipoEventoId || undefined,
+      responsavel_id: responsavelId || undefined,
       data_inicio: new Date(dataInicio).toISOString(),
       data_fim: new Date(dataFim).toISOString(),
       dia_inteiro: diaInteiro,
@@ -85,23 +103,41 @@ export function EventoFormDialog({ open, onOpenChange, evento, defaultDate }: Ev
             <Input value={titulo} onChange={(e) => setTitulo(e.target.value)} required placeholder="Ex: Reunião com cliente" />
           </div>
 
-          <div className="space-y-2">
-            <Label>Tipo de Evento</Label>
-            <Select value={tipoEventoId} onValueChange={setTipoEventoId}>
-              <SelectTrigger>
-                <SelectValue placeholder="Selecione o tipo" />
-              </SelectTrigger>
-              <SelectContent>
-                {tiposAtivos.map((t) => (
-                  <SelectItem key={t.id} value={t.id}>
-                    <div className="flex items-center gap-2">
-                      <div className="w-3 h-3 rounded-full" style={{ backgroundColor: t.cor }} />
-                      {t.nome}
-                    </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2">
+              <Label>Tipo de Evento</Label>
+              <Select value={tipoEventoId} onValueChange={setTipoEventoId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  {tiposAtivos.map((t) => (
+                    <SelectItem key={t.id} value={t.id}>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 rounded-full" style={{ backgroundColor: t.cor }} />
+                        {t.nome}
+                      </div>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label>Responsável</Label>
+              <Select value={responsavelId} onValueChange={setResponsavelId}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Selecione o responsável" />
+                </SelectTrigger>
+                <SelectContent>
+                  {profiles?.map((p) => (
+                    <SelectItem key={p.id} value={p.id}>
+                      {p.display_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="flex items-center gap-2">

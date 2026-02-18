@@ -22,6 +22,7 @@ export type Database = {
           descricao: string | null
           dia_inteiro: boolean
           id: string
+          responsavel_id: string | null
           tipo_evento_id: string | null
           titulo: string
           updated_at: string
@@ -34,6 +35,7 @@ export type Database = {
           descricao?: string | null
           dia_inteiro?: boolean
           id?: string
+          responsavel_id?: string | null
           tipo_evento_id?: string | null
           titulo: string
           updated_at?: string
@@ -46,12 +48,20 @@ export type Database = {
           descricao?: string | null
           dia_inteiro?: boolean
           id?: string
+          responsavel_id?: string | null
           tipo_evento_id?: string | null
           titulo?: string
           updated_at?: string
           user_id?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "agenda_eventos_responsavel_id_fkey"
+            columns: ["responsavel_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "agenda_eventos_tipo_evento_id_fkey"
             columns: ["tipo_evento_id"]
