@@ -647,41 +647,6 @@ export default function CrmFunilKanban() {
                 </TabsContent>
                 <TabsContent value="atendimento-closer" className="flex-1 overflow-auto px-6 pb-6">
                   <div className="space-y-4">
-                    {/* Resumo IA dos Contatos SDR */}
-                    {detailLead.resumo_ia_contatos ? (
-                      <Collapsible defaultOpen={false} className="border rounded-lg bg-muted/30">
-                        <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2.5 hover:bg-muted/50 transition-colors rounded-lg group">
-                          <div className="flex items-center gap-2">
-                            <Sparkles className="h-4 w-4 text-amber-500" />
-                            <span className="text-sm font-medium">Resumo SDR</span>
-                          </div>
-                          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
-                        </CollapsibleTrigger>
-                        <CollapsibleContent>
-                          <div className="px-4 py-3 border-t border-border/50">
-                            <div className="text-sm leading-relaxed space-y-1">
-                              {(detailLead.resumo_ia_contatos as string).split('\n').map((line: string, i: number) => {
-                                const trimmed = line.trim();
-                                if (!trimmed) return <div key={i} className="h-1.5" />;
-                                if (/^#{1,3}\s/.test(trimmed)) return <p key={i} className="font-semibold text-foreground mt-2 mb-0.5">{trimmed.replace(/^#{1,3}\s+/, '')}</p>;
-                                if (/^[-•]\s/.test(trimmed)) {
-                                  const text = trimmed.replace(/^[-•]\s+/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                                  return <div key={i} className="flex items-start gap-2 ml-2"><span className="text-muted-foreground mt-0.5 shrink-0">•</span><span className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: text }} /></div>;
-                                }
-                                const formatted = trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
-                                return <p key={i} className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: formatted }} />;
-                              })}
-                            </div>
-                          </div>
-                        </CollapsibleContent>
-                      </Collapsible>
-                    ) : (
-                      <div className="border rounded-lg bg-muted/30 px-4 py-3 flex items-center gap-2 text-sm text-muted-foreground">
-                        <Sparkles className="h-4 w-4 text-amber-500" />
-                        Nenhum resumo SDR disponível. Gere na aba "Contatos SDR".
-                      </div>
-                    )}
-
                     {/* Dados do Lead */}
                     {detailLead.dados_extras && (
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -724,6 +689,41 @@ export default function CrmFunilKanban() {
                           audioStream={activeAudioStream}
                         />
                       </CoachingErrorBoundary>
+                    )}
+
+                    {/* Resumo IA dos Contatos SDR */}
+                    {detailLead.resumo_ia_contatos ? (
+                      <Collapsible defaultOpen={false} className="border rounded-lg bg-muted/30">
+                        <CollapsibleTrigger className="flex items-center justify-between w-full px-4 py-2.5 hover:bg-muted/50 transition-colors rounded-lg group">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-amber-500" />
+                            <span className="text-sm font-medium">Resumo SDR</span>
+                          </div>
+                          <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+                        </CollapsibleTrigger>
+                        <CollapsibleContent>
+                          <div className="px-4 py-3 border-t border-border/50">
+                            <div className="text-sm leading-relaxed space-y-1">
+                              {(detailLead.resumo_ia_contatos as string).split('\n').map((line: string, i: number) => {
+                                const trimmed = line.trim();
+                                if (!trimmed) return <div key={i} className="h-1.5" />;
+                                if (/^#{1,3}\s/.test(trimmed)) return <p key={i} className="font-semibold text-foreground mt-2 mb-0.5">{trimmed.replace(/^#{1,3}\s+/, '')}</p>;
+                                if (/^[-•]\s/.test(trimmed)) {
+                                  const text = trimmed.replace(/^[-•]\s+/, '').replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                                  return <div key={i} className="flex items-start gap-2 ml-2"><span className="text-muted-foreground mt-0.5 shrink-0">•</span><span className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: text }} /></div>;
+                                }
+                                const formatted = trimmed.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>');
+                                return <p key={i} className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: formatted }} />;
+                              })}
+                            </div>
+                          </div>
+                        </CollapsibleContent>
+                      </Collapsible>
+                    ) : (
+                      <div className="border rounded-lg bg-muted/30 px-4 py-3 flex items-center gap-2 text-sm text-muted-foreground">
+                        <Sparkles className="h-4 w-4 text-amber-500" />
+                        Nenhum resumo SDR disponível. Gere na aba "Contatos SDR".
+                      </div>
                     )}
                   </div>
                 </TabsContent>
