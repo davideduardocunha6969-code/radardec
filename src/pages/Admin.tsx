@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { UserPlus, Trash2, Shield, ShieldCheck, Edit } from 'lucide-react';
 import { Navigate } from 'react-router-dom';
+import { AgendaTiposEventoManager } from '@/components/agenda/AgendaTiposEventoManager';
 
 type AppRole = 'admin' | 'marketing_manager' | 'user';
 
@@ -577,6 +578,17 @@ export default function Admin() {
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Tipos de Evento da Agenda */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Agenda</CardTitle>
+          <CardDescription>Gerencie os tipos de evento disponíveis na agenda do sistema.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AgendaTiposEventoManager />
+        </CardContent>
+      </Card>
     </div>
   );
 }
