@@ -148,6 +148,11 @@ export function RealtimeCoachingPanel({
     },
   });
 
+  // Manual audio piping: open mic independently and send PCM chunks to Scribe
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const audioCtxRef = useRef<AudioContext | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
+
   useEffect(() => {
     if (!isRecording) return;
     let cancelled = false;
@@ -155,18 +160,82 @@ export function RealtimeCoachingPanel({
     const connectScribe = async () => {
       try {
         setConnectionError(null);
+
+        // 1. Get Scribe token
         const { data, error } = await supabase.functions.invoke("elevenlabs-scribe-token");
         if (error || !data?.token) {
           setConnectionError("Erro ao obter token: " + (error?.message || "No token"));
           return;
         }
         if (cancelled) return;
+
+        // 2. Connect Scribe WITHOUT microphone (we'll pipe audio manually)
         await scribe.connect({
           token: data.token,
-          microphone: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         });
+        if (cancelled) { scribe.disconnect(); return; }
+
+        // 3. Open mic stream independently (won't conflict since Scribe isn't using its own)
+        let micStream: MediaStream;
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
+          });
+        } catch {
+          try {
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+          } catch {
+            const devices = await navigator.mediaDevices.enumerateDevices();
+            const audioInput = devices.find((d) => d.kind === "audioinput");
+            if (!audioInput) {
+              setConnectionError("Nenhum microfone encontrado");
+              return;
+            }
+            micStream = await navigator.mediaDevices.getUserMedia({
+              audio: { deviceId: { exact: audioInput.deviceId } },
+            });
+          }
+        }
+        if (cancelled) { micStream.getTracks().forEach(t => t.stop()); scribe.disconnect(); return; }
+        micStreamRef.current = micStream;
+
+        // 4. Set up AudioContext + ScriptProcessor to capture PCM and pipe to Scribe
+        const audioCtx = new AudioContext({ sampleRate: 16000 });
+        audioCtxRef.current = audioCtx;
+        const source = audioCtx.createMediaStreamSource(micStream);
+        const processor = audioCtx.createScriptProcessor(4096, 1, 1);
+        processorRef.current = processor;
+
+        processor.onaudioprocess = (e) => {
+          if (!scribe.isConnected) return;
+          const inputData = e.inputBuffer.getChannelData(0);
+          // Convert Float32 PCM to Int16 PCM
+          const int16 = new Int16Array(inputData.length);
+          for (let i = 0; i < inputData.length; i++) {
+            const s = Math.max(-1, Math.min(1, inputData[i]));
+            int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          }
+          // Convert to base64
+          const uint8 = new Uint8Array(int16.buffer);
+          let binary = "";
+          for (let i = 0; i < uint8.length; i++) {
+            binary += String.fromCharCode(uint8[i]);
+          }
+          const base64 = btoa(binary);
+          try {
+            scribe.sendAudio(base64, { sampleRate: 16000 });
+          } catch {
+            // Ignore send errors if websocket momentarily disconnects
+          }
+        };
+
+        source.connect(processor);
+        processor.connect(audioCtx.destination);
+
         setConnectionError(null);
+        console.log("[Coaching] Scribe connected with manual audio piping");
       } catch (e: any) {
+        console.error("[Coaching] Connection error:", e);
         setConnectionError("Erro ao conectar: " + (e.message || String(e)));
       }
     };
@@ -174,6 +243,10 @@ export function RealtimeCoachingPanel({
     connectScribe();
     return () => {
       cancelled = true;
+      // Cleanup manual audio pipeline
+      if (processorRef.current) { processorRef.current.disconnect(); processorRef.current = null; }
+      if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
+      if (micStreamRef.current) { micStreamRef.current.getTracks().forEach(t => t.stop()); micStreamRef.current = null; }
       scribe.disconnect();
       allTranscriptsRef.current = [];
     };
