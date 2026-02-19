@@ -307,10 +307,13 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
     } catch (err: any) {
       console.error("Error starting WhatsApp recording:", err);
       cleanup();
+      setStatus("error");
       if (err.name === "NotAllowedError") {
         setError("Permissão negada. Permita o acesso ao microfone e compartilhamento de tela.");
+        toast.error("Permissão negada. Permita o acesso ao microfone e compartilhamento de tela.");
       } else {
         setError(`Erro: ${err.message}`);
+        toast.error(`Erro ao iniciar gravação: ${err.message}`);
       }
     }
   };
@@ -376,6 +379,22 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
           <span className="text-sm">Gravação processada com sucesso!</span>
           <Button variant="outline" size="sm" onClick={() => setStatus("idle")} className="ml-auto">
             Nova gravação
+          </Button>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (status === "error") {
+    return (
+      <Card className="border-destructive/20">
+        <CardContent className="p-3 space-y-2">
+          <Alert variant="destructive" className="py-2">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription className="text-xs">{error}</AlertDescription>
+          </Alert>
+          <Button variant="outline" size="sm" onClick={() => { setStatus("idle"); setError(null); }}>
+            Tentar novamente
           </Button>
         </CardContent>
       </Card>
