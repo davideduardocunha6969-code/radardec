@@ -205,6 +205,11 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
     }
     setError(null);
 
+    // Force-release any lingering streams/context from previous attempts
+    cleanup();
+    // Give the browser a moment to fully release audio devices
+    await new Promise((r) => setTimeout(r, 300));
+
     try {
       // 1. Request microphone FIRST (most reliable)
       let micStream: MediaStream;
@@ -213,9 +218,19 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
           audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
         });
       } catch (micErr: any) {
-        // Retry with simpler constraints
         console.warn("[WhatsApp] Mic with constraints failed, retrying simple:", micErr);
-        micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        } catch (micErr2: any) {
+          console.warn("[WhatsApp] Simple mic also failed, trying with sampleRate:", micErr2);
+          // Last resort: specify exact device constraints
+          const devices = await navigator.mediaDevices.enumerateDevices();
+          const audioInput = devices.find((d) => d.kind === "audioinput");
+          if (!audioInput) throw new Error("Nenhum microfone encontrado no dispositivo");
+          micStream = await navigator.mediaDevices.getUserMedia({
+            audio: { deviceId: { exact: audioInput.deviceId } },
+          });
+        }
       }
       setHasMicAudio(true);
 
