@@ -342,7 +342,11 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
         savePartialAudio();
       }, 30_000);
       mixedStreamRef.current = destination.stream;
-      onRecordingStateChange?.(true, destination.stream);
+      onRecordingStateChange?.(true, {
+        micStream: micStreamRef.current,
+        systemStream: systemStreamRef.current,
+        mixedStream: destination.stream,
+      });
 
       // 5. Create chamada record
       const chamada = await createChamada.mutateAsync({
