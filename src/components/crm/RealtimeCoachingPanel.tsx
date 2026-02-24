@@ -160,8 +160,6 @@ export function RealtimeCoachingPanel({
     modelId: "scribe_v2_realtime",
     languageCode: "por",
     commitStrategy: CommitStrategy.VAD,
-    audioFormat: AudioFormat.PCM_16000,
-    sampleRate: 16000,
     onCommittedTranscript: (data) => {
       if (data.text?.trim() && !isHallucination(data.text)) {
         allTranscriptsRef.current = [...allTranscriptsRef.current, data.text];
