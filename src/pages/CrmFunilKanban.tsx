@@ -687,6 +687,7 @@ export default function CrmFunilKanban() {
                           isRecording={activeRecording}
                           audioStream={activeAudioStream}
                           script={getScriptForLead(detailLead, "sdr")}
+                          leadId={detailLead.id}
                         />
                       </CoachingErrorBoundary>
                     )}
@@ -751,6 +752,7 @@ export default function CrmFunilKanban() {
                           isRecording={activeRecording}
                           audioStream={activeAudioStream}
                           script={getScriptForLead(detailLead, "closer")}
+                          leadId={detailLead.id}
                         />
                       </CoachingErrorBoundary>
                     )}
