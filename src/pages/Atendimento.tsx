@@ -1,7 +1,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { WhatsAppCallRecorder } from "@/components/crm/WhatsAppCallRecorder";
+import { WhatsAppCallRecorder, type AudioStreamsInfo } from "@/components/crm/WhatsAppCallRecorder";
 import { VoipDialer } from "@/components/crm/VoipDialer";
 import { RealtimeCoachingPanel, type AudioMonitorInfo } from "@/components/crm/RealtimeCoachingPanel";
 import { CoachingErrorBoundary } from "@/components/crm/coaching/CoachingErrorBoundary";
@@ -34,15 +34,15 @@ export default function Atendimento() {
   const [authChecked, setAuthChecked] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeRecording, setActiveRecording] = useState(false);
-  const [activeAudioStream, setActiveAudioStream] = useState<MediaStream | null>(null);
+  const [audioStreams, setAudioStreams] = useState<AudioStreamsInfo>({ micStream: null, systemStream: null, mixedStream: null });
 
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [audioMonitor, setAudioMonitor] = useState<AudioMonitorInfo | undefined>(undefined);
   const stopCallRef = useRef<(() => void) | null>(null);
 
-  const handleRecordingStateChange = useCallback((isRecording: boolean, stream: MediaStream | null) => {
+  const handleRecordingStateChange = useCallback((isRecording: boolean, streams: AudioStreamsInfo) => {
     setActiveRecording(isRecording);
-    setActiveAudioStream(stream);
+    setAudioStreams(streams);
     if (!isRecording) setAudioMonitor(undefined);
   }, []);
 
