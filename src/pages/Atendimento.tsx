@@ -148,18 +148,18 @@ export default function Atendimento() {
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
-      {/* Compact header */}
-      <header className="border-b bg-card px-4 py-2 shrink-0">
+      {/* Header — azul marinho escuro */}
+      <header className="gradient-primary px-4 py-2 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
             <img src={logoEscritorio} alt="Logo" className="h-7" />
-            <div className="h-6 w-px bg-border" />
+            <div className="h-6 w-px bg-white/20" />
             <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-muted-foreground" />
-              <span className="font-semibold text-sm">{lead.nome}</span>
+              <User className="h-4 w-4 text-white/70" />
+              <span className="font-semibold text-sm text-white">{lead.nome}</span>
             </div>
             {lead.endereco && (
-              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+              <div className="flex items-center gap-1 text-xs text-white/60">
                 <MapPin className="h-3 w-3" />
                 {lead.endereco}
               </div>
@@ -172,7 +172,7 @@ export default function Atendimento() {
                 Gravando
               </Badge>
             )}
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
+            <div className="flex items-center gap-1 text-xs text-white/60">
               <Phone className="h-3 w-3" />
               {numero}
             </div>
@@ -182,24 +182,20 @@ export default function Atendimento() {
 
       {/* Lead context bar */}
       {(lead.resumo_caso || lead.dados_extras) && (
-        <div className="border-b bg-muted/30 px-4 py-1.5 shrink-0">
-          <div className="flex items-center gap-4 text-xs text-muted-foreground overflow-x-auto">
-            {(lead.dados_extras as Record<string, string>)?.empresa && (
-              <span>Empresa: <strong className="text-foreground">{(lead.dados_extras as Record<string, string>).empresa}</strong></span>
-            )}
-            {(lead.dados_extras as Record<string, string>)?.cargo && (
-              <span>Cargo: <strong className="text-foreground">{(lead.dados_extras as Record<string, string>).cargo}</strong></span>
-            )}
-            {(lead.dados_extras as Record<string, string>)?.data_admissao && (
-              <span>Admissão: {(lead.dados_extras as Record<string, string>).data_admissao}</span>
-            )}
-            {(lead.dados_extras as Record<string, string>)?.data_demissao && (
-              <span>Demissão: {(lead.dados_extras as Record<string, string>).data_demissao}</span>
-            )}
+        <div className="border-b bg-muted/30 px-4 py-2 shrink-0">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+            {Object.entries((lead.dados_extras as Record<string, string>) || {}).map(([key, value]) => (
+              value ? (
+                <span key={key} className="inline-flex items-center gap-1 bg-background/60 rounded px-2 py-0.5 border border-border/50">
+                  <span className="text-muted-foreground capitalize">{key.replace(/_/g, ' ')}:</span>
+                  <strong className="text-foreground">{value}</strong>
+                </span>
+              ) : null
+            ))}
             {lead.resumo_caso && (
-              <span className="flex items-center gap-1">
-                <FileText className="h-3 w-3" />
-                <span className="truncate max-w-xs">{lead.resumo_caso}</span>
+              <span className="inline-flex items-center gap-1 bg-background/60 rounded px-2 py-0.5 border border-border/50">
+                <FileText className="h-3 w-3 text-muted-foreground" />
+                <span className="text-foreground truncate max-w-md">{lead.resumo_caso}</span>
               </span>
             )}
           </div>
@@ -207,24 +203,26 @@ export default function Atendimento() {
       )}
 
       {/* Main content */}
-      <div className="flex-1 min-h-0 p-4 flex flex-col gap-3">
-        {/* Call controls */}
-        <div className="shrink-0">
-          {tipo === "whatsapp" ? (
-            <WhatsAppCallRecorder
-              leadId={lead.id}
-              leadNome={lead.nome}
-              numero={numero}
-              onRecordingStateChange={handleRecordingStateChange}
-            />
-          ) : (
-            <VoipDialer
-              leadId={lead.id}
-              leadNome={lead.nome}
-              numero={numero}
-              onRecordingStateChange={handleRecordingStateChange}
-            />
-          )}
+      <div className="flex-1 min-h-0 p-3 flex flex-col gap-2">
+        {/* Call controls — compact */}
+        <div className="shrink-0 flex justify-end">
+          <div className="w-fit">
+            {tipo === "whatsapp" ? (
+              <WhatsAppCallRecorder
+                leadId={lead.id}
+                leadNome={lead.nome}
+                numero={numero}
+                onRecordingStateChange={handleRecordingStateChange}
+              />
+            ) : (
+              <VoipDialer
+                leadId={lead.id}
+                leadNome={lead.nome}
+                numero={numero}
+                onRecordingStateChange={handleRecordingStateChange}
+              />
+            )}
+          </div>
         </div>
 
         {/* Coaching panel */}
