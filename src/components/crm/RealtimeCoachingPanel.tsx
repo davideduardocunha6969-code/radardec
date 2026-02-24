@@ -174,6 +174,8 @@ export function RealtimeCoachingPanel({
   useEffect(() => {
     if (!isRecording) return;
     let cancelled = false;
+    // Track whether we created our own mic stream (so we know to stop it on cleanup)
+    let ownsMicStream = false;
 
     const connectScribe = async () => {
       try {
@@ -189,29 +191,42 @@ export function RealtimeCoachingPanel({
         scribeConnectedRef.current = true;
         if (cancelled) { scribe.disconnect(); scribeConnectedRef.current = false; return; }
 
-        let micStream: MediaStream;
-        try {
-          micStream = await navigator.mediaDevices.getUserMedia({
-            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-          });
-        } catch {
+        // Use the mixed audioStream (mic + system) from the recorder when available
+        // This ensures we transcribe BOTH the SDR and the lead's audio
+        let streamToUse: MediaStream;
+        if (audioStream && audioStream.getAudioTracks().length > 0) {
+          console.log("[Coaching] Using mixed audioStream (mic + system audio) with", audioStream.getAudioTracks().length, "tracks");
+          streamToUse = audioStream;
+        } else {
+          console.log("[Coaching] No mixed stream available, falling back to mic-only");
+          ownsMicStream = true;
           try {
-            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          } catch {
-            const devices = await navigator.mediaDevices.enumerateDevices();
-            const audioInput = devices.find((d) => d.kind === "audioinput");
-            if (!audioInput) { setConnectionError("Nenhum microfone encontrado"); return; }
-            micStream = await navigator.mediaDevices.getUserMedia({
-              audio: { deviceId: { exact: audioInput.deviceId } },
+            streamToUse = await navigator.mediaDevices.getUserMedia({
+              audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
             });
+          } catch {
+            try {
+              streamToUse = await navigator.mediaDevices.getUserMedia({ audio: true });
+            } catch {
+              const devices = await navigator.mediaDevices.enumerateDevices();
+              const audioInput = devices.find((d) => d.kind === "audioinput");
+              if (!audioInput) { setConnectionError("Nenhum microfone encontrado"); return; }
+              streamToUse = await navigator.mediaDevices.getUserMedia({
+                audio: { deviceId: { exact: audioInput.deviceId } },
+              });
+            }
           }
         }
-        if (cancelled) { micStream.getTracks().forEach(t => t.stop()); scribe.disconnect(); scribeConnectedRef.current = false; return; }
-        micStreamRef.current = micStream;
+        if (cancelled) {
+          if (ownsMicStream) streamToUse.getTracks().forEach(t => t.stop());
+          scribe.disconnect(); scribeConnectedRef.current = false;
+          return;
+        }
+        micStreamRef.current = streamToUse;
 
         const audioCtx = new AudioContext({ sampleRate: 16000 });
         audioCtxRef.current = audioCtx;
-        const source = audioCtx.createMediaStreamSource(micStream);
+        const source = audioCtx.createMediaStreamSource(streamToUse);
         const processor = audioCtx.createScriptProcessor(4096, 1, 1);
         processorRef.current = processor;
 
@@ -246,7 +261,9 @@ export function RealtimeCoachingPanel({
       cancelled = true;
       if (processorRef.current) { processorRef.current.disconnect(); processorRef.current = null; }
       if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
-      if (micStreamRef.current) { micStreamRef.current.getTracks().forEach(t => t.stop()); micStreamRef.current = null; }
+      // Only stop tracks if we created them ourselves; the recorder owns the mixed stream
+      if (ownsMicStream && micStreamRef.current) { micStreamRef.current.getTracks().forEach(t => t.stop()); }
+      micStreamRef.current = null;
       scribeConnectedRef.current = false;
       scribe.disconnect();
       allTranscriptsRef.current = [];
