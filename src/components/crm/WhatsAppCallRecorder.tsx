@@ -26,6 +26,7 @@ interface WhatsAppCallRecorderProps {
   leadNome: string;
   numero: string;
   onRecordingStateChange?: (isRecording: boolean, audioStream: MediaStream | null) => void;
+  onAudioMonitorUpdate?: (info: { hasMicAudio: boolean; hasSystemAudio: boolean; micLevel: number; systemLevel: number; duration: number }) => void;
   stopRef?: React.MutableRefObject<(() => void) | null>;
 }
 
