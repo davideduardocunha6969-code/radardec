@@ -43,19 +43,30 @@ export default function Atendimento() {
 
   // Wait for auth session to be restored from localStorage
   useEffect(() => {
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setIsAuthenticated(!!session);
-      setAuthChecked(true);
-    };
-    checkAuth();
-
+    // Listen for auth state changes FIRST — this is the authoritative source
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session);
       setAuthChecked(true);
     });
 
-    return () => subscription.unsubscribe();
+    // Then check for existing session; if found, use it immediately
+    // If not found, DON'T mark authChecked yet — wait for onAuthStateChange
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
+        setIsAuthenticated(true);
+        setAuthChecked(true);
+      }
+    });
+
+    // Fallback timeout: if after 3s neither callback fired, mark as checked
+    const timeout = setTimeout(() => {
+      setAuthChecked(true);
+    }, 3000);
+
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(timeout);
+    };
   }, []);
 
   useEffect(() => {
