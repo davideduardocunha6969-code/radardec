@@ -36,6 +36,7 @@ export function RealtimeCoachingPanel({
 
   const [apresentacaoDone, setApresentacaoDone] = useState<string[]>([]);
   const [qualificationDone, setQualificationDone] = useState<string[]>([]);
+  const [fechamentoDone, setFechamentoDone] = useState<string[]>([]);
   const [objections, setObjections] = useState<Objection[]>([]);
   const [recaItems, setRecaItems] = useState<DynamicItem[]>([]);
   const [ralocaItems, setRalocaItems] = useState<DynamicItem[]>([]);
@@ -98,6 +99,7 @@ export function RealtimeCoachingPanel({
           const a = scriptRes.value.data.analysis;
           setApresentacaoDone(a.apresentacao_done || []);
           setQualificationDone(a.qualification_done || []);
+          setFechamentoDone(a.fechamento_done || []);
         }
         if (recaRes.status === "fulfilled" && recaRes.value.data?.analysis) {
           setRecaItems(recaRes.value.data.analysis.reca_items || []);
@@ -120,7 +122,7 @@ export function RealtimeCoachingPanel({
         isAnalyzingRef.current = false;
       }
     },
-    [coach.instrucoes, coach.instrucoes_reca, coach.instrucoes_raloca, coach.instrucoes_radoveca, leadNome, leadContext, qualificationItems, apresentacaoItems, showRateItems, showRateData?.score]
+    [coach.instrucoes, coach.instrucoes_reca, coach.instrucoes_raloca, coach.instrucoes_radoveca, coach.instrucoes_noshow, leadNome, leadContext, qualificationItems, apresentacaoItems, fechamentoItems, showRateItems, showRateData?.score]
   );
 
   // Filter STT hallucinations
