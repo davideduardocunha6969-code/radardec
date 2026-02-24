@@ -395,6 +395,13 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
     }
   };
 
+  // Expose stop function to parent via ref
+  useEffect(() => {
+    if (stopRef) {
+      stopRef.current = (status === "recording" || status === "paused") ? stopRecording : null;
+    }
+  }, [status, stopRef, stopRecording]);
+
   useEffect(() => {
     return () => cleanup();
   }, [cleanup]);

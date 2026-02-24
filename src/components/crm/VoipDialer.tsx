@@ -211,6 +211,13 @@ export function VoipDialer({ leadId, leadNome, numero, onCallStatusChange, onRec
     }
   }, []);
 
+  // Expose stop function to parent via ref
+  useEffect(() => {
+    if (stopRef) {
+      stopRef.current = (callStatus === "in-progress" || callStatus === "ringing") ? endCall : null;
+    }
+  }, [callStatus, stopRef, endCall]);
+
   const toggleMute = useCallback(() => {
     if (callRef.current) {
       const newMuted = !isMuted;
