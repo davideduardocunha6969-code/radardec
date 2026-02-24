@@ -31,6 +31,7 @@ export function RealtimeCoachingPanel({
   leadNome,
   leadContext,
   isRecording,
+  audioStream,
 }: RealtimeCoachingPanelProps) {
   const { data: activeScript } = useActiveScriptSdr();
 
