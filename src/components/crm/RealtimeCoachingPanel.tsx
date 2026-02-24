@@ -187,12 +187,11 @@ export function RealtimeCoachingPanel({
   }, [isHallucination, requestAnalysis, buildFullTranscript]);
 
   // --- Dual Scribe connections: SDR (mic) and Lead (system audio) ---
+  // NOTE: No microphone option = manual mode. We pipe audio via sendAudio().
   const sdrScribe = useScribe({
     modelId: "scribe_v2_realtime",
     languageCode: "por",
     commitStrategy: CommitStrategy.VAD,
-    audioFormat: AudioFormat.PCM_16000,
-    sampleRate: 16000,
     onCommittedTranscript: (data) => addTranscript(data.text, "sdr"),
     onPartialTranscript: (data) => setSdrPartial(data.text || ""),
     onError: (err) => console.error("[Coaching] SDR Scribe error:", err),
@@ -202,8 +201,6 @@ export function RealtimeCoachingPanel({
     modelId: "scribe_v2_realtime",
     languageCode: "por",
     commitStrategy: CommitStrategy.VAD,
-    audioFormat: AudioFormat.PCM_16000,
-    sampleRate: 16000,
     onCommittedTranscript: (data) => addTranscript(data.text, "lead"),
     onPartialTranscript: (data) => setLeadPartial(data.text || ""),
     onError: (err) => console.error("[Coaching] Lead Scribe error:", err),
@@ -234,9 +231,18 @@ export function RealtimeCoachingPanel({
         }
         if (cancelled) return;
 
+        // Connect in manual audio mode — pass audioFormat + sampleRate at connect time
         await Promise.all([
-          sdrScribe.connect({ token: sdrTokenRes.data.token }),
-          leadScribe.connect({ token: leadTokenRes.data.token }),
+          sdrScribe.connect({
+            token: sdrTokenRes.data.token,
+            audioFormat: AudioFormat.PCM_16000,
+            sampleRate: 16000,
+          }),
+          leadScribe.connect({
+            token: leadTokenRes.data.token,
+            audioFormat: AudioFormat.PCM_16000,
+            sampleRate: 16000,
+          }),
         ]);
 
         if (cancelled) {
@@ -264,14 +270,38 @@ export function RealtimeCoachingPanel({
     };
   }, [isRecording]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Helper to pipe a MediaStream into a Scribe instance
+  // Helper to pipe a MediaStream into a Scribe instance at 16 kHz PCM16
   const pipeStreamToScribe = useCallback((stream: MediaStream, scribeInstance: ReturnType<typeof useScribe>) => {
+    // Browser may ignore the sampleRate hint; we'll resample if needed
     const ctx = new AudioContext({ sampleRate: 16000 });
+    const actualRate = ctx.sampleRate;
+    const targetRate = 16000;
     const source = ctx.createMediaStreamSource(stream);
-    const processor = ctx.createScriptProcessor(4096, 1, 1);
+    const bufferSize = 4096;
+    const processor = ctx.createScriptProcessor(bufferSize, 1, 1);
+
+    // Simple linear resampler for when browser ignores sampleRate hint
+    const resample = (input: Float32Array, fromRate: number, toRate: number): Float32Array => {
+      if (fromRate === toRate) return input;
+      const ratio = fromRate / toRate;
+      const outLen = Math.round(input.length / ratio);
+      const output = new Float32Array(outLen);
+      for (let i = 0; i < outLen; i++) {
+        const srcIdx = i * ratio;
+        const lo = Math.floor(srcIdx);
+        const hi = Math.min(lo + 1, input.length - 1);
+        const frac = srcIdx - lo;
+        output[i] = input[lo] * (1 - frac) + input[hi] * frac;
+      }
+      return output;
+    };
 
     processor.onaudioprocess = (e) => {
-      const float32 = e.inputBuffer.getChannelData(0);
+      let float32 = e.inputBuffer.getChannelData(0);
+      // Resample if the AudioContext didn't honor 16kHz
+      if (actualRate !== targetRate) {
+        float32 = resample(float32, actualRate, targetRate);
+      }
       const pcm16 = new Int16Array(float32.length);
       for (let i = 0; i < float32.length; i++) {
         const s = Math.max(-1, Math.min(1, float32[i]));
@@ -286,7 +316,9 @@ export function RealtimeCoachingPanel({
     };
 
     source.connect(processor);
+    // Connect to destination to keep processing alive (output is silent anyway)
     processor.connect(ctx.destination);
+    console.log(`[Coaching] Audio piping started: ctx.sampleRate=${actualRate}, target=${targetRate}`);
     return () => {
       processor.disconnect();
       source.disconnect();
