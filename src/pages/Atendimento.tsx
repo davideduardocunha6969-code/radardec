@@ -118,17 +118,21 @@ export default function Atendimento() {
     fetchData();
   }, [leadId, isAuthenticated]);
 
-  // Auto-stop call on window close
+  // Auto-stop call ONLY on actual page close/navigation (not protocol dialogs)
+  // We use 'pagehide' instead of 'beforeunload' because protocol handler dialogs
+  // (e.g. "Open WhatsApp?") can trigger 'beforeunload' on some browsers.
   useEffect(() => {
     if (!activeRecording) return;
-    const handleBeforeUnload = () => {
-      // Trigger stop as if SDR clicked "Finalizar"
+    const handlePageHide = (e: PageTransitionEvent) => {
+      // persisted === true means the page is just being put in bfcache (not destroyed)
+      // We still want to stop in that case too, but the key thing is pagehide
+      // does NOT fire for protocol handler dialogs.
       if (stopCallRef.current) {
         stopCallRef.current();
       }
     };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
   }, [activeRecording]);
 
   // Update window title
