@@ -237,7 +237,8 @@ export default function Atendimento() {
                   leadNome={lead.nome}
                   leadContext={lead.resumo_caso || undefined}
                   isRecording={activeRecording}
-                  audioStream={activeAudioStream}
+                  micStream={audioStreams.micStream}
+                  systemStream={audioStreams.systemStream}
                   topBarOnly
                   audioMonitor={audioMonitor}
                 />
@@ -274,9 +275,10 @@ export default function Atendimento() {
                 coach={coach}
                 leadNome={lead.nome}
                 leadContext={lead.resumo_caso || undefined}
-                isRecording={activeRecording}
-                audioStream={activeAudioStream}
-                bottomOnly
+                  isRecording={activeRecording}
+                  micStream={audioStreams.micStream}
+                  systemStream={audioStreams.systemStream}
+                  bottomOnly
               />
             </CoachingErrorBoundary>
           </div>
