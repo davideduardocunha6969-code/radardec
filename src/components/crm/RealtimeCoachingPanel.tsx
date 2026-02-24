@@ -297,11 +297,11 @@ export function RealtimeCoachingPanel({
     };
 
     processor.onaudioprocess = (e) => {
-      let float32 = e.inputBuffer.getChannelData(0);
+      const rawFloat32 = e.inputBuffer.getChannelData(0);
       // Resample if the AudioContext didn't honor 16kHz
-      if (actualRate !== targetRate) {
-        float32 = resample(float32, actualRate, targetRate);
-      }
+      const float32 = actualRate !== targetRate
+        ? resample(rawFloat32, actualRate, targetRate)
+        : rawFloat32;
       const pcm16 = new Int16Array(float32.length);
       for (let i = 0; i < float32.length; i++) {
         const s = Math.max(-1, Math.min(1, float32[i]));
