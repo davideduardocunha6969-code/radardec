@@ -312,7 +312,7 @@ export function RealtimeCoachingPanel({
 
   if (!isRecording) return null;
 
-  const isConnected = scribe.isConnected;
+  const isConnected = sdrScribe.isConnected || leadScribe.isConnected;
 
   // Unified top bar: transcription + audio monitor in one card
   const formatTime = (seconds: number): string => {
@@ -379,15 +379,19 @@ export function RealtimeCoachingPanel({
         {connectionError && <p className="text-[10px] text-destructive mb-1">{connectionError}</p>}
         <ScrollArea className="h-full">
           <div className="space-y-0.5 text-xs">
-            {scribe.committedTranscripts
-              .filter((t) => !isHallucination(t.text))
-              .map((t) => (
-                <p key={t.id} className="text-foreground">{t.text}</p>
-              ))}
-            {scribe.partialTranscript && (
-              <p className="text-muted-foreground italic">{scribe.partialTranscript}</p>
+            {labeledTranscripts.map((t) => (
+              <p key={t.id} className={t.speaker === "sdr" ? "text-primary" : "text-foreground"}>
+                <span className="font-semibold text-muted-foreground">{t.speaker === "sdr" ? "SDR" : "Lead"}:</span>{" "}
+                {t.text}
+              </p>
+            ))}
+            {(sdrPartial || leadPartial) && (
+              <>
+                {sdrPartial && <p className="text-primary/60 italic"><span className="font-semibold">SDR:</span> {sdrPartial}</p>}
+                {leadPartial && <p className="text-muted-foreground italic"><span className="font-semibold">Lead:</span> {leadPartial}</p>}
+              </>
             )}
-            {!scribe.committedTranscripts.length && !scribe.partialTranscript && (
+            {!labeledTranscripts.length && !sdrPartial && !leadPartial && (
               <p className="text-muted-foreground text-xs text-center py-2">Aguardando fala...</p>
             )}
           </div>
