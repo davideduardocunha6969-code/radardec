@@ -4,12 +4,8 @@ import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useUpdateColu
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { VoipDialer } from "@/components/crm/VoipDialer";
-import { WhatsAppCallRecorder } from "@/components/crm/WhatsAppCallRecorder";
 import { WhatsAppAICallButton } from "@/components/crm/WhatsAppAICallButton";
 import { LeadContatosTab } from "@/components/crm/LeadContatosTab";
-import { RealtimeCoachingPanel } from "@/components/crm/RealtimeCoachingPanel";
-import { CoachingErrorBoundary } from "@/components/crm/coaching/CoachingErrorBoundary";
 import { AgendaClosersTab } from "@/components/crm/AgendaClosersTab";
 import { useRobosCoachAtivos, type RoboCoach } from "@/hooks/useRobosCoach";
 import { useScriptsSdr } from "@/hooks/useScriptsSdr";
@@ -145,20 +141,7 @@ export default function CrmFunilKanban() {
   const [detailLead, setDetailLead] = useState<CrmLead | null>(null);
   const [editingLeadData, setEditingLeadData] = useState(false);
   const [editLeadForm, setEditLeadForm] = useState<{ nome: string; endereco: string; telefones: LeadTelefone[] }>({ nome: "", endereco: "", telefones: [] });
-  const [activeRecording, setActiveRecording] = useState(false);
-  const [activeAudioStream, setActiveAudioStream] = useState<MediaStream | null>(null);
 
-  const getCoachForLead = useCallback((lead: CrmLead, tipo: "sdr" | "closer" = "sdr"): RoboCoach | null => {
-    const coluna = colunas?.find(c => c.id === lead.coluna_id);
-    const coachId = tipo === "closer" ? coluna?.robo_coach_closer_id : coluna?.robo_coach_id;
-    if (!coachId || !robosCoach) return null;
-    return robosCoach.find(r => r.id === coachId) || null;
-  }, [colunas, robosCoach]);
-
-  const handleRecordingStateChange = useCallback((isRecording: boolean, stream: MediaStream | null) => {
-    setActiveRecording(isRecording);
-    setActiveAudioStream(stream);
-  }, []);
 
   const [uploadDialog, setUploadDialog] = useState(false);
   const [uploadColunaId, setUploadColunaId] = useState("");
@@ -567,8 +550,8 @@ export default function CrmFunilKanban() {
       </Dialog>
 
       {/* Dialog Detalhe Lead */}
-      <Dialog open={!!detailLead} onOpenChange={(o) => { if (!o && !activeRecording) { setDetailLead(null); setEditingLeadData(false); } }}>
-        <DialogContent className="max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] rounded-none border-0 overflow-y-auto overflow-x-hidden flex flex-col p-0" onInteractOutside={(e) => { if (activeRecording) e.preventDefault(); }} onPointerDownOutside={(e) => { if (activeRecording) e.preventDefault(); }}>
+      <Dialog open={!!detailLead} onOpenChange={(o) => { if (!o) { setDetailLead(null); setEditingLeadData(false); } }}>
+        <DialogContent className="max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] rounded-none border-0 overflow-y-auto overflow-x-hidden flex flex-col p-0">
           <DialogHeader className="px-6 pt-4 pb-2 shrink-0 border-b">
             <DialogTitle>{detailLead?.nome}</DialogTitle>
           </DialogHeader>
@@ -655,8 +638,36 @@ export default function CrmFunilKanban() {
                               <Badge variant="outline" className="text-xs">{t.tipo}</Badge>
                               <div className="flex items-center gap-1 ml-auto">
                                 <WhatsAppAICallButton leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} />
-                                <WhatsAppCallRecorder leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} onRecordingStateChange={handleRecordingStateChange} />
-                                <VoipDialer leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} onRecordingStateChange={handleRecordingStateChange} />
+                                <Button
+                                  size="sm"
+                                  className="gap-1.5 bg-green-600 hover:bg-green-700 text-white h-8 px-2 text-xs"
+                                  onClick={() => {
+                                    window.open(
+                                      `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=whatsapp&funilId=${funilId}`,
+                                      `atendimento_${detailLead.id}`,
+                                      "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
+                                    );
+                                  }}
+                                  disabled={!t.numero}
+                                >
+                                  <Phone className="h-3.5 w-3.5" />
+                                  WhatsApp
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  className="gap-1.5 h-8 px-2 text-xs"
+                                  onClick={() => {
+                                    window.open(
+                                      `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=voip&funilId=${funilId}`,
+                                      `atendimento_${detailLead.id}`,
+                                      "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
+                                    );
+                                  }}
+                                  disabled={!t.numero}
+                                >
+                                  <Phone className="h-3.5 w-3.5" />
+                                  Ligar
+                                </Button>
                               </div>
                             </div>
                             {t.observacao && <p className="text-xs text-muted-foreground ml-6 mt-0.5 italic">{t.observacao}</p>}
@@ -665,18 +676,6 @@ export default function CrmFunilKanban() {
                       )}
                     </div>
 
-                    {/* Real-time coaching panel inside lead card */}
-                    {activeRecording && getCoachForLead(detailLead) && (
-                      <CoachingErrorBoundary>
-                        <RealtimeCoachingPanel
-                          coach={getCoachForLead(detailLead)!}
-                          leadNome={detailLead.nome}
-                          leadContext={detailLead.resumo_caso || undefined}
-                          isRecording={activeRecording}
-                          audioStream={activeAudioStream}
-                        />
-                      </CoachingErrorBoundary>
-                    )}
 
                     {detailLead.resumo_caso && <div><label className="text-sm font-medium text-muted-foreground">Resumo do Caso (IA)</label><p className="text-sm bg-muted p-3 rounded-md">{detailLead.resumo_caso}</p></div>}
                     <div className="flex items-center gap-4">
@@ -721,25 +720,41 @@ export default function CrmFunilKanban() {
                           <Badge variant="outline" className="text-xs">{t.tipo}</Badge>
                           <div className="flex items-center gap-1 ml-auto">
                             <WhatsAppAICallButton leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} />
-                            <WhatsAppCallRecorder leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} onRecordingStateChange={handleRecordingStateChange} />
-                            <VoipDialer leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} onRecordingStateChange={handleRecordingStateChange} />
+                            <Button
+                              size="sm"
+                              className="gap-1.5 bg-green-600 hover:bg-green-700 text-white h-8 px-2 text-xs"
+                              onClick={() => {
+                                window.open(
+                                  `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=whatsapp&funilId=${funilId}`,
+                                  `atendimento_${detailLead.id}`,
+                                  "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
+                                );
+                              }}
+                              disabled={!t.numero}
+                            >
+                              <Phone className="h-3.5 w-3.5" />
+                              WhatsApp
+                            </Button>
+                            <Button
+                              size="sm"
+                              className="gap-1.5 h-8 px-2 text-xs"
+                              onClick={() => {
+                                window.open(
+                                  `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=voip&funilId=${funilId}`,
+                                  `atendimento_${detailLead.id}`,
+                                  "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
+                                );
+                              }}
+                              disabled={!t.numero}
+                            >
+                              <Phone className="h-3.5 w-3.5" />
+                              Ligar
+                            </Button>
                           </div>
                         </div>
                       ))}
                     </div>
 
-                    {/* Real-time coaching panel for Closer */}
-                    {activeRecording && getCoachForLead(detailLead, "closer") && (
-                      <CoachingErrorBoundary>
-                        <RealtimeCoachingPanel
-                          coach={getCoachForLead(detailLead, "closer")!}
-                          leadNome={detailLead.nome}
-                          leadContext={detailLead.resumo_caso || undefined}
-                          isRecording={activeRecording}
-                          audioStream={activeAudioStream}
-                        />
-                      </CoachingErrorBoundary>
-                    )}
 
                     {/* Resumo IA dos Contatos SDR */}
                     {detailLead.resumo_ia_contatos ? (

@@ -1,6 +1,6 @@
+import { forwardRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle2, Circle } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import type { ChecklistItem } from "./coachingData";
 import type { LucideIcon } from "lucide-react";
 
@@ -13,12 +13,12 @@ interface ChecklistCardProps {
   className?: string;
 }
 
-export function ChecklistCard({ title, icon: Icon, iconColor = "text-primary", items, completedIds, className }: ChecklistCardProps) {
+export const ChecklistCard = forwardRef<HTMLDivElement, ChecklistCardProps>(function ChecklistCard({ title, icon: Icon, iconColor = "text-primary", items, completedIds, className }, ref) {
   const doneCount = completedIds.length;
   const total = items.length;
 
   return (
-    <Card className={`border-border/60 flex flex-col ${className || ""}`}>
+    <Card ref={ref} className={`border-border/60 flex flex-col ${className || ""}`}>
       <CardHeader className="pb-1 px-2.5 pt-2 shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xs flex items-center gap-1.5">
@@ -63,4 +63,4 @@ export function ChecklistCard({ title, icon: Icon, iconColor = "text-primary", i
       </CardContent>
     </Card>
   );
-}
+});
