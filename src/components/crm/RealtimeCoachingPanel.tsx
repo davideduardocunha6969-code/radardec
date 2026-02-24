@@ -165,6 +165,7 @@ export function RealtimeCoachingPanel({
   const micStreamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const scribeConnectedRef = useRef(false);
 
   useEffect(() => {
     if (!isRecording) return;
@@ -181,7 +182,8 @@ export function RealtimeCoachingPanel({
         if (cancelled) return;
 
         await scribe.connect({ token: data.token, audioFormat: "pcm_16000" as any, sampleRate: 16000 });
-        if (cancelled) { scribe.disconnect(); return; }
+        scribeConnectedRef.current = true;
+        if (cancelled) { scribe.disconnect(); scribeConnectedRef.current = false; return; }
 
         let micStream: MediaStream;
         try {
@@ -204,7 +206,7 @@ export function RealtimeCoachingPanel({
         processorRef.current = processor;
 
         processor.onaudioprocess = (e) => {
-          if (!scribe.isConnected) return;
+          if (!scribeConnectedRef.current) return;
           const inputData = e.inputBuffer.getChannelData(0);
           const int16 = new Int16Array(inputData.length);
           for (let i = 0; i < inputData.length; i++) {
@@ -229,6 +231,7 @@ export function RealtimeCoachingPanel({
     connectScribe();
     return () => {
       cancelled = true;
+      scribeConnectedRef.current = false;
       if (processorRef.current) { processorRef.current.disconnect(); processorRef.current = null; }
       if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
       if (micStreamRef.current) { micStreamRef.current.getTracks().forEach(t => t.stop()); micStreamRef.current = null; }
