@@ -143,6 +143,8 @@ export default function CrmFunilKanban() {
   const [leadForm, setLeadForm] = useState({ nome: "", endereco: "", telefones: [{ numero: "", tipo: "celular" }] as LeadTelefone[], coluna_id: "" });
 
   const [detailLead, setDetailLead] = useState<CrmLead | null>(null);
+  const [editingLeadData, setEditingLeadData] = useState(false);
+  const [editLeadForm, setEditLeadForm] = useState<{ nome: string; endereco: string; telefones: LeadTelefone[] }>({ nome: "", endereco: "", telefones: [] });
   const [activeRecording, setActiveRecording] = useState(false);
   const [activeAudioStream, setActiveAudioStream] = useState<MediaStream | null>(null);
 
