@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Mic, MicOff, Loader2, ClipboardList, Heart, Brain, BookOpen, Presentation } from "lucide-react";
+import { Mic, MicOff, Loader2, ClipboardList, Heart, Brain, BookOpen, Presentation, Star } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type RoboCoach } from "@/hooks/useRobosCoach";
 import { useActiveScriptSdr } from "@/hooks/useScriptsSdr";
@@ -41,6 +41,7 @@ export function RealtimeCoachingPanel({
 
   const [apresentacaoDone, setApresentacaoDone] = useState<string[]>([]);
   const [qualificationDone, setQualificationDone] = useState<string[]>([]);
+  const [showRateDone, setShowRateDone] = useState<string[]>([]);
   const [objections, setObjections] = useState<Objection[]>([]);
   const [recaItems, setRecaItems] = useState<DynamicItem[]>([]);
   const [ralocaItems, setRalocaItems] = useState<DynamicItem[]>([]);
@@ -63,6 +64,10 @@ export function RealtimeCoachingPanel({
     ? activeScript.apresentacao
     : [];
 
+  const showRateItems: ChecklistItem[] = activeScript?.show_rate?.length
+    ? activeScript.show_rate
+    : [];
+
   const instructionsText = INSTRUCTIONS_TEXT;
 
   const requestAnalysis = useCallback(
@@ -83,6 +88,7 @@ export function RealtimeCoachingPanel({
             scriptItems: {
               qualificacao: qualificationItems,
               apresentacao: apresentacaoItems,
+              show_rate: showRateItems,
             },
           },
         });
@@ -96,6 +102,7 @@ export function RealtimeCoachingPanel({
         if (analysis) {
           setApresentacaoDone(analysis.apresentacao_done || []);
           setQualificationDone(analysis.qualification_done || []);
+          setShowRateDone(analysis.show_rate_done || []);
           setObjections(analysis.objections || []);
           setRecaItems(analysis.reca_items || []);
           setRalocaItems(analysis.raloca_items || []);
@@ -107,7 +114,7 @@ export function RealtimeCoachingPanel({
         isAnalyzingRef.current = false;
       }
     },
-    [coach.instrucoes, leadNome, leadContext, qualificationItems, apresentacaoItems]
+    [coach.instrucoes, leadNome, leadContext, qualificationItems, apresentacaoItems, showRateItems]
   );
 
   // Filter out STT hallucinations that occur during silence
@@ -297,6 +304,16 @@ export function RealtimeCoachingPanel({
           items={qualificationItems}
           completedIds={qualificationDone}
         />
+        {showRateItems.length > 0 && (
+          <ChecklistCard
+            title="Show Rate"
+            icon={Star}
+            iconColor="text-amber-500"
+            items={showRateItems}
+            completedIds={showRateDone}
+            className="flex-none"
+          />
+        )}
       </div>
 
       {/* Column 2: Objeções + RECA + RALOCA */}

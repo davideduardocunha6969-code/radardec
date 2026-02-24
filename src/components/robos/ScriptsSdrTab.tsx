@@ -25,6 +25,7 @@ import {
   ClipboardList,
   X,
   GripVertical,
+  Star,
 } from "lucide-react";
 
 function generateId(label: string): string {
@@ -110,6 +111,18 @@ export default function ScriptsSdrTab() {
   const updateScript = useUpdateScriptSdr();
   const deleteScript = useDeleteScriptSdr();
 
+  const defaultShowRate: ScriptItem[] = [
+    { id: "reafirmacao", label: "Reafirmação", description: "Perfeito, então ficou (dia da semana) às (horário). Nesse horário o especialista vai calcular e revisar sua rescisão junto com o senhor." },
+    { id: "antecipacao_mental", label: "Antecipação mental", description: "Em 20 minutos o senhor já vai saber se tem diferença para receber ou se está tudo certo." },
+    { id: "autoridade_closer", label: "Autoridade do closer", description: "Quem vai te atender é um especialista em cálculos de motoristas, ele faz isso todos os dias." },
+    { id: "ambiente", label: "Ambiente", description: "É importante estar num lugar tranquilo, com internet boa, para conseguir entender tudo com calma." },
+    { id: "inclusao_familiar", label: "Inclusão familiar", description: "Se quiser, pode fazer junto com sua esposa ou alguém da família. É até bom para ajudarem o Sr. caso o Sr. precise." },
+    { id: "microcompromisso", label: "Microcompromisso explícito", description: "O senhor consegue estar disponível nesse horário sem dirigir ou fazer outra coisa?" },
+    { id: "exclusividade_agenda", label: "Exclusividade da agenda", description: "Esse horário fica reservado só para o senhor, porque a agenda do especialista é bem corrida." },
+    { id: "regra_imprevisto", label: "Regra do imprevisto", description: "Se surgir qualquer imprevisto, me avisa antes para a gente remarcar e encaixar outra pessoa no lugar, combinado?" },
+    { id: "confirmacao_lembrete", label: "Confirmação + lembrete", description: "Eu já vou te mandar a confirmação no WhatsApp com um vídeo de apresentação do escritório e 15 minutos antes eu te lembro novamente." },
+  ];
+
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<ScriptSdr | null>(null);
   const [form, setForm] = useState({
@@ -117,11 +130,12 @@ export default function ScriptsSdrTab() {
     descricao: "",
     apresentacao: [] as ScriptItem[],
     qualificacao: [] as ScriptItem[],
+    show_rate: [...defaultShowRate] as ScriptItem[],
   });
 
   const openNew = () => {
     setEditing(null);
-    setForm({ nome: "", descricao: "", apresentacao: [], qualificacao: [] });
+    setForm({ nome: "", descricao: "", apresentacao: [], qualificacao: [], show_rate: [...defaultShowRate] });
     setFormOpen(true);
   };
 
@@ -132,6 +146,7 @@ export default function ScriptsSdrTab() {
       descricao: s.descricao || "",
       apresentacao: s.apresentacao,
       qualificacao: s.qualificacao,
+      show_rate: s.show_rate?.length ? s.show_rate : [...defaultShowRate],
     });
     setFormOpen(true);
   };
@@ -143,6 +158,7 @@ export default function ScriptsSdrTab() {
       descricao: form.descricao,
       apresentacao: form.apresentacao.filter((i) => i.label.trim()),
       qualificacao: form.qualificacao.filter((i) => i.label.trim()),
+      show_rate: form.show_rate.filter((i) => i.label.trim()),
     };
     if (editing) {
       updateScript.mutate({ id: editing.id, ...payload }, { onSuccess: () => setFormOpen(false) });
@@ -214,6 +230,9 @@ export default function ScriptsSdrTab() {
                   <Badge variant="outline" className="gap-1">
                     <ClipboardList className="h-3 w-3" />{s.qualificacao.length} qualificação
                   </Badge>
+                  <Badge variant="outline" className="gap-1">
+                    <Star className="h-3 w-3" />{s.show_rate?.length || 0} show rate
+                  </Badge>
                 </div>
                 <div className="flex justify-end gap-1">
                   <Button variant="ghost" size="sm" onClick={() => openEdit(s)}>
@@ -263,6 +282,15 @@ export default function ScriptsSdrTab() {
                 icon={<ClipboardList className="h-4 w-4 text-blue-500" />}
                 items={form.qualificacao}
                 onChange={(qualificacao) => setForm({ ...form, qualificacao })}
+              />
+
+              <Separator />
+
+              <ScriptItemEditor
+                title="Falas de Show Rate"
+                icon={<Star className="h-4 w-4 text-amber-500" />}
+                items={form.show_rate}
+                onChange={(show_rate) => setForm({ ...form, show_rate })}
               />
 
             </div>

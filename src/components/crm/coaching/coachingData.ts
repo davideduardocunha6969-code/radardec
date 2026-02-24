@@ -21,6 +21,7 @@ export interface DynamicItem {
 export interface CoachingAnalysis {
   apresentacao_done: string[];
   qualification_done: string[];
+  show_rate_done: string[];
   objections: Objection[];
   reca_items: DynamicItem[];
   raloca_items: DynamicItem[];
