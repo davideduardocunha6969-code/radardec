@@ -71,11 +71,9 @@ export function RealtimeCoachingPanel({
   const [ralocaItems, setRalocaItems] = useState<DynamicItem[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
-  const [micLevel, setMicLevel] = useState(0);
-
-  const lastAnalyzedRef = useRef("");
-  const isAnalyzingRef = useRef(false);
-  const allTranscriptsRef = useRef<string[]>([]);
+  const [labeledTranscripts, setLabeledTranscripts] = useState<LabeledTranscript[]>([]);
+  const [sdrPartial, setSdrPartial] = useState("");
+  const [leadPartial, setLeadPartial] = useState("");
   const animFrameRef = useRef<number | null>(null);
 
   // Qualification items from script or fallback
