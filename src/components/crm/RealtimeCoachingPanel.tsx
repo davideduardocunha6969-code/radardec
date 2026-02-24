@@ -78,7 +78,7 @@ export function RealtimeCoachingPanel({
       try {
         const [scriptRes, recaRes, ralocaRes, radovecaRes, showrateRes] = await Promise.allSettled([
           supabase.functions.invoke("coaching-realtime", {
-            body: { ...baseBody, mode: "script", scriptItems: { qualificacao: qualificationItems, apresentacao: apresentacaoItems } },
+            body: { ...baseBody, mode: "script", scriptItems: { qualificacao: qualificationItems, apresentacao: apresentacaoItems, fechamento: fechamentoItems } },
           }),
           supabase.functions.invoke("coaching-realtime", {
             body: { ...baseBody, mode: "reca", coachInstructions: coach.instrucoes_reca || coach.instrucoes },
@@ -90,7 +90,7 @@ export function RealtimeCoachingPanel({
             body: { ...baseBody, mode: "radoveca", coachInstructions: coach.instrucoes_radoveca || coach.instrucoes },
           }),
           supabase.functions.invoke("coaching-realtime", {
-            body: { ...baseBody, mode: "showrate", showRateItems },
+            body: { ...baseBody, mode: "showrate", showRateItems, coachInstructions: coach.instrucoes_noshow || "" },
           }),
         ]);
 
