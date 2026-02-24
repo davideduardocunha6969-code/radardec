@@ -349,7 +349,7 @@ serve(async (req) => {
         promptConfig = buildNoshowPrompt(transcript, leadName, leadContext, body.coachInstructions);
         break;
       case "showrate":
-        promptConfig = buildShowratePrompt(transcript, leadName, leadContext, body.showRateItems);
+        promptConfig = buildShowratePrompt(transcript, leadName, leadContext, body.showRateItems, body.coachInstructions);
         break;
       default:
         // Legacy fallback — single combined call
