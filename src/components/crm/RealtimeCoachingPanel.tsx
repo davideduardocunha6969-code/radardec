@@ -47,6 +47,7 @@ export function RealtimeCoachingPanel({
   leadNome,
   leadContext,
   isRecording,
+  audioStream,
   topBarOnly,
   bottomOnly,
   audioMonitor,
