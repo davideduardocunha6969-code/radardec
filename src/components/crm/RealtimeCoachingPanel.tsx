@@ -179,7 +179,8 @@ export function RealtimeCoachingPanel({
         if (cancelled) return;
 
         await scribe.connect({ token: data.token, audioFormat: AudioFormat.PCM_16000, sampleRate: 16000 });
-        if (cancelled) { scribe.disconnect(); return; }
+        scribeConnectedRef.current = true;
+        if (cancelled) { scribe.disconnect(); scribeConnectedRef.current = false; return; }
 
         let micStream: MediaStream;
         try {
