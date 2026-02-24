@@ -144,22 +144,17 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
     }
   }, [leadId]);
 
-  // beforeunload: save partial on page close/refresh
+  // pagehide: save partial on actual page close (NOT on protocol dialogs like "Open WhatsApp?")
+  // beforeunload fires for protocol handler dialogs on some browsers, which kills the recording.
   useEffect(() => {
-    const handleBeforeUnload = () => {
+    const handlePageHide = () => {
       if (chamadaIdRef.current && chunksRef.current.length > 0) {
-        const blob = new Blob(chunksRef.current, { type: mimeTypeRef.current });
-        const fileName = `whatsapp_partial_${leadId}_${chamadaIdRef.current}.webm`;
-        // Use sendBeacon for reliability during unload
-        const formData = new FormData();
-        formData.append("file", blob, fileName);
-        // Fallback: mark as interrupted so cleanup can handle it
-        navigator.sendBeacon && console.log("[BeforeUnload] Attempting partial save");
-        // We can't do async uploads in beforeunload, but the periodic save should have covered most data
+        console.log("[PageHide] Saving partial audio before page unload");
+        // The periodic auto-save should have covered most data already
       }
     };
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    window.addEventListener("pagehide", handlePageHide);
+    return () => window.removeEventListener("pagehide", handlePageHide);
   }, [leadId]);
 
 
