@@ -74,20 +74,30 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
   };
 
   const updateLevels = useCallback(() => {
+    let ml = 0, sl = 0;
     if (micAnalyserRef.current) {
       const data = new Uint8Array(micAnalyserRef.current.frequencyBinCount);
       micAnalyserRef.current.getByteFrequencyData(data);
       const avg = data.reduce((a, b) => a + b) / data.length;
-      setMicLevel(Math.min(100, (avg / 128) * 100));
+      ml = Math.min(100, (avg / 128) * 100);
+      setMicLevel(ml);
     }
     if (systemAnalyserRef.current) {
       const data = new Uint8Array(systemAnalyserRef.current.frequencyBinCount);
       systemAnalyserRef.current.getByteFrequencyData(data);
       const avg = data.reduce((a, b) => a + b) / data.length;
-      setSystemLevel(Math.min(100, (avg / 128) * 100));
+      sl = Math.min(100, (avg / 128) * 100);
+      setSystemLevel(sl);
     }
+    onAudioMonitorUpdate?.({
+      hasMicAudio: hasMicAudio,
+      hasSystemAudio: hasSystemAudio,
+      micLevel: ml,
+      systemLevel: sl,
+      duration: durationRef.current,
+    });
     animationFrameRef.current = requestAnimationFrame(updateLevels);
-  }, []);
+  }, [onAudioMonitorUpdate, hasMicAudio, hasSystemAudio]);
 
   const stopAllStreams = useCallback(() => {
     streamsRef.current.forEach((s) => s.getTracks().forEach((t) => t.stop()));
