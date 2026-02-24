@@ -25,6 +25,7 @@ import {
   ClipboardList,
   X,
   GripVertical,
+  CalendarCheck,
 } from "lucide-react";
 
 function generateId(label: string): string {
@@ -117,11 +118,12 @@ export default function ScriptsSdrTab() {
     descricao: "",
     apresentacao: [] as ScriptItem[],
     qualificacao: [] as ScriptItem[],
+    show_rate: [] as ScriptItem[],
   });
 
   const openNew = () => {
     setEditing(null);
-    setForm({ nome: "", descricao: "", apresentacao: [], qualificacao: [] });
+    setForm({ nome: "", descricao: "", apresentacao: [], qualificacao: [], show_rate: DEFAULT_SHOW_RATE_ITEMS() });
     setFormOpen(true);
   };
 
@@ -132,6 +134,7 @@ export default function ScriptsSdrTab() {
       descricao: s.descricao || "",
       apresentacao: s.apresentacao,
       qualificacao: s.qualificacao,
+      show_rate: s.show_rate?.length ? s.show_rate : DEFAULT_SHOW_RATE_ITEMS(),
     });
     setFormOpen(true);
   };
@@ -143,6 +146,7 @@ export default function ScriptsSdrTab() {
       descricao: form.descricao,
       apresentacao: form.apresentacao.filter((i) => i.label.trim()),
       qualificacao: form.qualificacao.filter((i) => i.label.trim()),
+      show_rate: form.show_rate.filter((i) => i.label.trim()),
     };
     if (editing) {
       updateScript.mutate({ id: editing.id, ...payload }, { onSuccess: () => setFormOpen(false) });
@@ -214,6 +218,9 @@ export default function ScriptsSdrTab() {
                   <Badge variant="outline" className="gap-1">
                     <ClipboardList className="h-3 w-3" />{s.qualificacao.length} qualificação
                   </Badge>
+                  <Badge variant="outline" className="gap-1">
+                    <CalendarCheck className="h-3 w-3" />{s.show_rate?.length || 0} show rate
+                  </Badge>
                 </div>
                 <div className="flex justify-end gap-1">
                   <Button variant="ghost" size="sm" onClick={() => openEdit(s)}>
@@ -263,6 +270,15 @@ export default function ScriptsSdrTab() {
                 icon={<ClipboardList className="h-4 w-4 text-blue-500" />}
                 items={form.qualificacao}
                 onChange={(qualificacao) => setForm({ ...form, qualificacao })}
+              />
+
+              <Separator />
+
+              <ScriptItemEditor
+                title="Falas de Show Rate"
+                icon={<CalendarCheck className="h-4 w-4 text-amber-500" />}
+                items={form.show_rate}
+                onChange={(show_rate) => setForm({ ...form, show_rate })}
               />
 
             </div>
