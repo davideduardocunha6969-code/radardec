@@ -214,7 +214,7 @@ export function RealtimeCoachingPanel({
           const uint8 = new Uint8Array(int16.buffer);
           let binary = "";
           for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
-          try { scribe.sendAudio(btoa(binary), { sampleRate: 16000 }); } catch { /* ignore */ }
+          try { scribe.sendAudio(btoa(binary)); } catch (err) { console.error("[Coaching V2] sendAudio error:", err); }
         };
 
         source.connect(processor);
