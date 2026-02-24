@@ -71,6 +71,8 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedChunksRef = useRef(0);
   const mimeTypeRef = useRef("audio/webm");
+  const manualStopRef = useRef(false);
+  const audioContextDestRef = useRef<MediaStreamAudioDestinationNode | null>(null);
 
   const createChamada = useCreateChamada();
   const updateChamada = useUpdateChamada();
