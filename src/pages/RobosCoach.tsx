@@ -85,15 +85,19 @@ export default function RobosCoach() {
 
   const PromptPreview = ({ label, icon: Icon, color, text }: { label: string; icon: any; color: string; text: string }) => (
     text ? (
-      <div className="space-y-1">
-        <div className="flex items-center gap-1.5">
-          <Icon className={`h-3.5 w-3.5 ${color}`} />
-          <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
-        </div>
-        <div className="bg-muted rounded-md p-2 max-h-20 overflow-auto">
-          <p className="text-[11px] whitespace-pre-wrap">{text.slice(0, 200)}{text.length > 200 ? "..." : ""}</p>
-        </div>
-      </div>
+      <AccordionItem value={label} className="border-none">
+        <AccordionTrigger className="py-1.5 hover:no-underline">
+          <div className="flex items-center gap-1.5">
+            <Icon className={`h-3.5 w-3.5 ${color}`} />
+            <span className="text-[10px] font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+          </div>
+        </AccordionTrigger>
+        <AccordionContent>
+          <div className="bg-muted rounded-md p-2 max-h-28 overflow-auto">
+            <p className="text-[11px] whitespace-pre-wrap">{text.slice(0, 300)}{text.length > 300 ? "..." : ""}</p>
+          </div>
+        </AccordionContent>
+      </AccordionItem>
     ) : null
   );
 
