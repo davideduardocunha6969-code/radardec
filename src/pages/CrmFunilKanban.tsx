@@ -686,7 +686,6 @@ export default function CrmFunilKanban() {
                                   Ligar
                                 </Button>
                               </div>
-                              </div>
                             </div>
                             {t.observacao && <p className="text-xs text-muted-foreground ml-6 mt-0.5 italic">{t.observacao}</p>}
                           </div>
