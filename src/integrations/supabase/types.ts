@@ -1707,6 +1707,7 @@ export type Database = {
           qualificacao: Json
           raloca: Json
           reca: Json
+          show_rate: Json
           tipo: string
           updated_at: string
           user_id: string
@@ -1723,6 +1724,7 @@ export type Database = {
           qualificacao?: Json
           raloca?: Json
           reca?: Json
+          show_rate?: Json
           tipo?: string
           updated_at?: string
           user_id: string
@@ -1739,6 +1741,7 @@ export type Database = {
           qualificacao?: Json
           raloca?: Json
           reca?: Json
+          show_rate?: Json
           tipo?: string
           updated_at?: string
           user_id?: string
