@@ -2,7 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Mic, MicOff, Loader2 } from "lucide-react";
+import { Mic, MicOff, Loader2, ClipboardList, Presentation } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type RoboCoach } from "@/hooks/useRobosCoach";
 import { type ScriptSdr } from "@/hooks/useScriptsSdr";
@@ -266,9 +266,9 @@ export function RealtimeCoachingPanel({
           alertaCompliance={alertaCompliance}
         />
         {apresentacaoItems.length > 0 && (
-          <ChecklistCard title="Apresentação" icon={(() => { const { Presentation } = require("lucide-react"); return Presentation; })()} iconColor="text-emerald-500" items={apresentacaoItems} completedIds={apresentacaoDone} className="flex-none" />
+          <ChecklistCard title="Apresentação" icon={Presentation} iconColor="text-emerald-500" items={apresentacaoItems} completedIds={apresentacaoDone} className="flex-none" />
         )}
-        <ChecklistCard title="Qualificação" icon={(() => { const { ClipboardList } = require("lucide-react"); return ClipboardList; })()} iconColor="text-blue-500" items={qualificationItems} completedIds={qualificationDone} />
+        <ChecklistCard title="Qualificação" icon={ClipboardList} iconColor="text-blue-500" items={qualificationItems} completedIds={qualificationDone} />
       </div>
 
       {/* Column 2: Âncoras + Objeções + Transcrição */}
