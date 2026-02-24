@@ -29,6 +29,8 @@ interface RealtimeCoachingPanelProps {
   leadContext?: string;
   isRecording: boolean;
   audioStream: MediaStream | null;
+  topBarOnly?: boolean;
+  bottomOnly?: boolean;
 }
 
 export function RealtimeCoachingPanel({
@@ -36,6 +38,8 @@ export function RealtimeCoachingPanel({
   leadNome,
   leadContext,
   isRecording,
+  topBarOnly,
+  bottomOnly,
 }: RealtimeCoachingPanelProps) {
   const { data: activeScript } = useActiveScriptSdr();
 
@@ -283,67 +287,28 @@ export function RealtimeCoachingPanel({
 
   const isConnected = scribe.isConnected;
 
-  return (
-    <div className="flex flex-col gap-2 overflow-hidden h-full">
-      {/* Top bar: Transcrição (wide) + Mic status (small right) */}
-      <div className="flex gap-2 shrink-0" style={{ maxHeight: '160px' }}>
-        {/* Transcrição — quase largura total */}
-        <Card className="border-primary/20 flex-1 flex flex-col min-h-[0]">
-          <CardHeader className="pb-1 px-3 pt-2 shrink-0">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-xs flex items-center gap-1.5">
-                {isConnected ? (
-                  <Mic className="h-3.5 w-3.5 text-primary" />
-                ) : (
-                  <MicOff className="h-3.5 w-3.5 text-muted-foreground" />
-                )}
-                Transcrição em Tempo Real
-              </CardTitle>
-              <div className="flex items-center gap-1.5">
-                {isAnalyzing && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-                <Badge variant={isConnected ? "default" : "secondary"} className="text-[10px]">
-                  {isConnected ? "Ao vivo" : "Conectando..."}
-                </Badge>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent className="px-3 pb-2 flex-1 min-h-0">
-            {connectionError && <p className="text-[10px] text-destructive mb-1">{connectionError}</p>}
-            <ScrollArea className="h-full">
-              <div className="space-y-0.5 text-xs">
-                {scribe.committedTranscripts
-                  .filter((t) => !isHallucination(t.text))
-                  .map((t) => (
-                    <p key={t.id} className="text-foreground">{t.text}</p>
-                  ))}
-                {scribe.partialTranscript && (
-                  <p className="text-muted-foreground italic">{scribe.partialTranscript}</p>
-                )}
-                {!scribe.committedTranscripts.length && !scribe.partialTranscript && (
-                  <p className="text-muted-foreground text-xs text-center py-4">Aguardando fala...</p>
-                )}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-
-        {/* Mic status — canto superior direito, compacto */}
-        <Card className="border-primary/20 w-48 shrink-0 flex flex-col">
-          <CardContent className="p-2 flex flex-col gap-1.5 flex-1 justify-center">
-            <Progress value={micLevel} className="h-1.5" />
-            <div className="flex items-center justify-between">
-              <span className="text-[10px] text-muted-foreground">
-                {isConnected ? "Microfone ativo" : "Conectando mic..."}
-              </span>
-              {isConnected ? (
-                <Mic className="h-3 w-3 text-primary" />
-              ) : (
-                <MicOff className="h-3 w-3 text-muted-foreground" />
-              )}
-            </div>
+  // Unified top bar: transcription + mic status in one card
+  const topBar = (
+    <Card className="border-primary/20 flex flex-col h-full">
+      <CardHeader className="pb-1 px-3 pt-2 shrink-0">
+        <div className="flex items-center justify-between">
+          <CardTitle className="text-xs flex items-center gap-1.5">
+            {isConnected ? (
+              <Mic className="h-3.5 w-3.5 text-primary" />
+            ) : (
+              <MicOff className="h-3.5 w-3.5 text-muted-foreground" />
+            )}
+            Transcrição em Tempo Real
+          </CardTitle>
+          <div className="flex items-center gap-2">
+            {isAnalyzing && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+            <Progress value={micLevel} className="h-1.5 w-16" />
+            <Badge variant={isConnected ? "default" : "secondary"} className="text-[10px]">
+              {isConnected ? "Ao vivo" : "Conectando..."}
+            </Badge>
             <Sheet>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="sm" className="w-full text-[10px] h-6 gap-1">
+                <Button variant="ghost" size="sm" className="text-[10px] h-6 gap-1 px-2">
                   <BookOpen className="h-3 w-3" />
                   Instruções
                 </Button>
@@ -357,62 +322,96 @@ export function RealtimeCoachingPanel({
                 </div>
               </SheetContent>
             </Sheet>
-          </CardContent>
-        </Card>
-      </div>
+          </div>
+        </div>
+      </CardHeader>
+      <CardContent className="px-3 pb-2 flex-1 min-h-0">
+        {connectionError && <p className="text-[10px] text-destructive mb-1">{connectionError}</p>}
+        <ScrollArea className="h-full">
+          <div className="space-y-0.5 text-xs">
+            {scribe.committedTranscripts
+              .filter((t) => !isHallucination(t.text))
+              .map((t) => (
+                <p key={t.id} className="text-foreground">{t.text}</p>
+              ))}
+            {scribe.partialTranscript && (
+              <p className="text-muted-foreground italic">{scribe.partialTranscript}</p>
+            )}
+            {!scribe.committedTranscripts.length && !scribe.partialTranscript && (
+              <p className="text-muted-foreground text-xs text-center py-2">Aguardando fala...</p>
+            )}
+          </div>
+        </ScrollArea>
+      </CardContent>
+    </Card>
+  );
 
-      {/* Cards de script: ocupam o restante da página */}
-      <div className="flex gap-2 flex-1 min-h-0 overflow-y-auto">
-        {/* Column 1: Apresentação + Qualificação + Show Rate */}
-        <div className="flex-1 flex flex-col gap-2">
-          {apresentacaoItems.length > 0 && (
-            <ChecklistCard
-              title="Apresentação"
-              icon={Presentation}
-              iconColor="text-emerald-500"
-              items={apresentacaoItems}
-              completedIds={apresentacaoDone}
-              className="flex-none"
-            />
-          )}
+  if (topBarOnly) return topBar;
+
+  // Script cards (bottom section)
+  const scriptCards = (
+    <div className="flex gap-2 flex-1 min-h-0 overflow-y-auto h-full">
+      {/* Column 1: Apresentação + Qualificação + Show Rate */}
+      <div className="flex-1 flex flex-col gap-2">
+        {apresentacaoItems.length > 0 && (
           <ChecklistCard
-            title="Qualificação"
-            icon={ClipboardList}
-            iconColor="text-blue-500"
-            items={qualificationItems}
-            completedIds={qualificationDone}
+            title="Apresentação"
+            icon={Presentation}
+            iconColor="text-emerald-500"
+            items={apresentacaoItems}
+            completedIds={apresentacaoDone}
+            className="flex-none"
           />
-          {showRateItems.length > 0 && (
-            <ChecklistCard
-              title="Show Rate"
-              icon={Star}
-              iconColor="text-amber-500"
-              items={showRateItems}
-              completedIds={showRateDone}
-              className="flex-none"
-            />
-          )}
-        </div>
-
-        {/* Column 2: Objeções + RECA + RALOCA */}
-        <div className="flex-1 flex flex-col gap-2">
-          <ObjectionsCard objections={objections} />
-          <DynamicChecklistCard
-            title="RECA — Emocionais"
-            icon={Heart}
-            iconColor="text-red-500"
-            items={recaItems}
-            emptyMessage="Aguardando análise..."
+        )}
+        <ChecklistCard
+          title="Qualificação"
+          icon={ClipboardList}
+          iconColor="text-blue-500"
+          items={qualificationItems}
+          completedIds={qualificationDone}
+        />
+        {showRateItems.length > 0 && (
+          <ChecklistCard
+            title="Show Rate"
+            icon={Star}
+            iconColor="text-amber-500"
+            items={showRateItems}
+            completedIds={showRateDone}
+            className="flex-none"
           />
-          <DynamicChecklistCard
-            title="RALOCA — Lógicos"
-            icon={Brain}
-            iconColor="text-purple-500"
-            items={ralocaItems}
-            emptyMessage="Aguardando análise..."
-          />
-        </div>
+        )}
       </div>
+
+      {/* Column 2: Objeções + RECA + RALOCA */}
+      <div className="flex-1 flex flex-col gap-2">
+        <ObjectionsCard objections={objections} />
+        <DynamicChecklistCard
+          title="RECA — Emocionais"
+          icon={Heart}
+          iconColor="text-red-500"
+          items={recaItems}
+          emptyMessage="Aguardando análise..."
+        />
+        <DynamicChecklistCard
+          title="RALOCA — Lógicos"
+          icon={Brain}
+          iconColor="text-purple-500"
+          items={ralocaItems}
+          emptyMessage="Aguardando análise..."
+        />
+      </div>
+    </div>
+  );
+
+  if (bottomOnly) return scriptCards;
+
+  // Full layout (fallback)
+  return (
+    <div className="flex flex-col gap-2 overflow-hidden h-full">
+      <div className="shrink-0" style={{ maxHeight: '160px' }}>
+        {topBar}
+      </div>
+      {scriptCards}
     </div>
   );
 }

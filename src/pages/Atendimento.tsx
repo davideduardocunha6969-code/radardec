@@ -220,9 +220,24 @@ export default function Atendimento() {
 
       {/* Main content */}
       <div className="flex-1 min-h-0 p-3 flex flex-col gap-2">
-        {/* Call controls — top right */}
-        <div className="shrink-0 flex justify-end">
-          <div className="w-fit">
+        {/* Top row: Transcription (left) + Call controls (right) */}
+        <div className="shrink-0 flex gap-2 items-start">
+          {/* Transcription card — fills remaining space left of call controls */}
+          {activeRecording && coach && (
+            <div className="flex-1 min-w-0">
+              <CoachingErrorBoundary>
+                <RealtimeCoachingPanel
+                  coach={coach}
+                  leadNome={lead.nome}
+                  leadContext={lead.resumo_caso || undefined}
+                  isRecording={activeRecording}
+                  audioStream={activeAudioStream}
+                  topBarOnly
+                />
+              </CoachingErrorBoundary>
+            </div>
+          )}
+          <div className="w-fit shrink-0">
             {tipo === "whatsapp" ? (
               <WhatsAppCallRecorder
                 leadId={lead.id}
@@ -243,9 +258,9 @@ export default function Atendimento() {
           </div>
         </div>
 
-        {/* Coaching panel — uses negative margin to overlap with controls area */}
+        {/* Coaching panel — script cards below */}
         {activeRecording && coach && (
-          <div className="flex-1 min-h-0 -mt-16">
+          <div className="flex-1 min-h-0">
             <CoachingErrorBoundary>
               <RealtimeCoachingPanel
                 coach={coach}
@@ -253,6 +268,7 @@ export default function Atendimento() {
                 leadContext={lead.resumo_caso || undefined}
                 isRecording={activeRecording}
                 audioStream={activeAudioStream}
+                bottomOnly
               />
             </CoachingErrorBoundary>
           </div>
