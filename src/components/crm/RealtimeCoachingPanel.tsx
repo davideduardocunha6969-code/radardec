@@ -171,11 +171,20 @@ export function RealtimeCoachingPanel({
   const scribeRef = useRef(scribe);
   scribeRef.current = scribe;
 
+  // Store audioStream in a ref so the effect can use the latest value
+  const audioStreamRef = useRef<MediaStream | null>(audioStream);
+  audioStreamRef.current = audioStream;
+
   useEffect(() => {
     if (!isRecording) return;
+    // Wait until we have a valid audio stream before connecting
+    // The mixed stream from WhatsAppCallRecorder may arrive after isRecording=true
+    if (!audioStream || audioStream.getAudioTracks().length === 0) {
+      console.log("[Coaching] Waiting for audioStream to become available...");
+      return;
+    }
+
     let cancelled = false;
-    // Track whether we created our own mic stream (so we know to stop it on cleanup)
-    let ownsMicStream = false;
 
     const connectScribe = async () => {
       try {
@@ -191,37 +200,8 @@ export function RealtimeCoachingPanel({
         scribeConnectedRef.current = true;
         if (cancelled) { scribe.disconnect(); scribeConnectedRef.current = false; return; }
 
-        // Use the mixed audioStream (mic + system) from the recorder when available
-        // This ensures we transcribe BOTH the SDR and the lead's audio
-        let streamToUse: MediaStream;
-        if (audioStream && audioStream.getAudioTracks().length > 0) {
-          console.log("[Coaching] Using mixed audioStream (mic + system audio) with", audioStream.getAudioTracks().length, "tracks");
-          streamToUse = audioStream;
-        } else {
-          console.log("[Coaching] No mixed stream available, falling back to mic-only");
-          ownsMicStream = true;
-          try {
-            streamToUse = await navigator.mediaDevices.getUserMedia({
-              audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-            });
-          } catch {
-            try {
-              streamToUse = await navigator.mediaDevices.getUserMedia({ audio: true });
-            } catch {
-              const devices = await navigator.mediaDevices.enumerateDevices();
-              const audioInput = devices.find((d) => d.kind === "audioinput");
-              if (!audioInput) { setConnectionError("Nenhum microfone encontrado"); return; }
-              streamToUse = await navigator.mediaDevices.getUserMedia({
-                audio: { deviceId: { exact: audioInput.deviceId } },
-              });
-            }
-          }
-        }
-        if (cancelled) {
-          if (ownsMicStream) streamToUse.getTracks().forEach(t => t.stop());
-          scribe.disconnect(); scribeConnectedRef.current = false;
-          return;
-        }
+        const streamToUse = audioStreamRef.current!;
+        console.log("[Coaching] Connected with mixed audioStream:", streamToUse.getAudioTracks().length, "audio tracks");
         micStreamRef.current = streamToUse;
 
         const audioCtx = new AudioContext({ sampleRate: 16000 });
@@ -261,14 +241,12 @@ export function RealtimeCoachingPanel({
       cancelled = true;
       if (processorRef.current) { processorRef.current.disconnect(); processorRef.current = null; }
       if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
-      // Only stop tracks if we created them ourselves; the recorder owns the mixed stream
-      if (ownsMicStream && micStreamRef.current) { micStreamRef.current.getTracks().forEach(t => t.stop()); }
       micStreamRef.current = null;
       scribeConnectedRef.current = false;
       scribe.disconnect();
       allTranscriptsRef.current = [];
     };
-  }, [isRecording]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [isRecording, audioStream]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!isRecording || !scribe.isConnected) { setMicLevel(0); return; }
