@@ -32,6 +32,7 @@ export interface CrmColuna {
 export interface LeadTelefone {
   numero: string;
   tipo: string;
+  observacao?: string;
 }
 
 export interface CrmLead {
