@@ -198,6 +198,55 @@ REGRAS: Só marque como addressed se houver evidência CLARA. Não invente fatos
   };
 }
 
+function buildNoshowPrompt(transcript: string, leadName: string, leadContext: string, instructions: string) {
+  return {
+    system: `Você é uma IA especialista em situações de NO-SHOW em vendas (quando o lead não aparece ou cancela).
+
+CONTEXTO:
+- Lead: ${leadName || "Desconhecido"}
+${leadContext ? `- Info: ${leadContext}` : ""}
+
+INSTRUÇÕES DO COACH PARA NO-SHOW:
+${instructions || "Identifique sinais de no-show e sugira abordagens de recuperação."}
+
+Analise a transcrição e:
+- Identifique sinais de que o lead pode dar no-show (hesitação, desinteresse, adiamentos)
+- Gere sugestões de falas/perguntas para prevenir o no-show
+- Sugira estratégias de reengajamento se o no-show já ocorreu
+- Marque como "done: true" se o SDR JÁ aplicou essa estratégia
+- Gere entre 2 e 5 itens priorizando os mais relevantes
+
+REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
+    tools: [{
+      type: "function",
+      function: {
+        name: "analyze_noshow",
+        description: "No-show prevention and recovery strategies",
+        parameters: {
+          type: "object",
+          properties: {
+            noshow_items: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  id: { type: "string" },
+                  label: { type: "string" },
+                  description: { type: "string" },
+                  done: { type: "boolean" },
+                },
+                required: ["id", "label", "description", "done"],
+              },
+            },
+          },
+          required: ["noshow_items"],
+        },
+      },
+    }],
+    toolChoice: { type: "function", function: { name: "analyze_noshow" } },
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -228,6 +277,9 @@ serve(async (req) => {
         break;
       case "radoveca":
         promptConfig = buildRadovecaPrompt(transcript, leadName, leadContext, body.coachInstructions);
+        break;
+      case "noshow":
+        promptConfig = buildNoshowPrompt(transcript, leadName, leadContext, body.coachInstructions);
         break;
       default:
         // Legacy fallback — single combined call

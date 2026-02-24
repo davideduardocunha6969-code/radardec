@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
-import { Plus, Pencil, Trash2, Bot, Loader2, ClipboardCheck, FileText, Heart, Brain, ShieldAlert } from "lucide-react";
+import { Plus, Pencil, Trash2, Bot, Loader2, ClipboardCheck, FileText, Heart, Brain, ShieldAlert, UserX } from "lucide-react";
 import ScriptsSdrTab from "@/components/robos/ScriptsSdrTab";
 import ScriptsCloserTab from "@/components/robos/ScriptsCloserTab";
 import { Briefcase } from "lucide-react";
@@ -23,10 +23,11 @@ interface CoachForm {
   instrucoes_reca: string;
   instrucoes_raloca: string;
   instrucoes_radoveca: string;
+  instrucoes_noshow: string;
   tipo: string;
 }
 
-const emptyForm: CoachForm = { nome: "", descricao: "", instrucoes: "", instrucoes_reca: "", instrucoes_raloca: "", instrucoes_radoveca: "", tipo: "coaching" };
+const emptyForm: CoachForm = { nome: "", descricao: "", instrucoes: "", instrucoes_reca: "", instrucoes_raloca: "", instrucoes_radoveca: "", instrucoes_noshow: "", tipo: "coaching" };
 
 export default function RobosCoach() {
   const { data: robos, isLoading } = useRobosCoach();
@@ -61,6 +62,7 @@ export default function RobosCoach() {
       instrucoes_reca: r.instrucoes_reca || "",
       instrucoes_raloca: r.instrucoes_raloca || "",
       instrucoes_radoveca: r.instrucoes_radoveca || "",
+      instrucoes_noshow: r.instrucoes_noshow || "",
       tipo: r.tipo || "coaching",
     });
     setFormOpen(true);
@@ -70,7 +72,7 @@ export default function RobosCoach() {
     if (!form.nome) return;
     if (editing) {
       updateRobo.mutate(
-        { id: editing.id, nome: form.nome, descricao: form.descricao, instrucoes: form.instrucoes, instrucoes_reca: form.instrucoes_reca, instrucoes_raloca: form.instrucoes_raloca, instrucoes_radoveca: form.instrucoes_radoveca },
+        { id: editing.id, nome: form.nome, descricao: form.descricao, instrucoes: form.instrucoes, instrucoes_reca: form.instrucoes_reca, instrucoes_raloca: form.instrucoes_raloca, instrucoes_radoveca: form.instrucoes_radoveca, instrucoes_noshow: form.instrucoes_noshow },
         { onSuccess: () => setFormOpen(false) }
       );
     } else {
@@ -153,6 +155,7 @@ export default function RobosCoach() {
                       <PromptPreview label="RECA — Âncoras Emocionais" icon={Heart} color="text-red-500" text={r.instrucoes_reca} />
                       <PromptPreview label="RALOCA — Âncoras Lógicas" icon={Brain} color="text-purple-500" text={r.instrucoes_raloca} />
                       <PromptPreview label="RADOVECA — Objeções" icon={ShieldAlert} color="text-amber-500" text={r.instrucoes_radoveca} />
+                      <PromptPreview label="No-Show" icon={UserX} color="text-orange-500" text={r.instrucoes_noshow} />
                       {r.instrucoes && !r.instrucoes_reca && !r.instrucoes_raloca && !r.instrucoes_radoveca && (
                         <PromptPreview label="Instruções Gerais (legado)" icon={Bot} color="text-muted-foreground" text={r.instrucoes} />
                       )}
@@ -285,6 +288,23 @@ export default function RobosCoach() {
                           value={form.instrucoes_radoveca}
                           onChange={(e) => setForm({ ...form, instrucoes_radoveca: e.target.value })}
                           placeholder="Instruções para a IA que detecta e responde objeções do lead (RADOVECA, contorno de objeções)..."
+                          rows={8}
+                        />
+                      </AccordionContent>
+                    </AccordionItem>
+
+                    <AccordionItem value="noshow">
+                      <AccordionTrigger className="py-2">
+                        <div className="flex items-center gap-2">
+                          <UserX className="h-4 w-4 text-orange-500" />
+                          <span className="text-sm font-semibold">No-Show</span>
+                        </div>
+                      </AccordionTrigger>
+                      <AccordionContent>
+                        <Textarea
+                          value={form.instrucoes_noshow}
+                          onChange={(e) => setForm({ ...form, instrucoes_noshow: e.target.value })}
+                          placeholder="Instruções para a IA que lida com situações de no-show do lead..."
                           rows={8}
                         />
                       </AccordionContent>

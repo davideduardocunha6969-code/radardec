@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Mic, MicOff, Loader2, ClipboardList, Heart, Brain, BookOpen, Presentation } from "lucide-react";
+import { Mic, MicOff, Loader2, ClipboardList, Heart, Brain, BookOpen, Presentation, UserX } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type RoboCoach } from "@/hooks/useRobosCoach";
 import { useActiveScriptSdr } from "@/hooks/useScriptsSdr";
@@ -44,6 +44,7 @@ export function RealtimeCoachingPanel({
   const [objections, setObjections] = useState<Objection[]>([]);
   const [recaItems, setRecaItems] = useState<DynamicItem[]>([]);
   const [ralocaItems, setRalocaItems] = useState<DynamicItem[]>([]);
+  const [noshowItems, setNoshowItems] = useState<DynamicItem[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [micLevel, setMicLevel] = useState(0);
@@ -76,7 +77,7 @@ export function RealtimeCoachingPanel({
 
       try {
         // 4 parallel specialized AI calls
-        const [scriptRes, recaRes, ralocaRes, radovecaRes] = await Promise.allSettled([
+        const [scriptRes, recaRes, ralocaRes, radovecaRes, noshowRes] = await Promise.allSettled([
           supabase.functions.invoke("coaching-realtime", {
             body: { ...baseBody, mode: "script", scriptItems: { qualificacao: qualificationItems, apresentacao: apresentacaoItems } },
           }),
@@ -88,6 +89,9 @@ export function RealtimeCoachingPanel({
           }),
           supabase.functions.invoke("coaching-realtime", {
             body: { ...baseBody, mode: "radoveca", coachInstructions: coach.instrucoes_radoveca || coach.instrucoes },
+          }),
+          supabase.functions.invoke("coaching-realtime", {
+            body: { ...baseBody, mode: "noshow", coachInstructions: coach.instrucoes_noshow || "" },
           }),
         ]);
 
@@ -105,6 +109,9 @@ export function RealtimeCoachingPanel({
         if (radovecaRes.status === "fulfilled" && radovecaRes.value.data?.analysis) {
           setObjections(radovecaRes.value.data.analysis.objections || []);
         }
+        if (noshowRes.status === "fulfilled" && noshowRes.value.data?.analysis) {
+          setNoshowItems(noshowRes.value.data.analysis.noshow_items || []);
+        }
       } catch (e) {
         console.error("[Coaching] Request error:", e);
       } finally {
@@ -112,7 +119,7 @@ export function RealtimeCoachingPanel({
         isAnalyzingRef.current = false;
       }
     },
-    [coach.instrucoes, coach.instrucoes_reca, coach.instrucoes_raloca, coach.instrucoes_radoveca, leadNome, leadContext, qualificationItems, apresentacaoItems]
+    [coach.instrucoes, coach.instrucoes_reca, coach.instrucoes_raloca, coach.instrucoes_radoveca, coach.instrucoes_noshow, leadNome, leadContext, qualificationItems, apresentacaoItems]
   );
 
   // Filter out STT hallucinations that occur during silence
@@ -319,6 +326,13 @@ export function RealtimeCoachingPanel({
           icon={Brain}
           iconColor="text-purple-500"
           items={ralocaItems}
+          emptyMessage="Aguardando análise..."
+        />
+        <DynamicChecklistCard
+          title="No-Show"
+          icon={UserX}
+          iconColor="text-orange-500"
+          items={noshowItems}
           emptyMessage="Aguardando análise..."
         />
       </div>

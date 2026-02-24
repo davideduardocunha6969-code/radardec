@@ -11,6 +11,7 @@ export interface RoboCoach {
   instrucoes_reca: string;
   instrucoes_raloca: string;
   instrucoes_radoveca: string;
+  instrucoes_noshow: string;
   ativo: boolean;
   tipo: string;
   user_id: string;
@@ -73,7 +74,7 @@ export function useCreateRoboCoach() {
 export function useUpdateRoboCoach() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { id: string; nome?: string; descricao?: string; instrucoes?: string; instrucoes_reca?: string; instrucoes_raloca?: string; instrucoes_radoveca?: string; ativo?: boolean }) => {
+    mutationFn: async (data: { id: string; nome?: string; descricao?: string; instrucoes?: string; instrucoes_reca?: string; instrucoes_raloca?: string; instrucoes_radoveca?: string; instrucoes_noshow?: string; ativo?: boolean }) => {
       const { id, ...rest } = data;
       const { error } = await supabase
         .from("robos_coach" as any)
