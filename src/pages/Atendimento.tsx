@@ -3,7 +3,7 @@ import { useSearchParams, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppCallRecorder } from "@/components/crm/WhatsAppCallRecorder";
 import { VoipDialer } from "@/components/crm/VoipDialer";
-import { RealtimeCoachingPanel } from "@/components/crm/RealtimeCoachingPanel";
+import { RealtimeCoachingPanel, type AudioMonitorInfo } from "@/components/crm/RealtimeCoachingPanel";
 import { CoachingErrorBoundary } from "@/components/crm/coaching/CoachingErrorBoundary";
 import { Badge } from "@/components/ui/badge";
 import { Phone, User, MapPin, FileText, Loader2 } from "lucide-react";
