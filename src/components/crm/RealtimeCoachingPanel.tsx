@@ -297,7 +297,13 @@ export function RealtimeCoachingPanel({
 
   const isConnected = scribe.isConnected;
 
-  // Unified top bar: transcription + mic status in one card
+  // Unified top bar: transcription + audio monitor in one card
+  const formatTime = (seconds: number): string => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+  };
+
   const topBar = (
     <Card className="border-primary/20 flex flex-col h-full">
       <CardHeader className="pb-1 px-3 pt-2 shrink-0">
@@ -312,7 +318,24 @@ export function RealtimeCoachingPanel({
           </CardTitle>
           <div className="flex items-center gap-2">
             {isAnalyzing && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-            <Progress value={micLevel} className="h-1.5 w-16" />
+            {audioMonitor && (
+              <>
+                <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                  <span className="h-2 w-2 rounded-full bg-red-500 animate-pulse" />
+                  <span className="font-mono font-semibold text-foreground">{formatTime(audioMonitor.duration)}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <Mic className="h-3 w-3" />
+                  <Progress value={audioMonitor.micLevel} className="h-1 w-10" />
+                  {audioMonitor.hasMicAudio ? <CheckCircle2 className="h-3 w-3 text-green-500" /> : <MicOff className="h-3 w-3 text-destructive" />}
+                </div>
+                <div className="flex items-center gap-1">
+                  <Volume2 className="h-3 w-3" />
+                  <Progress value={audioMonitor.systemLevel} className="h-1 w-10" />
+                  {audioMonitor.hasSystemAudio ? <CheckCircle2 className="h-3 w-3 text-green-500" /> : <AlertTriangle className="h-3 w-3 text-yellow-500" />}
+                </div>
+              </>
+            )}
             <Badge variant={isConnected ? "default" : "secondary"} className="text-[10px]">
               {isConnected ? "Ao vivo" : "Conectando..."}
             </Badge>
