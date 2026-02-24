@@ -122,6 +122,18 @@ export default function Atendimento() {
     fetchData();
   }, [leadId, isAuthenticated]);
 
+  // Block window close while recording
+  useEffect(() => {
+    if (!activeRecording) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "Você tem uma chamada em andamento. Deseja encerrar?";
+      return e.returnValue;
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [activeRecording]);
+
   // Update window title
   useEffect(() => {
     if (lead) {
