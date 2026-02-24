@@ -50,7 +50,6 @@ export function useScriptsSdr() {
   });
 }
 
-export function useActiveScriptSdr() {
 export function useActiveScriptSdr(tipo: string = "sdr") {
   return useQuery({
     queryKey: ["scripts_sdr", "active", tipo],
