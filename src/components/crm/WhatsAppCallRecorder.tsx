@@ -318,6 +318,8 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       chunksRef.current = [];
       lastSavedChunksRef.current = 0;
       mimeTypeRef.current = mimeType;
+      manualStopRef.current = false;
+      audioContextDestRef.current = destination;
       const recorder = new MediaRecorder(destination.stream, { mimeType });
       mediaRecorderRef.current = recorder;
 
@@ -326,15 +328,38 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       };
 
       recorder.onstop = () => {
-        // Stop auto-save timer
-        if (autoSaveTimerRef.current) { clearInterval(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
-        const blob = new Blob(chunksRef.current, { type: mimeType });
-        handleRecordingComplete(blob, durationRef.current);
+        if (manualStopRef.current) {
+          // Intentional stop – process the recording
+          if (autoSaveTimerRef.current) { clearInterval(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
+          const blob = new Blob(chunksRef.current, { type: mimeType });
+          handleRecordingComplete(blob, durationRef.current);
+        } else {
+          // Unintentional stop (tracks died, e.g. WhatsApp protocol dialog)
+          // Restart the recorder with whatever tracks are still alive
+          console.warn("[WhatsApp] MediaRecorder stopped unexpectedly – attempting restart");
+          try {
+            if (destination.stream.getTracks().some((t) => t.readyState === "live")) {
+              const newRecorder = new MediaRecorder(destination.stream, { mimeType });
+              mediaRecorderRef.current = newRecorder;
+              newRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) chunksRef.current.push(e.data);
+              };
+              newRecorder.onstop = recorder.onstop; // reuse same handler
+              newRecorder.start(1000);
+              console.log("[WhatsApp] MediaRecorder restarted successfully");
+            } else {
+              // All tracks dead – fall back to mic-only recorder
+              console.warn("[WhatsApp] All destination tracks dead, rebuilding with mic-only");
+              rebuildRecorderMicOnly(mimeType);
+            }
+          } catch (restartErr) {
+            console.error("[WhatsApp] Failed to restart MediaRecorder:", restartErr);
+            rebuildRecorderMicOnly(mimeType);
+          }
+        }
       };
 
-      // No auto-stop listener on display tracks – video tracks are already
-      // stopped above, and audio tracks should stay alive independently.
-
+      // No auto-stop listener on display tracks
       recorder.start(1000);
       setStatus("recording");
       setDuration(0);
