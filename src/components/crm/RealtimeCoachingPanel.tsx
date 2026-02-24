@@ -209,7 +209,7 @@ export function RealtimeCoachingPanel({
         processorRef.current = processor;
 
         processor.onaudioprocess = (e) => {
-          if (!scribe.isConnected) return;
+          if (!scribeConnectedRef.current) return;
           const inputData = e.inputBuffer.getChannelData(0);
           const int16 = new Int16Array(inputData.length);
           for (let i = 0; i < inputData.length; i++) {
@@ -222,7 +222,7 @@ export function RealtimeCoachingPanel({
             binary += String.fromCharCode(uint8[i]);
           }
           const base64 = btoa(binary);
-          try { scribe.sendAudio(base64, { sampleRate: 16000 }); } catch {}
+          try { scribeRef.current.sendAudio(base64, { sampleRate: 16000 }); } catch {}
         };
 
         source.connect(processor);
