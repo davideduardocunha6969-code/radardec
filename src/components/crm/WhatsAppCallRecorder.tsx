@@ -332,15 +332,10 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       chamadaIdRef.current = chamada.id;
       updateChamada.mutate({ id: chamada.id, leadId, status: "em_chamada" });
 
-      // 6. Open WhatsApp call - use top window to avoid iframe blocking
+      // 6. Open WhatsApp call — open in new tab/window to avoid navigating away
       const formattedPhone = formatPhone(numero);
-      // Use whatsapp:// protocol to open the native desktop app directly
-      const waUrl = `whatsapp://send?phone=${formattedPhone}`;
-      try {
-        (window.top || window).location.assign(waUrl);
-      } catch {
-        window.location.assign(waUrl);
-      }
+      const waUrl = `https://wa.me/${formattedPhone}`;
+      window.open(waUrl, "_blank", "noopener");
 
       toast.success("WhatsApp aberto! Inicie a ligação e o áudio será gravado.");
     } catch (err: any) {
