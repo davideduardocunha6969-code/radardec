@@ -5,7 +5,7 @@ import { BookOpen, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type RoboCoach } from "@/hooks/useRobosCoach";
 import { useActiveScriptSdr } from "@/hooks/useScriptsSdr";
-import { useScribe, CommitStrategy } from "@elevenlabs/react";
+import { useScribe, CommitStrategy, AudioFormat } from "@elevenlabs/react";
 import { ScriptCard, RecaCard, RalocaCard, RadovecaCard, ShowRateCard } from "./coaching/CommandCenterCards";
 import { TranscriptionPanel } from "./coaching/TranscriptionPanel";
 import {
@@ -175,7 +175,7 @@ export function RealtimeCoachingPanel({
         }
         if (cancelled) return;
 
-        await scribe.connect({ token: data.token, audioFormat: "pcm_16000", sampleRate: 16000 });
+        await scribe.connect({ token: data.token, audioFormat: AudioFormat.PCM_16000, sampleRate: 16000 });
         if (cancelled) { scribe.disconnect(); return; }
 
         let micStream: MediaStream;
