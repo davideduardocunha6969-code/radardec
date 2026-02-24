@@ -16,6 +16,10 @@ export interface ScriptSdr {
   apresentacao: ScriptItem[];
   qualificacao: ScriptItem[];
   show_rate: ScriptItem[];
+  fechamento: ScriptItem[];
+  reca: ScriptItem[];
+  raloca: ScriptItem[];
+  instrucoes_gerais: string | null;
   ativo: boolean;
   user_id: string;
   created_at: string;
@@ -37,6 +41,10 @@ export function useScriptsSdr() {
         apresentacao: Array.isArray(s.apresentacao) ? s.apresentacao : [],
         qualificacao: Array.isArray(s.qualificacao) ? s.qualificacao : [],
         show_rate: Array.isArray((s as any).show_rate) ? (s as any).show_rate : [],
+        fechamento: Array.isArray((s as any).fechamento) ? (s as any).fechamento : [],
+        reca: Array.isArray((s as any).reca) ? (s as any).reca : [],
+        raloca: Array.isArray((s as any).raloca) ? (s as any).raloca : [],
+        instrucoes_gerais: (s as any).instrucoes_gerais || null,
       }));
     },
   });
@@ -60,6 +68,10 @@ export function useActiveScriptSdr() {
         apresentacao: Array.isArray(s.apresentacao) ? s.apresentacao : [],
         qualificacao: Array.isArray(s.qualificacao) ? s.qualificacao : [],
         show_rate: Array.isArray((s as any).show_rate) ? (s as any).show_rate : [],
+        fechamento: Array.isArray((s as any).fechamento) ? (s as any).fechamento : [],
+        reca: Array.isArray((s as any).reca) ? (s as any).reca : [],
+        raloca: Array.isArray((s as any).raloca) ? (s as any).raloca : [],
+        instrucoes_gerais: (s as any).instrucoes_gerais || null,
       };
     },
     refetchOnWindowFocus: false,
