@@ -240,6 +240,7 @@ export function RealtimeCoachingPanel({
       if (processorRef.current) { processorRef.current.disconnect(); processorRef.current = null; }
       if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
       if (micStreamRef.current) { micStreamRef.current.getTracks().forEach(t => t.stop()); micStreamRef.current = null; }
+      scribeConnectedRef.current = false;
       scribe.disconnect();
       allTranscriptsRef.current = [];
     };
