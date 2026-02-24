@@ -37,11 +37,17 @@ export default function Atendimento() {
   const [activeAudioStream, setActiveAudioStream] = useState<MediaStream | null>(null);
 
   const [showCloseWarning, setShowCloseWarning] = useState(false);
+  const [audioMonitor, setAudioMonitor] = useState<AudioMonitorInfo | undefined>(undefined);
   const stopCallRef = useRef<(() => void) | null>(null);
 
   const handleRecordingStateChange = useCallback((isRecording: boolean, stream: MediaStream | null) => {
     setActiveRecording(isRecording);
     setActiveAudioStream(stream);
+    if (!isRecording) setAudioMonitor(undefined);
+  }, []);
+
+  const handleAudioMonitorUpdate = useCallback((info: AudioMonitorInfo) => {
+    setAudioMonitor(info);
   }, []);
 
   // Wait for auth session to be restored from localStorage
