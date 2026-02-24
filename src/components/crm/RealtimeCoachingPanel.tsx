@@ -74,7 +74,8 @@ export function RealtimeCoachingPanel({
   const [labeledTranscripts, setLabeledTranscripts] = useState<LabeledTranscript[]>([]);
   const [sdrPartial, setSdrPartial] = useState("");
   const [leadPartial, setLeadPartial] = useState("");
-  const animFrameRef = useRef<number | null>(null);
+  const lastAnalyzedRef = useRef("");
+  const isAnalyzingRef = useRef(false);
 
   // Qualification items from script or fallback
   const qualificationItems: ChecklistItem[] = activeScript?.qualificacao?.length
@@ -94,7 +95,6 @@ export function RealtimeCoachingPanel({
 
   const requestAnalysis = useCallback(
     async (transcript: string) => {
-      // Require at least 40 chars of real transcript to avoid analyzing noise/silence
       if (!transcript || transcript.trim().length < 10 || transcript === lastAnalyzedRef.current || isAnalyzingRef.current) return;
       lastAnalyzedRef.current = transcript;
       setIsAnalyzing(true);
@@ -143,7 +143,6 @@ export function RealtimeCoachingPanel({
   const isHallucination = useCallback((text: string): boolean => {
     const cleaned = text.trim().toLowerCase();
     if (!cleaned) return true;
-    // Known hallucination patterns from Scribe model during silence
     const hallucinationPatterns = [
       /p[ií]lulas\s+do\s+evangelho/i,
       /colabore\s+conosco/i,
@@ -164,128 +163,152 @@ export function RealtimeCoachingPanel({
     return false;
   }, []);
 
-  const scribe = useScribe({
+  // Ref to accumulate full labeled transcript for AI analysis
+  const labeledTranscriptsRef = useRef<LabeledTranscript[]>([]);
+
+  // Helper: build full transcript string with speaker labels
+  const buildFullTranscript = useCallback(() => {
+    return labeledTranscriptsRef.current
+      .map((t) => `[${t.speaker === "sdr" ? "SDR" : "Lead"}]: ${t.text}`)
+      .join("\n");
+  }, []);
+
+  const addTranscript = useCallback((text: string, speaker: "sdr" | "lead") => {
+    if (!text?.trim() || isHallucination(text)) return;
+    const entry: LabeledTranscript = {
+      id: `${speaker}-${Date.now()}-${Math.random()}`,
+      text: text.trim(),
+      speaker,
+      timestamp: Date.now(),
+    };
+    labeledTranscriptsRef.current = [...labeledTranscriptsRef.current, entry];
+    setLabeledTranscripts([...labeledTranscriptsRef.current]);
+    requestAnalysis(buildFullTranscript());
+  }, [isHallucination, requestAnalysis, buildFullTranscript]);
+
+  // --- Dual Scribe connections: SDR (mic) and Lead (system audio) ---
+  const sdrScribe = useScribe({
     modelId: "scribe_v2_realtime",
     languageCode: "por",
     commitStrategy: CommitStrategy.VAD,
     audioFormat: AudioFormat.PCM_16000,
     sampleRate: 16000,
-    onCommittedTranscript: (data) => {
-      if (data.text?.trim() && !isHallucination(data.text)) {
-        allTranscriptsRef.current = [...allTranscriptsRef.current, data.text];
-        const fullTranscript = allTranscriptsRef.current.join("\n");
-        requestAnalysis(fullTranscript);
-      }
-    },
-    onError: (err) => {
-      console.error("[Coaching] Scribe error:", err);
-    },
+    onCommittedTranscript: (data) => addTranscript(data.text, "sdr"),
+    onPartialTranscript: (data) => setSdrPartial(data.text || ""),
+    onError: (err) => console.error("[Coaching] SDR Scribe error:", err),
   });
 
-  // Pipe audio from the existing recording stream into Scribe
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const leadScribe = useScribe({
+    modelId: "scribe_v2_realtime",
+    languageCode: "por",
+    commitStrategy: CommitStrategy.VAD,
+    audioFormat: AudioFormat.PCM_16000,
+    sampleRate: 16000,
+    onCommittedTranscript: (data) => addTranscript(data.text, "lead"),
+    onPartialTranscript: (data) => setLeadPartial(data.text || ""),
+    onError: (err) => console.error("[Coaching] Lead Scribe error:", err),
+  });
 
+  // Connect both Scribe instances when recording starts
   useEffect(() => {
     if (!isRecording) return;
     let cancelled = false;
 
-    const connectScribe = async () => {
+    const connectBoth = async () => {
       try {
         setConnectionError(null);
 
-        // 1. Get Scribe token
-        const { data, error } = await supabase.functions.invoke("elevenlabs-scribe-token");
-        if (error || !data?.token) {
-          setConnectionError("Erro ao obter token: " + (error?.message || "No token"));
+        // Get 2 tokens in parallel
+        const [sdrTokenRes, leadTokenRes] = await Promise.all([
+          supabase.functions.invoke("elevenlabs-scribe-token"),
+          supabase.functions.invoke("elevenlabs-scribe-token"),
+        ]);
+
+        if (sdrTokenRes.error || !sdrTokenRes.data?.token) {
+          setConnectionError("Erro ao obter token SDR: " + (sdrTokenRes.error?.message || "No token"));
+          return;
+        }
+        if (leadTokenRes.error || !leadTokenRes.data?.token) {
+          setConnectionError("Erro ao obter token Lead: " + (leadTokenRes.error?.message || "No token"));
           return;
         }
         if (cancelled) return;
 
-        // 2. Connect Scribe WITHOUT microphone (manual audio piping)
-        await scribe.connect({
-          token: data.token,
-        });
+        await Promise.all([
+          sdrScribe.connect({ token: sdrTokenRes.data.token }),
+          leadScribe.connect({ token: leadTokenRes.data.token }),
+        ]);
 
-        if (cancelled) { scribe.disconnect(); return; }
+        if (cancelled) {
+          sdrScribe.disconnect();
+          leadScribe.disconnect();
+          return;
+        }
         setConnectionError(null);
-        console.log("[Coaching] Scribe connected, waiting for audio stream...");
+        console.log("[Coaching] Dual Scribe connected (SDR + Lead)");
       } catch (e: any) {
         console.error("[Coaching] Connection error:", e);
         setConnectionError("Erro ao conectar: " + (e.message || String(e)));
       }
     };
 
-    connectScribe();
+    connectBoth();
     return () => {
       cancelled = true;
-      scribe.disconnect();
-      allTranscriptsRef.current = [];
+      sdrScribe.disconnect();
+      leadScribe.disconnect();
+      labeledTranscriptsRef.current = [];
+      setLabeledTranscripts([]);
+      setSdrPartial("");
+      setLeadPartial("");
     };
   }, [isRecording]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // When audioStream becomes available and scribe is connected, pipe audio
-  useEffect(() => {
-    if (!audioStream || !scribe.isConnected) return;
-
+  // Helper to pipe a MediaStream into a Scribe instance
+  const pipeStreamToScribe = useCallback((stream: MediaStream, scribeInstance: ReturnType<typeof useScribe>) => {
     const ctx = new AudioContext({ sampleRate: 16000 });
-    audioContextRef.current = ctx;
-
-    const source = ctx.createMediaStreamSource(audioStream);
-    // Buffer size 4096 at 16kHz ≈ 256ms chunks
+    const source = ctx.createMediaStreamSource(stream);
     const processor = ctx.createScriptProcessor(4096, 1, 1);
-    processorRef.current = processor;
 
     processor.onaudioprocess = (e) => {
       const float32 = e.inputBuffer.getChannelData(0);
-      // Convert Float32 to PCM 16-bit
       const pcm16 = new Int16Array(float32.length);
       for (let i = 0; i < float32.length; i++) {
         const s = Math.max(-1, Math.min(1, float32[i]));
         pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
       }
-      // Convert to base64
       const bytes = new Uint8Array(pcm16.buffer);
       let binary = "";
       for (let i = 0; i < bytes.length; i++) {
         binary += String.fromCharCode(bytes[i]);
       }
-      const base64 = btoa(binary);
-      scribe.sendAudio(base64);
+      scribeInstance.sendAudio(btoa(binary));
     };
 
     source.connect(processor);
     processor.connect(ctx.destination);
-    console.log("[Coaching] Audio piping started from recording stream");
-
     return () => {
       processor.disconnect();
       source.disconnect();
       ctx.close();
-      audioContextRef.current = null;
-      processorRef.current = null;
     };
-  }, [audioStream, scribe.isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
+  // Pipe mic stream → SDR Scribe
   useEffect(() => {
-    if (!isRecording || !scribe.isConnected) {
-      setMicLevel(0);
-      return;
-    }
-    let level = 0;
-    let direction = 1;
-    const update = () => {
-      level += direction * 2;
-      if (level >= 60) direction = -1;
-      if (level <= 10) direction = 1;
-      setMicLevel(level);
-      animFrameRef.current = requestAnimationFrame(update);
-    };
-    update();
-    return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-    };
-  }, [isRecording, scribe.isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!micStream || !sdrScribe.isConnected) return;
+    const cleanup = pipeStreamToScribe(micStream, sdrScribe);
+    console.log("[Coaching] Mic audio piping started (SDR)");
+    return cleanup;
+  }, [micStream, sdrScribe.isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Pipe system stream → Lead Scribe
+  useEffect(() => {
+    if (!systemStream || !leadScribe.isConnected) return;
+    const cleanup = pipeStreamToScribe(systemStream, leadScribe);
+    console.log("[Coaching] System audio piping started (Lead)");
+    return cleanup;
+  }, [systemStream, leadScribe.isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isRecording) return null;
 
