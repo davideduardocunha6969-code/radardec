@@ -23,6 +23,14 @@ import {
 } from "./coaching/coachingData";
 import ReactMarkdown from "react-markdown";
 
+export interface AudioMonitorInfo {
+  hasMicAudio: boolean;
+  hasSystemAudio: boolean;
+  micLevel: number;
+  systemLevel: number;
+  duration: number;
+}
+
 interface RealtimeCoachingPanelProps {
   coach: RoboCoach;
   leadNome: string;
@@ -31,6 +39,7 @@ interface RealtimeCoachingPanelProps {
   audioStream: MediaStream | null;
   topBarOnly?: boolean;
   bottomOnly?: boolean;
+  audioMonitor?: AudioMonitorInfo;
 }
 
 export function RealtimeCoachingPanel({
@@ -40,6 +49,7 @@ export function RealtimeCoachingPanel({
   isRecording,
   topBarOnly,
   bottomOnly,
+  audioMonitor,
 }: RealtimeCoachingPanelProps) {
   const { data: activeScript } = useActiveScriptSdr();
 
