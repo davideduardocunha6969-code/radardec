@@ -203,24 +203,26 @@ export default function Atendimento() {
       )}
 
       {/* Main content */}
-      <div className="flex-1 min-h-0 p-4 flex flex-col gap-3">
-        {/* Call controls */}
-        <div className="shrink-0">
-          {tipo === "whatsapp" ? (
-            <WhatsAppCallRecorder
-              leadId={lead.id}
-              leadNome={lead.nome}
-              numero={numero}
-              onRecordingStateChange={handleRecordingStateChange}
-            />
-          ) : (
-            <VoipDialer
-              leadId={lead.id}
-              leadNome={lead.nome}
-              numero={numero}
-              onRecordingStateChange={handleRecordingStateChange}
-            />
-          )}
+      <div className="flex-1 min-h-0 p-3 flex flex-col gap-2">
+        {/* Call controls — compact */}
+        <div className="shrink-0 flex justify-end">
+          <div className="w-fit">
+            {tipo === "whatsapp" ? (
+              <WhatsAppCallRecorder
+                leadId={lead.id}
+                leadNome={lead.nome}
+                numero={numero}
+                onRecordingStateChange={handleRecordingStateChange}
+              />
+            ) : (
+              <VoipDialer
+                leadId={lead.id}
+                leadNome={lead.nome}
+                numero={numero}
+                onRecordingStateChange={handleRecordingStateChange}
+              />
+            )}
+          </div>
         </div>
 
         {/* Coaching panel */}
