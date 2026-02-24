@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from "react";
-import { useSearchParams } from "react-router-dom";
+import { useSearchParams, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppCallRecorder } from "@/components/crm/WhatsAppCallRecorder";
 import { VoipDialer } from "@/components/crm/VoipDialer";
@@ -31,6 +31,8 @@ export default function Atendimento() {
   const [lead, setLead] = useState<LeadData | null>(null);
   const [coach, setCoach] = useState<RoboCoach | null>(null);
   const [loading, setLoading] = useState(true);
+  const [authChecked, setAuthChecked] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeRecording, setActiveRecording] = useState(false);
   const [activeAudioStream, setActiveAudioStream] = useState<MediaStream | null>(null);
 
@@ -39,8 +41,25 @@ export default function Atendimento() {
     setActiveAudioStream(stream);
   }, []);
 
+  // Wait for auth session to be restored from localStorage
   useEffect(() => {
-    if (!leadId) return;
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      setIsAuthenticated(!!session);
+      setAuthChecked(true);
+    };
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setIsAuthenticated(!!session);
+      setAuthChecked(true);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    if (!leadId || !isAuthenticated) return;
     const fetchData = async () => {
       setLoading(true);
       try {
@@ -77,7 +96,7 @@ export default function Atendimento() {
       }
     };
     fetchData();
-  }, [leadId]);
+  }, [leadId, isAuthenticated]);
 
   // Update window title
   useEffect(() => {
@@ -86,6 +105,19 @@ export default function Atendimento() {
     }
     return () => { document.title = "RadarDEC"; };
   }, [lead]);
+
+  // Auth guard: wait for check, then redirect if not authenticated
+  if (!authChecked) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   if (loading) {
     return (
