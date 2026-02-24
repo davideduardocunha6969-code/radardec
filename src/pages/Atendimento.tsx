@@ -6,6 +6,17 @@ import { VoipDialer } from "@/components/crm/VoipDialer";
 import { RealtimeCoachingPanel } from "@/components/crm/RealtimeCoachingPanel";
 import { CoachingErrorBoundary } from "@/components/crm/coaching/CoachingErrorBoundary";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Phone, User, MapPin, FileText, Loader2 } from "lucide-react";
 import type { RoboCoach } from "@/hooks/useRobosCoach";
 import type { LeadTelefone } from "@/hooks/useCrmOutbound";
