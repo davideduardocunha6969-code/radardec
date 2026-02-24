@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { type RoboCoach } from "@/hooks/useRobosCoach";
 import { type ScriptSdr } from "@/hooks/useScriptsSdr";
 import { Progress } from "@/components/ui/progress";
-import { useScribe, CommitStrategy, AudioFormat } from "@elevenlabs/react";
+import { useScribe, CommitStrategy } from "@elevenlabs/react";
 import { ChecklistCard } from "./coaching/ChecklistCard";
 import { ObjectionsCard } from "./coaching/ObjectionsCard";
 import { RadarCard } from "./coaching/RadarCard";
@@ -180,7 +180,7 @@ export function RealtimeCoachingPanel({
         }
         if (cancelled) return;
 
-        await scribe.connect({ token: data.token, audioFormat: AudioFormat.PCM_16000, sampleRate: 16000 });
+        await scribe.connect({ token: data.token, audioFormat: "pcm_16000" as any, sampleRate: 16000 });
         if (cancelled) { scribe.disconnect(); return; }
 
         let micStream: MediaStream;
