@@ -1653,6 +1653,9 @@ export type Database = {
           descricao: string | null
           id: string
           instrucoes: string
+          instrucoes_radoveca: string
+          instrucoes_raloca: string
+          instrucoes_reca: string
           nome: string
           tipo: string
           updated_at: string
@@ -1664,6 +1667,9 @@ export type Database = {
           descricao?: string | null
           id?: string
           instrucoes: string
+          instrucoes_radoveca?: string
+          instrucoes_raloca?: string
+          instrucoes_reca?: string
           nome: string
           tipo?: string
           updated_at?: string
@@ -1675,6 +1681,9 @@ export type Database = {
           descricao?: string | null
           id?: string
           instrucoes?: string
+          instrucoes_radoveca?: string
+          instrucoes_raloca?: string
+          instrucoes_reca?: string
           nome?: string
           tipo?: string
           updated_at?: string

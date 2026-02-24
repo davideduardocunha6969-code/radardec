@@ -67,38 +67,43 @@ export function RealtimeCoachingPanel({
 
   const requestAnalysis = useCallback(
     async (transcript: string) => {
-      // Require at least 40 chars of real transcript to avoid analyzing noise/silence
       if (!transcript || transcript.trim().length < 10 || transcript === lastAnalyzedRef.current || isAnalyzingRef.current) return;
       lastAnalyzedRef.current = transcript;
       setIsAnalyzing(true);
       isAnalyzingRef.current = true;
 
+      const baseBody = { transcript, leadName: leadNome, leadContext };
+
       try {
-        const { data, error } = await supabase.functions.invoke("coaching-realtime", {
-          body: {
-            transcript,
-            coachInstructions: coach.instrucoes,
-            leadName: leadNome,
-            leadContext,
-            scriptItems: {
-              qualificacao: qualificationItems,
-              apresentacao: apresentacaoItems,
-            },
-          },
-        });
+        // 4 parallel specialized AI calls
+        const [scriptRes, recaRes, ralocaRes, radovecaRes] = await Promise.allSettled([
+          supabase.functions.invoke("coaching-realtime", {
+            body: { ...baseBody, mode: "script", scriptItems: { qualificacao: qualificationItems, apresentacao: apresentacaoItems } },
+          }),
+          supabase.functions.invoke("coaching-realtime", {
+            body: { ...baseBody, mode: "reca", coachInstructions: coach.instrucoes_reca || coach.instrucoes },
+          }),
+          supabase.functions.invoke("coaching-realtime", {
+            body: { ...baseBody, mode: "raloca", coachInstructions: coach.instrucoes_raloca || coach.instrucoes },
+          }),
+          supabase.functions.invoke("coaching-realtime", {
+            body: { ...baseBody, mode: "radoveca", coachInstructions: coach.instrucoes_radoveca || coach.instrucoes },
+          }),
+        ]);
 
-        if (error) {
-          console.error("[Coaching] AI error:", error);
-          return;
+        if (scriptRes.status === "fulfilled" && scriptRes.value.data?.analysis) {
+          const a = scriptRes.value.data.analysis;
+          setApresentacaoDone(a.apresentacao_done || []);
+          setQualificationDone(a.qualification_done || []);
         }
-
-        const analysis: CoachingAnalysis | undefined = data?.analysis;
-        if (analysis) {
-          setApresentacaoDone(analysis.apresentacao_done || []);
-          setQualificationDone(analysis.qualification_done || []);
-          setObjections(analysis.objections || []);
-          setRecaItems(analysis.reca_items || []);
-          setRalocaItems(analysis.raloca_items || []);
+        if (recaRes.status === "fulfilled" && recaRes.value.data?.analysis) {
+          setRecaItems(recaRes.value.data.analysis.reca_items || []);
+        }
+        if (ralocaRes.status === "fulfilled" && ralocaRes.value.data?.analysis) {
+          setRalocaItems(ralocaRes.value.data.analysis.raloca_items || []);
+        }
+        if (radovecaRes.status === "fulfilled" && radovecaRes.value.data?.analysis) {
+          setObjections(radovecaRes.value.data.analysis.objections || []);
         }
       } catch (e) {
         console.error("[Coaching] Request error:", e);
@@ -107,7 +112,7 @@ export function RealtimeCoachingPanel({
         isAnalyzingRef.current = false;
       }
     },
-    [coach.instrucoes, leadNome, leadContext, qualificationItems, apresentacaoItems]
+    [coach.instrucoes, coach.instrucoes_reca, coach.instrucoes_raloca, coach.instrucoes_radoveca, leadNome, leadContext, qualificationItems, apresentacaoItems]
   );
 
   // Filter out STT hallucinations that occur during silence
