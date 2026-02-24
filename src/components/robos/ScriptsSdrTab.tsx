@@ -38,6 +38,20 @@ function generateId(label: string): string {
     .slice(0, 30) || `item_${Date.now()}`;
 }
 
+function DEFAULT_SHOW_RATE_ITEMS(): ScriptItem[] {
+  return [
+    { id: "reafirmacao", label: "Reafirmação", description: "Perfeito, então ficou (dia da semana) às (horário). Nesse horário o especialista vai calcular e revisar sua rescisão junto com o senhor." },
+    { id: "antecipacao_mental", label: "Antecipação mental", description: "Em 20 minutos o senhor já vai saber se tem diferença para receber ou se está tudo certo." },
+    { id: "autoridade_closer", label: "Autoridade do closer", description: "Quem vai te atender é um especialista em cálculos de motoristas, ele faz isso todos os dias." },
+    { id: "ambiente", label: "Ambiente", description: "É importante estar num lugar tranquilo, com internet boa, para conseguir entender tudo com calma." },
+    { id: "inclusao_familiar", label: "Inclusão familiar", description: "Se quiser, pode fazer junto com sua esposa ou alguém da família. É até bom para ajudarem o Sr. caso o Sr. precise." },
+    { id: "microcompromisso", label: "Microcompromisso explícito", description: "O senhor consegue estar disponível nesse horário sem dirigir ou fazer outra coisa?" },
+    { id: "exclusividade_agenda", label: "Exclusividade da agenda", description: "Esse horário fica reservado só para o senhor, porque a agenda do especialista é bem corrida." },
+    { id: "regra_imprevisto", label: "Regra do imprevisto", description: "Se surgir qualquer imprevisto, me avisa antes para a gente remarcar e encaixar outra pessoa no lugar, combinado?" },
+    { id: "confirmacao_lembrete", label: "Confirmação + lembrete", description: "Eu já vou te mandar a confirmação no WhatsApp com um vídeo de apresentação do escritório e 15 minutos antes eu te lembro novamente." },
+  ];
+}
+
 interface ScriptItemEditorProps {
   title: string;
   icon: React.ReactNode;
