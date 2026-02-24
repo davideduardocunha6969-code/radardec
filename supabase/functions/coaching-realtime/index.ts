@@ -62,28 +62,32 @@ REGRAS: Só marque como feito se houver evidência CLARA na transcrição.`,
 
 function buildRecaPrompt(transcript: string, leadName: string, leadContext: string, instructions: string) {
   return {
-    system: `Você é uma IA especialista em RAZÕES EMOCIONAIS (RECA) e âncoras emocionais em vendas.
+    system: `Você é um coach de vendas em tempo real. Sua ÚNICA função é seguir EXATAMENTE as instruções abaixo para gerar orientações de RECA (Razões Emocionais de Compra e Ação) para o SDR.
 
-CONTEXTO:
-- Lead: ${leadName || "Desconhecido"}
-${leadContext ? `- Info: ${leadContext}` : ""}
+LEAD: ${leadName || "Desconhecido"}
+${leadContext ? `CONTEXTO DO LEAD: ${leadContext}` : ""}
 
-INSTRUÇÕES DO COACH PARA RECA:
-${instructions || "Identifique gatilhos emocionais relevantes para este lead."}
+===== INSTRUÇÕES OBRIGATÓRIAS DO COACH (SIGA À RISCA) =====
+${instructions || "Nenhuma instrução cadastrada."}
+===== FIM DAS INSTRUÇÕES =====
 
-Analise a transcrição e:
-- Identifique quais gatilhos emocionais são relevantes para ESTE lead específico
-- Gere perguntas/falas que o SDR deveria usar para ativar esses gatilhos
-- Marque como "done: true" se o SDR JÁ explorou esse gatilho na transcrição
-- Adapte ao estado emocional detectado do lead
-- Gere entre 3 e 7 itens priorizando os mais relevantes
+COMO APLICAR:
+1. Leia a transcrição da ligação INTEIRA para entender o que o lead disse, suas dores, medos e desejos.
+2. Baseando-se EXCLUSIVAMENTE nas instruções do coach acima, gere itens de RECA que o SDR deve usar AGORA na conversa.
+3. Cada item deve ser uma FALA PRONTA que o SDR pode usar, contextualizada com o que o lead REALMENTE disse.
+4. NÃO gere itens genéricos. Cada item deve referenciar algo específico da conversa.
+5. Marque "done: true" SOMENTE se o SDR já usou esse gatilho emocional na transcrição.
+6. Gere entre 3 e 7 itens, priorizando os mais urgentes para o momento da conversa.
 
-REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
+PROIBIÇÕES:
+- NÃO invente informações sobre o lead.
+- NÃO gere instruções que contradigam as instruções do coach.
+- NÃO use frases genéricas como "entendo sua preocupação" sem contexto específico.`,
     tools: [{
       type: "function",
       function: {
         name: "analyze_reca",
-        description: "Emotional triggers relevant to this lead",
+        description: "Emotional triggers relevant to this lead based on coach instructions",
         parameters: {
           type: "object",
           properties: {
@@ -93,8 +97,8 @@ REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
                 type: "object",
                 properties: {
                   id: { type: "string" },
-                  label: { type: "string" },
-                  description: { type: "string" },
+                  label: { type: "string", description: "Título curto do gatilho emocional" },
+                  description: { type: "string", description: "Fala pronta contextualizada para o SDR usar agora" },
                   done: { type: "boolean" },
                 },
                 required: ["id", "label", "description", "done"],
