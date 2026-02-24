@@ -141,20 +141,7 @@ export default function CrmFunilKanban() {
   const [detailLead, setDetailLead] = useState<CrmLead | null>(null);
   const [editingLeadData, setEditingLeadData] = useState(false);
   const [editLeadForm, setEditLeadForm] = useState<{ nome: string; endereco: string; telefones: LeadTelefone[] }>({ nome: "", endereco: "", telefones: [] });
-  const [activeRecording, setActiveRecording] = useState(false);
-  const [activeAudioStream, setActiveAudioStream] = useState<MediaStream | null>(null);
 
-  const getCoachForLead = useCallback((lead: CrmLead, tipo: "sdr" | "closer" = "sdr"): RoboCoach | null => {
-    const coluna = colunas?.find(c => c.id === lead.coluna_id);
-    const coachId = tipo === "closer" ? coluna?.robo_coach_closer_id : coluna?.robo_coach_id;
-    if (!coachId || !robosCoach) return null;
-    return robosCoach.find(r => r.id === coachId) || null;
-  }, [colunas, robosCoach]);
-
-  const handleRecordingStateChange = useCallback((isRecording: boolean, stream: MediaStream | null) => {
-    setActiveRecording(isRecording);
-    setActiveAudioStream(stream);
-  }, []);
 
   const [uploadDialog, setUploadDialog] = useState(false);
   const [uploadColunaId, setUploadColunaId] = useState("");
