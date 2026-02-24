@@ -468,54 +468,16 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
   }
 
   return (
-    <Card className="border-green-500/20">
-      <CardContent className="p-3 space-y-3">
-        {error && (
-          <Alert variant="destructive" className="py-2">
-            <AlertTriangle className="h-4 w-4" />
-            <AlertDescription className="text-xs">{error}</AlertDescription>
-          </Alert>
-        )}
-
-        {(status === "recording" || status === "paused") && (
-          <div className="space-y-2">
-            <div className="flex items-center justify-center gap-3">
-              <div className={`h-3 w-3 rounded-full ${status === "paused" ? "bg-yellow-500" : "bg-red-500 animate-pulse"}`} />
-              <span className="text-xl font-mono font-bold">{formatTime(duration)}</span>
-            </div>
-
-            <div className="space-y-1.5">
-              <div className="flex items-center gap-2">
-                <Mic className="h-3.5 w-3.5" />
-                <span className="text-xs w-16">Microfone</span>
-                <Progress value={micLevel} className="flex-1 h-1.5" />
-                {hasMicAudio ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <MicOff className="h-3.5 w-3.5 text-destructive" />}
-              </div>
-              <div className="flex items-center gap-2">
-                <Volume2 className="h-3.5 w-3.5" />
-                <span className="text-xs w-16">Sistema</span>
-                <Progress value={systemLevel} className="flex-1 h-1.5" />
-                {hasSystemAudio ? <CheckCircle2 className="h-3.5 w-3.5 text-green-500" /> : <AlertTriangle className="h-3.5 w-3.5 text-yellow-500" />}
-              </div>
-            </div>
-
-            {!hasSystemAudio && (
-              <p className="text-xs text-yellow-600">
-                ⚠ Áudio do sistema não detectado. Marque "Compartilhar áudio" ao selecionar a guia.
-              </p>
-            )}
-          </div>
-        )}
-
-        <div className="flex gap-1">
-          <Button variant="outline" size="sm" className="gap-1" onClick={togglePause}>
-            {status === "paused" ? <><Play className="h-3.5 w-3.5" />Retomar</> : <><Pause className="h-3.5 w-3.5" />Pausar</>}
-          </Button>
-          <Button variant="destructive" size="sm" className="gap-1" onClick={stopRecording}>
-            <Square className="h-3.5 w-3.5" />Finalizar
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+    <div className="flex items-center gap-1.5">
+      {error && (
+        <span className="text-[10px] text-destructive max-w-[200px] truncate">{error}</span>
+      )}
+      <Button variant="outline" size="sm" className="gap-1 h-7 text-xs" onClick={togglePause}>
+        {status === "paused" ? <><Play className="h-3 w-3" />Retomar</> : <><Pause className="h-3 w-3" />Pausar</>}
+      </Button>
+      <Button variant="destructive" size="sm" className="gap-1 h-7 text-xs" onClick={stopRecording}>
+        <Square className="h-3 w-3" />Finalizar
+      </Button>
+    </div>
   );
 }
