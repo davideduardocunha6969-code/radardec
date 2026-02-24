@@ -2,9 +2,7 @@ import { useState, useCallback, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Mic, MicOff, Loader2, ClipboardList, Heart, Brain, BookOpen, Presentation } from "lucide-react";
+import { Mic, MicOff, Loader2, ClipboardList, Presentation } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type RoboCoach } from "@/hooks/useRobosCoach";
 import { type ScriptSdr } from "@/hooks/useScriptsSdr";
@@ -12,16 +10,15 @@ import { Progress } from "@/components/ui/progress";
 import { useScribe, CommitStrategy } from "@elevenlabs/react";
 import { ChecklistCard } from "./coaching/ChecklistCard";
 import { ObjectionsCard } from "./coaching/ObjectionsCard";
-import { DynamicChecklistCard } from "./coaching/DynamicChecklistCard";
+import { RadarCard } from "./coaching/RadarCard";
+import { AncorasCard } from "./coaching/AncorasCard";
+import { DizerAgoraCard } from "./coaching/DizerAgoraCard";
 import {
   QUALIFICATION_QUESTIONS,
-  INSTRUCTIONS_TEXT,
   type CoachingAnalysis,
   type Objection,
-  type DynamicItem,
   type ChecklistItem,
 } from "./coaching/coachingData";
-import ReactMarkdown from "react-markdown";
 
 interface RealtimeCoachingPanelProps {
   coach: RoboCoach;
@@ -30,6 +27,22 @@ interface RealtimeCoachingPanelProps {
   isRecording: boolean;
   audioStream: MediaStream | null;
   script?: ScriptSdr | null;
+  leadId?: string;
+}
+
+interface RadarData {
+  prova_tecnica: number;
+  confianca_closer: number;
+  conviccao_cliente: number;
+  resistencia: number;
+}
+
+interface AncoraEmocional {
+  frase: string;
+  categoria: string;
+  intensidade: string;
+  utilizado: boolean;
+  turno_capturado: number;
 }
 
 export function RealtimeCoachingPanel({
@@ -38,49 +51,52 @@ export function RealtimeCoachingPanel({
   leadContext,
   isRecording,
   script,
+  leadId,
 }: RealtimeCoachingPanelProps) {
+  // V2 state
+  const [radar, setRadar] = useState<RadarData>({ prova_tecnica: 0, confianca_closer: 5, conviccao_cliente: 0, resistencia: 0 });
+  const [faseAtual, setFaseAtual] = useState(1);
+  const [podeFechar, setPodeFechar] = useState(false);
+  const [dizerAgora, setDizerAgora] = useState<string | null>(null);
+  const [proximaPergunta, setProximaPergunta] = useState<string | null>(null);
+  const [alertaCompliance, setAlertaCompliance] = useState<string | null>(null);
+  const [ancoras, setAncoras] = useState<AncoraEmocional[]>([]);
 
+  // Legacy-compatible state
   const [apresentacaoDone, setApresentacaoDone] = useState<string[]>([]);
   const [qualificationDone, setQualificationDone] = useState<string[]>([]);
   const [objections, setObjections] = useState<Objection[]>([]);
-  const [recaItems, setRecaItems] = useState<DynamicItem[]>([]);
-  const [ralocaItems, setRalocaItems] = useState<DynamicItem[]>([]);
+
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [micLevel, setMicLevel] = useState(0);
 
-  const lastAnalyzedRef = useRef("");
   const isAnalyzingRef = useRef(false);
-  const allTranscriptsRef = useRef<string[]>([]);
   const animFrameRef = useRef<number | null>(null);
+  const sessionKeyRef = useRef(`${leadId || "unknown"}_${Date.now()}`);
 
-  // Qualification items from script or fallback
   const qualificationItems: ChecklistItem[] = script?.qualificacao?.length
     ? script.qualificacao
     : QUALIFICATION_QUESTIONS;
-  
-  // Apresentacao items from script
+
   const apresentacaoItems: ChecklistItem[] = script?.apresentacao?.length
     ? script.apresentacao
     : [];
 
-  const instructionsText = INSTRUCTIONS_TEXT;
-
-  const requestAnalysis = useCallback(
-    async (transcript: string) => {
-      // Require at least 40 chars of real transcript to avoid analyzing noise/silence
-      if (!transcript || transcript.trim().length < 10 || transcript === lastAnalyzedRef.current || isAnalyzingRef.current) return;
-      lastAnalyzedRef.current = transcript;
+  const requestAnalysisV2 = useCallback(
+    async (utterance: string) => {
+      if (!utterance?.trim() || utterance.trim().length < 10 || isAnalyzingRef.current) return;
       setIsAnalyzing(true);
       isAnalyzingRef.current = true;
 
       try {
         const { data, error } = await supabase.functions.invoke("coaching-realtime", {
           body: {
-            transcript,
-            coachInstructions: coach.instrucoes,
+            session_key: sessionKeyRef.current,
+            new_utterance: utterance,
             leadName: leadNome,
             leadContext,
+            coachInstructions: coach.instrucoes,
             scriptItems: {
               qualificacao: qualificationItems,
               apresentacao: apresentacaoItems,
@@ -89,20 +105,28 @@ export function RealtimeCoachingPanel({
         });
 
         if (error) {
-          console.error("[Coaching] AI error:", error);
+          console.error("[Coaching V2] AI error:", error);
           return;
         }
 
-        const analysis: CoachingAnalysis | undefined = data?.analysis;
+        const analysis = data?.analysis;
         if (analysis) {
           setApresentacaoDone(analysis.apresentacao_done || []);
           setQualificationDone(analysis.qualification_done || []);
           setObjections(analysis.objections || []);
-          setRecaItems(analysis.reca_items || []);
-          setRalocaItems(analysis.raloca_items || []);
+          setDizerAgora(analysis.dizer_agora || null);
+          setProximaPergunta(analysis.proxima_pergunta || null);
+          setAlertaCompliance(analysis.alerta_compliance || null);
+          if (analysis.radar) setRadar(analysis.radar);
+          if (analysis.fase_atual) setFaseAtual(analysis.fase_atual);
+          if (analysis.pode_fechar !== undefined) setPodeFechar(analysis.pode_fechar);
+        }
+
+        if (data?.ancoras) {
+          setAncoras(data.ancoras);
         }
       } catch (e) {
-        console.error("[Coaching] Request error:", e);
+        console.error("[Coaching V2] Request error:", e);
       } finally {
         setIsAnalyzing(false);
         isAnalyzingRef.current = false;
@@ -111,29 +135,18 @@ export function RealtimeCoachingPanel({
     [coach.instrucoes, leadNome, leadContext, qualificationItems, apresentacaoItems]
   );
 
-  // Filter out STT hallucinations that occur during silence
+  // Filter STT hallucinations
   const isHallucination = useCallback((text: string): boolean => {
     const cleaned = text.trim().toLowerCase();
     if (!cleaned) return true;
-    // Known hallucination patterns from Scribe model during silence
     const hallucinationPatterns = [
-      /p[ií]lulas\s+do\s+evangelho/i,
-      /colabore\s+conosco/i,
-      /nosso\s+time\s+de\s+colaboradores/i,
-      /seja\s+voc[êe]\s+tamb[ée]m\s+um\s+volunt[áa]rio/i,
-      /acesse\s+nosso\s+grupo/i,
-      /tradu[çc][ãa]o/i,
-      /transcri[çc][ãa]o.*facebook/i,
-      /o\s+que\s+[ée]\s+o\s+que\s+[ée]/i,
-      /legendas?\s+por\s+comunidade/i,
-      /inscreva[\s-]*se/i,
-      /obrigad[oa]\s+por\s+assistir/i,
-      /amara\.org/i,
+      /p[ií]lulas\s+do\s+evangelho/i, /colabore\s+conosco/i,
+      /nosso\s+time\s+de\s+colaboradores/i, /seja\s+voc[êe]\s+tamb[ée]m\s+um\s+volunt[áa]rio/i,
+      /acesse\s+nosso\s+grupo/i, /tradu[çc][ãa]o/i, /transcri[çc][ãa]o.*facebook/i,
+      /o\s+que\s+[ée]\s+o\s+que\s+[ée]/i, /legendas?\s+por\s+comunidade/i,
+      /inscreva[\s-]*se/i, /obrigad[oa]\s+por\s+assistir/i, /amara\.org/i,
     ];
-    for (const pattern of hallucinationPatterns) {
-      if (pattern.test(cleaned)) return true;
-    }
-    return false;
+    return hallucinationPatterns.some((p) => p.test(cleaned));
   }, []);
 
   const scribe = useScribe({
@@ -142,14 +155,13 @@ export function RealtimeCoachingPanel({
     commitStrategy: CommitStrategy.VAD,
     onCommittedTranscript: (data) => {
       if (data.text?.trim() && !isHallucination(data.text)) {
-        allTranscriptsRef.current = [...allTranscriptsRef.current, data.text];
-        const fullTranscript = allTranscriptsRef.current.join("\n");
-        requestAnalysis(fullTranscript);
+        // V2: send each utterance individually
+        requestAnalysisV2(data.text);
       }
     },
   });
 
-  // Manual audio piping: open mic independently and send PCM chunks to Scribe
+  // Manual audio piping
   const micStreamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
@@ -161,8 +173,6 @@ export function RealtimeCoachingPanel({
     const connectScribe = async () => {
       try {
         setConnectionError(null);
-
-        // 1. Get Scribe token
         const { data, error } = await supabase.functions.invoke("elevenlabs-scribe-token");
         if (error || !data?.token) {
           setConnectionError("Erro ao obter token: " + (error?.message || "No token"));
@@ -170,37 +180,23 @@ export function RealtimeCoachingPanel({
         }
         if (cancelled) return;
 
-        // 2. Connect Scribe WITHOUT microphone (we'll pipe audio manually)
-        await scribe.connect({
-          token: data.token,
-        });
+        await scribe.connect({ token: data.token });
         if (cancelled) { scribe.disconnect(); return; }
 
-        // 3. Open mic stream independently (won't conflict since Scribe isn't using its own)
         let micStream: MediaStream;
         try {
-          micStream = await navigator.mediaDevices.getUserMedia({
-            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-          });
+          micStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true } });
         } catch {
-          try {
-            micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          } catch {
+          try { micStream = await navigator.mediaDevices.getUserMedia({ audio: true }); } catch {
             const devices = await navigator.mediaDevices.enumerateDevices();
             const audioInput = devices.find((d) => d.kind === "audioinput");
-            if (!audioInput) {
-              setConnectionError("Nenhum microfone encontrado");
-              return;
-            }
-            micStream = await navigator.mediaDevices.getUserMedia({
-              audio: { deviceId: { exact: audioInput.deviceId } },
-            });
+            if (!audioInput) { setConnectionError("Nenhum microfone encontrado"); return; }
+            micStream = await navigator.mediaDevices.getUserMedia({ audio: { deviceId: { exact: audioInput.deviceId } } });
           }
         }
         if (cancelled) { micStream.getTracks().forEach(t => t.stop()); scribe.disconnect(); return; }
         micStreamRef.current = micStream;
 
-        // 4. Set up AudioContext + ScriptProcessor to capture PCM and pipe to Scribe
         const audioCtx = new AudioContext({ sampleRate: 16000 });
         audioCtxRef.current = audioCtx;
         const source = audioCtx.createMediaStreamSource(micStream);
@@ -210,33 +206,22 @@ export function RealtimeCoachingPanel({
         processor.onaudioprocess = (e) => {
           if (!scribe.isConnected) return;
           const inputData = e.inputBuffer.getChannelData(0);
-          // Convert Float32 PCM to Int16 PCM
           const int16 = new Int16Array(inputData.length);
           for (let i = 0; i < inputData.length; i++) {
             const s = Math.max(-1, Math.min(1, inputData[i]));
             int16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
           }
-          // Convert to base64
           const uint8 = new Uint8Array(int16.buffer);
           let binary = "";
-          for (let i = 0; i < uint8.length; i++) {
-            binary += String.fromCharCode(uint8[i]);
-          }
-          const base64 = btoa(binary);
-          try {
-            scribe.sendAudio(base64, { sampleRate: 16000 });
-          } catch {
-            // Ignore send errors if websocket momentarily disconnects
-          }
+          for (let i = 0; i < uint8.length; i++) binary += String.fromCharCode(uint8[i]);
+          try { scribe.sendAudio(btoa(binary), { sampleRate: 16000 }); } catch { /* ignore */ }
         };
 
         source.connect(processor);
         processor.connect(audioCtx.destination);
-
-        setConnectionError(null);
-        console.log("[Coaching] Scribe connected with manual audio piping");
+        console.log("[Coaching V2] Scribe connected");
       } catch (e: any) {
-        console.error("[Coaching] Connection error:", e);
+        console.error("[Coaching V2] Connection error:", e);
         setConnectionError("Erro ao conectar: " + (e.message || String(e)));
       }
     };
@@ -244,22 +229,17 @@ export function RealtimeCoachingPanel({
     connectScribe();
     return () => {
       cancelled = true;
-      // Cleanup manual audio pipeline
       if (processorRef.current) { processorRef.current.disconnect(); processorRef.current = null; }
       if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
       if (micStreamRef.current) { micStreamRef.current.getTracks().forEach(t => t.stop()); micStreamRef.current = null; }
       scribe.disconnect();
-      allTranscriptsRef.current = [];
     };
   }, [isRecording]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // Mic level animation
   useEffect(() => {
-    if (!isRecording || !scribe.isConnected) {
-      setMicLevel(0);
-      return;
-    }
-    let level = 0;
-    let direction = 1;
+    if (!isRecording || !scribe.isConnected) { setMicLevel(0); return; }
+    let level = 0, direction = 1;
     const update = () => {
       level += direction * 2;
       if (level >= 60) direction = -1;
@@ -268,9 +248,7 @@ export function RealtimeCoachingPanel({
       animFrameRef.current = requestAnimationFrame(update);
     };
     update();
-    return () => {
-      if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
-    };
+    return () => { if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); };
   }, [isRecording, scribe.isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!isRecording) return null;
@@ -279,104 +257,62 @@ export function RealtimeCoachingPanel({
 
   return (
     <div className="flex gap-2 mt-3 overflow-y-auto" style={{ height: 'calc(100vh - 260px)' }}>
-      {/* Column 1: Apresentação + Qualificação */}
+      {/* Column 1: Radar + DIZER AGORA + Checklists */}
       <div className="flex-1 flex flex-col gap-2">
+        <RadarCard radar={radar} faseAtual={faseAtual} podeFechar={podeFechar} />
+        <DizerAgoraCard
+          dizerAgora={dizerAgora}
+          proximaPergunta={proximaPergunta}
+          alertaCompliance={alertaCompliance}
+        />
         {apresentacaoItems.length > 0 && (
-          <ChecklistCard
-            title="Apresentação"
-            icon={Presentation}
-            iconColor="text-emerald-500"
-            items={apresentacaoItems}
-            completedIds={apresentacaoDone}
-            className="flex-none"
-          />
+          <ChecklistCard title="Apresentação" icon={Presentation} iconColor="text-emerald-500" items={apresentacaoItems} completedIds={apresentacaoDone} className="flex-none" />
         )}
-        <ChecklistCard
-          title="Qualificação"
-          icon={ClipboardList}
-          iconColor="text-blue-500"
-          items={qualificationItems}
-          completedIds={qualificationDone}
-        />
+        <ChecklistCard title="Qualificação" icon={ClipboardList} iconColor="text-blue-500" items={qualificationItems} completedIds={qualificationDone} />
       </div>
 
-      {/* Column 2: Objeções + RECA + RALOCA */}
+      {/* Column 2: Âncoras + Objeções + Transcrição */}
       <div className="flex-1 flex flex-col gap-2">
+        <AncorasCard ancoras={ancoras} />
         <ObjectionsCard objections={objections} />
-        <DynamicChecklistCard
-          title="RECA — Emocionais"
-          icon={Heart}
-          iconColor="text-red-500"
-          items={recaItems}
-          emptyMessage="Aguardando análise..."
-        />
-        <DynamicChecklistCard
-          title="RALOCA — Lógicos"
-          icon={Brain}
-          iconColor="text-purple-500"
-          items={ralocaItems}
-          emptyMessage="Aguardando análise..."
-        />
-      </div>
 
-      {/* Column 3: Transcrição */}
-      <Card className="border-primary/20 flex-1 flex flex-col min-h-[0] self-stretch">
-        <CardHeader className="pb-1 px-3 pt-2 shrink-0">
-          <div className="flex items-center justify-between">
-            <CardTitle className="text-xs flex items-center gap-1.5">
-              {isConnected ? (
-                <Mic className="h-3.5 w-3.5 text-primary" />
-              ) : (
-                <MicOff className="h-3.5 w-3.5 text-muted-foreground" />
-              )}
-              Transcrição
-            </CardTitle>
-            <div className="flex items-center gap-1.5">
-              {isAnalyzing && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
-              <Badge variant={isConnected ? "default" : "secondary"} className="text-[10px]">
-                {isConnected ? "Ao vivo" : "Conectando..."}
-              </Badge>
-            </div>
-          </div>
-          <Progress value={micLevel} className="h-1 mt-1" />
-        </CardHeader>
-        <CardContent className="px-3 pb-2 flex-1 min-h-0">
-          {connectionError && <p className="text-[10px] text-destructive mb-1">{connectionError}</p>}
-          <ScrollArea className="h-full">
-            <div className="space-y-1 text-xs">
-              {scribe.committedTranscripts
-                .filter((t) => !isHallucination(t.text))
-                .map((t) => (
-                  <p key={t.id} className="text-foreground">{t.text}</p>
-                ))}
-              {scribe.partialTranscript && (
-                <p className="text-muted-foreground italic">{scribe.partialTranscript}</p>
-              )}
-              {!scribe.committedTranscripts.length && !scribe.partialTranscript && (
-                <p className="text-muted-foreground text-xs text-center py-6">Aguardando fala...</p>
-              )}
-            </div>
-          </ScrollArea>
-        </CardContent>
-        <div className="px-3 pb-2 shrink-0">
-          <Sheet>
-            <SheetTrigger asChild>
-              <Button variant="outline" size="sm" className="w-full text-[11px] h-7 gap-1">
-                <BookOpen className="h-3 w-3" />
-                Instruções
-              </Button>
-            </SheetTrigger>
-            <SheetContent className="w-[400px] sm:w-[500px] overflow-y-auto">
-              <SheetHeader>
-                <SheetTitle>Instruções de Qualificação</SheetTitle>
-              </SheetHeader>
-              <div className="prose prose-sm dark:prose-invert mt-4 max-w-none">
-                <ReactMarkdown>{instructionsText}</ReactMarkdown>
+        {/* Compact Transcription */}
+        <Card className="border-primary/20 flex-1 flex flex-col min-h-[0] self-stretch">
+          <CardHeader className="pb-1 px-3 pt-2 shrink-0">
+            <div className="flex items-center justify-between">
+              <CardTitle className="text-xs flex items-center gap-1.5">
+                {isConnected ? <Mic className="h-3.5 w-3.5 text-primary" /> : <MicOff className="h-3.5 w-3.5 text-muted-foreground" />}
+                Transcrição
+              </CardTitle>
+              <div className="flex items-center gap-1.5">
+                {isAnalyzing && <Loader2 className="h-3 w-3 animate-spin text-primary" />}
+                <Badge variant={isConnected ? "default" : "secondary"} className="text-[10px]">
+                  {isConnected ? "Ao vivo" : "Conectando..."}
+                </Badge>
               </div>
-            </SheetContent>
-          </Sheet>
-        </div>
-      </Card>
+            </div>
+            <Progress value={micLevel} className="h-1 mt-1" />
+          </CardHeader>
+          <CardContent className="px-3 pb-2 flex-1 min-h-0">
+            {connectionError && <p className="text-[10px] text-destructive mb-1">{connectionError}</p>}
+            <ScrollArea className="h-full">
+              <div className="space-y-1 text-xs">
+                {scribe.committedTranscripts
+                  .filter((t) => !isHallucination(t.text))
+                  .map((t) => (
+                    <p key={t.id} className="text-foreground">{t.text}</p>
+                  ))}
+                {scribe.partialTranscript && (
+                  <p className="text-muted-foreground italic">{scribe.partialTranscript}</p>
+                )}
+                {!scribe.committedTranscripts.length && !scribe.partialTranscript && (
+                  <p className="text-muted-foreground text-xs text-center py-6">Aguardando fala...</p>
+                )}
+              </div>
+            </ScrollArea>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
