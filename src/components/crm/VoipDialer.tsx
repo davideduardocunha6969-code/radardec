@@ -14,6 +14,7 @@ interface VoipDialerProps {
   numero: string;
   onCallStatusChange?: (status: string) => void;
   onRecordingStateChange?: (isRecording: boolean, audioStream: MediaStream | null) => void;
+  stopRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 type CallStatus = "idle" | "connecting" | "ringing" | "in-progress" | "completed" | "failed" | "busy" | "no-answer";
@@ -40,7 +41,7 @@ const statusColors: Record<CallStatus, string> = {
   "no-answer": "bg-orange-500/20 text-orange-700",
 };
 
-export function VoipDialer({ leadId, leadNome, numero, onCallStatusChange, onRecordingStateChange }: VoipDialerProps) {
+export function VoipDialer({ leadId, leadNome, numero, onCallStatusChange, onRecordingStateChange, stopRef }: VoipDialerProps) {
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [isMuted, setIsMuted] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -209,6 +210,13 @@ export function VoipDialer({ leadId, leadNome, numero, onCallStatusChange, onRec
       callRef.current.disconnect();
     }
   }, []);
+
+  // Expose stop function to parent via ref
+  useEffect(() => {
+    if (stopRef) {
+      stopRef.current = (callStatus === "in-progress" || callStatus === "ringing") ? endCall : null;
+    }
+  }, [callStatus, stopRef, endCall]);
 
   const toggleMute = useCallback(() => {
     if (callRef.current) {

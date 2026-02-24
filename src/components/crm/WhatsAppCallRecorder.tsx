@@ -26,6 +26,7 @@ interface WhatsAppCallRecorderProps {
   leadNome: string;
   numero: string;
   onRecordingStateChange?: (isRecording: boolean, audioStream: MediaStream | null) => void;
+  stopRef?: React.MutableRefObject<(() => void) | null>;
 }
 
 type RecordingStatus = "idle" | "recording" | "paused" | "processing" | "done" | "error";
@@ -38,7 +39,7 @@ const formatPhone = (numero: string): string => {
   return `55${digits}`;
 };
 
-export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStateChange }: WhatsAppCallRecorderProps) {
+export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStateChange, stopRef }: WhatsAppCallRecorderProps) {
   const [status, setStatus] = useState<RecordingStatus>("idle");
   const [duration, setDuration] = useState(0);
   const [hasSystemAudio, setHasSystemAudio] = useState(false);
@@ -393,6 +394,13 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       setStatus("paused");
     }
   };
+
+  // Expose stop function to parent via ref
+  useEffect(() => {
+    if (stopRef) {
+      stopRef.current = (status === "recording" || status === "paused") ? stopRecording : null;
+    }
+  }, [status, stopRef, stopRecording]);
 
   useEffect(() => {
     return () => cleanup();

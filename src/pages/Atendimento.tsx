@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppCallRecorder } from "@/components/crm/WhatsAppCallRecorder";
@@ -6,17 +6,6 @@ import { VoipDialer } from "@/components/crm/VoipDialer";
 import { RealtimeCoachingPanel } from "@/components/crm/RealtimeCoachingPanel";
 import { CoachingErrorBoundary } from "@/components/crm/coaching/CoachingErrorBoundary";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
 import { Phone, User, MapPin, FileText, Loader2 } from "lucide-react";
 import type { RoboCoach } from "@/hooks/useRobosCoach";
 import type { LeadTelefone } from "@/hooks/useCrmOutbound";
@@ -48,6 +37,7 @@ export default function Atendimento() {
   const [activeAudioStream, setActiveAudioStream] = useState<MediaStream | null>(null);
 
   const [showCloseWarning, setShowCloseWarning] = useState(false);
+  const stopCallRef = useRef<(() => void) | null>(null);
 
   const handleRecordingStateChange = useCallback((isRecording: boolean, stream: MediaStream | null) => {
     setActiveRecording(isRecording);
@@ -122,13 +112,14 @@ export default function Atendimento() {
     fetchData();
   }, [leadId, isAuthenticated]);
 
-  // Block window close while recording
+  // Auto-stop call on window close
   useEffect(() => {
     if (!activeRecording) return;
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "Você tem uma chamada em andamento. Deseja encerrar?";
-      return e.returnValue;
+    const handleBeforeUnload = () => {
+      // Trigger stop as if SDR clicked "Finalizar"
+      if (stopCallRef.current) {
+        stopCallRef.current();
+      }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
@@ -238,6 +229,7 @@ export default function Atendimento() {
                 leadNome={lead.nome}
                 numero={numero}
                 onRecordingStateChange={handleRecordingStateChange}
+                stopRef={stopCallRef}
               />
             ) : (
               <VoipDialer
@@ -245,6 +237,7 @@ export default function Atendimento() {
                 leadNome={lead.nome}
                 numero={numero}
                 onRecordingStateChange={handleRecordingStateChange}
+                stopRef={stopCallRef}
               />
             )}
           </div>
