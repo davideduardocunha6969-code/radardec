@@ -284,9 +284,9 @@ export function RealtimeCoachingPanel({
   const isConnected = scribe.isConnected;
 
   return (
-    <div className="flex flex-col gap-2 overflow-hidden" style={{ height: 'calc(100vh - 260px)' }}>
+    <div className="flex flex-col gap-2 overflow-hidden h-full">
       {/* Top bar: Transcrição (wide) + Mic status (small right) */}
-      <div className="flex gap-2 shrink-0" style={{ maxHeight: '140px' }}>
+      <div className="flex gap-2 shrink-0" style={{ maxHeight: '160px' }}>
         {/* Transcrição — quase largura total */}
         <Card className="border-primary/20 flex-1 flex flex-col min-h-[0]">
           <CardHeader className="pb-1 px-3 pt-2 shrink-0">

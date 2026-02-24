@@ -220,7 +220,7 @@ export default function Atendimento() {
 
       {/* Main content */}
       <div className="flex-1 min-h-0 p-3 flex flex-col gap-2">
-        {/* Call controls — compact */}
+        {/* Call controls — top right */}
         <div className="shrink-0 flex justify-end">
           <div className="w-fit">
             {tipo === "whatsapp" ? (
@@ -243,9 +243,9 @@ export default function Atendimento() {
           </div>
         </div>
 
-        {/* Coaching panel */}
+        {/* Coaching panel — uses negative margin to overlap with controls area */}
         {activeRecording && coach && (
-          <div className="flex-1 min-h-0">
+          <div className="flex-1 min-h-0 -mt-16">
             <CoachingErrorBoundary>
               <RealtimeCoachingPanel
                 coach={coach}
