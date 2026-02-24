@@ -239,6 +239,7 @@ export default function Atendimento() {
                   isRecording={activeRecording}
                   audioStream={activeAudioStream}
                   topBarOnly
+                  audioMonitor={audioMonitor}
                 />
               </CoachingErrorBoundary>
             </div>
@@ -250,6 +251,7 @@ export default function Atendimento() {
                 leadNome={lead.nome}
                 numero={numero}
                 onRecordingStateChange={handleRecordingStateChange}
+                onAudioMonitorUpdate={handleAudioMonitorUpdate}
                 stopRef={stopCallRef}
               />
             ) : (
