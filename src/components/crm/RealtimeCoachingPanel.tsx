@@ -180,7 +180,7 @@ export function RealtimeCoachingPanel({
         }
         if (cancelled) return;
 
-        await scribe.connect({ token: data.token });
+        await scribe.connect({ token: data.token, sampleRate: 16000 });
         if (cancelled) { scribe.disconnect(); return; }
 
         let micStream: MediaStream;
