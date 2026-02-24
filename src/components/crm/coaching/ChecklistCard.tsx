@@ -18,7 +18,7 @@ export const ChecklistCard = forwardRef<HTMLDivElement, ChecklistCardProps>(func
   const total = items.length;
 
   return (
-    <Card className={`border-border/60 flex flex-col ${className || ""}`}>
+    <Card ref={ref} className={`border-border/60 flex flex-col ${className || ""}`}>
       <CardHeader className="pb-1 px-2.5 pt-2 shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xs flex items-center gap-1.5">
@@ -63,4 +63,4 @@ export const ChecklistCard = forwardRef<HTMLDivElement, ChecklistCardProps>(func
       </CardContent>
     </Card>
   );
-}
+});
