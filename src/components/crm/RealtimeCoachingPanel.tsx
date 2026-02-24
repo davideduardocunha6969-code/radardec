@@ -193,6 +193,8 @@ export function RealtimeCoachingPanel({
         // 2. Connect Scribe WITHOUT microphone (we'll pipe audio manually)
         await scribe.connect({
           token: data.token,
+          audioFormat: "pcm_16000",
+          sampleRate: 16000,
         });
         if (cancelled) { scribe.disconnect(); return; }
 
