@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { Mic, MicOff, Loader2, ClipboardList, Heart, Brain, BookOpen, Presentation, Star } from "lucide-react";
+import { Mic, MicOff, Loader2, ClipboardList, Heart, Brain, BookOpen, Presentation, Star, Volume2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type RoboCoach } from "@/hooks/useRobosCoach";
 import { useActiveScriptSdr } from "@/hooks/useScriptsSdr";
