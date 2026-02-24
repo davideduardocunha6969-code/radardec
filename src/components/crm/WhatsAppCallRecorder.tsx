@@ -393,7 +393,9 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       setMicLevel(0);
       setSystemLevel(0);
       mixedStreamRef.current = null;
-      onRecordingStateChange?.(false, null);
+      micStreamRef.current = null;
+      systemStreamRef.current = null;
+      onRecordingStateChange?.(false, { micStream: null, systemStream: null, mixedStream: null });
     }
   }, [status, stopAllStreams, onRecordingStateChange, savePartialAudio]);
 
