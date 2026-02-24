@@ -323,7 +323,13 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
         handleRecordingComplete(blob, durationRef.current);
       };
 
+      // Guard: ignore displayStream "ended" during the first 5s (WhatsApp protocol dialog triggers it)
+      const recordingStartedAt = Date.now();
       displayStream?.getVideoTracks()[0]?.addEventListener("ended", () => {
+        if (Date.now() - recordingStartedAt < 5000) {
+          console.log("[WhatsApp] Ignoring early video track ended (WhatsApp dialog grace period)");
+          return;
+        }
         stopRecording();
       });
 
@@ -357,17 +363,17 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       chamadaIdRef.current = chamada.id;
       updateChamada.mutate({ id: chamada.id, leadId, status: "em_chamada" });
 
-      // 6. Open WhatsApp call via native protocol (avoids opening web version)
-      // Use a temporary anchor element to trigger the native protocol handler
-      // window.open() with whatsapp:// can fallback to web search; <a> click does not
-      const formattedPhone = formatPhone(numero);
-      const waUrl = `whatsapp://send?phone=${formattedPhone}`;
-      const anchor = document.createElement("a");
-      anchor.href = waUrl;
-      anchor.style.display = "none";
-      document.body.appendChild(anchor);
-      anchor.click();
-      setTimeout(() => document.body.removeChild(anchor), 200);
+      // 6. Open WhatsApp AFTER a small delay so the protocol dialog doesn't kill the recording
+      setTimeout(() => {
+        const formattedPhone = formatPhone(numero);
+        const waUrl = `whatsapp://send?phone=${formattedPhone}`;
+        const anchor = document.createElement("a");
+        anchor.href = waUrl;
+        anchor.style.display = "none";
+        document.body.appendChild(anchor);
+        anchor.click();
+        setTimeout(() => document.body.removeChild(anchor), 200);
+      }, 1500);
 
       toast.success("WhatsApp aberto! Inicie a ligação e o áudio será gravado.");
     } catch (err: any) {
