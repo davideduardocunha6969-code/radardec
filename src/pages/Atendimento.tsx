@@ -47,6 +47,8 @@ export default function Atendimento() {
   const [activeRecording, setActiveRecording] = useState(false);
   const [activeAudioStream, setActiveAudioStream] = useState<MediaStream | null>(null);
 
+  const [showCloseWarning, setShowCloseWarning] = useState(false);
+
   const handleRecordingStateChange = useCallback((isRecording: boolean, stream: MediaStream | null) => {
     setActiveRecording(isRecording);
     setActiveAudioStream(stream);
