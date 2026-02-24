@@ -254,7 +254,7 @@ REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
   };
 }
 
-function buildShowratePrompt(transcript: string, leadName: string, leadContext: string, showRateItems: any[]) {
+function buildShowratePrompt(transcript: string, leadName: string, leadContext: string, showRateItems: any[], coachInstructions?: string) {
   const itemsList = (showRateItems || []).map((i: any) => `- ${i.label}: ${i.description || ""}`).join("\n");
   return {
     system: `Você é uma IA especialista em análise de SHOW RATE (probabilidade de comparecimento a reuniões agendadas).
@@ -263,6 +263,7 @@ CONTEXTO:
 - Lead: ${leadName || "Desconhecido"}
 ${leadContext ? `- Info: ${leadContext}` : ""}
 
+${coachInstructions ? `INSTRUÇÕES DO COACH PARA SHOW RATE:\n${coachInstructions}\n` : ""}
 FALAS DE SHOW RATE DISPONÍVEIS:
 ${itemsList || "Nenhuma fala cadastrada."}
 
