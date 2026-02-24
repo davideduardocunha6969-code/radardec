@@ -149,14 +149,14 @@ export default function RobosCoach() {
                   </CardHeader>
                   <CardContent className="space-y-2">
                     {r.descricao && <p className="text-sm text-muted-foreground">{r.descricao}</p>}
-                    <div className="space-y-2">
+                    <Accordion type="multiple" className="w-full">
                       <PromptPreview label="RECA — Âncoras Emocionais" icon={Heart} color="text-red-500" text={r.instrucoes_reca} />
                       <PromptPreview label="RALOCA — Âncoras Lógicas" icon={Brain} color="text-purple-500" text={r.instrucoes_raloca} />
                       <PromptPreview label="RADOVECA — Objeções" icon={ShieldAlert} color="text-amber-500" text={r.instrucoes_radoveca} />
                       {r.instrucoes && !r.instrucoes_reca && !r.instrucoes_raloca && !r.instrucoes_radoveca && (
                         <PromptPreview label="Instruções Gerais (legado)" icon={Bot} color="text-muted-foreground" text={r.instrucoes} />
                       )}
-                    </div>
+                    </Accordion>
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(r)}><Pencil className="h-3.5 w-3.5 mr-1" />Editar</Button>
                       <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteRobo.mutate(r.id)}><Trash2 className="h-3.5 w-3.5 mr-1" />Excluir</Button>
