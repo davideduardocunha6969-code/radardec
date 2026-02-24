@@ -21,11 +21,17 @@ import { useCreateChamada, useUpdateChamada } from "@/hooks/useCrmChamadas";
 import { toast } from "sonner";
 
 
+export interface AudioStreamsInfo {
+  micStream: MediaStream | null;
+  systemStream: MediaStream | null;
+  mixedStream: MediaStream | null;
+}
+
 interface WhatsAppCallRecorderProps {
   leadId: string;
   leadNome: string;
   numero: string;
-  onRecordingStateChange?: (isRecording: boolean, audioStream: MediaStream | null) => void;
+  onRecordingStateChange?: (isRecording: boolean, streams: AudioStreamsInfo) => void;
   onAudioMonitorUpdate?: (info: { hasMicAudio: boolean; hasSystemAudio: boolean; micLevel: number; systemLevel: number; duration: number }) => void;
   stopRef?: React.MutableRefObject<(() => void) | null>;
 }
