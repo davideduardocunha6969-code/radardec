@@ -115,27 +115,32 @@ PROIBIÇÕES:
 
 function buildRalocaPrompt(transcript: string, leadName: string, leadContext: string, instructions: string) {
   return {
-    system: `Você é uma IA especialista em RAZÕES LÓGICAS (RALOCA) e argumentos racionais em vendas.
+    system: `Você é um coach de vendas em tempo real. Sua ÚNICA função é seguir EXATAMENTE as instruções abaixo para gerar orientações de RALOCA (Razões Lógicas de Compra e Ação) para o SDR.
 
-CONTEXTO:
-- Lead: ${leadName || "Desconhecido"}
-${leadContext ? `- Info: ${leadContext}` : ""}
+LEAD: ${leadName || "Desconhecido"}
+${leadContext ? `CONTEXTO DO LEAD: ${leadContext}` : ""}
 
-INSTRUÇÕES DO COACH PARA RALOCA:
-${instructions || "Identifique argumentos lógicos relevantes para este lead."}
+===== INSTRUÇÕES OBRIGATÓRIAS DO COACH (SIGA À RISCA) =====
+${instructions || "Nenhuma instrução cadastrada."}
+===== FIM DAS INSTRUÇÕES =====
 
-Analise a transcrição e:
-- Identifique quais argumentos lógicos são relevantes para ESTE lead
-- Gere falas/perguntas que o SDR deveria usar para trazer consciência lógica
-- Marque como "done: true" se o SDR JÁ utilizou esse argumento
-- Gere entre 3 e 7 itens priorizando os mais relevantes
+COMO APLICAR:
+1. Leia a transcrição da ligação INTEIRA para entender a situação real do lead.
+2. Baseando-se EXCLUSIVAMENTE nas instruções do coach acima, gere argumentos lógicos que o SDR deve usar AGORA.
+3. Cada item deve ser uma FALA PRONTA contextualizada com o que o lead REALMENTE disse na conversa.
+4. NÃO gere itens genéricos. Referencie dados, números ou situações mencionados pelo lead.
+5. Marque "done: true" SOMENTE se o SDR já usou esse argumento lógico na transcrição.
+6. Gere entre 3 e 7 itens, priorizando os mais urgentes.
 
-REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
+PROIBIÇÕES:
+- NÃO invente informações sobre o lead.
+- NÃO gere instruções que contradigam as instruções do coach.
+- NÃO use argumentos genéricos sem conexão com a conversa real.`,
     tools: [{
       type: "function",
       function: {
         name: "analyze_raloca",
-        description: "Logical arguments relevant to this lead",
+        description: "Logical arguments based on coach instructions",
         parameters: {
           type: "object",
           properties: {
@@ -145,8 +150,8 @@ REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
                 type: "object",
                 properties: {
                   id: { type: "string" },
-                  label: { type: "string" },
-                  description: { type: "string" },
+                  label: { type: "string", description: "Título curto do argumento lógico" },
+                  description: { type: "string", description: "Fala pronta contextualizada para o SDR usar agora" },
                   done: { type: "boolean" },
                 },
                 required: ["id", "label", "description", "done"],
@@ -163,27 +168,31 @@ REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
 
 function buildRadovecaPrompt(transcript: string, leadName: string, leadContext: string, instructions: string) {
   return {
-    system: `Você é uma IA especialista em OBJEÇÕES (RADOVECA) e contorno de objeções em vendas.
+    system: `Você é um coach de vendas em tempo real. Sua ÚNICA função é seguir EXATAMENTE as instruções abaixo para gerar orientações de RADOVECA (contorno de objeções) para o SDR.
 
-CONTEXTO:
-- Lead: ${leadName || "Desconhecido"}
-${leadContext ? `- Info: ${leadContext}` : ""}
+LEAD: ${leadName || "Desconhecido"}
+${leadContext ? `CONTEXTO DO LEAD: ${leadContext}` : ""}
 
-INSTRUÇÕES DO COACH PARA OBJEÇÕES:
-${instructions || "Identifique e sugira respostas para objeções do lead."}
+===== INSTRUÇÕES OBRIGATÓRIAS DO COACH (SIGA À RISCA) =====
+${instructions || "Nenhuma instrução cadastrada."}
+===== FIM DAS INSTRUÇÕES =====
 
-Analise a transcrição e identifique TODAS as objeções do lead. Para cada:
-- Crie um ID único em snake_case
-- Descreva a objeção detectada
-- Sugira uma resposta/pergunta para o SDR (linguagem simples, prefira perguntas que levem o lead a encontrar a resposta sozinho)
-- Indique se o SDR JÁ respondeu adequadamente (addressed: true/false)
+COMO APLICAR:
+1. Leia a transcrição INTEIRA e identifique objeções REAIS que o lead levantou.
+2. Para cada objeção, siga as instruções do coach para formular a resposta.
+3. A resposta sugerida deve ser uma FALA PRONTA que o SDR pode usar, usando a linguagem e abordagem definidas pelo coach.
+4. NÃO invente objeções que o lead não fez. Só liste objeções com evidência na transcrição.
+5. Marque "addressed: true" SOMENTE se o SDR já respondeu adequadamente.
 
-REGRAS: Só marque como addressed se houver evidência CLARA. Não invente fatos.`,
+PROIBIÇÕES:
+- NÃO invente objeções que o lead não verbalizou.
+- NÃO gere respostas genéricas desconectadas das instruções do coach.
+- NÃO contradiga a metodologia definida nas instruções.`,
     tools: [{
       type: "function",
       function: {
         name: "analyze_objections",
-        description: "Objections detected in the call",
+        description: "Objections detected and responses based on coach methodology",
         parameters: {
           type: "object",
           properties: {
@@ -193,8 +202,8 @@ REGRAS: Só marque como addressed se houver evidência CLARA. Não invente fatos
                 type: "object",
                 properties: {
                   id: { type: "string" },
-                  objection: { type: "string" },
-                  suggested_response: { type: "string" },
+                  objection: { type: "string", description: "A objeção real que o lead fez na conversa" },
+                  suggested_response: { type: "string", description: "Fala pronta baseada nas instruções do coach" },
                   addressed: { type: "boolean" },
                 },
                 required: ["id", "objection", "suggested_response", "addressed"],
@@ -211,28 +220,30 @@ REGRAS: Só marque como addressed se houver evidência CLARA. Não invente fatos
 
 function buildNoshowPrompt(transcript: string, leadName: string, leadContext: string, instructions: string) {
   return {
-    system: `Você é uma IA especialista em situações de NO-SHOW em vendas (quando o lead não aparece ou cancela).
+    system: `Você é um coach de vendas em tempo real. Sua ÚNICA função é seguir EXATAMENTE as instruções abaixo para gerar orientações de prevenção de NO-SHOW para o SDR.
 
-CONTEXTO:
-- Lead: ${leadName || "Desconhecido"}
-${leadContext ? `- Info: ${leadContext}` : ""}
+LEAD: ${leadName || "Desconhecido"}
+${leadContext ? `CONTEXTO DO LEAD: ${leadContext}` : ""}
 
-INSTRUÇÕES DO COACH PARA NO-SHOW:
-${instructions || "Identifique sinais de no-show e sugira abordagens de recuperação."}
+===== INSTRUÇÕES OBRIGATÓRIAS DO COACH (SIGA À RISCA) =====
+${instructions || "Nenhuma instrução cadastrada."}
+===== FIM DAS INSTRUÇÕES =====
 
-Analise a transcrição e:
-- Identifique sinais de que o lead pode dar no-show (hesitação, desinteresse, adiamentos)
-- Gere sugestões de falas/perguntas para prevenir o no-show
-- Sugira estratégias de reengajamento se o no-show já ocorreu
-- Marque como "done: true" se o SDR JÁ aplicou essa estratégia
-- Gere entre 2 e 5 itens priorizando os mais relevantes
+COMO APLICAR:
+1. Leia a transcrição INTEIRA e identifique sinais reais de risco de no-show (hesitação, adiamentos, desinteresse).
+2. Baseando-se nas instruções do coach, gere FALAS PRONTAS que o SDR deve usar para prevenir o no-show.
+3. Cada sugestão deve estar conectada ao que o lead realmente disse ou demonstrou.
+4. Marque "done: true" SOMENTE se o SDR já aplicou essa estratégia.
+5. Gere entre 2 e 5 itens.
 
-REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
+PROIBIÇÕES:
+- NÃO invente sinais de risco que não existem na transcrição.
+- NÃO gere sugestões genéricas desconectadas da conversa.`,
     tools: [{
       type: "function",
       function: {
         name: "analyze_noshow",
-        description: "No-show prevention and recovery strategies",
+        description: "No-show prevention based on coach instructions",
         parameters: {
           type: "object",
           properties: {
@@ -242,8 +253,8 @@ REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
                 type: "object",
                 properties: {
                   id: { type: "string" },
-                  label: { type: "string" },
-                  description: { type: "string" },
+                  label: { type: "string", description: "Título curto da estratégia" },
+                  description: { type: "string", description: "Fala pronta contextualizada para o SDR" },
                   done: { type: "boolean" },
                 },
                 required: ["id", "label", "description", "done"],
