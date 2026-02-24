@@ -13,7 +13,7 @@ interface VoipDialerProps {
   leadNome: string;
   numero: string;
   onCallStatusChange?: (status: string) => void;
-  onRecordingStateChange?: (isRecording: boolean, audioStream: MediaStream | null) => void;
+  onRecordingStateChange?: (isRecording: boolean, streams: { micStream: MediaStream | null; systemStream: MediaStream | null; mixedStream: MediaStream | null }) => void;
   stopRef?: React.MutableRefObject<(() => void) | null>;
 }
 
