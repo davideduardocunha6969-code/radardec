@@ -21,11 +21,17 @@ import { useCreateChamada, useUpdateChamada } from "@/hooks/useCrmChamadas";
 import { toast } from "sonner";
 
 
+export interface AudioStreamsInfo {
+  micStream: MediaStream | null;
+  systemStream: MediaStream | null;
+  mixedStream: MediaStream | null;
+}
+
 interface WhatsAppCallRecorderProps {
   leadId: string;
   leadNome: string;
   numero: string;
-  onRecordingStateChange?: (isRecording: boolean, audioStream: MediaStream | null) => void;
+  onRecordingStateChange?: (isRecording: boolean, streams: AudioStreamsInfo) => void;
   onAudioMonitorUpdate?: (info: { hasMicAudio: boolean; hasSystemAudio: boolean; micLevel: number; systemLevel: number; duration: number }) => void;
   stopRef?: React.MutableRefObject<(() => void) | null>;
 }
@@ -59,6 +65,8 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
   const streamsRef = useRef<MediaStream[]>([]);
   const chamadaIdRef = useRef<string | null>(null);
   const mixedStreamRef = useRef<MediaStream | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const systemStreamRef = useRef<MediaStream | null>(null);
   const durationRef = useRef(0);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedChunksRef = useRef(0);
@@ -277,14 +285,16 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       const destination = audioContextRef.current.createMediaStreamDestination();
 
       const micSource = audioContextRef.current.createMediaStreamSource(micStream);
+      micStreamRef.current = micStream;
       micAnalyserRef.current = audioContextRef.current.createAnalyser();
       micAnalyserRef.current.fftSize = 256;
       micSource.connect(micAnalyserRef.current);
       micSource.connect(destination);
 
       if (hasDisplayAudio && displayStream) {
-        const systemStream = new MediaStream([displayStream.getAudioTracks()[0]]);
-        const systemSource = audioContextRef.current.createMediaStreamSource(systemStream);
+        const sysAudioStream = new MediaStream([displayStream.getAudioTracks()[0]]);
+        systemStreamRef.current = sysAudioStream;
+        const systemSource = audioContextRef.current.createMediaStreamSource(sysAudioStream);
         systemAnalyserRef.current = audioContextRef.current.createAnalyser();
         systemAnalyserRef.current.fftSize = 256;
         systemSource.connect(systemAnalyserRef.current);
@@ -332,7 +342,11 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
         savePartialAudio();
       }, 30_000);
       mixedStreamRef.current = destination.stream;
-      onRecordingStateChange?.(true, destination.stream);
+      onRecordingStateChange?.(true, {
+        micStream: micStreamRef.current,
+        systemStream: systemStreamRef.current,
+        mixedStream: destination.stream,
+      });
 
       // 5. Create chamada record
       const chamada = await createChamada.mutateAsync({
@@ -379,7 +393,9 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       setMicLevel(0);
       setSystemLevel(0);
       mixedStreamRef.current = null;
-      onRecordingStateChange?.(false, null);
+      micStreamRef.current = null;
+      systemStreamRef.current = null;
+      onRecordingStateChange?.(false, { micStream: null, systemStream: null, mixedStream: null });
     }
   }, [status, stopAllStreams, onRecordingStateChange, savePartialAudio]);
 
