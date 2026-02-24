@@ -617,12 +617,15 @@ export default function CrmFunilKanban() {
                           <div>
                             <label className="text-xs font-medium text-muted-foreground">Telefones</label>
                             {editLeadForm.telefones.map((t, i) => (
-                              <div key={i} className="flex gap-2 mt-1 items-center">
-                                <Input value={t.numero} onChange={(e) => { const tels = [...editLeadForm.telefones]; tels[i] = { ...tels[i], numero: e.target.value }; setEditLeadForm({ ...editLeadForm, telefones: tels }); }} placeholder="(99) 99999-9999" className="flex-1" />
-                                <Input value={t.tipo} onChange={(e) => { const tels = [...editLeadForm.telefones]; tels[i] = { ...tels[i], tipo: e.target.value }; setEditLeadForm({ ...editLeadForm, telefones: tels }); }} placeholder="celular" className="w-28" />
-                                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => { const tels = editLeadForm.telefones.filter((_, j) => j !== i); setEditLeadForm({ ...editLeadForm, telefones: tels }); }}>
-                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                                </Button>
+                              <div key={i} className="flex flex-col gap-1 mt-2">
+                                <div className="flex gap-2 items-center">
+                                  <Input value={t.numero} onChange={(e) => { const tels = [...editLeadForm.telefones]; tels[i] = { ...tels[i], numero: e.target.value }; setEditLeadForm({ ...editLeadForm, telefones: tels }); }} placeholder="(99) 99999-9999" className="flex-1" />
+                                  <Input value={t.tipo} onChange={(e) => { const tels = [...editLeadForm.telefones]; tels[i] = { ...tels[i], tipo: e.target.value }; setEditLeadForm({ ...editLeadForm, telefones: tels }); }} placeholder="celular" className="w-28" />
+                                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => { const tels = editLeadForm.telefones.filter((_, j) => j !== i); setEditLeadForm({ ...editLeadForm, telefones: tels }); }}>
+                                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                  </Button>
+                                </div>
+                                <Input value={t.obs || ""} onChange={(e) => { const tels = [...editLeadForm.telefones]; tels[i] = { ...tels[i], obs: e.target.value }; setEditLeadForm({ ...editLeadForm, telefones: tels }); }} placeholder="Observação (ex: ligar após 18h, contato da esposa...)" className="text-xs" />
                               </div>
                             ))}
                             <Button variant="outline" size="sm" className="mt-2" onClick={() => setEditLeadForm({ ...editLeadForm, telefones: [...editLeadForm.telefones, { numero: "", tipo: "celular" }] })}>
@@ -645,14 +648,17 @@ export default function CrmFunilKanban() {
                         </div>
                       ) : (
                         detailLead.telefones.map((t, i) => (
-                          <div key={i} className="flex items-center gap-2 mt-1">
-                            <Phone className="h-4 w-4 text-muted-foreground" />
-                            <span className="text-sm">{t.numero}</span>
-                            <Badge variant="outline" className="text-xs">{t.tipo}</Badge>
-                            <div className="flex items-center gap-1 ml-auto">
-                              <WhatsAppAICallButton leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} />
-                              <WhatsAppCallRecorder leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} onRecordingStateChange={handleRecordingStateChange} />
-                              <VoipDialer leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} onRecordingStateChange={handleRecordingStateChange} />
+                          <div key={i} className="mt-1">
+                            <div className="flex items-center gap-2">
+                              <Phone className="h-4 w-4 text-muted-foreground" />
+                              <span className="text-sm">{t.numero}</span>
+                              <Badge variant="outline" className="text-xs">{t.tipo}</Badge>
+                              {t.obs && <span className="text-xs text-muted-foreground italic">— {t.obs}</span>}
+                              <div className="flex items-center gap-1 ml-auto">
+                                <WhatsAppAICallButton leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} />
+                                <WhatsAppCallRecorder leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} onRecordingStateChange={handleRecordingStateChange} />
+                                <VoipDialer leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} onRecordingStateChange={handleRecordingStateChange} />
+                              </div>
                             </div>
                           </div>
                         ))
