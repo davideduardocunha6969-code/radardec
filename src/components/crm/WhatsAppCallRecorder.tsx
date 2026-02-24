@@ -40,7 +40,7 @@ const formatPhone = (numero: string): string => {
   return `55${digits}`;
 };
 
-export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStateChange, stopRef }: WhatsAppCallRecorderProps) {
+export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStateChange, onAudioMonitorUpdate, stopRef }: WhatsAppCallRecorderProps) {
   const [status, setStatus] = useState<RecordingStatus>("idle");
   const [duration, setDuration] = useState(0);
   const [hasSystemAudio, setHasSystemAudio] = useState(false);
