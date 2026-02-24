@@ -123,13 +123,14 @@ export default function Atendimento() {
     fetchData();
   }, [leadId, isAuthenticated]);
 
-  // Block window close while recording
+  // Auto-stop call on window close
   useEffect(() => {
     if (!activeRecording) return;
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = "Você tem uma chamada em andamento. Deseja encerrar?";
-      return e.returnValue;
+    const handleBeforeUnload = () => {
+      // Trigger stop as if SDR clicked "Finalizar"
+      if (stopCallRef.current) {
+        stopCallRef.current();
+      }
     };
     window.addEventListener("beforeunload", handleBeforeUnload);
     return () => window.removeEventListener("beforeunload", handleBeforeUnload);
@@ -239,6 +240,7 @@ export default function Atendimento() {
                 leadNome={lead.nome}
                 numero={numero}
                 onRecordingStateChange={handleRecordingStateChange}
+                stopRef={stopCallRef}
               />
             ) : (
               <VoipDialer
@@ -246,6 +248,7 @@ export default function Atendimento() {
                 leadNome={lead.nome}
                 numero={numero}
                 onRecordingStateChange={handleRecordingStateChange}
+                stopRef={stopCallRef}
               />
             )}
           </div>
