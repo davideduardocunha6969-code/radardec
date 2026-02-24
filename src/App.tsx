@@ -39,6 +39,7 @@ import RadarOutbound from "./pages/RadarOutbound";
  import NotFound from "./pages/NotFound";
  import Agenda from "./pages/Agenda";
  import MeuPainel from "./pages/MeuPainel";
+ import Atendimento from "./pages/Atendimento";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -50,6 +51,7 @@ const App = () => (
         <AuthProvider>
           <Routes>
             <Route path="/login" element={<Login />} />
+            <Route path="/atendimento" element={<ProtectedRoute><Atendimento /></ProtectedRoute>} />
             <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
               <Route path="/" element={<ProtectedRoute pageKey="gestao-geral"><GestaoGeral /></ProtectedRoute>} />
               <Route path="/radar-controladoria" element={<ProtectedRoute pageKey="radar-controladoria"><RadarControladoria /></ProtectedRoute>} />
