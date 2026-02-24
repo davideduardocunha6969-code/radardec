@@ -160,6 +160,8 @@ export function RealtimeCoachingPanel({
     modelId: "scribe_v2_realtime",
     languageCode: "por",
     commitStrategy: CommitStrategy.VAD,
+    audioFormat: AudioFormat.PCM_16000,
+    sampleRate: 16000,
     onCommittedTranscript: (data) => {
       if (data.text?.trim() && !isHallucination(data.text)) {
         allTranscriptsRef.current = [...allTranscriptsRef.current, data.text];
@@ -167,7 +169,14 @@ export function RealtimeCoachingPanel({
         requestAnalysis(fullTranscript);
       }
     },
+    onError: (err) => {
+      console.error("[Coaching] Scribe error:", err);
+    },
   });
+
+  // Pipe audio from the existing recording stream into Scribe
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const processorRef = useRef<ScriptProcessorNode | null>(null);
 
   useEffect(() => {
     if (!isRecording) return;
@@ -185,20 +194,14 @@ export function RealtimeCoachingPanel({
         }
         if (cancelled) return;
 
-        // 2. Connect Scribe WITH native microphone (simplest & most reliable)
+        // 2. Connect Scribe WITHOUT microphone (manual audio piping)
         await scribe.connect({
           token: data.token,
-          microphone: {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-          },
         });
 
         if (cancelled) { scribe.disconnect(); return; }
-
         setConnectionError(null);
-        console.log("[Coaching] Scribe connected with native microphone");
+        console.log("[Coaching] Scribe connected, waiting for audio stream...");
       } catch (e: any) {
         console.error("[Coaching] Connection error:", e);
         setConnectionError("Erro ao conectar: " + (e.message || String(e)));
@@ -212,6 +215,49 @@ export function RealtimeCoachingPanel({
       allTranscriptsRef.current = [];
     };
   }, [isRecording]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // When audioStream becomes available and scribe is connected, pipe audio
+  useEffect(() => {
+    if (!audioStream || !scribe.isConnected) return;
+
+    const ctx = new AudioContext({ sampleRate: 16000 });
+    audioContextRef.current = ctx;
+
+    const source = ctx.createMediaStreamSource(audioStream);
+    // Buffer size 4096 at 16kHz ≈ 256ms chunks
+    const processor = ctx.createScriptProcessor(4096, 1, 1);
+    processorRef.current = processor;
+
+    processor.onaudioprocess = (e) => {
+      const float32 = e.inputBuffer.getChannelData(0);
+      // Convert Float32 to PCM 16-bit
+      const pcm16 = new Int16Array(float32.length);
+      for (let i = 0; i < float32.length; i++) {
+        const s = Math.max(-1, Math.min(1, float32[i]));
+        pcm16[i] = s < 0 ? s * 0x8000 : s * 0x7FFF;
+      }
+      // Convert to base64
+      const bytes = new Uint8Array(pcm16.buffer);
+      let binary = "";
+      for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+      }
+      const base64 = btoa(binary);
+      scribe.sendAudio(base64);
+    };
+
+    source.connect(processor);
+    processor.connect(ctx.destination);
+    console.log("[Coaching] Audio piping started from recording stream");
+
+    return () => {
+      processor.disconnect();
+      source.disconnect();
+      ctx.close();
+      audioContextRef.current = null;
+      processorRef.current = null;
+    };
+  }, [audioStream, scribe.isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     if (!isRecording || !scribe.isConnected) {
