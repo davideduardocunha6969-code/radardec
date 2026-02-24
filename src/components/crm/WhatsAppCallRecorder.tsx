@@ -343,10 +343,10 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       chamadaIdRef.current = chamada.id;
       updateChamada.mutate({ id: chamada.id, leadId, status: "em_chamada" });
 
-      // 6. Open WhatsApp call — open in new tab/window to avoid navigating away
+      // 6. Open WhatsApp call via native protocol (avoids opening web version)
       const formattedPhone = formatPhone(numero);
-      const waUrl = `https://wa.me/${formattedPhone}`;
-      window.open(waUrl, "_blank", "noopener");
+      const waUrl = `whatsapp://send?phone=${formattedPhone}`;
+      window.open(waUrl, "_blank");
 
       toast.success("WhatsApp aberto! Inicie a ligação e o áudio será gravado.");
     } catch (err: any) {
