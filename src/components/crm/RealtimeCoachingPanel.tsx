@@ -7,7 +7,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/co
 import { Mic, MicOff, Loader2, ClipboardList, Heart, Brain, BookOpen, Presentation } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { type RoboCoach } from "@/hooks/useRobosCoach";
-import { useActiveScriptSdr } from "@/hooks/useScriptsSdr";
+import { type ScriptSdr } from "@/hooks/useScriptsSdr";
 import { Progress } from "@/components/ui/progress";
 import { useScribe, CommitStrategy } from "@elevenlabs/react";
 import { ChecklistCard } from "./coaching/ChecklistCard";
@@ -29,6 +29,7 @@ interface RealtimeCoachingPanelProps {
   leadContext?: string;
   isRecording: boolean;
   audioStream: MediaStream | null;
+  script?: ScriptSdr | null;
 }
 
 export function RealtimeCoachingPanel({
@@ -36,8 +37,8 @@ export function RealtimeCoachingPanel({
   leadNome,
   leadContext,
   isRecording,
+  script,
 }: RealtimeCoachingPanelProps) {
-  const { data: activeScript } = useActiveScriptSdr();
 
   const [apresentacaoDone, setApresentacaoDone] = useState<string[]>([]);
   const [qualificationDone, setQualificationDone] = useState<string[]>([]);
@@ -54,13 +55,13 @@ export function RealtimeCoachingPanel({
   const animFrameRef = useRef<number | null>(null);
 
   // Qualification items from script or fallback
-  const qualificationItems: ChecklistItem[] = activeScript?.qualificacao?.length
-    ? activeScript.qualificacao
+  const qualificationItems: ChecklistItem[] = script?.qualificacao?.length
+    ? script.qualificacao
     : QUALIFICATION_QUESTIONS;
   
   // Apresentacao items from script
-  const apresentacaoItems: ChecklistItem[] = activeScript?.apresentacao?.length
-    ? activeScript.apresentacao
+  const apresentacaoItems: ChecklistItem[] = script?.apresentacao?.length
+    ? script.apresentacao
     : [];
 
   const instructionsText = INSTRUCTIONS_TEXT;

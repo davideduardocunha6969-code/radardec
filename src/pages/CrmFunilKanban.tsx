@@ -155,6 +155,18 @@ export default function CrmFunilKanban() {
     return robosCoach.find(r => r.id === coachId) || null;
   }, [colunas, robosCoach]);
 
+  const getScriptForLead = useCallback((lead: CrmLead, tipo: "sdr" | "closer" = "sdr") => {
+    const coluna = colunas?.find(c => c.id === lead.coluna_id);
+    if (tipo === "closer") {
+      const scriptId = coluna?.script_closer_id;
+      if (!scriptId || !scriptsCloser) return null;
+      return scriptsCloser.find(s => s.id === scriptId) || null;
+    }
+    const scriptId = coluna?.script_sdr_id;
+    if (!scriptId || !scriptsSdr) return null;
+    return scriptsSdr.find(s => s.id === scriptId) || null;
+  }, [colunas, scriptsSdr, scriptsCloser]);
+
   const handleRecordingStateChange = useCallback((isRecording: boolean, stream: MediaStream | null) => {
     setActiveRecording(isRecording);
     setActiveAudioStream(stream);
@@ -674,6 +686,7 @@ export default function CrmFunilKanban() {
                           leadContext={detailLead.resumo_caso || undefined}
                           isRecording={activeRecording}
                           audioStream={activeAudioStream}
+                          script={getScriptForLead(detailLead, "sdr")}
                         />
                       </CoachingErrorBoundary>
                     )}
@@ -737,6 +750,7 @@ export default function CrmFunilKanban() {
                           leadContext={detailLead.resumo_caso || undefined}
                           isRecording={activeRecording}
                           audioStream={activeAudioStream}
+                          script={getScriptForLead(detailLead, "closer")}
                         />
                       </CoachingErrorBoundary>
                     )}
