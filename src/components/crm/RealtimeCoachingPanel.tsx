@@ -206,7 +206,7 @@ export function RealtimeCoachingPanel({
         processorRef.current = processor;
 
         processor.onaudioprocess = (e) => {
-          if (!scribe.isConnected) return;
+          if (!scribeConnectedRef.current) return;
           const inputData = e.inputBuffer.getChannelData(0);
           const int16 = new Int16Array(inputData.length);
           for (let i = 0; i < inputData.length; i++) {
