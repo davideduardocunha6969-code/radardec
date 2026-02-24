@@ -96,7 +96,7 @@ export default function Atendimento() {
       }
     };
     fetchData();
-  }, [leadId]);
+  }, [leadId, isAuthenticated]);
 
   // Update window title
   useEffect(() => {
@@ -105,6 +105,19 @@ export default function Atendimento() {
     }
     return () => { document.title = "RadarDEC"; };
   }, [lead]);
+
+  // Auth guard: wait for check, then redirect if not authenticated
+  if (!authChecked) {
+    return (
+      <div className="flex items-center justify-center h-screen bg-background">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace />;
+  }
 
   if (loading) {
     return (
