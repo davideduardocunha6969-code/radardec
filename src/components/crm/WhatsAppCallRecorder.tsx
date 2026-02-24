@@ -220,6 +220,44 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
     }
   }, [leadId, leadNome, updateChamada]);
 
+  const rebuildRecorderMicOnly = useCallback((mimeType: string) => {
+    try {
+      const mic = micStreamRef.current;
+      if (!mic || mic.getTracks().every((t) => t.readyState !== "live")) {
+        console.error("[WhatsApp] Mic stream also dead – cannot rebuild recorder");
+        return;
+      }
+      // Create a fresh destination from mic only
+      const ctx = audioContextRef.current || new AudioContext();
+      if (!audioContextRef.current) audioContextRef.current = ctx;
+      const dest = ctx.createMediaStreamDestination();
+      const src = ctx.createMediaStreamSource(mic);
+      src.connect(dest);
+      audioContextDestRef.current = dest;
+
+      const newRecorder = new MediaRecorder(dest.stream, { mimeType });
+      mediaRecorderRef.current = newRecorder;
+      newRecorder.ondataavailable = (e) => {
+        if (e.data.size > 0) chunksRef.current.push(e.data);
+      };
+      newRecorder.onstop = () => {
+        if (manualStopRef.current) {
+          if (autoSaveTimerRef.current) { clearInterval(autoSaveTimerRef.current); autoSaveTimerRef.current = null; }
+          const blob = new Blob(chunksRef.current, { type: mimeType });
+          handleRecordingComplete(blob, durationRef.current);
+        } else {
+          console.warn("[WhatsApp] Rebuilt recorder also stopped unexpectedly – ignoring");
+        }
+      };
+      newRecorder.start(1000);
+      mixedStreamRef.current = dest.stream;
+      setHasSystemAudio(false);
+      console.log("[WhatsApp] Rebuilt recorder with mic-only successfully");
+    } catch (err) {
+      console.error("[WhatsApp] rebuildRecorderMicOnly failed:", err);
+    }
+  }, [handleRecordingComplete]);
+
   const startWhatsAppCall = async () => {
     if (!numero) {
       toast.error("Telefone não informado");
@@ -418,8 +456,8 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
   };
 
   const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && status === "recording") {
-      // Do one final partial save before stopping
+    if (mediaRecorderRef.current && (status === "recording" || status === "paused")) {
+      manualStopRef.current = true;
       savePartialAudio();
       mediaRecorderRef.current.stop();
       setStatus("processing");
