@@ -602,19 +602,61 @@ export default function CrmFunilKanban() {
                     )}
                     {detailLead.endereco && <div><label className="text-sm font-medium text-muted-foreground">Endereço</label><p className="text-sm">{detailLead.endereco}</p></div>}
                     <div>
-                      <label className="text-sm font-medium text-muted-foreground">Telefones</label>
-                      {detailLead.telefones.map((t, i) => (
-                        <div key={i} className="flex items-center gap-2 mt-1">
-                          <Phone className="h-4 w-4 text-muted-foreground" />
-                          <span className="text-sm">{t.numero}</span>
-                          <Badge variant="outline" className="text-xs">{t.tipo}</Badge>
-                          <div className="flex items-center gap-1 ml-auto">
-                            <WhatsAppAICallButton leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} />
-                            <WhatsAppCallRecorder leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} onRecordingStateChange={handleRecordingStateChange} />
-                            <VoipDialer leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} onRecordingStateChange={handleRecordingStateChange} />
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-sm font-medium text-muted-foreground">Telefones</label>
+                        {!editingLeadData && (
+                          <Button variant="outline" size="sm" onClick={() => { setEditLeadForm({ nome: detailLead.nome, endereco: detailLead.endereco || "", telefones: [...detailLead.telefones] }); setEditingLeadData(true); }}>
+                            <Pencil className="h-3.5 w-3.5 mr-1" />Editar Dados
+                          </Button>
+                        )}
+                      </div>
+                      {editingLeadData ? (
+                        <div className="space-y-3 rounded-lg border p-4">
+                          <div><label className="text-xs font-medium text-muted-foreground">Nome</label><Input value={editLeadForm.nome} onChange={(e) => setEditLeadForm({ ...editLeadForm, nome: e.target.value })} /></div>
+                          <div><label className="text-xs font-medium text-muted-foreground">Endereço</label><Input value={editLeadForm.endereco} onChange={(e) => setEditLeadForm({ ...editLeadForm, endereco: e.target.value })} /></div>
+                          <div>
+                            <label className="text-xs font-medium text-muted-foreground">Telefones</label>
+                            {editLeadForm.telefones.map((t, i) => (
+                              <div key={i} className="flex gap-2 mt-1 items-center">
+                                <Input value={t.numero} onChange={(e) => { const tels = [...editLeadForm.telefones]; tels[i] = { ...tels[i], numero: e.target.value }; setEditLeadForm({ ...editLeadForm, telefones: tels }); }} placeholder="(99) 99999-9999" className="flex-1" />
+                                <Input value={t.tipo} onChange={(e) => { const tels = [...editLeadForm.telefones]; tels[i] = { ...tels[i], tipo: e.target.value }; setEditLeadForm({ ...editLeadForm, telefones: tels }); }} placeholder="celular" className="w-28" />
+                                <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => { const tels = editLeadForm.telefones.filter((_, j) => j !== i); setEditLeadForm({ ...editLeadForm, telefones: tels }); }}>
+                                  <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                                </Button>
+                              </div>
+                            ))}
+                            <Button variant="outline" size="sm" className="mt-2" onClick={() => setEditLeadForm({ ...editLeadForm, telefones: [...editLeadForm.telefones, { numero: "", tipo: "celular" }] })}>
+                              <Plus className="h-3.5 w-3.5 mr-1" />Adicionar Telefone
+                            </Button>
+                          </div>
+                          <div className="flex gap-2 justify-end">
+                            <Button variant="outline" size="sm" onClick={() => setEditingLeadData(false)}>Cancelar</Button>
+                            <Button size="sm" onClick={() => {
+                              const validPhones = editLeadForm.telefones.filter(t => t.numero.trim());
+                              updateLead.mutate({ id: detailLead.id, funilId: funilId!, nome: editLeadForm.nome, endereco: editLeadForm.endereco || undefined, telefones: validPhones }, {
+                                onSuccess: () => {
+                                  setDetailLead({ ...detailLead, nome: editLeadForm.nome, endereco: editLeadForm.endereco || null, telefones: validPhones });
+                                  setEditingLeadData(false);
+                                  toast.success("Dados atualizados!");
+                                },
+                              });
+                            }}>Salvar</Button>
                           </div>
                         </div>
-                      ))}
+                      ) : (
+                        detailLead.telefones.map((t, i) => (
+                          <div key={i} className="flex items-center gap-2 mt-1">
+                            <Phone className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{t.numero}</span>
+                            <Badge variant="outline" className="text-xs">{t.tipo}</Badge>
+                            <div className="flex items-center gap-1 ml-auto">
+                              <WhatsAppAICallButton leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} />
+                              <WhatsAppCallRecorder leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} onRecordingStateChange={handleRecordingStateChange} />
+                              <VoipDialer leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} onRecordingStateChange={handleRecordingStateChange} />
+                            </div>
+                          </div>
+                        ))
+                      )}
                     </div>
 
                     {/* Real-time coaching panel inside lead card */}
