@@ -541,6 +541,80 @@ export type Database = {
         }
         Relationships: []
       }
+      coaching_prompts: {
+        Row: {
+          ai_key: string
+          created_at: string
+          id: string
+          is_active: boolean
+          phase: string
+          prompt_text: string
+          updated_at: string
+          version: number
+        }
+        Insert: {
+          ai_key: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          phase: string
+          prompt_text: string
+          updated_at?: string
+          version?: number
+        }
+        Update: {
+          ai_key?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          phase?: string
+          prompt_text?: string
+          updated_at?: string
+          version?: number
+        }
+        Relationships: []
+      }
+      coaching_sessions: {
+        Row: {
+          chamada_id: string | null
+          created_at: string
+          id: string
+          lead_id: string | null
+          session_key: string
+          state: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          chamada_id?: string | null
+          created_at?: string
+          id?: string
+          lead_id?: string | null
+          session_key: string
+          state?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          chamada_id?: string | null
+          created_at?: string
+          id?: string
+          lead_id?: string | null
+          session_key?: string
+          state?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coaching_sessions_chamada_id_fkey"
+            columns: ["chamada_id"]
+            isOneToOne: false
+            referencedRelation: "crm_chamadas"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       config_recrutamento: {
         Row: {
           created_at: string
