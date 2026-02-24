@@ -6,6 +6,17 @@ import { VoipDialer } from "@/components/crm/VoipDialer";
 import { RealtimeCoachingPanel } from "@/components/crm/RealtimeCoachingPanel";
 import { CoachingErrorBoundary } from "@/components/crm/coaching/CoachingErrorBoundary";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Phone, User, MapPin, FileText, Loader2 } from "lucide-react";
 import type { RoboCoach } from "@/hooks/useRobosCoach";
 import type { LeadTelefone } from "@/hooks/useCrmOutbound";
@@ -35,6 +46,8 @@ export default function Atendimento() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [activeRecording, setActiveRecording] = useState(false);
   const [activeAudioStream, setActiveAudioStream] = useState<MediaStream | null>(null);
+
+  const [showCloseWarning, setShowCloseWarning] = useState(false);
 
   const handleRecordingStateChange = useCallback((isRecording: boolean, stream: MediaStream | null) => {
     setActiveRecording(isRecording);
@@ -108,6 +121,18 @@ export default function Atendimento() {
     };
     fetchData();
   }, [leadId, isAuthenticated]);
+
+  // Block window close while recording
+  useEffect(() => {
+    if (!activeRecording) return;
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = "Você tem uma chamada em andamento. Deseja encerrar?";
+      return e.returnValue;
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+  }, [activeRecording]);
 
   // Update window title
   useEffect(() => {
