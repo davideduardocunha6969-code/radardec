@@ -58,6 +58,10 @@ export function RealtimeCoachingPanel({
     ? activeScript.apresentacao
     : [];
 
+  const fechamentoItems: ChecklistItem[] = activeScript?.fechamento?.length
+    ? activeScript.fechamento
+    : [];
+
   const showRateItems: ChecklistItem[] = activeScript?.show_rate?.length
     ? activeScript.show_rate
     : [];
