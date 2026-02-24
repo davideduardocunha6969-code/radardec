@@ -4,14 +4,11 @@ import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useUpdateColu
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { VoipDialer } from "@/components/crm/VoipDialer";
-import { WhatsAppCallRecorder } from "@/components/crm/WhatsAppCallRecorder";
 import { WhatsAppAICallButton } from "@/components/crm/WhatsAppAICallButton";
 import { LeadContatosTab } from "@/components/crm/LeadContatosTab";
-import { RealtimeCoachingPanel } from "@/components/crm/RealtimeCoachingPanel";
-import { CoachingErrorBoundary } from "@/components/crm/coaching/CoachingErrorBoundary";
 import { AgendaClosersTab } from "@/components/crm/AgendaClosersTab";
-import { useRobosCoachAtivos, type RoboCoach } from "@/hooks/useRobosCoach";
+import { useRobosCoachAtivos } from "@/hooks/useRobosCoach";
+import { AgendaClosersTab } from "@/components/crm/AgendaClosersTab";
 import { useScriptsSdr } from "@/hooks/useScriptsSdr";
 import { useScriptsCloser } from "@/hooks/useScriptsCloser";
 import { useCleanupOrphanedChamadas } from "@/hooks/useCrmChamadas";
