@@ -160,6 +160,9 @@ export function RealtimeCoachingPanel({
   const micStreamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const scribeConnectedRef = useRef(false);
+  const scribeRef = useRef(scribe);
+  scribeRef.current = scribe;
 
   useEffect(() => {
     if (!isRecording) return;
@@ -176,7 +179,8 @@ export function RealtimeCoachingPanel({
         if (cancelled) return;
 
         await scribe.connect({ token: data.token, audioFormat: AudioFormat.PCM_16000, sampleRate: 16000 });
-        if (cancelled) { scribe.disconnect(); return; }
+        scribeConnectedRef.current = true;
+        if (cancelled) { scribe.disconnect(); scribeConnectedRef.current = false; return; }
 
         let micStream: MediaStream;
         try {
@@ -195,7 +199,7 @@ export function RealtimeCoachingPanel({
             });
           }
         }
-        if (cancelled) { micStream.getTracks().forEach(t => t.stop()); scribe.disconnect(); return; }
+        if (cancelled) { micStream.getTracks().forEach(t => t.stop()); scribe.disconnect(); scribeConnectedRef.current = false; return; }
         micStreamRef.current = micStream;
 
         const audioCtx = new AudioContext({ sampleRate: 16000 });
@@ -205,7 +209,7 @@ export function RealtimeCoachingPanel({
         processorRef.current = processor;
 
         processor.onaudioprocess = (e) => {
-          if (!scribe.isConnected) return;
+          if (!scribeConnectedRef.current) return;
           const inputData = e.inputBuffer.getChannelData(0);
           const int16 = new Int16Array(inputData.length);
           for (let i = 0; i < inputData.length; i++) {
@@ -218,7 +222,7 @@ export function RealtimeCoachingPanel({
             binary += String.fromCharCode(uint8[i]);
           }
           const base64 = btoa(binary);
-          try { scribe.sendAudio(base64, { sampleRate: 16000 }); } catch {}
+          try { scribeRef.current.sendAudio(base64, { sampleRate: 16000 }); } catch {}
         };
 
         source.connect(processor);
@@ -236,6 +240,7 @@ export function RealtimeCoachingPanel({
       if (processorRef.current) { processorRef.current.disconnect(); processorRef.current = null; }
       if (audioCtxRef.current) { audioCtxRef.current.close(); audioCtxRef.current = null; }
       if (micStreamRef.current) { micStreamRef.current.getTracks().forEach(t => t.stop()); micStreamRef.current = null; }
+      scribeConnectedRef.current = false;
       scribe.disconnect();
       allTranscriptsRef.current = [];
     };
