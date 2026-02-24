@@ -3,7 +3,7 @@ import { useSearchParams, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppCallRecorder } from "@/components/crm/WhatsAppCallRecorder";
 import { VoipDialer } from "@/components/crm/VoipDialer";
-import { RealtimeCoachingPanel } from "@/components/crm/RealtimeCoachingPanel";
+import { RealtimeCoachingPanel, type AudioMonitorInfo } from "@/components/crm/RealtimeCoachingPanel";
 import { CoachingErrorBoundary } from "@/components/crm/coaching/CoachingErrorBoundary";
 import { Badge } from "@/components/ui/badge";
 import { Phone, User, MapPin, FileText, Loader2 } from "lucide-react";
@@ -37,11 +37,17 @@ export default function Atendimento() {
   const [activeAudioStream, setActiveAudioStream] = useState<MediaStream | null>(null);
 
   const [showCloseWarning, setShowCloseWarning] = useState(false);
+  const [audioMonitor, setAudioMonitor] = useState<AudioMonitorInfo | undefined>(undefined);
   const stopCallRef = useRef<(() => void) | null>(null);
 
   const handleRecordingStateChange = useCallback((isRecording: boolean, stream: MediaStream | null) => {
     setActiveRecording(isRecording);
     setActiveAudioStream(stream);
+    if (!isRecording) setAudioMonitor(undefined);
+  }, []);
+
+  const handleAudioMonitorUpdate = useCallback((info: AudioMonitorInfo) => {
+    setAudioMonitor(info);
   }, []);
 
   // Wait for auth session to be restored from localStorage
@@ -233,6 +239,7 @@ export default function Atendimento() {
                   isRecording={activeRecording}
                   audioStream={activeAudioStream}
                   topBarOnly
+                  audioMonitor={audioMonitor}
                 />
               </CoachingErrorBoundary>
             </div>
@@ -244,6 +251,7 @@ export default function Atendimento() {
                 leadNome={lead.nome}
                 numero={numero}
                 onRecordingStateChange={handleRecordingStateChange}
+                onAudioMonitorUpdate={handleAudioMonitorUpdate}
                 stopRef={stopCallRef}
               />
             ) : (
