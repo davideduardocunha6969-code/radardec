@@ -15,10 +15,13 @@ interface ScriptItem {
 function buildScriptPrompt(transcript: string, leadName: string, leadContext: string, scriptItems: any) {
   const qualificacao: ScriptItem[] = scriptItems?.qualificacao || [];
   const apresentacao: ScriptItem[] = scriptItems?.apresentacao || [];
+  const fechamento: ScriptItem[] = scriptItems?.fechamento || [];
   const qualList = qualificacao.map((q) => `   - ${q.id}: ${q.description || q.label}`).join("\n");
   const qualIds = qualificacao.map((q) => q.id).join(", ");
   const apresList = apresentacao.map((a) => `   - ${a.id}: ${a.description || a.label}`).join("\n");
   const apresIds = apresentacao.map((a) => a.id).join(", ");
+  const fechList = fechamento.map((f) => `   - ${f.id}: ${f.description || f.label}`).join("\n");
+  const fechIds = fechamento.map((f) => f.id).join(", ");
 
   return {
     system: `Você analisa transcrições de ligações SDR e identifica quais itens do script já foram cobertos.
@@ -33,6 +36,9 @@ ${apresList || "   Nenhum item."}
 2. QUALIFICAÇÃO (IDs válidos: ${qualIds || "nenhum"}):
 ${qualList || "   Nenhum item."}
 
+3. FECHAMENTO (IDs válidos: ${fechIds || "nenhum"}):
+${fechList || "   Nenhum item."}
+
 REGRAS: Só marque como feito se houver evidência CLARA na transcrição.`,
     tools: [{
       type: "function",
@@ -44,8 +50,9 @@ REGRAS: Só marque como feito se houver evidência CLARA na transcrição.`,
           properties: {
             apresentacao_done: { type: "array", items: { type: "string" } },
             qualification_done: { type: "array", items: { type: "string" } },
+            fechamento_done: { type: "array", items: { type: "string" } },
           },
-          required: ["apresentacao_done", "qualification_done"],
+          required: ["apresentacao_done", "qualification_done", "fechamento_done"],
         },
       },
     }],
@@ -247,7 +254,7 @@ REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
   };
 }
 
-function buildShowratePrompt(transcript: string, leadName: string, leadContext: string, showRateItems: any[]) {
+function buildShowratePrompt(transcript: string, leadName: string, leadContext: string, showRateItems: any[], coachInstructions?: string) {
   const itemsList = (showRateItems || []).map((i: any) => `- ${i.label}: ${i.description || ""}`).join("\n");
   return {
     system: `Você é uma IA especialista em análise de SHOW RATE (probabilidade de comparecimento a reuniões agendadas).
@@ -256,6 +263,7 @@ CONTEXTO:
 - Lead: ${leadName || "Desconhecido"}
 ${leadContext ? `- Info: ${leadContext}` : ""}
 
+${coachInstructions ? `INSTRUÇÕES DO COACH PARA SHOW RATE:\n${coachInstructions}\n` : ""}
 FALAS DE SHOW RATE DISPONÍVEIS:
 ${itemsList || "Nenhuma fala cadastrada."}
 
@@ -341,7 +349,7 @@ serve(async (req) => {
         promptConfig = buildNoshowPrompt(transcript, leadName, leadContext, body.coachInstructions);
         break;
       case "showrate":
-        promptConfig = buildShowratePrompt(transcript, leadName, leadContext, body.showRateItems);
+        promptConfig = buildShowratePrompt(transcript, leadName, leadContext, body.showRateItems, body.coachInstructions);
         break;
       default:
         // Legacy fallback — single combined call

@@ -27,21 +27,24 @@ function sortItems<T extends { done?: boolean; addressed?: boolean }>(items: T[]
 interface ScriptCardProps {
   apresentacaoItems: ChecklistItem[];
   qualificationItems: ChecklistItem[];
+  fechamentoItems: ChecklistItem[];
   apresentacaoDone: string[];
   qualificationDone: string[];
+  fechamentoDone: string[];
 }
 
-export function ScriptCard({ apresentacaoItems, qualificationItems, apresentacaoDone, qualificationDone }: ScriptCardProps) {
+export function ScriptCard({ apresentacaoItems, qualificationItems, fechamentoItems, apresentacaoDone, qualificationDone, fechamentoDone }: ScriptCardProps) {
   const allItems = [
     ...apresentacaoItems.map(i => ({ ...i, type: "apresentacao" as const })),
     ...qualificationItems.map(i => ({ ...i, type: "qualificacao" as const })),
+    ...fechamentoItems.map(i => ({ ...i, type: "fechamento" as const })),
   ];
   const pending = allItems.filter(i => {
-    const doneList = i.type === "apresentacao" ? apresentacaoDone : qualificationDone;
+    const doneList = i.type === "apresentacao" ? apresentacaoDone : i.type === "qualificacao" ? qualificationDone : fechamentoDone;
     return !doneList.includes(i.id);
   });
   const done = allItems.filter(i => {
-    const doneList = i.type === "apresentacao" ? apresentacaoDone : qualificationDone;
+    const doneList = i.type === "apresentacao" ? apresentacaoDone : i.type === "qualificacao" ? qualificationDone : fechamentoDone;
     return doneList.includes(i.id);
   });
   const total = allItems.length;

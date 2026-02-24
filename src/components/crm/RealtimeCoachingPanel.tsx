@@ -36,6 +36,7 @@ export function RealtimeCoachingPanel({
 
   const [apresentacaoDone, setApresentacaoDone] = useState<string[]>([]);
   const [qualificationDone, setQualificationDone] = useState<string[]>([]);
+  const [fechamentoDone, setFechamentoDone] = useState<string[]>([]);
   const [objections, setObjections] = useState<Objection[]>([]);
   const [recaItems, setRecaItems] = useState<DynamicItem[]>([]);
   const [ralocaItems, setRalocaItems] = useState<DynamicItem[]>([]);
@@ -58,6 +59,10 @@ export function RealtimeCoachingPanel({
     ? activeScript.apresentacao
     : [];
 
+  const fechamentoItems: ChecklistItem[] = activeScript?.fechamento?.length
+    ? activeScript.fechamento
+    : [];
+
   const showRateItems: ChecklistItem[] = activeScript?.show_rate?.length
     ? activeScript.show_rate
     : [];
@@ -74,7 +79,7 @@ export function RealtimeCoachingPanel({
       try {
         const [scriptRes, recaRes, ralocaRes, radovecaRes, showrateRes] = await Promise.allSettled([
           supabase.functions.invoke("coaching-realtime", {
-            body: { ...baseBody, mode: "script", scriptItems: { qualificacao: qualificationItems, apresentacao: apresentacaoItems } },
+            body: { ...baseBody, mode: "script", scriptItems: { qualificacao: qualificationItems, apresentacao: apresentacaoItems, fechamento: fechamentoItems } },
           }),
           supabase.functions.invoke("coaching-realtime", {
             body: { ...baseBody, mode: "reca", coachInstructions: coach.instrucoes_reca || coach.instrucoes },
@@ -86,7 +91,7 @@ export function RealtimeCoachingPanel({
             body: { ...baseBody, mode: "radoveca", coachInstructions: coach.instrucoes_radoveca || coach.instrucoes },
           }),
           supabase.functions.invoke("coaching-realtime", {
-            body: { ...baseBody, mode: "showrate", showRateItems },
+            body: { ...baseBody, mode: "showrate", showRateItems, coachInstructions: coach.instrucoes_noshow || "" },
           }),
         ]);
 
@@ -94,6 +99,7 @@ export function RealtimeCoachingPanel({
           const a = scriptRes.value.data.analysis;
           setApresentacaoDone(a.apresentacao_done || []);
           setQualificationDone(a.qualification_done || []);
+          setFechamentoDone(a.fechamento_done || []);
         }
         if (recaRes.status === "fulfilled" && recaRes.value.data?.analysis) {
           setRecaItems(recaRes.value.data.analysis.reca_items || []);
@@ -116,7 +122,7 @@ export function RealtimeCoachingPanel({
         isAnalyzingRef.current = false;
       }
     },
-    [coach.instrucoes, coach.instrucoes_reca, coach.instrucoes_raloca, coach.instrucoes_radoveca, leadNome, leadContext, qualificationItems, apresentacaoItems, showRateItems, showRateData?.score]
+    [coach.instrucoes, coach.instrucoes_reca, coach.instrucoes_raloca, coach.instrucoes_radoveca, coach.instrucoes_noshow, leadNome, leadContext, qualificationItems, apresentacaoItems, fechamentoItems, showRateItems, showRateData?.score]
   );
 
   // Filter STT hallucinations
@@ -278,8 +284,10 @@ export function RealtimeCoachingPanel({
           <ScriptCard
             apresentacaoItems={apresentacaoItems}
             qualificationItems={qualificationItems}
+            fechamentoItems={fechamentoItems}
             apresentacaoDone={apresentacaoDone}
             qualificationDone={qualificationDone}
+            fechamentoDone={fechamentoDone}
           />
           <RecaCard items={recaItems} />
         </div>
