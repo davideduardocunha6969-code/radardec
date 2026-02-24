@@ -278,6 +278,13 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       }
       setHasSystemAudio(hasDisplayAudio);
 
+      // Immediately stop video tracks – we only need audio, and keeping
+      // the video track alive causes the browser protocol dialog to kill it,
+      // which cascades and stops the MediaRecorder.
+      if (displayStream) {
+        displayStream.getVideoTracks().forEach((t) => t.stop());
+      }
+
       streamsRef.current = displayStream ? [displayStream, micStream] : [micStream];
 
       // 3. Mix audio streams
@@ -323,15 +330,8 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
         handleRecordingComplete(blob, durationRef.current);
       };
 
-      // Guard: ignore displayStream "ended" during the first 5s (WhatsApp protocol dialog triggers it)
-      const recordingStartedAt = Date.now();
-      displayStream?.getVideoTracks()[0]?.addEventListener("ended", () => {
-        if (Date.now() - recordingStartedAt < 5000) {
-          console.log("[WhatsApp] Ignoring early video track ended (WhatsApp dialog grace period)");
-          return;
-        }
-        stopRecording();
-      });
+      // No auto-stop listener on display tracks – video tracks are already
+      // stopped above, and audio tracks should stay alive independently.
 
       recorder.start(1000);
       setStatus("recording");
