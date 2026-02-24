@@ -9,7 +9,6 @@ export interface Objection {
   objection: string;
   suggested_response: string;
   addressed: boolean;
-  intensity?: "alta" | "media" | "baixa";
 }
 
 export interface DynamicItem {
@@ -17,16 +16,6 @@ export interface DynamicItem {
   label: string;
   description: string;
   done: boolean;
-  lead_phrase?: string;
-}
-
-export interface ShowRateAnalysis {
-  score: number;
-  classification: "alta" | "media" | "baixa" | "critica";
-  dominant_risk: string;
-  suggested_phrase: string;
-  confirmation_question: string;
-  items: DynamicItem[];
 }
 
 export interface CoachingAnalysis {

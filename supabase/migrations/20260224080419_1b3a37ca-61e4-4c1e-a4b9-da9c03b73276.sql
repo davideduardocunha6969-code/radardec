@@ -1,1 +1,0 @@
-ALTER TABLE public.robos_coach ADD COLUMN instrucoes_noshow text NOT NULL DEFAULT '';

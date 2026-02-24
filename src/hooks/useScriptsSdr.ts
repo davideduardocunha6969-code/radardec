@@ -15,11 +15,6 @@ export interface ScriptSdr {
   descricao: string | null;
   apresentacao: ScriptItem[];
   qualificacao: ScriptItem[];
-  show_rate: ScriptItem[];
-  fechamento: ScriptItem[];
-  reca: ScriptItem[];
-  raloca: ScriptItem[];
-  instrucoes_gerais: string | null;
   ativo: boolean;
   user_id: string;
   created_at: string;
@@ -40,25 +35,19 @@ export function useScriptsSdr() {
         ...s,
         apresentacao: Array.isArray(s.apresentacao) ? s.apresentacao : [],
         qualificacao: Array.isArray(s.qualificacao) ? s.qualificacao : [],
-        show_rate: Array.isArray((s as any).show_rate) ? (s as any).show_rate : [],
-        fechamento: Array.isArray((s as any).fechamento) ? (s as any).fechamento : [],
-        reca: Array.isArray((s as any).reca) ? (s as any).reca : [],
-        raloca: Array.isArray((s as any).raloca) ? (s as any).raloca : [],
-        instrucoes_gerais: (s as any).instrucoes_gerais || null,
       }));
     },
   });
 }
 
-export function useActiveScriptSdr(tipo: string = "sdr") {
+export function useActiveScriptSdr() {
   return useQuery({
-    queryKey: ["scripts_sdr", "active", tipo],
+    queryKey: ["scripts_sdr", "active"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("scripts_sdr" as any)
         .select("*")
         .eq("ativo", true)
-        .eq("tipo", tipo)
         .order("created_at", { ascending: true })
         .limit(1);
       if (error) throw error;
@@ -68,11 +57,6 @@ export function useActiveScriptSdr(tipo: string = "sdr") {
         ...s,
         apresentacao: Array.isArray(s.apresentacao) ? s.apresentacao : [],
         qualificacao: Array.isArray(s.qualificacao) ? s.qualificacao : [],
-        show_rate: Array.isArray((s as any).show_rate) ? (s as any).show_rate : [],
-        fechamento: Array.isArray((s as any).fechamento) ? (s as any).fechamento : [],
-        reca: Array.isArray((s as any).reca) ? (s as any).reca : [],
-        raloca: Array.isArray((s as any).raloca) ? (s as any).raloca : [],
-        instrucoes_gerais: (s as any).instrucoes_gerais || null,
       };
     },
     refetchOnWindowFocus: false,
@@ -89,14 +73,12 @@ export function useCreateScriptSdr() {
       descricao?: string;
       apresentacao: ScriptItem[];
       qualificacao: ScriptItem[];
-      show_rate?: ScriptItem[];
     }) => {
       const { error } = await supabase.from("scripts_sdr" as any).insert({
         nome: data.nome,
         descricao: data.descricao || null,
         apresentacao: JSON.parse(JSON.stringify(data.apresentacao)),
         qualificacao: JSON.parse(JSON.stringify(data.qualificacao)),
-        show_rate: JSON.parse(JSON.stringify(data.show_rate || [])),
         user_id: user!.id,
       });
       if (error) throw error;
@@ -118,14 +100,12 @@ export function useUpdateScriptSdr() {
       descricao?: string;
       apresentacao?: ScriptItem[];
       qualificacao?: ScriptItem[];
-      show_rate?: ScriptItem[];
       ativo?: boolean;
     }) => {
       const { id, ...rest } = data;
       const updateData: Record<string, unknown> = { ...rest };
       if (rest.apresentacao) updateData.apresentacao = JSON.parse(JSON.stringify(rest.apresentacao));
       if (rest.qualificacao) updateData.qualificacao = JSON.parse(JSON.stringify(rest.qualificacao));
-      if (rest.show_rate) updateData.show_rate = JSON.parse(JSON.stringify(rest.show_rate));
       const { error } = await supabase.from("scripts_sdr" as any).update(updateData).eq("id", id);
       if (error) throw error;
     },

@@ -1653,10 +1653,6 @@ export type Database = {
           descricao: string | null
           id: string
           instrucoes: string
-          instrucoes_noshow: string
-          instrucoes_radoveca: string
-          instrucoes_raloca: string
-          instrucoes_reca: string
           nome: string
           tipo: string
           updated_at: string
@@ -1668,10 +1664,6 @@ export type Database = {
           descricao?: string | null
           id?: string
           instrucoes: string
-          instrucoes_noshow?: string
-          instrucoes_radoveca?: string
-          instrucoes_raloca?: string
-          instrucoes_reca?: string
           nome: string
           tipo?: string
           updated_at?: string
@@ -1683,10 +1675,6 @@ export type Database = {
           descricao?: string | null
           id?: string
           instrucoes?: string
-          instrucoes_noshow?: string
-          instrucoes_radoveca?: string
-          instrucoes_raloca?: string
-          instrucoes_reca?: string
           nome?: string
           tipo?: string
           updated_at?: string
@@ -1707,7 +1695,6 @@ export type Database = {
           qualificacao: Json
           raloca: Json
           reca: Json
-          show_rate: Json
           tipo: string
           updated_at: string
           user_id: string
@@ -1724,7 +1711,6 @@ export type Database = {
           qualificacao?: Json
           raloca?: Json
           reca?: Json
-          show_rate?: Json
           tipo?: string
           updated_at?: string
           user_id: string
@@ -1741,7 +1727,6 @@ export type Database = {
           qualificacao?: Json
           raloca?: Json
           reca?: Json
-          show_rate?: Json
           tipo?: string
           updated_at?: string
           user_id?: string
