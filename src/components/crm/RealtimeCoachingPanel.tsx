@@ -199,7 +199,7 @@ export function RealtimeCoachingPanel({
             });
           }
         }
-        if (cancelled) { micStream.getTracks().forEach(t => t.stop()); scribe.disconnect(); return; }
+        if (cancelled) { micStream.getTracks().forEach(t => t.stop()); scribe.disconnect(); scribeConnectedRef.current = false; return; }
         micStreamRef.current = micStream;
 
         const audioCtx = new AudioContext({ sampleRate: 16000 });
