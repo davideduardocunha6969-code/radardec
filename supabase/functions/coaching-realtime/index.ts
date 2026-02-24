@@ -62,28 +62,32 @@ REGRAS: Só marque como feito se houver evidência CLARA na transcrição.`,
 
 function buildRecaPrompt(transcript: string, leadName: string, leadContext: string, instructions: string) {
   return {
-    system: `Você é uma IA especialista em RAZÕES EMOCIONAIS (RECA) e âncoras emocionais em vendas.
+    system: `Você é um coach de vendas em tempo real. Sua ÚNICA função é seguir EXATAMENTE as instruções abaixo para gerar orientações de RECA (Razões Emocionais de Compra e Ação) para o SDR.
 
-CONTEXTO:
-- Lead: ${leadName || "Desconhecido"}
-${leadContext ? `- Info: ${leadContext}` : ""}
+LEAD: ${leadName || "Desconhecido"}
+${leadContext ? `CONTEXTO DO LEAD: ${leadContext}` : ""}
 
-INSTRUÇÕES DO COACH PARA RECA:
-${instructions || "Identifique gatilhos emocionais relevantes para este lead."}
+===== INSTRUÇÕES OBRIGATÓRIAS DO COACH (SIGA À RISCA) =====
+${instructions || "Nenhuma instrução cadastrada."}
+===== FIM DAS INSTRUÇÕES =====
 
-Analise a transcrição e:
-- Identifique quais gatilhos emocionais são relevantes para ESTE lead específico
-- Gere perguntas/falas que o SDR deveria usar para ativar esses gatilhos
-- Marque como "done: true" se o SDR JÁ explorou esse gatilho na transcrição
-- Adapte ao estado emocional detectado do lead
-- Gere entre 3 e 7 itens priorizando os mais relevantes
+COMO APLICAR:
+1. Leia a transcrição da ligação INTEIRA para entender o que o lead disse, suas dores, medos e desejos.
+2. Baseando-se EXCLUSIVAMENTE nas instruções do coach acima, gere itens de RECA que o SDR deve usar AGORA na conversa.
+3. Cada item deve ser uma FALA PRONTA que o SDR pode usar, contextualizada com o que o lead REALMENTE disse.
+4. NÃO gere itens genéricos. Cada item deve referenciar algo específico da conversa.
+5. Marque "done: true" SOMENTE se o SDR já usou esse gatilho emocional na transcrição.
+6. Gere entre 3 e 7 itens, priorizando os mais urgentes para o momento da conversa.
 
-REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
+PROIBIÇÕES:
+- NÃO invente informações sobre o lead.
+- NÃO gere instruções que contradigam as instruções do coach.
+- NÃO use frases genéricas como "entendo sua preocupação" sem contexto específico.`,
     tools: [{
       type: "function",
       function: {
         name: "analyze_reca",
-        description: "Emotional triggers relevant to this lead",
+        description: "Emotional triggers relevant to this lead based on coach instructions",
         parameters: {
           type: "object",
           properties: {
@@ -93,8 +97,8 @@ REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
                 type: "object",
                 properties: {
                   id: { type: "string" },
-                  label: { type: "string" },
-                  description: { type: "string" },
+                  label: { type: "string", description: "Título curto do gatilho emocional" },
+                  description: { type: "string", description: "Fala pronta contextualizada para o SDR usar agora" },
                   done: { type: "boolean" },
                 },
                 required: ["id", "label", "description", "done"],
@@ -111,27 +115,32 @@ REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
 
 function buildRalocaPrompt(transcript: string, leadName: string, leadContext: string, instructions: string) {
   return {
-    system: `Você é uma IA especialista em RAZÕES LÓGICAS (RALOCA) e argumentos racionais em vendas.
+    system: `Você é um coach de vendas em tempo real. Sua ÚNICA função é seguir EXATAMENTE as instruções abaixo para gerar orientações de RALOCA (Razões Lógicas de Compra e Ação) para o SDR.
 
-CONTEXTO:
-- Lead: ${leadName || "Desconhecido"}
-${leadContext ? `- Info: ${leadContext}` : ""}
+LEAD: ${leadName || "Desconhecido"}
+${leadContext ? `CONTEXTO DO LEAD: ${leadContext}` : ""}
 
-INSTRUÇÕES DO COACH PARA RALOCA:
-${instructions || "Identifique argumentos lógicos relevantes para este lead."}
+===== INSTRUÇÕES OBRIGATÓRIAS DO COACH (SIGA À RISCA) =====
+${instructions || "Nenhuma instrução cadastrada."}
+===== FIM DAS INSTRUÇÕES =====
 
-Analise a transcrição e:
-- Identifique quais argumentos lógicos são relevantes para ESTE lead
-- Gere falas/perguntas que o SDR deveria usar para trazer consciência lógica
-- Marque como "done: true" se o SDR JÁ utilizou esse argumento
-- Gere entre 3 e 7 itens priorizando os mais relevantes
+COMO APLICAR:
+1. Leia a transcrição da ligação INTEIRA para entender a situação real do lead.
+2. Baseando-se EXCLUSIVAMENTE nas instruções do coach acima, gere argumentos lógicos que o SDR deve usar AGORA.
+3. Cada item deve ser uma FALA PRONTA contextualizada com o que o lead REALMENTE disse na conversa.
+4. NÃO gere itens genéricos. Referencie dados, números ou situações mencionados pelo lead.
+5. Marque "done: true" SOMENTE se o SDR já usou esse argumento lógico na transcrição.
+6. Gere entre 3 e 7 itens, priorizando os mais urgentes.
 
-REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
+PROIBIÇÕES:
+- NÃO invente informações sobre o lead.
+- NÃO gere instruções que contradigam as instruções do coach.
+- NÃO use argumentos genéricos sem conexão com a conversa real.`,
     tools: [{
       type: "function",
       function: {
         name: "analyze_raloca",
-        description: "Logical arguments relevant to this lead",
+        description: "Logical arguments based on coach instructions",
         parameters: {
           type: "object",
           properties: {
@@ -141,8 +150,8 @@ REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
                 type: "object",
                 properties: {
                   id: { type: "string" },
-                  label: { type: "string" },
-                  description: { type: "string" },
+                  label: { type: "string", description: "Título curto do argumento lógico" },
+                  description: { type: "string", description: "Fala pronta contextualizada para o SDR usar agora" },
                   done: { type: "boolean" },
                 },
                 required: ["id", "label", "description", "done"],
@@ -159,27 +168,31 @@ REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
 
 function buildRadovecaPrompt(transcript: string, leadName: string, leadContext: string, instructions: string) {
   return {
-    system: `Você é uma IA especialista em OBJEÇÕES (RADOVECA) e contorno de objeções em vendas.
+    system: `Você é um coach de vendas em tempo real. Sua ÚNICA função é seguir EXATAMENTE as instruções abaixo para gerar orientações de RADOVECA (contorno de objeções) para o SDR.
 
-CONTEXTO:
-- Lead: ${leadName || "Desconhecido"}
-${leadContext ? `- Info: ${leadContext}` : ""}
+LEAD: ${leadName || "Desconhecido"}
+${leadContext ? `CONTEXTO DO LEAD: ${leadContext}` : ""}
 
-INSTRUÇÕES DO COACH PARA OBJEÇÕES:
-${instructions || "Identifique e sugira respostas para objeções do lead."}
+===== INSTRUÇÕES OBRIGATÓRIAS DO COACH (SIGA À RISCA) =====
+${instructions || "Nenhuma instrução cadastrada."}
+===== FIM DAS INSTRUÇÕES =====
 
-Analise a transcrição e identifique TODAS as objeções do lead. Para cada:
-- Crie um ID único em snake_case
-- Descreva a objeção detectada
-- Sugira uma resposta/pergunta para o SDR (linguagem simples, prefira perguntas que levem o lead a encontrar a resposta sozinho)
-- Indique se o SDR JÁ respondeu adequadamente (addressed: true/false)
+COMO APLICAR:
+1. Leia a transcrição INTEIRA e identifique objeções REAIS que o lead levantou.
+2. Para cada objeção, siga as instruções do coach para formular a resposta.
+3. A resposta sugerida deve ser uma FALA PRONTA que o SDR pode usar, usando a linguagem e abordagem definidas pelo coach.
+4. NÃO invente objeções que o lead não fez. Só liste objeções com evidência na transcrição.
+5. Marque "addressed: true" SOMENTE se o SDR já respondeu adequadamente.
 
-REGRAS: Só marque como addressed se houver evidência CLARA. Não invente fatos.`,
+PROIBIÇÕES:
+- NÃO invente objeções que o lead não verbalizou.
+- NÃO gere respostas genéricas desconectadas das instruções do coach.
+- NÃO contradiga a metodologia definida nas instruções.`,
     tools: [{
       type: "function",
       function: {
         name: "analyze_objections",
-        description: "Objections detected in the call",
+        description: "Objections detected and responses based on coach methodology",
         parameters: {
           type: "object",
           properties: {
@@ -189,8 +202,8 @@ REGRAS: Só marque como addressed se houver evidência CLARA. Não invente fatos
                 type: "object",
                 properties: {
                   id: { type: "string" },
-                  objection: { type: "string" },
-                  suggested_response: { type: "string" },
+                  objection: { type: "string", description: "A objeção real que o lead fez na conversa" },
+                  suggested_response: { type: "string", description: "Fala pronta baseada nas instruções do coach" },
                   addressed: { type: "boolean" },
                 },
                 required: ["id", "objection", "suggested_response", "addressed"],
@@ -207,28 +220,30 @@ REGRAS: Só marque como addressed se houver evidência CLARA. Não invente fatos
 
 function buildNoshowPrompt(transcript: string, leadName: string, leadContext: string, instructions: string) {
   return {
-    system: `Você é uma IA especialista em situações de NO-SHOW em vendas (quando o lead não aparece ou cancela).
+    system: `Você é um coach de vendas em tempo real. Sua ÚNICA função é seguir EXATAMENTE as instruções abaixo para gerar orientações de prevenção de NO-SHOW para o SDR.
 
-CONTEXTO:
-- Lead: ${leadName || "Desconhecido"}
-${leadContext ? `- Info: ${leadContext}` : ""}
+LEAD: ${leadName || "Desconhecido"}
+${leadContext ? `CONTEXTO DO LEAD: ${leadContext}` : ""}
 
-INSTRUÇÕES DO COACH PARA NO-SHOW:
-${instructions || "Identifique sinais de no-show e sugira abordagens de recuperação."}
+===== INSTRUÇÕES OBRIGATÓRIAS DO COACH (SIGA À RISCA) =====
+${instructions || "Nenhuma instrução cadastrada."}
+===== FIM DAS INSTRUÇÕES =====
 
-Analise a transcrição e:
-- Identifique sinais de que o lead pode dar no-show (hesitação, desinteresse, adiamentos)
-- Gere sugestões de falas/perguntas para prevenir o no-show
-- Sugira estratégias de reengajamento se o no-show já ocorreu
-- Marque como "done: true" se o SDR JÁ aplicou essa estratégia
-- Gere entre 2 e 5 itens priorizando os mais relevantes
+COMO APLICAR:
+1. Leia a transcrição INTEIRA e identifique sinais reais de risco de no-show (hesitação, adiamentos, desinteresse).
+2. Baseando-se nas instruções do coach, gere FALAS PRONTAS que o SDR deve usar para prevenir o no-show.
+3. Cada sugestão deve estar conectada ao que o lead realmente disse ou demonstrou.
+4. Marque "done: true" SOMENTE se o SDR já aplicou essa estratégia.
+5. Gere entre 2 e 5 itens.
 
-REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
+PROIBIÇÕES:
+- NÃO invente sinais de risco que não existem na transcrição.
+- NÃO gere sugestões genéricas desconectadas da conversa.`,
     tools: [{
       type: "function",
       function: {
         name: "analyze_noshow",
-        description: "No-show prevention and recovery strategies",
+        description: "No-show prevention based on coach instructions",
         parameters: {
           type: "object",
           properties: {
@@ -238,8 +253,8 @@ REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
                 type: "object",
                 properties: {
                   id: { type: "string" },
-                  label: { type: "string" },
-                  description: { type: "string" },
+                  label: { type: "string", description: "Título curto da estratégia" },
+                  description: { type: "string", description: "Fala pronta contextualizada para o SDR" },
                   done: { type: "boolean" },
                 },
                 required: ["id", "label", "description", "done"],
@@ -257,41 +272,43 @@ REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
 function buildShowratePrompt(transcript: string, leadName: string, leadContext: string, showRateItems: any[], coachInstructions?: string) {
   const itemsList = (showRateItems || []).map((i: any) => `- ${i.label}: ${i.description || ""}`).join("\n");
   return {
-    system: `Você é uma IA especialista em análise de SHOW RATE (probabilidade de comparecimento a reuniões agendadas).
+    system: `Você é um coach de vendas em tempo real. Sua ÚNICA função é analisar a probabilidade de SHOW RATE seguindo EXATAMENTE as instruções abaixo.
 
-CONTEXTO:
-- Lead: ${leadName || "Desconhecido"}
-${leadContext ? `- Info: ${leadContext}` : ""}
+LEAD: ${leadName || "Desconhecido"}
+${leadContext ? `CONTEXTO DO LEAD: ${leadContext}` : ""}
 
-${coachInstructions ? `INSTRUÇÕES DO COACH PARA SHOW RATE:\n${coachInstructions}\n` : ""}
-FALAS DE SHOW RATE DISPONÍVEIS:
+===== INSTRUÇÕES OBRIGATÓRIAS DO COACH (SIGA À RISCA) =====
+${coachInstructions || "Nenhuma instrução cadastrada."}
+===== FIM DAS INSTRUÇÕES =====
+
+FALAS DE SHOW RATE CADASTRADAS:
 ${itemsList || "Nenhuma fala cadastrada."}
 
-Analise a transcrição e:
-1. Calcule um SCORE de 0 a 100 representando a probabilidade do lead comparecer à reunião
-2. Classifique: "alta" (>=75), "media" (55-74), "baixa" (35-54), "critica" (<35)
-3. Identifique o risco dominante para não comparecimento
-4. Sugira UMA fala curta (máximo 2 frases) para aumentar o comparecimento
-5. Sugira UMA pergunta de confirmação de compromisso
-6. Para cada item de show rate, marque "done: true" se o SDR JÁ utilizou
+COMO APLICAR:
+1. Leia a transcrição INTEIRA e avalie sinais reais de comprometimento ou desinteresse do lead.
+2. Calcule um SCORE de 0 a 100 baseado em evidências concretas da conversa.
+3. A fala sugerida e a pergunta de confirmação devem seguir a metodologia do coach e ser contextualizadas com a conversa real.
+4. Para cada item de show rate cadastrado, marque "done: true" SOMENTE se o SDR já utilizou.
 
-Fatores que AUMENTAM o score: compromisso verbal explícito, entusiasmo, perguntas sobre a reunião, mencionar disponibilidade.
-Fatores que DIMINUEM o score: hesitação, "vou ver", "talvez", "não sei se consigo", falta de urgência, excesso de objeções não resolvidas.
+Fatores que AUMENTAM: compromisso verbal, entusiasmo, perguntas sobre a reunião, disponibilidade confirmada.
+Fatores que DIMINUEM: hesitação, "vou ver", "talvez", falta de urgência, objeções não resolvidas.
 
-REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
+PROIBIÇÕES:
+- NÃO gere sugestões genéricas desconectadas da conversa.
+- NÃO contradiga as instruções do coach.`,
     tools: [{
       type: "function",
       function: {
         name: "analyze_showrate",
-        description: "Show rate analysis with score and recommendations",
+        description: "Show rate analysis based on coach instructions",
         parameters: {
           type: "object",
           properties: {
-            score: { type: "number", description: "Show rate probability 0-100" },
+            score: { type: "number", description: "Probabilidade 0-100 baseada em evidências da conversa" },
             classification: { type: "string", enum: ["alta", "media", "baixa", "critica"] },
-            dominant_risk: { type: "string", description: "Main risk for no-show" },
-            suggested_phrase: { type: "string", description: "Suggested phrase to increase show rate" },
-            confirmation_question: { type: "string", description: "Commitment confirmation question" },
+            dominant_risk: { type: "string", description: "Risco principal identificado na conversa real" },
+            suggested_phrase: { type: "string", description: "Fala pronta contextualizada seguindo a metodologia do coach" },
+            confirmation_question: { type: "string", description: "Pergunta de confirmação contextualizada" },
             items: {
               type: "array",
               items: {
