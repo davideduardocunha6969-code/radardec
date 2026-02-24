@@ -65,6 +65,8 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
   const streamsRef = useRef<MediaStream[]>([]);
   const chamadaIdRef = useRef<string | null>(null);
   const mixedStreamRef = useRef<MediaStream | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
+  const systemStreamRef = useRef<MediaStream | null>(null);
   const durationRef = useRef(0);
   const autoSaveTimerRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedChunksRef = useRef(0);
