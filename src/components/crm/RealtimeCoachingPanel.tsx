@@ -29,6 +29,8 @@ interface RealtimeCoachingPanelProps {
   leadContext?: string;
   isRecording: boolean;
   audioStream: MediaStream | null;
+  topBarOnly?: boolean;
+  bottomOnly?: boolean;
 }
 
 export function RealtimeCoachingPanel({
@@ -36,6 +38,8 @@ export function RealtimeCoachingPanel({
   leadNome,
   leadContext,
   isRecording,
+  topBarOnly,
+  bottomOnly,
 }: RealtimeCoachingPanelProps) {
   const { data: activeScript } = useActiveScriptSdr();
 
