@@ -36,10 +36,18 @@ interface RealtimeCoachingPanelProps {
   leadNome: string;
   leadContext?: string;
   isRecording: boolean;
-  audioStream: MediaStream | null;
+  micStream: MediaStream | null;
+  systemStream: MediaStream | null;
   topBarOnly?: boolean;
   bottomOnly?: boolean;
   audioMonitor?: AudioMonitorInfo;
+}
+
+interface LabeledTranscript {
+  id: string;
+  text: string;
+  speaker: "sdr" | "lead";
+  timestamp: number;
 }
 
 export function RealtimeCoachingPanel({
@@ -47,7 +55,8 @@ export function RealtimeCoachingPanel({
   leadNome,
   leadContext,
   isRecording,
-  audioStream,
+  micStream,
+  systemStream,
   topBarOnly,
   bottomOnly,
   audioMonitor,
