@@ -48,6 +48,7 @@ export default function Atendimento() {
   const [activeAudioStream, setActiveAudioStream] = useState<MediaStream | null>(null);
 
   const [showCloseWarning, setShowCloseWarning] = useState(false);
+  const stopCallRef = useRef<(() => void) | null>(null);
 
   const handleRecordingStateChange = useCallback((isRecording: boolean, stream: MediaStream | null) => {
     setActiveRecording(isRecording);
