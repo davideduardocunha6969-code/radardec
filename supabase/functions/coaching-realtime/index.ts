@@ -247,6 +247,65 @@ REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
   };
 }
 
+function buildShowratePrompt(transcript: string, leadName: string, leadContext: string, showRateItems: any[]) {
+  const itemsList = (showRateItems || []).map((i: any) => `- ${i.label}: ${i.description || ""}`).join("\n");
+  return {
+    system: `Você é uma IA especialista em análise de SHOW RATE (probabilidade de comparecimento a reuniões agendadas).
+
+CONTEXTO:
+- Lead: ${leadName || "Desconhecido"}
+${leadContext ? `- Info: ${leadContext}` : ""}
+
+FALAS DE SHOW RATE DISPONÍVEIS:
+${itemsList || "Nenhuma fala cadastrada."}
+
+Analise a transcrição e:
+1. Calcule um SCORE de 0 a 100 representando a probabilidade do lead comparecer à reunião
+2. Classifique: "alta" (>=75), "media" (55-74), "baixa" (35-54), "critica" (<35)
+3. Identifique o risco dominante para não comparecimento
+4. Sugira UMA fala curta (máximo 2 frases) para aumentar o comparecimento
+5. Sugira UMA pergunta de confirmação de compromisso
+6. Para cada item de show rate, marque "done: true" se o SDR JÁ utilizou
+
+Fatores que AUMENTAM o score: compromisso verbal explícito, entusiasmo, perguntas sobre a reunião, mencionar disponibilidade.
+Fatores que DIMINUEM o score: hesitação, "vou ver", "talvez", "não sei se consigo", falta de urgência, excesso de objeções não resolvidas.
+
+REGRAS: Só marque como feito se houver evidência CLARA. Não invente fatos.`,
+    tools: [{
+      type: "function",
+      function: {
+        name: "analyze_showrate",
+        description: "Show rate analysis with score and recommendations",
+        parameters: {
+          type: "object",
+          properties: {
+            score: { type: "number", description: "Show rate probability 0-100" },
+            classification: { type: "string", enum: ["alta", "media", "baixa", "critica"] },
+            dominant_risk: { type: "string", description: "Main risk for no-show" },
+            suggested_phrase: { type: "string", description: "Suggested phrase to increase show rate" },
+            confirmation_question: { type: "string", description: "Commitment confirmation question" },
+            items: {
+              type: "array",
+              items: {
+                type: "object",
+                properties: {
+                  id: { type: "string" },
+                  label: { type: "string" },
+                  description: { type: "string" },
+                  done: { type: "boolean" },
+                },
+                required: ["id", "label", "description", "done"],
+              },
+            },
+          },
+          required: ["score", "classification", "dominant_risk", "suggested_phrase", "confirmation_question", "items"],
+        },
+      },
+    }],
+    toolChoice: { type: "function", function: { name: "analyze_showrate" } },
+  };
+}
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -280,6 +339,9 @@ serve(async (req) => {
         break;
       case "noshow":
         promptConfig = buildNoshowPrompt(transcript, leadName, leadContext, body.coachInstructions);
+        break;
+      case "showrate":
+        promptConfig = buildShowratePrompt(transcript, leadName, leadContext, body.showRateItems);
         break;
       default:
         // Legacy fallback — single combined call
