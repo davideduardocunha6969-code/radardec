@@ -30,6 +30,7 @@ serve(async (req) => {
 
     const qualificacao: ScriptItem[] = scriptItems?.qualificacao || [];
     const apresentacao: ScriptItem[] = scriptItems?.apresentacao || [];
+    const showRate: ScriptItem[] = scriptItems?.show_rate || [];
     const qualList = qualificacao
       .map((q) => `   - ${q.id}: ${q.description || q.label}`)
       .join("\n");
@@ -38,6 +39,10 @@ serve(async (req) => {
       .map((a) => `   - ${a.id}: ${a.description || a.label}`)
       .join("\n");
     const apresIds = apresentacao.map((a) => a.id).join(", ");
+    const showRateList = showRate
+      .map((s) => `   - ${s.id}: ${s.description || s.label}`)
+      .join("\n");
+    const showRateIds = showRate.map((s) => s.id).join(", ");
 
     const systemPrompt = `Você é um assistente de análise em tempo real de ligações SDR.
 
@@ -56,19 +61,22 @@ ${apresList || "   Nenhuma fala de apresentação cadastrada."}
 2. QUALIFICAÇÃO — Quais perguntas o SDR JÁ FEZ (IDs válidos: ${qualIds || "nenhum"}):
 ${qualList || "   Nenhuma pergunta cadastrada."}
 
-3. OBJEÇÕES (RAPOVECA) — Com base nas instruções do coach, identifique TODAS as objeções do lead na transcrição. Para cada:
+3. SHOW RATE — Quais falas de show rate o SDR JÁ FEZ para garantir comparecimento (IDs válidos: ${showRateIds || "nenhum"}):
+${showRateList || "   Nenhuma fala de show rate cadastrada."}
+
+4. OBJEÇÕES (RAPOVECA) — Com base nas instruções do coach, identifique TODAS as objeções do lead na transcrição. Para cada:
    - Crie um ID único em snake_case
    - Descreva a objeção detectada
    - Sugira uma resposta/pergunta para o SDR tratar essa objeção (linguagem simples, prefira perguntas que levem o lead a encontrar a resposta sozinho)
    - Indique se o SDR JÁ respondeu adequadamente (addressed: true/false)
 
-4. RECA (Razões Emocionais) — Com base nas instruções do coach e na análise do perfil psicológico do lead:
+5. RECA (Razões Emocionais) — Com base nas instruções do coach e na análise do perfil psicológico do lead:
    - Identifique quais gatilhos emocionais são relevantes para ESTE lead específico
    - Gere perguntas/falas que o SDR deveria usar para ativar esses gatilhos
    - Marque como "done: true" se o SDR JÁ explorou esse gatilho na transcrição
    - Adapte ao estado emocional detectado do lead (revoltado, resignado, pressionado, etc.)
 
-5. RALOCA (Razões Lógicas) — Com base nas instruções do coach:
+6. RALOCA (Razões Lógicas) — Com base nas instruções do coach:
    - Identifique quais argumentos lógicos são relevantes para ESTE lead
    - Gere falas/perguntas que o SDR deveria usar para trazer consciência lógica
    - Marque como "done: true" se o SDR JÁ utilizou esse argumento na transcrição
@@ -98,6 +106,11 @@ REGRAS:
                 type: "array",
                 items: { type: "string" },
                 description: `IDs of qualification questions already asked. Valid IDs: ${qualIds}`,
+              },
+              show_rate_done: {
+                type: "array",
+                items: { type: "string" },
+                description: `IDs of show rate items already done by the SDR. Valid IDs: ${showRateIds}`,
               },
               objections: {
                 type: "array",
@@ -141,7 +154,7 @@ REGRAS:
                 },
               },
             },
-            required: ["apresentacao_done", "qualification_done", "objections", "reca_items", "raloca_items"],
+            required: ["apresentacao_done", "qualification_done", "show_rate_done", "objections", "reca_items", "raloca_items"],
           },
         },
       },
