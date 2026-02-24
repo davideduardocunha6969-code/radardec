@@ -693,18 +693,6 @@ export default function CrmFunilKanban() {
                       )}
                     </div>
 
-                    {/* Real-time coaching panel inside lead card */}
-                    {activeRecording && getCoachForLead(detailLead) && (
-                      <CoachingErrorBoundary>
-                        <RealtimeCoachingPanel
-                          coach={getCoachForLead(detailLead)!}
-                          leadNome={detailLead.nome}
-                          leadContext={detailLead.resumo_caso || undefined}
-                          isRecording={activeRecording}
-                          audioStream={activeAudioStream}
-                        />
-                      </CoachingErrorBoundary>
-                    )}
 
                     {detailLead.resumo_caso && <div><label className="text-sm font-medium text-muted-foreground">Resumo do Caso (IA)</label><p className="text-sm bg-muted p-3 rounded-md">{detailLead.resumo_caso}</p></div>}
                     <div className="flex items-center gap-4">
@@ -784,18 +772,6 @@ export default function CrmFunilKanban() {
                       ))}
                     </div>
 
-                    {/* Real-time coaching panel for Closer */}
-                    {activeRecording && getCoachForLead(detailLead, "closer") && (
-                      <CoachingErrorBoundary>
-                        <RealtimeCoachingPanel
-                          coach={getCoachForLead(detailLead, "closer")!}
-                          leadNome={detailLead.nome}
-                          leadContext={detailLead.resumo_caso || undefined}
-                          isRecording={activeRecording}
-                          audioStream={activeAudioStream}
-                        />
-                      </CoachingErrorBoundary>
-                    )}
 
                     {/* Resumo IA dos Contatos SDR */}
                     {detailLead.resumo_ia_contatos ? (
