@@ -165,6 +165,7 @@ export function RealtimeCoachingPanel({
   const micStreamRef = useRef<MediaStream | null>(null);
   const audioCtxRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
+  const scribeConnectedRef = useRef(false);
 
   useEffect(() => {
     if (!isRecording) return;
