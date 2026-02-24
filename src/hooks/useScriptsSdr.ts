@@ -51,13 +51,15 @@ export function useScriptsSdr() {
 }
 
 export function useActiveScriptSdr() {
+export function useActiveScriptSdr(tipo: string = "sdr") {
   return useQuery({
-    queryKey: ["scripts_sdr", "active"],
+    queryKey: ["scripts_sdr", "active", tipo],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("scripts_sdr" as any)
         .select("*")
         .eq("ativo", true)
+        .eq("tipo", tipo)
         .order("created_at", { ascending: true })
         .limit(1);
       if (error) throw error;
