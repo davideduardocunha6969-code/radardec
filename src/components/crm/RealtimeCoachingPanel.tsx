@@ -9,7 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { type RoboCoach } from "@/hooks/useRobosCoach";
 import { useActiveScriptSdr } from "@/hooks/useScriptsSdr";
 import { Progress } from "@/components/ui/progress";
-import { useScribe, CommitStrategy } from "@elevenlabs/react";
+import { useScribe, CommitStrategy, AudioFormat } from "@elevenlabs/react";
 import { ChecklistCard } from "./coaching/ChecklistCard";
 import { ObjectionsCard } from "./coaching/ObjectionsCard";
 import { DynamicChecklistCard } from "./coaching/DynamicChecklistCard";
@@ -160,6 +160,8 @@ export function RealtimeCoachingPanel({
     modelId: "scribe_v2_realtime",
     languageCode: "por",
     commitStrategy: CommitStrategy.VAD,
+    audioFormat: AudioFormat.PCM_16000,
+    sampleRate: 16000,
     onCommittedTranscript: (data) => {
       if (data.text?.trim() && !isHallucination(data.text)) {
         allTranscriptsRef.current = [...allTranscriptsRef.current, data.text];
@@ -193,8 +195,6 @@ export function RealtimeCoachingPanel({
         // 2. Connect Scribe WITHOUT microphone (we'll pipe audio manually)
         await scribe.connect({
           token: data.token,
-          audioFormat: "pcm_16000",
-          sampleRate: 16000,
         });
         if (cancelled) { scribe.disconnect(); return; }
 
