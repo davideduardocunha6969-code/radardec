@@ -285,14 +285,16 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
       const destination = audioContextRef.current.createMediaStreamDestination();
 
       const micSource = audioContextRef.current.createMediaStreamSource(micStream);
+      micStreamRef.current = micStream;
       micAnalyserRef.current = audioContextRef.current.createAnalyser();
       micAnalyserRef.current.fftSize = 256;
       micSource.connect(micAnalyserRef.current);
       micSource.connect(destination);
 
       if (hasDisplayAudio && displayStream) {
-        const systemStream = new MediaStream([displayStream.getAudioTracks()[0]]);
-        const systemSource = audioContextRef.current.createMediaStreamSource(systemStream);
+        const sysAudioStream = new MediaStream([displayStream.getAudioTracks()[0]]);
+        systemStreamRef.current = sysAudioStream;
+        const systemSource = audioContextRef.current.createMediaStreamSource(sysAudioStream);
         systemAnalyserRef.current = audioContextRef.current.createAnalyser();
         systemAnalyserRef.current.fftSize = 256;
         systemSource.connect(systemAnalyserRef.current);
