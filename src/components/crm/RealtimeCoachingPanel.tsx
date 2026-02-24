@@ -284,8 +284,10 @@ export function RealtimeCoachingPanel({
           <ScriptCard
             apresentacaoItems={apresentacaoItems}
             qualificationItems={qualificationItems}
+            fechamentoItems={fechamentoItems}
             apresentacaoDone={apresentacaoDone}
             qualificationDone={qualificationDone}
+            fechamentoDone={fechamentoDone}
           />
           <RecaCard items={recaItems} />
         </div>
