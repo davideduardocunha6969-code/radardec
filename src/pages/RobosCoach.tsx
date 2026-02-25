@@ -8,10 +8,22 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Bot, Loader2, ClipboardCheck, FileText } from "lucide-react";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Plus, Pencil, Trash2, Bot, Loader2, ClipboardCheck, FileText, Eye } from "lucide-react";
 import ScriptsSdrTab from "@/components/robos/ScriptsSdrTab";
 import ScriptsCloserTab from "@/components/robos/ScriptsCloserTab";
 import { Briefcase } from "lucide-react";
+
+const DEFAULT_DETECTOR_PROMPT = `Você é um detector de progresso de ligação SDR. Sua ÚNICA tarefa é analisar a transcrição e identificar quais itens JÁ FORAM DITOS ou COBERTOS pelo SDR.
+
+REGRAS GERAIS:
+- Seja MUITO FLEXÍVEL na detecção. Se o SDR cobriu o MESMO TEMA ou INTENÇÃO de um item, mesmo com palavras completamente diferentes, marque como feito.
+- Erre para o lado de MARCAR MAIS itens como feitos. Na dúvida, marque.
+- Analise APENAS as falas marcadas como [SDR] para itens de script (apresentação, qualificação, show rate).
+- Para itens de coaching (RECA, RALOCA, objeções), verifique se o SDR JÁ UTILIZOU a sugestão dada ou abordou o tema.
+- Retorne TODOS os IDs que foram cobertos, mesmo que parcialmente.
+- Se um item foi coberto com sinônimos, paráfrases ou intenção similar, MARQUE COMO FEITO.
+- NUNCA retorne IDs que não existem na lista fornecida.`;
 
 export default function RobosCoach() {
   const { data: robos, isLoading } = useRobosCoach();
@@ -21,7 +33,7 @@ export default function RobosCoach() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<RoboCoach | null>(null);
-  const [form, setForm] = useState({ nome: "", descricao: "", instrucoes: "", tipo: "coaching" });
+  const [form, setForm] = useState({ nome: "", descricao: "", instrucoes: "", instrucoes_detector: "", tipo: "coaching" });
 
   const coachingRobos = robos?.filter((r) => r.tipo !== "feedback_sdr") || [];
   const feedbackRobos = robos?.filter((r) => r.tipo === "feedback_sdr") || [];
@@ -32,6 +44,7 @@ export default function RobosCoach() {
       nome: tipo === "feedback_sdr" ? "Coach Feedback SDR" : "",
       descricao: tipo === "feedback_sdr" ? "Instruções para análise automática de atendimento do SDR após cada ligação" : "",
       instrucoes: "",
+      instrucoes_detector: tipo === "coaching" ? DEFAULT_DETECTOR_PROMPT : "",
       tipo,
     });
     setFormOpen(true);
@@ -39,18 +52,27 @@ export default function RobosCoach() {
 
   const openEdit = (r: RoboCoach) => {
     setEditing(r);
-    setForm({ nome: r.nome, descricao: r.descricao || "", instrucoes: r.instrucoes, tipo: r.tipo || "coaching" });
+    setForm({
+      nome: r.nome,
+      descricao: r.descricao || "",
+      instrucoes: r.instrucoes,
+      instrucoes_detector: r.instrucoes_detector || "",
+      tipo: r.tipo || "coaching",
+    });
     setFormOpen(true);
   };
 
   const handleSave = () => {
     if (!form.nome || !form.instrucoes) return;
+    const payload: any = { nome: form.nome, descricao: form.descricao, instrucoes: form.instrucoes, instrucoes_detector: form.instrucoes_detector };
     if (editing) {
-      updateRobo.mutate({ id: editing.id, nome: form.nome, descricao: form.descricao, instrucoes: form.instrucoes }, { onSuccess: () => setFormOpen(false) });
+      updateRobo.mutate({ id: editing.id, ...payload }, { onSuccess: () => setFormOpen(false) });
     } else {
-      createRobo.mutate({ nome: form.nome, descricao: form.descricao, instrucoes: form.instrucoes, tipo: form.tipo }, { onSuccess: () => setFormOpen(false) });
+      createRobo.mutate({ ...payload, tipo: form.tipo }, { onSuccess: () => setFormOpen(false) });
     }
   };
+
+  const isCoachingType = form.tipo !== "feedback_sdr";
 
   return (
     <div className="space-y-6">
@@ -114,6 +136,12 @@ export default function RobosCoach() {
                     <div className="bg-muted rounded-md p-3 max-h-32 overflow-auto">
                       <p className="text-xs whitespace-pre-wrap">{r.instrucoes.slice(0, 300)}{r.instrucoes.length > 300 ? "..." : ""}</p>
                     </div>
+                    {r.instrucoes_detector && (
+                      <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                        <Eye className="h-3 w-3" />
+                        <span>IA Detectora configurada</span>
+                      </div>
+                    )}
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(r)}><Pencil className="h-3.5 w-3.5 mr-1" />Editar</Button>
                       <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteRobo.mutate(r.id)}><Trash2 className="h-3.5 w-3.5 mr-1" />Excluir</Button>
@@ -185,7 +213,7 @@ export default function RobosCoach() {
 
       {/* Shared form dialog */}
       <Dialog open={formOpen} onOpenChange={setFormOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editing ? "Editar" : "Novo"} {form.tipo === "feedback_sdr" ? "Coach Feedback SDR" : "Robô Coach"}</DialogTitle>
           </DialogHeader>
@@ -198,15 +226,60 @@ export default function RobosCoach() {
               <label className="text-sm font-medium">Descrição</label>
               <Input value={form.descricao} onChange={(e) => setForm({ ...form, descricao: e.target.value })} placeholder="Breve descrição do objetivo" />
             </div>
-            <div>
-              <label className="text-sm font-medium">Instruções da IA *</label>
-              <Textarea
-                value={form.instrucoes}
-                onChange={(e) => setForm({ ...form, instrucoes: e.target.value })}
-                placeholder={form.tipo === "feedback_sdr" ? "Avalie o SDR considerando..." : "Você é um assistente de vendas..."}
-                rows={12}
-              />
-            </div>
+
+            <Accordion type="multiple" defaultValue={["coach"]} className="w-full">
+              <AccordionItem value="coach">
+                <AccordionTrigger className="text-sm font-medium">
+                  <div className="flex items-center gap-2">
+                    <Bot className="h-4 w-4 text-primary" />
+                    Instruções da IA Coach *
+                  </div>
+                </AccordionTrigger>
+                <AccordionContent>
+                  <p className="text-xs text-muted-foreground mb-2">
+                    Prompt usado pela IA que GERA sugestões de RECA, RALOCA, RADOVECA e objeções durante a ligação.
+                  </p>
+                  <Textarea
+                    value={form.instrucoes}
+                    onChange={(e) => setForm({ ...form, instrucoes: e.target.value })}
+                    placeholder={form.tipo === "feedback_sdr" ? "Avalie o SDR considerando..." : "Você é um assistente de vendas..."}
+                    rows={12}
+                  />
+                </AccordionContent>
+              </AccordionItem>
+
+              {isCoachingType && (
+                <AccordionItem value="detector">
+                  <AccordionTrigger className="text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                      <Eye className="h-4 w-4 text-emerald-500" />
+                      Instruções da IA Detectora
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Prompt usado pela IA que DETECTA quais itens (script + coaching) já foram ditos pelo SDR e os risca na tela. Roda em paralelo com a IA Coach, usando um modelo mais rápido e barato.
+                    </p>
+                    <Textarea
+                      value={form.instrucoes_detector}
+                      onChange={(e) => setForm({ ...form, instrucoes_detector: e.target.value })}
+                      placeholder="Prompt da IA detectora..."
+                      rows={12}
+                    />
+                    {!form.instrucoes_detector && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2"
+                        onClick={() => setForm({ ...form, instrucoes_detector: DEFAULT_DETECTOR_PROMPT })}
+                      >
+                        Usar prompt padrão
+                      </Button>
+                    )}
+                  </AccordionContent>
+                </AccordionItem>
+              )}
+            </Accordion>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button>
