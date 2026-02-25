@@ -148,7 +148,10 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
           {/* Campos por seção */}
           {groupedCampos.porSecao.map(({ secao, campos: secaoCampos }) => (
             <div key={secao.id}>
-              <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 border-b pb-1">{secao.nome}</h4>
+              <div className="flex items-center gap-2 mb-3 mt-1">
+                <div className="h-5 w-1 rounded-full bg-primary" />
+                <h4 className="text-sm font-semibold text-foreground">{secao.nome}</h4>
+              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 {secaoCampos.map(renderFieldEdit)}
               </div>
@@ -184,7 +187,10 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
             if (filled.length === 0) return null;
             return (
               <div key={secao.id}>
-                <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2 border-b pb-1">{secao.nome}</h4>
+                <div className="flex items-center gap-2 mb-3 mt-1">
+                  <div className="h-5 w-1 rounded-full bg-primary" />
+                  <h4 className="text-sm font-semibold text-foreground">{secao.nome}</h4>
+                </div>
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                   {filled.map(renderFieldView)}
                 </div>
