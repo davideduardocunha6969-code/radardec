@@ -1,6 +1,5 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, CheckCircle2, Circle, Trash2 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Check, CheckCircle2, Circle, Trash2, HelpCircle } from "lucide-react";
 import type { DynamicItem } from "./coachingData";
 import type { LucideIcon } from "lucide-react";
 
@@ -72,6 +71,12 @@ export function DynamicChecklistCard({
                   {item.description && !item.done && (
                     <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-tight">
                       {item.description}
+                    </p>
+                  )}
+                  {item.pergunta_sugerida && !item.done && (
+                    <p className="text-[10px] text-primary mt-0.5 leading-tight flex items-start gap-1">
+                      <HelpCircle className="h-3 w-3 shrink-0 mt-0.5" />
+                      {item.pergunta_sugerida}
                     </p>
                   )}
                 </div>

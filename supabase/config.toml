@@ -56,3 +56,6 @@ verify_jwt = false
 
  [functions.generate-coaching-item]
  verify_jwt = false
+
+ [functions.coaching-radar]
+ verify_jwt = false

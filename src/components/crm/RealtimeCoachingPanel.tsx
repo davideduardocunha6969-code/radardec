@@ -1,7 +1,6 @@
 import { useState, useCallback, useRef, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
@@ -15,6 +14,7 @@ import { useScribe, CommitStrategy, AudioFormat } from "@elevenlabs/react";
 import { ChecklistCard } from "./coaching/ChecklistCard";
 import { ObjectionsCard } from "./coaching/ObjectionsCard";
 import { DynamicChecklistCard } from "./coaching/DynamicChecklistCard";
+import { RadarCard } from "./coaching/RadarCard";
 import {
   QUALIFICATION_QUESTIONS,
   INSTRUCTIONS_TEXT,
@@ -23,8 +23,10 @@ import {
   type DynamicItem,
   type ChecklistItem,
   type CoachingState,
+  type CoachingStateCloser,
   type CoachingSugestaoAtiva,
   type CoachingRealtimeResponse,
+  type RadarValues,
 } from "./coaching/coachingData";
 import ReactMarkdown from "react-markdown";
 
@@ -68,7 +70,7 @@ export function RealtimeCoachingPanel({
   audioMonitor,
   script: scriptProp,
 }: RealtimeCoachingPanelProps) {
-  // Use script from prop (funil config) or fallback to global active script
+  const isCloser = coach.tipo === "coaching_closer";
   const { data: fallbackScript } = useActiveScriptSdr();
   const activeScript = scriptProp !== undefined ? scriptProp : fallbackScript;
 
@@ -80,6 +82,8 @@ export function RealtimeCoachingPanel({
   const [ralocaItems, setRalocaItems] = useState<DynamicItem[]>([]);
   const [discardedIds, setDiscardedIds] = useState<Set<string>>(new Set());
   const [generatingItemFor, setGeneratingItemFor] = useState<string | null>(null);
+  const [radarValues, setRadarValues] = useState<RadarValues | null>(null);
+  const [isRadarLoading, setIsRadarLoading] = useState(false);
   const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
@@ -90,11 +94,16 @@ export function RealtimeCoachingPanel({
   const isAnalyzingRef = useRef(false);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
   const lastAnalyzedIndexRef = useRef(0);
-  const coachingStateRef = useRef<CoachingState>({
-    sugestoes_ativas: [],
-    sugestoes_encerradas: [],
-  });
-  // Refs for detector items to avoid stale closures in requestAnalysis
+  const turnoRef = useRef(0);
+
+  // Coaching state ref — use base CoachingState for ref type (Closer fields added dynamically)
+  const coachingStateRef = useRef<CoachingState & { fases_cumpridas?: string[]; ancoras_registradas?: string[] }>(
+    isCloser
+      ? { sugestoes_ativas: [], sugestoes_encerradas: [], fases_cumpridas: [], ancoras_registradas: [] }
+      : { sugestoes_ativas: [], sugestoes_encerradas: [] }
+  );
+
+  // Refs for detector items to avoid stale closures
   const recaItemsRef = useRef<DynamicItem[]>([]);
   const ralocaItemsRef = useRef<DynamicItem[]>([]);
   const objectionsRef = useRef<Objection[]>([]);
@@ -102,12 +111,14 @@ export function RealtimeCoachingPanel({
   ralocaItemsRef.current = ralocaItems;
   objectionsRef.current = objections;
 
-  // Qualification items from script or fallback
+  // Radar values ref for sending to coaching-realtime
+  const radarValuesRef = useRef<RadarValues | null>(null);
+  radarValuesRef.current = radarValues;
+
   const qualificationItems: ChecklistItem[] = activeScript?.qualificacao?.length
     ? activeScript.qualificacao
     : QUALIFICATION_QUESTIONS;
   
-  // Apresentacao items from script
   const apresentacaoItems: ChecklistItem[] = activeScript?.apresentacao?.length
     ? activeScript.apresentacao
     : [];
@@ -122,7 +133,6 @@ export function RealtimeCoachingPanel({
     async (transcript: string) => {
       if (!transcript || transcript.trim().length < 10 || transcript === lastAnalyzedRef.current || isAnalyzingRef.current) return;
       
-      // Build delta transcript from new entries only
       const allEntries = labeledTranscriptsRef.current;
       const newEntries = allEntries.slice(lastAnalyzedIndexRef.current);
       if (newEntries.length === 0) return;
@@ -131,173 +141,105 @@ export function RealtimeCoachingPanel({
         .map((t) => `[${t.speaker === "sdr" ? "SDR" : "Lead"}]: ${t.text}`)
         .join("\n");
       
-      console.log(`[Coaching] Delta: ${newEntries.length} novas entradas (${newTranscript.length} chars)`);
+      // Increment turno for Closer
+      if (isCloser) {
+        turnoRef.current += 1;
+      }
+      const currentTurno = turnoRef.current;
+      
+      console.log(`[Coaching] Delta: ${newEntries.length} novas entradas (${newTranscript.length} chars)${isCloser ? ` turno=${currentTurno}` : ""}`);
       lastAnalyzedRef.current = transcript;
       lastAnalyzedIndexRef.current = allEntries.length;
       setIsAnalyzing(true);
       isAnalyzingRef.current = true;
 
       try {
-        // Build coaching items for detector (current items on screen)
         const coachingItemsForDetector = {
           reca: recaItemsRef.current.map(i => ({ id: i.id, label: i.label, description: i.description })),
           raloca: ralocaItemsRef.current.map(i => ({ id: i.id, label: i.label, description: i.description })),
           objections: objectionsRef.current.map(o => ({ id: o.id, label: o.objection, description: o.suggested_response })),
         };
 
-        // Two AI calls in parallel: detector (full transcript) + coaching (delta + state)
-        const [scriptResult, coachResult] = await Promise.all([
-          supabase.functions.invoke("script-checker", {
-            body: {
-              transcript,
-              scriptItems: {
-                qualificacao: qualificationItems,
-                apresentacao: apresentacaoItems,
-                show_rate: showRateItems,
+        // For Closer: call radar first (or in parallel with detector), then coach with radar results
+        if (isCloser) {
+          // Step 1: Radar + Detector in parallel
+          setIsRadarLoading(true);
+          const [radarResult, scriptResult] = await Promise.all([
+            supabase.functions.invoke("coaching-radar", {
+              body: {
+                transcript,
+                radarPrompt: coach.instrucoes_radar || undefined,
               },
-              coachingItems: coachingItemsForDetector,
-              detectorPrompt: coach.instrucoes_detector || undefined,
-            },
-          }),
-          supabase.functions.invoke("coaching-realtime", {
+            }),
+            supabase.functions.invoke("script-checker", {
+              body: {
+                transcript,
+                scriptItems: {
+                  qualificacao: qualificationItems,
+                  apresentacao: apresentacaoItems,
+                  show_rate: showRateItems,
+                },
+                coachingItems: coachingItemsForDetector,
+                detectorPrompt: coach.instrucoes_detector || undefined,
+              },
+            }),
+          ]);
+
+          // Process radar
+          if (radarResult.error) {
+            console.error("[Coaching] coaching-radar error:", radarResult.error);
+          } else if (radarResult.data?.radar) {
+            setRadarValues(radarResult.data.radar);
+            radarValuesRef.current = radarResult.data.radar;
+          }
+          setIsRadarLoading(false);
+
+          // Process detector
+          processDetectorResult(scriptResult);
+
+          // Step 2: Coach with radar context
+          const closerState = coachingStateRef.current as CoachingStateCloser;
+          const coachResult = await supabase.functions.invoke("coaching-realtime", {
             body: {
               newTranscript,
-              coachingState: coachingStateRef.current,
+              coachingState: closerState,
               coachInstructions: coach.instrucoes,
               leadName: leadNome,
               leadContext,
+              radar_atual: radarValuesRef.current,
+              isCloser: true,
             },
-          }),
-        ]);
+          });
 
-        // Process detector result (script items strikethrough only)
-        if (scriptResult.error) {
-          console.error("[Coaching] script-checker error:", scriptResult.error);
+          processCoachResult(coachResult, currentTurno);
         } else {
-          const analysis = scriptResult.data?.analysis;
-          console.log("[Coaching] detector result:", JSON.stringify(analysis));
-          if (analysis) {
-            setApresentacaoDone(prev => {
-              const merged = new Set(prev);
-              for (const id of (analysis.apresentacao_done || [])) merged.add(id);
-              return Array.from(merged);
-            });
-            setQualificationDone(prev => {
-              const merged = new Set(prev);
-              for (const id of (analysis.qualification_done || [])) merged.add(id);
-              return Array.from(merged);
-            });
-            setShowRateDone(prev => {
-              const merged = new Set(prev);
-              for (const id of (analysis.show_rate_done || [])) merged.add(id);
-              return Array.from(merged);
-            });
-          }
-        }
+          // SDR flow: detector + coach in parallel (existing behavior)
+          const [scriptResult, coachResult] = await Promise.all([
+            supabase.functions.invoke("script-checker", {
+              body: {
+                transcript,
+                scriptItems: {
+                  qualificacao: qualificationItems,
+                  apresentacao: apresentacaoItems,
+                  show_rate: showRateItems,
+                },
+                coachingItems: coachingItemsForDetector,
+                detectorPrompt: coach.instrucoes_detector || undefined,
+              },
+            }),
+            supabase.functions.invoke("coaching-realtime", {
+              body: {
+                newTranscript,
+                coachingState: coachingStateRef.current,
+                coachInstructions: coach.instrucoes,
+                leadName: leadNome,
+                leadContext,
+              },
+            }),
+          ]);
 
-        // Process coaching-realtime result (updates + new_items)
-        if (coachResult.error) {
-          console.error("[Coaching] coaching-realtime error:", coachResult.error);
-        } else {
-          const response = coachResult.data?.analysis as CoachingRealtimeResponse | undefined;
-          if (response) {
-            // Apply updates to existing items
-            const updates = response.updates || [];
-            for (const upd of updates) {
-              if (upd.new_status === "DITO" || upd.new_status === "TIMING_PASSOU") {
-                // Move from ativas to encerradas in persistent state
-                const item = coachingStateRef.current.sugestoes_ativas.find(s => s.id === upd.id);
-                if (item) {
-                  coachingStateRef.current = {
-                    sugestoes_ativas: coachingStateRef.current.sugestoes_ativas.filter(s => s.id !== upd.id),
-                    sugestoes_encerradas: [...coachingStateRef.current.sugestoes_encerradas, {
-                      id: item.id,
-                      gatilho: item.gatilho,
-                      classificacao: item.classificacao,
-                      status: upd.new_status,
-                    }],
-                  };
-                }
-                // Update UI state
-                if (upd.new_status === "DITO") {
-                  setRecaItems(prev => prev.map(i => i.id === upd.id ? { ...i, done: true } : i));
-                  setRalocaItems(prev => prev.map(i => i.id === upd.id ? { ...i, done: true } : i));
-                  setObjections(prev => prev.map(o => o.id === upd.id ? { ...o, addressed: true } : o));
-                } else {
-                  // TIMING_PASSOU — discard from UI
-                  setDiscardedIds(prev => new Set(prev).add(upd.id));
-                }
-              }
-            }
-
-            // Add new items
-            const newItems = response.new_items;
-            if (newItems) {
-              // Add to persistent state + UI
-              for (const o of (newItems.objections || [])) {
-                const exists = coachingStateRef.current.sugestoes_ativas.some(s => s.id === o.id)
-                  || coachingStateRef.current.sugestoes_encerradas.some(s => s.id === o.id);
-                if (!exists) {
-                  coachingStateRef.current.sugestoes_ativas.push({
-                    id: o.id,
-                    gatilho: o.objection,
-                    classificacao: "RAPOVECA",
-                    resposta_sugerida: o.suggested_response,
-                    status: "aguardando",
-                  });
-                }
-              }
-              for (const i of (newItems.reca_items || [])) {
-                const exists = coachingStateRef.current.sugestoes_ativas.some(s => s.id === i.id)
-                  || coachingStateRef.current.sugestoes_encerradas.some(s => s.id === i.id);
-                if (!exists) {
-                  coachingStateRef.current.sugestoes_ativas.push({
-                    id: i.id,
-                    gatilho: i.label,
-                    classificacao: "RECA",
-                    resposta_sugerida: i.description,
-                    status: "aguardando",
-                  });
-                }
-              }
-              for (const i of (newItems.raloca_items || [])) {
-                const exists = coachingStateRef.current.sugestoes_ativas.some(s => s.id === i.id)
-                  || coachingStateRef.current.sugestoes_encerradas.some(s => s.id === i.id);
-                if (!exists) {
-                  coachingStateRef.current.sugestoes_ativas.push({
-                    id: i.id,
-                    gatilho: i.label,
-                    classificacao: "RALOCA",
-                    resposta_sugerida: i.description,
-                    status: "aguardando",
-                  });
-                }
-              }
-
-              // Update UI states (merge, don't replace)
-              setObjections(prev => {
-                const merged = new Map(prev.map(o => [o.id, o]));
-                for (const o of (newItems.objections || [])) {
-                  if (!merged.has(o.id)) merged.set(o.id, o);
-                }
-                return Array.from(merged.values());
-              });
-              setRecaItems(prev => {
-                const merged = new Map(prev.map(i => [i.id, i]));
-                for (const i of (newItems.reca_items || [])) {
-                  if (!merged.has(i.id)) merged.set(i.id, i);
-                }
-                return Array.from(merged.values());
-              });
-              setRalocaItems(prev => {
-                const merged = new Map(prev.map(i => [i.id, i]));
-                for (const i of (newItems.raloca_items || [])) {
-                  if (!merged.has(i.id)) merged.set(i.id, i);
-                }
-                return Array.from(merged.values());
-              });
-            }
-          }
+          processDetectorResult(scriptResult);
+          processCoachResult(coachResult, currentTurno);
         }
       } catch (e) {
         console.error("[Coaching] Request error:", e);
@@ -306,18 +248,169 @@ export function RealtimeCoachingPanel({
         isAnalyzingRef.current = false;
       }
     },
-    [coach.instrucoes, coach.instrucoes_detector, leadNome, leadContext, qualificationItems, apresentacaoItems, showRateItems]
+    [coach.instrucoes, coach.instrucoes_detector, coach.instrucoes_radar, leadNome, leadContext, qualificationItems, apresentacaoItems, showRateItems, isCloser]
   );
 
-  // Filter out STT hallucinations that occur during silence
+  // Helper: process detector (script-checker) result
+  const processDetectorResult = useCallback((scriptResult: any) => {
+    if (scriptResult.error) {
+      console.error("[Coaching] script-checker error:", scriptResult.error);
+      return;
+    }
+    const analysis = scriptResult.data?.analysis;
+    if (!analysis) return;
+    setApresentacaoDone(prev => {
+      const merged = new Set(prev);
+      for (const id of (analysis.apresentacao_done || [])) merged.add(id);
+      return Array.from(merged);
+    });
+    setQualificationDone(prev => {
+      const merged = new Set(prev);
+      for (const id of (analysis.qualification_done || [])) merged.add(id);
+      return Array.from(merged);
+    });
+    setShowRateDone(prev => {
+      const merged = new Set(prev);
+      for (const id of (analysis.show_rate_done || [])) merged.add(id);
+      return Array.from(merged);
+    });
+  }, []);
+
+  // Helper: process coaching-realtime result
+  const processCoachResult = useCallback((coachResult: any, currentTurno: number) => {
+    if (coachResult.error) {
+      console.error("[Coaching] coaching-realtime error:", coachResult.error);
+      return;
+    }
+    const response = coachResult.data?.analysis as CoachingRealtimeResponse | undefined;
+    if (!response) return;
+
+    // Apply updates to existing items
+    const updates = response.updates || [];
+    for (const upd of updates) {
+      if (upd.new_status === "DITO" || upd.new_status === "TIMING_PASSOU") {
+        const item = coachingStateRef.current.sugestoes_ativas.find(s => s.id === upd.id);
+        if (item) {
+          const encerrada: any = {
+            id: item.id, gatilho: item.gatilho, classificacao: item.classificacao, status: upd.new_status,
+          };
+          if (isCloser && "turno_gerado" in item) {
+            encerrada.turno_gerado = (item as any).turno_gerado;
+            encerrada.turno_encerrado = currentTurno;
+          }
+          coachingStateRef.current = {
+            ...coachingStateRef.current,
+            sugestoes_ativas: coachingStateRef.current.sugestoes_ativas.filter(s => s.id !== upd.id),
+            sugestoes_encerradas: [...coachingStateRef.current.sugestoes_encerradas, encerrada],
+          };
+        }
+        if (upd.new_status === "DITO") {
+          setRecaItems(prev => prev.map(i => i.id === upd.id ? { ...i, done: true } : i));
+          setRalocaItems(prev => prev.map(i => i.id === upd.id ? { ...i, done: true } : i));
+          setObjections(prev => prev.map(o => o.id === upd.id ? { ...o, addressed: true } : o));
+        } else {
+          setDiscardedIds(prev => new Set(prev).add(upd.id));
+        }
+      }
+    }
+
+    // Add new items
+    const newItems = response.new_items;
+    if (newItems) {
+      const classificacaoObj = isCloser ? "RADOVECA" as const : "RAPOVECA" as const;
+      
+      for (const o of (newItems.objections || [])) {
+        const exists = coachingStateRef.current.sugestoes_ativas.some(s => s.id === o.id)
+          || coachingStateRef.current.sugestoes_encerradas.some(s => s.id === o.id);
+        if (!exists) {
+          const sugestao: any = {
+            id: o.id, gatilho: o.objection, classificacao: classificacaoObj,
+            resposta_sugerida: o.suggested_response, status: "aguardando",
+          };
+          if (isCloser) {
+            sugestao.turno_gerado = currentTurno;
+            sugestao.pergunta_sugerida = o.pergunta_sugerida;
+          }
+          coachingStateRef.current.sugestoes_ativas.push(sugestao);
+        }
+      }
+      for (const i of (newItems.reca_items || [])) {
+        const exists = coachingStateRef.current.sugestoes_ativas.some(s => s.id === i.id)
+          || coachingStateRef.current.sugestoes_encerradas.some(s => s.id === i.id);
+        if (!exists) {
+          const sugestao: any = {
+            id: i.id, gatilho: i.label, classificacao: "RECA",
+            resposta_sugerida: i.description, status: "aguardando",
+          };
+          if (isCloser) {
+            sugestao.turno_gerado = currentTurno;
+            sugestao.pergunta_sugerida = i.pergunta_sugerida;
+          }
+          coachingStateRef.current.sugestoes_ativas.push(sugestao);
+        }
+      }
+      for (const i of (newItems.raloca_items || [])) {
+        const exists = coachingStateRef.current.sugestoes_ativas.some(s => s.id === i.id)
+          || coachingStateRef.current.sugestoes_encerradas.some(s => s.id === i.id);
+        if (!exists) {
+          const sugestao: any = {
+            id: i.id, gatilho: i.label, classificacao: "RALOCA",
+            resposta_sugerida: i.description, status: "aguardando",
+          };
+          if (isCloser) {
+            sugestao.turno_gerado = currentTurno;
+            sugestao.pergunta_sugerida = i.pergunta_sugerida;
+          }
+          coachingStateRef.current.sugestoes_ativas.push(sugestao);
+        }
+      }
+
+      // Update UI states
+      setObjections(prev => {
+        const merged = new Map(prev.map(o => [o.id, o]));
+        for (const o of (newItems.objections || [])) {
+          if (!merged.has(o.id)) merged.set(o.id, o);
+        }
+        return Array.from(merged.values());
+      });
+      setRecaItems(prev => {
+        const merged = new Map(prev.map(i => [i.id, i]));
+        for (const i of (newItems.reca_items || [])) {
+          if (!merged.has(i.id)) merged.set(i.id, i);
+        }
+        return Array.from(merged.values());
+      });
+      setRalocaItems(prev => {
+        const merged = new Map(prev.map(i => [i.id, i]));
+        for (const i of (newItems.raloca_items || [])) {
+          if (!merged.has(i.id)) merged.set(i.id, i);
+        }
+        return Array.from(merged.values());
+      });
+    }
+
+    // Process state_updates for Closer
+    if (isCloser && response.state_updates) {
+      const closerState = coachingStateRef.current as CoachingStateCloser;
+      if (response.state_updates.novas_ancoras?.length) {
+        closerState.ancoras_registradas = [
+          ...new Set([...closerState.ancoras_registradas, ...response.state_updates.novas_ancoras])
+        ];
+      }
+      if (response.state_updates.fases_cumpridas?.length) {
+        closerState.fases_cumpridas = [
+          ...new Set([...closerState.fases_cumpridas, ...response.state_updates.fases_cumpridas])
+        ];
+      }
+    }
+  }, [isCloser]);
+
+  // Filter out STT hallucinations
   const isHallucination = useCallback((text: string): boolean => {
     const cleaned = text.trim().toLowerCase();
     if (!cleaned) return true;
-    
-    // Filter very short texts (less than 2 real words)
     const words = cleaned.replace(/[^\w\sáàâãéèêíïóôõúüç]/gi, "").trim().split(/\s+/).filter(w => w.length > 1);
     if (words.length < 2) return true;
-    
     const hallucinationPatterns = [
       /p[ií]lulas\s+do\s+evangelho/i,
       /colabore\s+conosco/i,
@@ -331,7 +424,6 @@ export function RealtimeCoachingPanel({
       /inscreva[\s-]*se/i,
       /obrigad[oa]\s+por\s+assistir/i,
       /amara\.org/i,
-      // New silence hallucination patterns
       /^que\s+[ée]\s+o\??$/i,
       /^o\s+qu[ée]\??$/i,
       /^\.+$/,
@@ -343,10 +435,8 @@ export function RealtimeCoachingPanel({
     return false;
   }, []);
 
-  // Ref to accumulate full labeled transcript for AI analysis
   const labeledTranscriptsRef = useRef<LabeledTranscript[]>([]);
 
-  // Helper: build full transcript string with speaker labels
   const buildFullTranscript = useCallback(() => {
     return labeledTranscriptsRef.current
       .map((t) => `[${t.speaker === "sdr" ? "SDR" : "Lead"}]: ${t.text}`)
@@ -363,13 +453,11 @@ export function RealtimeCoachingPanel({
     };
     labeledTranscriptsRef.current = [...labeledTranscriptsRef.current, entry];
     setLabeledTranscripts([...labeledTranscriptsRef.current]);
-    // Auto-scroll to bottom
     setTimeout(() => transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     requestAnalysis(buildFullTranscript());
   }, [isHallucination, requestAnalysis, buildFullTranscript]);
 
-  // --- Dual Scribe connections: SDR (mic) and Lead (system audio) ---
-  // NOTE: No microphone option = manual mode. We pipe audio via sendAudio().
+  // --- Dual Scribe connections ---
   const sdrScribe = useScribe({
     modelId: "scribe_v2_realtime",
     languageCode: "por",
@@ -388,7 +476,6 @@ export function RealtimeCoachingPanel({
     onError: (err) => console.error("[Coaching] Lead Scribe error:", err),
   });
 
-  // Connect both Scribe instances when recording starts
   useEffect(() => {
     if (!isRecording) return;
     let cancelled = false;
@@ -396,13 +483,10 @@ export function RealtimeCoachingPanel({
     const connectBoth = async () => {
       try {
         setConnectionError(null);
-
-        // Get 2 tokens in parallel
         const [sdrTokenRes, leadTokenRes] = await Promise.all([
           supabase.functions.invoke("elevenlabs-scribe-token"),
           supabase.functions.invoke("elevenlabs-scribe-token"),
         ]);
-
         if (sdrTokenRes.error || !sdrTokenRes.data?.token) {
           setConnectionError("Erro ao obter token SDR: " + (sdrTokenRes.error?.message || "No token"));
           return;
@@ -412,21 +496,10 @@ export function RealtimeCoachingPanel({
           return;
         }
         if (cancelled) return;
-
-        // Connect in manual audio mode — pass audioFormat + sampleRate at connect time
         await Promise.all([
-          sdrScribe.connect({
-            token: sdrTokenRes.data.token,
-            audioFormat: AudioFormat.PCM_16000,
-            sampleRate: 16000,
-          }),
-          leadScribe.connect({
-            token: leadTokenRes.data.token,
-            audioFormat: AudioFormat.PCM_16000,
-            sampleRate: 16000,
-          }),
+          sdrScribe.connect({ token: sdrTokenRes.data.token, audioFormat: AudioFormat.PCM_16000, sampleRate: 16000 }),
+          leadScribe.connect({ token: leadTokenRes.data.token, audioFormat: AudioFormat.PCM_16000, sampleRate: 16000 }),
         ]);
-
         if (cancelled) {
           sdrScribe.disconnect();
           leadScribe.disconnect();
@@ -447,16 +520,19 @@ export function RealtimeCoachingPanel({
       leadScribe.disconnect();
       labeledTranscriptsRef.current = [];
       lastAnalyzedIndexRef.current = 0;
-      coachingStateRef.current = { sugestoes_ativas: [], sugestoes_encerradas: [] };
+      turnoRef.current = 0;
+      coachingStateRef.current = isCloser
+        ? { sugestoes_ativas: [], sugestoes_encerradas: [], fases_cumpridas: [], ancoras_registradas: [] }
+        : { sugestoes_ativas: [], sugestoes_encerradas: [] };
       setLabeledTranscripts([]);
       setSdrPartial("");
       setLeadPartial("");
+      setRadarValues(null);
     };
   }, [isRecording]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Helper to pipe a MediaStream into a Scribe instance at 16 kHz PCM16
+  // Pipe a MediaStream into a Scribe instance at 16 kHz PCM16
   const pipeStreamToScribe = useCallback((stream: MediaStream, scribeInstance: ReturnType<typeof useScribe>) => {
-    // Browser may ignore the sampleRate hint; we'll resample if needed
     const ctx = new AudioContext({ sampleRate: 16000 });
     const actualRate = ctx.sampleRate;
     const targetRate = 16000;
@@ -464,7 +540,6 @@ export function RealtimeCoachingPanel({
     const bufferSize = 4096;
     const processor = ctx.createScriptProcessor(bufferSize, 1, 1);
 
-    // Simple linear resampler for when browser ignores sampleRate hint
     const resample = (input: Float32Array, fromRate: number, toRate: number): Float32Array => {
       if (fromRate === toRate) return input;
       const ratio = fromRate / toRate;
@@ -482,7 +557,6 @@ export function RealtimeCoachingPanel({
 
     processor.onaudioprocess = (e) => {
       const rawFloat32 = e.inputBuffer.getChannelData(0);
-      // Resample if the AudioContext didn't honor 16kHz
       const float32 = actualRate !== targetRate
         ? resample(rawFloat32, actualRate, targetRate)
         : rawFloat32;
@@ -500,7 +574,6 @@ export function RealtimeCoachingPanel({
     };
 
     source.connect(processor);
-    // Connect to destination to keep processing alive (output is silent anyway)
     processor.connect(ctx.destination);
     console.log(`[Coaching] Audio piping started: ctx.sampleRate=${actualRate}, target=${targetRate}`);
     return () => {
@@ -510,7 +583,6 @@ export function RealtimeCoachingPanel({
     };
   }, []);
 
-  // Pipe mic stream → SDR Scribe
   useEffect(() => {
     if (!micStream || !sdrScribe.isConnected) return;
     const cleanup = pipeStreamToScribe(micStream, sdrScribe);
@@ -518,7 +590,6 @@ export function RealtimeCoachingPanel({
     return cleanup;
   }, [micStream, sdrScribe.isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  // Pipe system stream → Lead Scribe
   useEffect(() => {
     if (!systemStream || !leadScribe.isConnected) return;
     const cleanup = pipeStreamToScribe(systemStream, leadScribe);
@@ -538,12 +609,12 @@ export function RealtimeCoachingPanel({
   }, []);
   const handleCheckReca = useCallback((id: string) => {
     setRecaItems(prev => prev.map(i => i.id === id ? { ...i, done: true } : i));
-    // Sync persistent state
     const item = coachingStateRef.current.sugestoes_ativas.find(s => s.id === id);
     if (item) {
       coachingStateRef.current = {
+        ...coachingStateRef.current,
         sugestoes_ativas: coachingStateRef.current.sugestoes_ativas.filter(s => s.id !== id),
-        sugestoes_encerradas: [...coachingStateRef.current.sugestoes_encerradas, { id: item.id, gatilho: item.gatilho, classificacao: item.classificacao, status: "DITO" }],
+        sugestoes_encerradas: [...coachingStateRef.current.sugestoes_encerradas, { id: item.id, gatilho: item.gatilho, classificacao: item.classificacao, status: "DITO" as const }],
       };
     }
   }, []);
@@ -552,8 +623,9 @@ export function RealtimeCoachingPanel({
     const item = coachingStateRef.current.sugestoes_ativas.find(s => s.id === id);
     if (item) {
       coachingStateRef.current = {
+        ...coachingStateRef.current,
         sugestoes_ativas: coachingStateRef.current.sugestoes_ativas.filter(s => s.id !== id),
-        sugestoes_encerradas: [...coachingStateRef.current.sugestoes_encerradas, { id: item.id, gatilho: item.gatilho, classificacao: item.classificacao, status: "DITO" }],
+        sugestoes_encerradas: [...coachingStateRef.current.sugestoes_encerradas, { id: item.id, gatilho: item.gatilho, classificacao: item.classificacao, status: "DITO" as const }],
       };
     }
   }, []);
@@ -562,8 +634,9 @@ export function RealtimeCoachingPanel({
     const item = coachingStateRef.current.sugestoes_ativas.find(s => s.id === id);
     if (item) {
       coachingStateRef.current = {
+        ...coachingStateRef.current,
         sugestoes_ativas: coachingStateRef.current.sugestoes_ativas.filter(s => s.id !== id),
-        sugestoes_encerradas: [...coachingStateRef.current.sugestoes_encerradas, { id: item.id, gatilho: item.gatilho, classificacao: item.classificacao, status: "DITO" }],
+        sugestoes_encerradas: [...coachingStateRef.current.sugestoes_encerradas, { id: item.id, gatilho: item.gatilho, classificacao: item.classificacao, status: "DITO" as const }],
       };
     }
   }, []);
@@ -572,8 +645,9 @@ export function RealtimeCoachingPanel({
     const item = coachingStateRef.current.sugestoes_ativas.find(s => s.id === id);
     if (item) {
       coachingStateRef.current = {
+        ...coachingStateRef.current,
         sugestoes_ativas: coachingStateRef.current.sugestoes_ativas.filter(s => s.id !== id),
-        sugestoes_encerradas: [...coachingStateRef.current.sugestoes_encerradas, { id: item.id, gatilho: item.gatilho, classificacao: item.classificacao, status: "DESCARTADO" }],
+        sugestoes_encerradas: [...coachingStateRef.current.sugestoes_encerradas, { id: item.id, gatilho: item.gatilho, classificacao: item.classificacao, status: "DESCARTADO" as const }],
       };
     }
   }, []);
@@ -597,6 +671,7 @@ export function RealtimeCoachingPanel({
       if (!data?.item) throw new Error("No item returned");
 
       const item = data.item;
+      const classificacaoObj = isCloser ? "RADOVECA" as const : "RAPOVECA" as const;
 
       if (type === "rapoveca") {
         const itemId = item.id || `manual-${Date.now()}`;
@@ -607,7 +682,7 @@ export function RealtimeCoachingPanel({
           addressed: false,
         }]);
         coachingStateRef.current.sugestoes_ativas.push({
-          id: itemId, gatilho: item.objection, classificacao: "RAPOVECA",
+          id: itemId, gatilho: item.objection, classificacao: classificacaoObj,
           resposta_sugerida: item.suggested_response, status: "aguardando",
         });
       } else {
@@ -637,13 +712,13 @@ export function RealtimeCoachingPanel({
     } finally {
       setGeneratingItemFor(null);
     }
-  }, [leadNome, coach.instrucoes_reca, coach.instrucoes_raloca, coach.instrucoes_radoveca, toast]);
+  }, [leadNome, coach.instrucoes_reca, coach.instrucoes_raloca, coach.instrucoes_radoveca, toast, isCloser]);
 
   if (!isRecording) return null;
 
   const isConnected = sdrScribe.isConnected || leadScribe.isConnected;
+  const techniqueLabel = isCloser ? "RADOVECA" : "RAPOVECA";
 
-  // Unified top bar: transcription + audio monitor in one card
   const formatTime = (seconds: number): string => {
     const m = Math.floor(seconds / 60);
     const s = seconds % 60;
@@ -723,32 +798,17 @@ export function RealtimeCoachingPanel({
                       <Loader2 className="h-4 w-4 animate-spin text-primary mx-4 my-1" />
                     ) : (
                       <>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 text-[10px] gap-1 px-2"
-                          onClick={() => handleGenerateFromLead(t, "reca")}
-                        >
+                        <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 px-2" onClick={() => handleGenerateFromLead(t, "reca")}>
                           <Heart className="h-3 w-3 text-red-500" />
                           RECA
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 text-[10px] gap-1 px-2"
-                          onClick={() => handleGenerateFromLead(t, "raloca")}
-                        >
+                        <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 px-2" onClick={() => handleGenerateFromLead(t, "raloca")}>
                           <Brain className="h-3 w-3 text-purple-500" />
                           RALOCA
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 text-[10px] gap-1 px-2"
-                          onClick={() => handleGenerateFromLead(t, "rapoveca")}
-                        >
+                        <Button variant="ghost" size="sm" className="h-6 text-[10px] gap-1 px-2" onClick={() => handleGenerateFromLead(t, "rapoveca")}>
                           <AlertTriangle className="h-3 w-3 text-amber-500" />
-                          RAPOVECA
+                          {techniqueLabel}
                         </Button>
                       </>
                     )}
@@ -779,7 +839,6 @@ export function RealtimeCoachingPanel({
 
   if (topBarOnly) return topBar;
 
-  // Script cards (bottom section)
   const scriptCards = (
     <div className="flex gap-2 flex-1 min-h-0 overflow-y-auto h-full">
       {/* Column 1: Apresentação + Qualificação + Show Rate */}
@@ -819,12 +878,16 @@ export function RealtimeCoachingPanel({
         )}
       </div>
 
-      {/* Column 2: Objeções + RECA + RALOCA */}
+      {/* Column 2: Radar (Closer only) + Objeções + RECA + RALOCA */}
       <div className="flex-1 flex flex-col gap-2">
+        {isCloser && (
+          <RadarCard values={radarValues} isLoading={isRadarLoading} />
+        )}
         <ObjectionsCard
           objections={objections.filter(o => !discardedIds.has(o.id))}
           onAddressed={handleAddressedObjection}
           onDiscard={handleDiscard}
+          techniqueLabel={techniqueLabel}
         />
         <DynamicChecklistCard
           title="RECA — Emocionais"
@@ -850,7 +913,6 @@ export function RealtimeCoachingPanel({
 
   if (bottomOnly) return scriptCards;
 
-  // Full layout (fallback)
   return (
     <div className="flex flex-col gap-2 overflow-hidden h-full">
       <div className="shrink-0" style={{ maxHeight: '160px' }}>
