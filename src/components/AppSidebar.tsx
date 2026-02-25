@@ -74,24 +74,16 @@ export function AppSidebar() {
   const collapsed = state === "collapsed";
   const location = useLocation();
   const currentPath = location.pathname;
-  const { isAdmin, hasPageAccess, signOut, profile } = useAuthContext();
+  const { loading, isAdmin, hasPageAccess, signOut, profile } = useAuthContext();
 
   const isActive = (path: string) => currentPath === path;
 
-  // Filtra radares visíveis baseado em permissões
-  const visibleRadarItems = radarItems.filter(item => hasPageAccess(item.pageKey));
-
-  // Filtra comercial visíveis baseado em permissões
-  const visibleComercialItems = comercialItems.filter(item => hasPageAccess(item.pageKey));
-
-  // Filtra robôs visíveis baseado em permissões
-  const visibleRobosItems = robosItems.filter(item => hasPageAccess(item.pageKey));
-
-  // Filtra marketing visíveis baseado em permissões
-  const visibleMarketingItems = marketingItems.filter(item => hasPageAccess(item.pageKey));
-
-   // Filtra recrutamento visíveis baseado em permissões
-   const visibleRecrutamentoItems = recrutamentoItems.filter(item => hasPageAccess(item.pageKey));
+  // Filtra itens baseado em permissões (mostra tudo durante loading)
+  const visibleRadarItems = loading ? radarItems : radarItems.filter(item => hasPageAccess(item.pageKey));
+  const visibleComercialItems = loading ? comercialItems : comercialItems.filter(item => hasPageAccess(item.pageKey));
+  const visibleRobosItems = loading ? robosItems : robosItems.filter(item => hasPageAccess(item.pageKey));
+  const visibleMarketingItems = loading ? marketingItems : marketingItems.filter(item => hasPageAccess(item.pageKey));
+  const visibleRecrutamentoItems = loading ? recrutamentoItems : recrutamentoItems.filter(item => hasPageAccess(item.pageKey));
  
   // Verifica se algum radar está ativo para manter o menu aberto
   const isAnyRadarActive = useMemo(() => {
