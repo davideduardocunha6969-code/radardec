@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_funis ADD COLUMN ativo boolean NOT NULL DEFAULT true;

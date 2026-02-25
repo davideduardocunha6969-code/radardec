@@ -9,10 +9,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Trash2, ChevronRight, Loader2, Settings2, Users } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { Plus, Trash2, ChevronRight, Loader2, Settings2, Users, MoreVertical, Power, PowerOff } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const AREAS = [
   { value: "previdenciario", label: "Previdenciário" },
@@ -35,8 +38,10 @@ export default function CrmOutbound() {
   const createFunil = useCreateFunil();
   const deleteFunil = useDeleteFunil();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [form, setForm] = useState({ nome: "", area_atuacao: "", tipo_acao: "", descricao: "" });
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Edit/members dialog
   const [editFunilId, setEditFunilId] = useState<string | null>(null);
@@ -77,6 +82,13 @@ export default function CrmOutbound() {
     setList(list.includes(profileId) ? list.filter(id => id !== profileId) : [...list, profileId]);
   };
 
+  const handleToggleAtivo = async (id: string, currentAtivo: boolean) => {
+    const { error } = await supabase.from("crm_funis").update({ ativo: !currentAtivo }).eq("id", id);
+    if (error) { toast.error(error.message); return; }
+    queryClient.invalidateQueries({ queryKey: ["crm_funis"] });
+    toast.success(!currentAtivo ? "Funil ativado!" : "Funil desativado!");
+  };
+
   const handleCreate = () => {
     if (!form.nome || !form.area_atuacao) return;
     createFunil.mutate(form, { onSuccess: () => { setDialogOpen(false); setForm({ nome: "", area_atuacao: "", tipo_acao: "", descricao: "" }); } });
@@ -108,18 +120,33 @@ export default function CrmOutbound() {
             <Card key={f.id} className="hover:shadow-md transition-shadow cursor-pointer group" onClick={() => navigate(`/crm-outbound/${f.id}`)}>
               <CardHeader className="flex flex-row items-start justify-between space-y-0 pb-2">
                 <div className="space-y-1">
-                  <CardTitle className="text-lg">{f.nome}</CardTitle>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    {f.nome}
+                    {!(f as any).ativo && <Badge variant="outline" className="text-xs text-muted-foreground">Desativado</Badge>}
+                  </CardTitle>
                   <span className={`inline-block text-xs px-2 py-0.5 rounded-full font-medium ${areaBadgeColor[f.area_atuacao] || areaBadgeColor.outro}`}>
                     {AREAS.find((a) => a.value === f.area_atuacao)?.label || f.area_atuacao}
                   </span>
                 </div>
-                <div className="flex gap-1">
-                  <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); openEditDialog(f.id); }}>
-                    <Settings2 className="h-4 w-4 text-muted-foreground" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100" onClick={(e) => { e.stopPropagation(); deleteFunil.mutate(f.id); }}>
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                <div className="flex gap-1 items-center">
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button variant="ghost" size="icon" className="opacity-0 group-hover:opacity-100" onClick={(e) => e.stopPropagation()}>
+                        <MoreVertical className="h-4 w-4 text-muted-foreground" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuItem onClick={() => openEditDialog(f.id)}>
+                        <Users className="h-4 w-4 mr-2" />Equipe
+                      </DropdownMenuItem>
+                      <DropdownMenuItem onClick={() => handleToggleAtivo(f.id, (f as any).ativo !== false)}>
+                        {(f as any).ativo !== false ? <><PowerOff className="h-4 w-4 mr-2" />Desativar</> : <><Power className="h-4 w-4 mr-2" />Ativar</>}
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="text-destructive focus:text-destructive" onClick={() => setDeleteConfirmId(f.id)}>
+                        <Trash2 className="h-4 w-4 mr-2" />Excluir
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
                   <ChevronRight className="h-5 w-5 text-muted-foreground" />
                 </div>
               </CardHeader>
@@ -229,6 +256,24 @@ export default function CrmOutbound() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Confirmação de exclusão */}
+      <AlertDialog open={!!deleteConfirmId} onOpenChange={(o) => { if (!o) setDeleteConfirmId(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Excluir funil?</AlertDialogTitle>
+            <AlertDialogDescription>
+              Essa ação é irreversível. Todos os leads, colunas e dados relacionados a este funil serão permanentemente excluídos.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => { if (deleteConfirmId) { deleteFunil.mutate(deleteConfirmId); setDeleteConfirmId(null); } }}>
+              Excluir
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -910,6 +910,7 @@ export type Database = {
       crm_funis: {
         Row: {
           area_atuacao: string
+          ativo: boolean
           created_at: string
           descricao: string | null
           id: string
@@ -920,6 +921,7 @@ export type Database = {
         }
         Insert: {
           area_atuacao: string
+          ativo?: boolean
           created_at?: string
           descricao?: string | null
           id?: string
@@ -930,6 +932,7 @@ export type Database = {
         }
         Update: {
           area_atuacao?: string
+          ativo?: boolean
           created_at?: string
           descricao?: string | null
           id?: string
