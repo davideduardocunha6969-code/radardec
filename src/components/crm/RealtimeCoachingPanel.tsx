@@ -97,6 +97,8 @@ export function RealtimeCoachingPanel({
   const requestAnalysis = useCallback(
     async (transcript: string) => {
       if (!transcript || transcript.trim().length < 10 || transcript === lastAnalyzedRef.current || isAnalyzingRef.current) return;
+      console.log(`[Coaching] Enviando transcript para análise (${transcript.length} chars). Preview: ${transcript.substring(0, 200)}`);
+      lastAnalyzedRef.current = transcript;
       lastAnalyzedRef.current = transcript;
       setIsAnalyzing(true);
       isAnalyzingRef.current = true;
@@ -217,6 +219,11 @@ export function RealtimeCoachingPanel({
   const isHallucination = useCallback((text: string): boolean => {
     const cleaned = text.trim().toLowerCase();
     if (!cleaned) return true;
+    
+    // Filter very short texts (less than 2 real words)
+    const words = cleaned.replace(/[^\w\sáàâãéèêíïóôõúüç]/gi, "").trim().split(/\s+/).filter(w => w.length > 1);
+    if (words.length < 2) return true;
+    
     const hallucinationPatterns = [
       /p[ií]lulas\s+do\s+evangelho/i,
       /colabore\s+conosco/i,
@@ -230,6 +237,11 @@ export function RealtimeCoachingPanel({
       /inscreva[\s-]*se/i,
       /obrigad[oa]\s+por\s+assistir/i,
       /amara\.org/i,
+      // New silence hallucination patterns
+      /^que\s+[ée]\s+o\??$/i,
+      /^o\s+qu[ée]\??$/i,
+      /^\.+$/,
+      /^[\s\W]{0,5}$/,
     ];
     for (const pattern of hallucinationPatterns) {
       if (pattern.test(cleaned)) return true;
