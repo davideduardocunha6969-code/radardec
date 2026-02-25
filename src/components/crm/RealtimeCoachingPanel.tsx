@@ -76,6 +76,7 @@ export function RealtimeCoachingPanel({
   const [leadPartial, setLeadPartial] = useState("");
   const lastAnalyzedRef = useRef("");
   const isAnalyzingRef = useRef(false);
+  const transcriptEndRef = useRef<HTMLDivElement>(null);
 
   // Qualification items from script or fallback
   const qualificationItems: ChecklistItem[] = activeScript?.qualificacao?.length
@@ -125,9 +126,30 @@ export function RealtimeCoachingPanel({
           setApresentacaoDone(analysis.apresentacao_done || []);
           setQualificationDone(analysis.qualification_done || []);
           setShowRateDone(analysis.show_rate_done || []);
-          setObjections(analysis.objections || []);
-          setRecaItems(analysis.reca_items || []);
-          setRalocaItems(analysis.raloca_items || []);
+          // Merge objections: keep previously detected, update existing, add new
+          setObjections(prev => {
+            const merged = new Map(prev.map(o => [o.id, o]));
+            for (const o of (analysis.objections || [])) {
+              merged.set(o.id, o);
+            }
+            return Array.from(merged.values());
+          });
+          // Merge RECA items
+          setRecaItems(prev => {
+            const merged = new Map(prev.map(i => [i.id, i]));
+            for (const i of (analysis.reca_items || [])) {
+              merged.set(i.id, i);
+            }
+            return Array.from(merged.values());
+          });
+          // Merge RALOCA items
+          setRalocaItems(prev => {
+            const merged = new Map(prev.map(i => [i.id, i]));
+            for (const i of (analysis.raloca_items || [])) {
+              merged.set(i.id, i);
+            }
+            return Array.from(merged.values());
+          });
         }
       } catch (e) {
         console.error("[Coaching] Request error:", e);
@@ -183,6 +205,8 @@ export function RealtimeCoachingPanel({
     };
     labeledTranscriptsRef.current = [...labeledTranscriptsRef.current, entry];
     setLabeledTranscripts([...labeledTranscriptsRef.current]);
+    // Auto-scroll to bottom
+    setTimeout(() => transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     requestAnalysis(buildFullTranscript());
   }, [isHallucination, requestAnalysis, buildFullTranscript]);
 
@@ -409,7 +433,7 @@ export function RealtimeCoachingPanel({
       </CardHeader>
       <CardContent className="px-3 pb-2 flex-1 min-h-0 overflow-hidden">
         {connectionError && <p className="text-[10px] text-destructive mb-1">{connectionError}</p>}
-        <ScrollArea className="h-full max-h-[180px]">
+        <div className="h-[180px] overflow-y-auto pr-1">
           <div className="space-y-0.5 text-xs">
             {labeledTranscripts.map((t) => (
               <p key={t.id} className={t.speaker === "sdr" ? "text-primary" : "text-foreground"}>
@@ -426,8 +450,9 @@ export function RealtimeCoachingPanel({
             {!labeledTranscripts.length && !sdrPartial && !leadPartial && (
               <p className="text-muted-foreground text-xs text-center py-2">Aguardando fala...</p>
             )}
+            <div ref={transcriptEndRef} />
           </div>
-        </ScrollArea>
+        </div>
       </CardContent>
     </Card>
   );

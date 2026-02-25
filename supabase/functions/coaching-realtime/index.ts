@@ -55,13 +55,13 @@ ${coachInstructions || "Sem instruções específicas."}
 
 Analise a transcrição e identifique com precisão:
 
-1. APRESENTAÇÃO — Quais falas de apresentação o SDR JÁ FEZ (IDs válidos: ${apresIds || "nenhum"}):
+1. APRESENTAÇÃO — Analise CADA fala de apresentação e marque como feita se o SDR disse algo com o MESMO SENTIDO (não precisa ser palavra por palavra, basta cobrir a intenção). IDs válidos: ${apresIds || "nenhum"}:
 ${apresList || "   Nenhuma fala de apresentação cadastrada."}
 
-2. QUALIFICAÇÃO — Quais perguntas o SDR JÁ FEZ (IDs válidos: ${qualIds || "nenhum"}):
+2. QUALIFICAÇÃO — Analise CADA pergunta e marque como feita se o SDR fez uma pergunta com o MESMO SENTIDO ou obteve a informação de outra forma. IDs válidos: ${qualIds || "nenhum"}:
 ${qualList || "   Nenhuma pergunta cadastrada."}
 
-3. SHOW RATE — Quais falas de show rate o SDR JÁ FEZ para garantir comparecimento (IDs válidos: ${showRateIds || "nenhum"}):
+3. SHOW RATE — Analise CADA fala e marque como feita se o SDR cobriu o MESMO TEMA ou intenção. IDs válidos: ${showRateIds || "nenhum"}:
 ${showRateList || "   Nenhuma fala de show rate cadastrada."}
 
 4. OBJEÇÕES (RAPOVECA) — SOMENTE liste objeções que o lead EXPLICITAMENTE verbalizou na transcrição. Para cada:
@@ -81,11 +81,11 @@ ${showRateList || "   Nenhuma fala de show rate cadastrada."}
    - NÃO gere itens preventivos ou especulativos. Se o lead não levantou questões lógicas, retorne array vazio.
 
 REGRAS CRÍTICAS:
-- Só marque como feito/addressed se houver evidência CLARA na transcrição.
-- Não invente fatos sobre a transcrição. Se não está claro, não marque.
-- NÃO gere objeções, RECA ou RALOCA especulativos ou preventivos. SOMENTE baseie-se em falas REAIS do lead na transcrição.
-- Se não há evidência suficiente na transcrição, retorne arrays VAZIOS para objections, reca_items e raloca_items.
-- Prefira MENOS itens com ALTA precisão a MUITOS itens especulativos.
+- Para APRESENTAÇÃO, QUALIFICAÇÃO e SHOW RATE: seja FLEXÍVEL na detecção. Se o SDR cobriu o mesmo tema/intenção de um item do script, mesmo com palavras diferentes, marque o ID como feito. Erre para o lado de MARCAR MAIS itens como feitos.
+- Para OBJEÇÕES, RECA e RALOCA: seja RESTRITIVO. Só gere itens com evidência EXPLÍCITA na fala do lead.
+- Não invente fatos sobre a transcrição. Se não está claro para objeções/RECA/RALOCA, não gere.
+- NÃO gere objeções, RECA ou RALOCA especulativos ou preventivos. SOMENTE baseie-se em falas REAIS do lead.
+- Se não há evidência suficiente, retorne arrays VAZIOS para objections, reca_items e raloca_items.
 - Para objeções, seja criativo nas sugestões de resposta, mas SOMENTE para objeções que o lead realmente verbalizou.`;
 
     const tools = [
