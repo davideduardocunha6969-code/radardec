@@ -69,6 +69,7 @@ export function RealtimeCoachingPanel({
   const [objections, setObjections] = useState<Objection[]>([]);
   const [recaItems, setRecaItems] = useState<DynamicItem[]>([]);
   const [ralocaItems, setRalocaItems] = useState<DynamicItem[]>([]);
+  const [discardedIds, setDiscardedIds] = useState<Set<string>>(new Set());
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [labeledTranscripts, setLabeledTranscripts] = useState<LabeledTranscript[]>([]);
@@ -434,6 +435,29 @@ export function RealtimeCoachingPanel({
     return cleanup;
   }, [systemStream, leadScribe.isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  // --- Manual check/discard handlers ---
+  const handleCheckApresentacao = useCallback((id: string) => {
+    setApresentacaoDone(prev => [...new Set([...prev, id])]);
+  }, []);
+  const handleCheckQualificacao = useCallback((id: string) => {
+    setQualificationDone(prev => [...new Set([...prev, id])]);
+  }, []);
+  const handleCheckShowRate = useCallback((id: string) => {
+    setShowRateDone(prev => [...new Set([...prev, id])]);
+  }, []);
+  const handleCheckReca = useCallback((id: string) => {
+    setRecaItems(prev => prev.map(i => i.id === id ? { ...i, done: true } : i));
+  }, []);
+  const handleCheckRaloca = useCallback((id: string) => {
+    setRalocaItems(prev => prev.map(i => i.id === id ? { ...i, done: true } : i));
+  }, []);
+  const handleAddressedObjection = useCallback((id: string) => {
+    setObjections(prev => prev.map(o => o.id === id ? { ...o, addressed: true } : o));
+  }, []);
+  const handleDiscard = useCallback((id: string) => {
+    setDiscardedIds(prev => new Set(prev).add(id));
+  }, []);
+
   if (!isRecording) return null;
 
   const isConnected = sdrScribe.isConnected || leadScribe.isConnected;
@@ -537,46 +561,60 @@ export function RealtimeCoachingPanel({
             title="Apresentação"
             icon={Presentation}
             iconColor="text-emerald-500"
-            items={apresentacaoItems}
+            items={apresentacaoItems.filter(i => !discardedIds.has(i.id))}
             completedIds={apresentacaoDone}
             className="flex-none"
+            onCheck={handleCheckApresentacao}
+            onDiscard={handleDiscard}
           />
         )}
         <ChecklistCard
           title="Qualificação"
           icon={ClipboardList}
           iconColor="text-blue-500"
-          items={qualificationItems}
+          items={qualificationItems.filter(i => !discardedIds.has(i.id))}
           completedIds={qualificationDone}
+          onCheck={handleCheckQualificacao}
+          onDiscard={handleDiscard}
         />
         {showRateItems.length > 0 && (
           <ChecklistCard
             title="Show Rate"
             icon={Star}
             iconColor="text-amber-500"
-            items={showRateItems}
+            items={showRateItems.filter(i => !discardedIds.has(i.id))}
             completedIds={showRateDone}
             className="flex-none"
+            onCheck={handleCheckShowRate}
+            onDiscard={handleDiscard}
           />
         )}
       </div>
 
       {/* Column 2: Objeções + RECA + RALOCA */}
       <div className="flex-1 flex flex-col gap-2">
-        <ObjectionsCard objections={objections} />
+        <ObjectionsCard
+          objections={objections.filter(o => !discardedIds.has(o.id))}
+          onAddressed={handleAddressedObjection}
+          onDiscard={handleDiscard}
+        />
         <DynamicChecklistCard
           title="RECA — Emocionais"
           icon={Heart}
           iconColor="text-red-500"
-          items={recaItems}
+          items={recaItems.filter(i => !discardedIds.has(i.id))}
           emptyMessage="Aguardando análise..."
+          onCheck={handleCheckReca}
+          onDiscard={handleDiscard}
         />
         <DynamicChecklistCard
           title="RALOCA — Lógicos"
           icon={Brain}
           iconColor="text-purple-500"
-          items={ralocaItems}
+          items={ralocaItems.filter(i => !discardedIds.has(i.id))}
           emptyMessage="Aguardando análise..."
+          onCheck={handleCheckRaloca}
+          onDiscard={handleDiscard}
         />
       </div>
     </div>

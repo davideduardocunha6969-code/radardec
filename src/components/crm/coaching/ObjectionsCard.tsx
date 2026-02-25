@@ -1,13 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, Circle, ShieldAlert } from "lucide-react";
+import { Check, CheckCircle2, Circle, ShieldAlert, Trash2 } from "lucide-react";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import type { Objection } from "./coachingData";
 
 interface ObjectionsCardProps {
   objections: Objection[];
+  onAddressed?: (id: string) => void;
+  onDiscard?: (id: string) => void;
 }
 
-export function ObjectionsCard({ objections }: ObjectionsCardProps) {
+export function ObjectionsCard({ objections, onAddressed, onDiscard }: ObjectionsCardProps) {
   const addressed = objections.filter((o) => o.addressed).length;
 
   return (
@@ -52,7 +54,7 @@ export function ObjectionsCard({ objections }: ObjectionsCardProps) {
                   ) : (
                     <Circle className="h-3.5 w-3.5 text-orange-500 shrink-0 mt-0.5" />
                   )}
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className={`font-medium ${obj.addressed ? "line-through opacity-70" : ""}`}>
                       {obj.objection}
                     </p>
@@ -62,6 +64,28 @@ export function ObjectionsCard({ objections }: ObjectionsCardProps) {
                       </p>
                     )}
                   </div>
+                  {!obj.addressed && (onAddressed || onDiscard) && (
+                    <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
+                      {onAddressed && (
+                        <button
+                          onClick={() => onAddressed(obj.id)}
+                          className="p-0.5 rounded hover:bg-green-500/20 text-green-600 transition-colors"
+                          title="Marcar como respondida"
+                        >
+                          <Check className="h-3 w-3" />
+                        </button>
+                      )}
+                      {onDiscard && (
+                        <button
+                          onClick={() => onDiscard(obj.id)}
+                          className="p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                          title="Descartar"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
