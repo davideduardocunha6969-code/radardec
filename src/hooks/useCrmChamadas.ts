@@ -57,9 +57,43 @@ export function useCleanupOrphanedChamadas() {
         .eq("user_id", user.id)
         .in("status", ["em_chamada", "iniciando"])
         .lt("updated_at", fiveMinutesAgo)
-        .select("id");
+        .select("id, audio_url, lead_id");
       if (!error && data?.length) {
         console.log(`[Cleanup] Fixed ${data.length} orphaned chamadas`);
+
+        // Dispatch transcription for orphaned chamadas that have audio
+        const withAudio = data.filter((c) => c.audio_url);
+        if (withAudio.length) {
+          // Fetch lead names
+          const leadIds = [...new Set(withAudio.map((c) => c.lead_id))];
+          const { data: leads } = await supabase
+            .from("crm_leads")
+            .select("id, nome")
+            .in("id", leadIds);
+          const leadMap = new Map((leads || []).map((l) => [l.id, l.nome]));
+
+          // Fetch user display name
+          const { data: profiles } = await supabase
+            .from("profiles")
+            .select("display_name")
+            .eq("user_id", user.id)
+            .limit(1);
+          const userName = profiles?.[0]?.display_name || "Operador";
+
+          for (const chamada of withAudio) {
+            const audioFileName = chamada.audio_url!.split("/").pop() || "";
+            console.log(`[Cleanup] Dispatching transcription for chamada ${chamada.id}`);
+            supabase.functions.invoke("process-chamada-background", {
+              body: {
+                chamadaId: chamada.id,
+                leadId: chamada.lead_id,
+                leadNome: leadMap.get(chamada.lead_id) || "Lead",
+                audioFileName,
+                userName,
+              },
+            }).catch((e) => console.error(`[Cleanup] Failed to dispatch transcription for ${chamada.id}:`, e));
+          }
+        }
       }
     };
     cleanupOrphans();
