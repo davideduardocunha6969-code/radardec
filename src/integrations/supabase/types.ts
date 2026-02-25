@@ -1012,6 +1012,7 @@ export type Database = {
           nome: string
           obrigatorio: boolean
           ordem: number
+          secao_id: string | null
           tipo: string
         }
         Insert: {
@@ -1021,6 +1022,7 @@ export type Database = {
           nome: string
           obrigatorio?: boolean
           ordem?: number
+          secao_id?: string | null
           tipo?: string
         }
         Update: {
@@ -1030,7 +1032,37 @@ export type Database = {
           nome?: string
           obrigatorio?: boolean
           ordem?: number
+          secao_id?: string | null
           tipo?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "crm_lead_campos_secao_id_fkey"
+            columns: ["secao_id"]
+            isOneToOne: false
+            referencedRelation: "crm_lead_secoes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      crm_lead_secoes: {
+        Row: {
+          created_at: string
+          id: string
+          nome: string
+          ordem: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          nome: string
+          ordem?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          nome?: string
+          ordem?: number
         }
         Relationships: []
       }

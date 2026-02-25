@@ -40,6 +40,7 @@ import RadarOutbound from "./pages/RadarOutbound";
  import Agenda from "./pages/Agenda";
  import MeuPainel from "./pages/MeuPainel";
  import Atendimento from "./pages/Atendimento";
+ import Configuracoes from "./pages/Configuracoes";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -76,6 +77,7 @@ const App = () => (
               <Route path="/marketing/atividades" element={<ProtectedRoute pageKey="marketing-atividades"><AtividadesMarketing /></ProtectedRoute>} />
               <Route path="/agenda" element={<Agenda />} />
               <Route path="/meu-painel" element={<MeuPainel />} />
+              <Route path="/configuracoes" element={<Configuracoes />} />
               <Route path="/admin" element={<Admin />} />
                {/* Recrutamento Inteligente */}
                <Route path="/recrutamento" element={<ProtectedRoute pageKey="recrutamento"><RecrutamentoLayout /></ProtectedRoute>}>

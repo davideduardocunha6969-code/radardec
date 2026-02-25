@@ -391,6 +391,25 @@ export function AppSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
+              {/* Configurações */}
+              <SidebarMenuItem>
+                <SidebarMenuButton
+                  asChild
+                  isActive={isActive("/configuracoes")}
+                  tooltip="Configurações"
+                >
+                  <NavLink
+                    to="/configuracoes"
+                    end
+                    className="flex items-center gap-3 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
+                    activeClassName="bg-accent text-primary font-medium"
+                  >
+                    <Settings className="h-4 w-4" />
+                    <span>Configurações</span>
+                  </NavLink>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
