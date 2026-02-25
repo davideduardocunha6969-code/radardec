@@ -55,6 +55,8 @@ export function useAuth() {
       setPermissions({ isAdmin, isMarketingManager, allowedPages });
     } catch (error) {
       console.error('Error fetching user data:', error);
+    } finally {
+      setLoading(false);
     }
   }, []);
 
@@ -66,24 +68,24 @@ export function useAuth() {
         setUser(currentSession?.user ?? null);
 
         if (currentSession?.user) {
-          // Use setTimeout to avoid potential race conditions
-          setTimeout(() => fetchUserData(currentSession.user.id), 0);
+          await fetchUserData(currentSession.user.id);
         } else {
           setProfile(null);
           setPermissions({ isAdmin: false, isMarketingManager: false, allowedPages: [] });
+          setLoading(false);
         }
-        setLoading(false);
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
+    supabase.auth.getSession().then(async ({ data: { session: existingSession } }) => {
       setSession(existingSession);
       setUser(existingSession?.user ?? null);
       if (existingSession?.user) {
-        fetchUserData(existingSession.user.id);
+        await fetchUserData(existingSession.user.id);
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
