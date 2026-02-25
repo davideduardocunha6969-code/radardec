@@ -382,7 +382,7 @@ export default function CrmFunilKanban() {
               <label className="text-sm font-medium">Coach Tempo Real SDR</label>
               <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={funilConfig.robo_coach_sdr_id} onChange={(e) => setFunilConfig({ ...funilConfig, robo_coach_sdr_id: e.target.value })}>
                 <option value="">Nenhum</option>
-                {robosCoach?.filter(r => r.tipo !== "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+                {robosCoach?.filter(r => r.tipo === "coaching").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
               </select>
             </div>
             <div>
@@ -405,7 +405,7 @@ export default function CrmFunilKanban() {
               <label className="text-sm font-medium">Coach Tempo Real Closer</label>
               <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={funilConfig.robo_coach_closer_id} onChange={(e) => setFunilConfig({ ...funilConfig, robo_coach_closer_id: e.target.value })}>
                 <option value="">Nenhum</option>
-                {robosCoach?.filter(r => r.tipo !== "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+                {robosCoach?.filter(r => r.tipo === "coaching_closer").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
               </select>
             </div>
             <div>

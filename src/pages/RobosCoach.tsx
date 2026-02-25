@@ -9,7 +9,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
-import { Plus, Pencil, Trash2, Bot, Loader2, ClipboardCheck, FileText, Eye } from "lucide-react";
+import { Plus, Pencil, Trash2, Bot, Loader2, ClipboardCheck, FileText, Eye, Sparkles } from "lucide-react";
 import ScriptsSdrTab from "@/components/robos/ScriptsSdrTab";
 import ScriptsCloserTab from "@/components/robos/ScriptsCloserTab";
 import { Briefcase } from "lucide-react";
@@ -33,9 +33,10 @@ export default function RobosCoach() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<RoboCoach | null>(null);
-  const [form, setForm] = useState({ nome: "", descricao: "", instrucoes: "", instrucoes_detector: "", tipo: "coaching" });
+  const [form, setForm] = useState({ nome: "", descricao: "", instrucoes: "", instrucoes_detector: "", instrucoes_radar: "", tipo: "coaching" });
 
-  const coachingRobos = robos?.filter((r) => r.tipo !== "feedback_sdr") || [];
+  const coachingSdrRobos = robos?.filter((r) => r.tipo === "coaching") || [];
+  const coachingCloserRobos = robos?.filter((r) => r.tipo === "coaching_closer") || [];
   const feedbackRobos = robos?.filter((r) => r.tipo === "feedback_sdr") || [];
 
   const openNew = (tipo: string = "coaching") => {
@@ -44,7 +45,8 @@ export default function RobosCoach() {
       nome: tipo === "feedback_sdr" ? "Coach Feedback SDR" : "",
       descricao: tipo === "feedback_sdr" ? "Instruções para análise automática de atendimento do SDR após cada ligação" : "",
       instrucoes: "",
-      instrucoes_detector: tipo === "coaching" ? DEFAULT_DETECTOR_PROMPT : "",
+      instrucoes_detector: (tipo === "coaching" || tipo === "coaching_closer") ? DEFAULT_DETECTOR_PROMPT : "",
+      instrucoes_radar: "",
       tipo,
     });
     setFormOpen(true);
@@ -57,6 +59,7 @@ export default function RobosCoach() {
       descricao: r.descricao || "",
       instrucoes: r.instrucoes,
       instrucoes_detector: r.instrucoes_detector || "",
+      instrucoes_radar: r.instrucoes_radar || "",
       tipo: r.tipo || "coaching",
     });
     setFormOpen(true);
@@ -64,7 +67,7 @@ export default function RobosCoach() {
 
   const handleSave = () => {
     if (!form.nome || !form.instrucoes) return;
-    const payload: any = { nome: form.nome, descricao: form.descricao, instrucoes: form.instrucoes, instrucoes_detector: form.instrucoes_detector };
+    const payload: any = { nome: form.nome, descricao: form.descricao, instrucoes: form.instrucoes, instrucoes_detector: form.instrucoes_detector, instrucoes_radar: form.tipo === "coaching_closer" ? form.instrucoes_radar : null };
     if (editing) {
       updateRobo.mutate({ id: editing.id, ...payload }, { onSuccess: () => setFormOpen(false) });
     } else {
@@ -72,7 +75,8 @@ export default function RobosCoach() {
     }
   };
 
-  const isCoachingType = form.tipo !== "feedback_sdr";
+  const isCoachingType = form.tipo === "coaching" || form.tipo === "coaching_closer";
+  const isCloserType = form.tipo === "coaching_closer";
 
   return (
     <div className="space-y-6">
@@ -81,10 +85,13 @@ export default function RobosCoach() {
         <p className="text-sm text-muted-foreground">Gerencie coaches de IA e scripts para SDRs.</p>
       </div>
 
-      <Tabs defaultValue="coaching" className="w-full">
+      <Tabs defaultValue="coaching_sdr" className="w-full">
         <TabsList>
-          <TabsTrigger value="coaching" className="gap-1.5">
-            <Bot className="h-4 w-4" />Coaches Tempo Real
+          <TabsTrigger value="coaching_sdr" className="gap-1.5">
+            <Bot className="h-4 w-4" />Coaches SDR
+          </TabsTrigger>
+          <TabsTrigger value="coaching_closer" className="gap-1.5">
+            <Briefcase className="h-4 w-4" />Coaches Closer
           </TabsTrigger>
           <TabsTrigger value="feedback" className="gap-1.5">
             <ClipboardCheck className="h-4 w-4" />Coaches Feedback
@@ -97,27 +104,27 @@ export default function RobosCoach() {
           </TabsTrigger>
         </TabsList>
 
-        {/* Coaching Realtime Tab */}
-        <TabsContent value="coaching" className="space-y-4 mt-4">
+        {/* Coaches SDR Tab */}
+        <TabsContent value="coaching_sdr" className="space-y-4 mt-4">
           <div className="flex justify-end">
             <Button onClick={() => openNew("coaching")}>
-              <Plus className="h-4 w-4 mr-2" />Novo Coach
+              <Plus className="h-4 w-4 mr-2" />Novo Coach SDR
             </Button>
           </div>
           {isLoading ? (
             <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
-          ) : !coachingRobos.length ? (
+          ) : !coachingSdrRobos.length ? (
             <Card className="border-dashed">
               <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
                 <Bot className="h-12 w-12 mb-3" />
-                <p className="font-medium">Nenhum Robô Coach cadastrado</p>
+                <p className="font-medium">Nenhum Coach SDR cadastrado</p>
                 <p className="text-sm">Crie um coach com instruções específicas para auxiliar SDRs durante ligações.</p>
-                <Button className="mt-4" onClick={() => openNew("coaching")}><Plus className="h-4 w-4 mr-2" />Criar Coach</Button>
+                <Button className="mt-4" onClick={() => openNew("coaching")}><Plus className="h-4 w-4 mr-2" />Criar Coach SDR</Button>
               </CardContent>
             </Card>
           ) : (
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {coachingRobos.map((r) => (
+              {coachingSdrRobos.map((r) => (
                 <Card key={r.id} className="relative">
                   <CardHeader className="pb-2">
                     <div className="flex items-start justify-between">
@@ -142,6 +149,70 @@ export default function RobosCoach() {
                         <span>IA Detectora configurada</span>
                       </div>
                     )}
+                    <div className="flex justify-end gap-1">
+                      <Button variant="ghost" size="sm" onClick={() => openEdit(r)}><Pencil className="h-3.5 w-3.5 mr-1" />Editar</Button>
+                      <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteRobo.mutate(r.id)}><Trash2 className="h-3.5 w-3.5 mr-1" />Excluir</Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Coaches Closer Tab */}
+        <TabsContent value="coaching_closer" className="space-y-4 mt-4">
+          <div className="flex justify-end">
+            <Button onClick={() => openNew("coaching_closer")}>
+              <Plus className="h-4 w-4 mr-2" />Novo Coach Closer
+            </Button>
+          </div>
+          {isLoading ? (
+            <div className="flex justify-center py-12"><Loader2 className="h-8 w-8 animate-spin text-muted-foreground" /></div>
+          ) : !coachingCloserRobos.length ? (
+            <Card className="border-dashed">
+              <CardContent className="flex flex-col items-center justify-center py-12 text-muted-foreground">
+                <Briefcase className="h-12 w-12 mb-3" />
+                <p className="font-medium">Nenhum Coach Closer cadastrado</p>
+                <p className="text-sm">Crie um coach com instruções específicas para auxiliar Closers durante atendimentos.</p>
+                <Button className="mt-4" onClick={() => openNew("coaching_closer")}><Plus className="h-4 w-4 mr-2" />Criar Coach Closer</Button>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+              {coachingCloserRobos.map((r) => (
+                <Card key={r.id} className="relative">
+                  <CardHeader className="pb-2">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-2">
+                        <Briefcase className="h-5 w-5 text-primary" />
+                        <CardTitle className="text-base">{r.nome}</CardTitle>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Badge variant={r.ativo ? "default" : "secondary"} className="text-[10px]">{r.ativo ? "Ativo" : "Inativo"}</Badge>
+                        <Switch checked={r.ativo} onCheckedChange={(ativo) => updateRobo.mutate({ id: r.id, ativo })} className="scale-75" />
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent className="space-y-3">
+                    {r.descricao && <p className="text-sm text-muted-foreground">{r.descricao}</p>}
+                    <div className="bg-muted rounded-md p-3 max-h-32 overflow-auto">
+                      <p className="text-xs whitespace-pre-wrap">{r.instrucoes.slice(0, 300)}{r.instrucoes.length > 300 ? "..." : ""}</p>
+                    </div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      {r.instrucoes_detector && (
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Eye className="h-3 w-3" />
+                          <span>Detectora</span>
+                        </div>
+                      )}
+                      {r.instrucoes_radar && (
+                        <div className="flex items-center gap-1 text-[10px] text-muted-foreground">
+                          <Sparkles className="h-3 w-3" />
+                          <span>Radar</span>
+                        </div>
+                      )}
+                    </div>
                     <div className="flex justify-end gap-1">
                       <Button variant="ghost" size="sm" onClick={() => openEdit(r)}><Pencil className="h-3.5 w-3.5 mr-1" />Editar</Button>
                       <Button variant="ghost" size="sm" className="text-destructive" onClick={() => deleteRobo.mutate(r.id)}><Trash2 className="h-3.5 w-3.5 mr-1" />Excluir</Button>
@@ -276,6 +347,28 @@ export default function RobosCoach() {
                         Usar prompt padrão
                       </Button>
                     )}
+                  </AccordionContent>
+                </AccordionItem>
+              )}
+
+              {isCloserType && (
+                <AccordionItem value="radar">
+                  <AccordionTrigger className="text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-amber-500" />
+                      Instruções da IA Radar
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Prompt usado pela IA Radar que analisa o contexto do lead e gera insights estratégicos para o Closer antes e durante o atendimento.
+                    </p>
+                    <Textarea
+                      value={form.instrucoes_radar}
+                      onChange={(e) => setForm({ ...form, instrucoes_radar: e.target.value })}
+                      placeholder="Prompt da IA Radar..."
+                      rows={12}
+                    />
                   </AccordionContent>
                 </AccordionItem>
               )}
