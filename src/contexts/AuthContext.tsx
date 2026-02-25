@@ -40,10 +40,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+const defaultAuthContext: AuthContextType = {
+  user: null,
+  session: null,
+  profile: null,
+  permissions: { isAdmin: false, isMarketingManager: false, allowedPages: [] },
+  loading: true,
+  signIn: async () => ({ error: new Error('AuthProvider not ready') }),
+  signOut: async () => {},
+  hasPageAccess: () => false,
+  canValidateContent: () => false,
+  isAdmin: false,
+  isMarketingManager: false,
+};
+
 export function useAuthContext() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuthContext must be used within an AuthProvider');
-  }
-  return context;
+  return context ?? defaultAuthContext;
 }
