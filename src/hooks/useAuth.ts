@@ -61,34 +61,55 @@ export function useAuth() {
   }, []);
 
   useEffect(() => {
+    let initialised = false;
+
+    const handleSession = async (currentSession: Session | null) => {
+      if (initialised) return;
+      initialised = true;
+
+      setSession(currentSession);
+      setUser(currentSession?.user ?? null);
+
+      if (currentSession?.user) {
+        await fetchUserData(currentSession.user.id);
+      } else {
+        setProfile(null);
+        setPermissions({ isAdmin: false, isMarketingManager: false, allowedPages: [] });
+        setLoading(false);
+      }
+    };
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, currentSession) => {
-        setSession(currentSession);
-        setUser(currentSession?.user ?? null);
-
-        if (currentSession?.user) {
-          await fetchUserData(currentSession.user.id);
-        } else {
+      (event, currentSession) => {
+        if (event === 'INITIAL_SESSION') {
+          handleSession(currentSession);
+        } else if (event === 'SIGNED_IN') {
+          setSession(currentSession);
+          setUser(currentSession?.user ?? null);
+          if (currentSession?.user) {
+            fetchUserData(currentSession.user.id);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          setSession(null);
+          setUser(null);
           setProfile(null);
           setPermissions({ isAdmin: false, isMarketingManager: false, allowedPages: [] });
-          setLoading(false);
         }
       }
     );
 
-    // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session: existingSession } }) => {
-      setSession(existingSession);
-      setUser(existingSession?.user ?? null);
-      if (existingSession?.user) {
-        await fetchUserData(existingSession.user.id);
-      } else {
-        setLoading(false);
+    // Fallback: if onAuthStateChange doesn't fire INITIAL_SESSION within 3s
+    const fallbackTimer = setTimeout(() => {
+      if (!initialised) {
+        supabase.auth.getSession().then(({ data: { session: s } }) => handleSession(s));
       }
-    });
+    }, 3000);
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+      clearTimeout(fallbackTimer);
+    };
   }, [fetchUserData]);
 
   const signIn = async (email: string, password: string) => {
