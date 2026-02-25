@@ -1,15 +1,15 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, CheckCircle2, Circle, ShieldAlert, Trash2 } from "lucide-react";
-import { ScrollArea } from "@/components/ui/scroll-area";
+import { Check, CheckCircle2, Circle, ShieldAlert, Trash2, HelpCircle } from "lucide-react";
 import type { Objection } from "./coachingData";
 
 interface ObjectionsCardProps {
   objections: Objection[];
   onAddressed?: (id: string) => void;
   onDiscard?: (id: string) => void;
+  techniqueLabel?: string;
 }
 
-export function ObjectionsCard({ objections, onAddressed, onDiscard }: ObjectionsCardProps) {
+export function ObjectionsCard({ objections, onAddressed, onDiscard, techniqueLabel = "RAPOVECA" }: ObjectionsCardProps) {
   const addressed = objections.filter((o) => o.addressed).length;
 
   return (
@@ -18,7 +18,7 @@ export function ObjectionsCard({ objections, onAddressed, onDiscard }: Objection
         <div className="flex items-center justify-between">
           <CardTitle className="text-xs flex items-center gap-1.5">
             <ShieldAlert className="h-3.5 w-3.5 text-orange-500" />
-            Objeções (RAPOVECA)
+            Objeções ({techniqueLabel})
           </CardTitle>
           {objections.length > 0 && (
             <span className="text-[10px] font-medium text-muted-foreground">
@@ -59,9 +59,17 @@ export function ObjectionsCard({ objections, onAddressed, onDiscard }: Objection
                       {obj.objection}
                     </p>
                     {!obj.addressed && (
-                      <p className="text-[10px] text-muted-foreground mt-1 leading-tight italic">
-                        💬 {obj.suggested_response}
-                      </p>
+                      <>
+                        <p className="text-[10px] text-muted-foreground mt-1 leading-tight italic">
+                          💬 {obj.suggested_response}
+                        </p>
+                        {obj.pergunta_sugerida && (
+                          <p className="text-[10px] text-primary mt-1 leading-tight flex items-start gap-1">
+                            <HelpCircle className="h-3 w-3 shrink-0 mt-0.5" />
+                            {obj.pergunta_sugerida}
+                          </p>
+                        )}
+                      </>
                     )}
                   </div>
                   {!obj.addressed && (onAddressed || onDiscard) && (

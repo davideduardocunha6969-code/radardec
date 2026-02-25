@@ -9,6 +9,7 @@ export interface Objection {
   objection: string;
   suggested_response: string;
   addressed: boolean;
+  pergunta_sugerida?: string;
 }
 
 export interface DynamicItem {
@@ -16,6 +17,7 @@ export interface DynamicItem {
   label: string;
   description: string;
   done: boolean;
+  pergunta_sugerida?: string;
 }
 
 export interface CoachingAnalysis {
@@ -29,7 +31,7 @@ export interface CoachingAnalysis {
 
 // --- Persistent coaching state types ---
 
-export type SugestaoClassificacao = "RECA" | "RALOCA" | "RAPOVECA";
+export type SugestaoClassificacao = "RECA" | "RALOCA" | "RAPOVECA" | "RADOVECA";
 export type SugestaoStatusAtiva = "aguardando";
 export type SugestaoStatusEncerrada = "DITO" | "TIMING_PASSOU" | "DESCARTADO";
 
@@ -64,10 +66,52 @@ export interface CoachingNewItems {
   raloca_items: DynamicItem[];
 }
 
+export interface CoachingStateUpdates {
+  novas_ancoras?: string[];
+  fases_cumpridas?: string[];
+}
+
 export interface CoachingRealtimeResponse {
   updates: CoachingUpdate[];
   new_items: CoachingNewItems;
+  state_updates?: CoachingStateUpdates;
 }
+
+// --- Closer-specific types ---
+
+export interface CoachingSugestaoAtivaCloser extends CoachingSugestaoAtiva {
+  turno_gerado: number;
+  pergunta_sugerida?: string;
+}
+
+export interface CoachingSugestaoEncerradaCloser extends CoachingSugestaoEncerrada {
+  turno_gerado: number;
+  turno_encerrado: number;
+}
+
+export interface CoachingStateCloser {
+  sugestoes_ativas: CoachingSugestaoAtivaCloser[];
+  sugestoes_encerradas: CoachingSugestaoEncerradaCloser[];
+  fases_cumpridas: string[];
+  ancoras_registradas: string[];
+}
+
+// --- Radar types ---
+
+export interface RadarIndicador {
+  valor: number;
+  justificativa: string;
+}
+
+export interface RadarValues {
+  prova_tecnica: RadarIndicador;
+  confianca: RadarIndicador;
+  conviccao: RadarIndicador;
+  resistencia: RadarIndicador;
+  prob_fechamento: RadarIndicador;
+}
+
+// --- SDR script ---
 
 export const QUALIFICATION_QUESTIONS: ChecklistItem[] = [
   { id: "jornada", label: "Jornada diária", description: "Qual era sua jornada diária de trabalho?" },
