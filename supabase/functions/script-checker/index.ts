@@ -6,10 +6,10 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-interface ScriptItem {
+interface CheckableItem {
   id: string;
   label: string;
-  description: string;
+  description?: string;
 }
 
 serve(async (req) => {
@@ -18,7 +18,7 @@ serve(async (req) => {
   }
 
   try {
-    const { transcript, scriptItems } = await req.json();
+    const { transcript, scriptItems, coachingItems, detectorPrompt } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -28,62 +28,105 @@ serve(async (req) => {
       });
     }
 
-    const apresentacao: ScriptItem[] = scriptItems?.apresentacao || [];
-    const qualificacao: ScriptItem[] = scriptItems?.qualificacao || [];
-    const showRate: ScriptItem[] = scriptItems?.show_rate || [];
+    // Script items (from scripts_sdr)
+    const apresentacao: CheckableItem[] = scriptItems?.apresentacao || [];
+    const qualificacao: CheckableItem[] = scriptItems?.qualificacao || [];
+    const showRate: CheckableItem[] = scriptItems?.show_rate || [];
 
-    const apresList = apresentacao.map((a) => `- ${a.id}: ${a.description || a.label}`).join("\n");
-    const apresIds = apresentacao.map((a) => a.id).join(", ");
-    const qualList = qualificacao.map((q) => `- ${q.id}: ${q.description || q.label}`).join("\n");
-    const qualIds = qualificacao.map((q) => q.id).join(", ");
-    const showRateList = showRate.map((s) => `- ${s.id}: ${s.description || s.label}`).join("\n");
-    const showRateIds = showRate.map((s) => s.id).join(", ");
+    // Coaching dynamic items (from coaching cards currently on screen)
+    const recaItems: CheckableItem[] = coachingItems?.reca || [];
+    const ralocaItems: CheckableItem[] = coachingItems?.raloca || [];
+    const objectionItems: CheckableItem[] = coachingItems?.objections || [];
 
-    console.log("[script-checker] IDs recebidos:", { apresIds, qualIds, showRateIds });
+    const formatList = (items: CheckableItem[]) =>
+      items.map((i) => `- ${i.id}: ${i.description || i.label}`).join("\n") || "Nenhum item.";
+    const formatIds = (items: CheckableItem[]) =>
+      items.map((i) => i.id).join(", ") || "nenhum";
 
-    const systemPrompt = `Você é um verificador de script de ligação SDR. Sua ÚNICA tarefa é analisar a transcrição e identificar quais itens do script já foram cobertos pelo SDR.
+    console.log("[script-checker] IDs recebidos:", {
+      apresentacao: formatIds(apresentacao),
+      qualificacao: formatIds(qualificacao),
+      showRate: formatIds(showRate),
+      reca: formatIds(recaItems),
+      raloca: formatIds(ralocaItems),
+      objections: formatIds(objectionItems),
+    });
 
-REGRAS:
+    // Use stored detector prompt if available, otherwise use default
+    const defaultPrompt = `Você é um detector de progresso de ligação SDR. Sua ÚNICA tarefa é analisar a transcrição e identificar quais itens JÁ FORAM DITOS ou COBERTOS pelo SDR.
+
+REGRAS GERAIS:
 - Seja MUITO FLEXÍVEL na detecção. Se o SDR cobriu o MESMO TEMA ou INTENÇÃO de um item, mesmo com palavras completamente diferentes, marque como feito.
 - Erre para o lado de MARCAR MAIS itens como feitos. Na dúvida, marque.
-- Analise APENAS as falas marcadas como [SDR], ignore falas do [Lead] para detecção de script.
+- Analise APENAS as falas marcadas como [SDR] para itens de script (apresentação, qualificação, show rate).
+- Para itens de coaching (RECA, RALOCA, objeções), verifique se o SDR JÁ UTILIZOU a sugestão dada ou abordou o tema.
 - Retorne TODOS os IDs que foram cobertos, mesmo que parcialmente.
+- Se um item foi coberto com sinônimos, paráfrases ou intenção similar, MARQUE COMO FEITO.
+- NUNCA retorne IDs que não existem na lista fornecida.`;
 
-APRESENTAÇÃO (IDs válidos: ${apresIds || "nenhum"}):
-${apresList || "Nenhum item cadastrado."}
+    const systemPrompt = `${detectorPrompt || defaultPrompt}
 
-QUALIFICAÇÃO (IDs válidos: ${qualIds || "nenhum"}):
-${qualList || "Nenhum item cadastrado."}
+--- ITENS PARA VERIFICAR ---
 
-SHOW RATE (IDs válidos: ${showRateIds || "nenhum"}):
-${showRateList || "Nenhum item cadastrado."}`;
+APRESENTAÇÃO (IDs válidos: ${formatIds(apresentacao)}):
+${formatList(apresentacao)}
+
+QUALIFICAÇÃO (IDs válidos: ${formatIds(qualificacao)}):
+${formatList(qualificacao)}
+
+SHOW RATE (IDs válidos: ${formatIds(showRate)}):
+${formatList(showRate)}
+
+RECA — Gatilhos Emocionais (IDs válidos: ${formatIds(recaItems)}):
+${formatList(recaItems)}
+
+RALOCA — Argumentos Lógicos (IDs válidos: ${formatIds(ralocaItems)}):
+${formatList(ralocaItems)}
+
+OBJEÇÕES (IDs válidos: ${formatIds(objectionItems)}):
+${formatList(objectionItems)}`;
 
     const tools = [
       {
         type: "function",
         function: {
-          name: "check_script",
-          description: "Return which script items have been covered by the SDR",
+          name: "check_progress",
+          description: "Return which items have been covered by the SDR in the transcript",
           parameters: {
             type: "object",
             properties: {
               apresentacao_done: {
                 type: "array",
                 items: { type: "string" },
-                description: `IDs of presentation items covered. Valid: ${apresIds}`,
+                description: `IDs of presentation items covered. Valid: ${formatIds(apresentacao)}`,
               },
               qualification_done: {
                 type: "array",
                 items: { type: "string" },
-                description: `IDs of qualification items covered. Valid: ${qualIds}`,
+                description: `IDs of qualification items covered. Valid: ${formatIds(qualificacao)}`,
               },
               show_rate_done: {
                 type: "array",
                 items: { type: "string" },
-                description: `IDs of show rate items covered. Valid: ${showRateIds}`,
+                description: `IDs of show rate items covered. Valid: ${formatIds(showRate)}`,
+              },
+              reca_done: {
+                type: "array",
+                items: { type: "string" },
+                description: `IDs of RECA items the SDR already explored. Valid: ${formatIds(recaItems)}`,
+              },
+              raloca_done: {
+                type: "array",
+                items: { type: "string" },
+                description: `IDs of RALOCA items the SDR already used. Valid: ${formatIds(ralocaItems)}`,
+              },
+              objections_addressed: {
+                type: "array",
+                items: { type: "string" },
+                description: `IDs of objections the SDR already addressed. Valid: ${formatIds(objectionItems)}`,
               },
             },
-            required: ["apresentacao_done", "qualification_done", "show_rate_done"],
+            required: ["apresentacao_done", "qualification_done", "show_rate_done", "reca_done", "raloca_done", "objections_addressed"],
           },
         },
       },
@@ -102,7 +145,7 @@ ${showRateList || "Nenhum item cadastrado."}`;
           { role: "user", content: `Transcrição da ligação:\n\n${transcript}` },
         ],
         tools,
-        tool_choice: { type: "function", function: { name: "check_script" } },
+        tool_choice: { type: "function", function: { name: "check_progress" } },
         stream: false,
       }),
     });

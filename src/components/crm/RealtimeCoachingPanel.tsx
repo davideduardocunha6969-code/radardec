@@ -102,7 +102,14 @@ export function RealtimeCoachingPanel({
       isAnalyzingRef.current = true;
 
       try {
-        // Two AI calls in parallel: script detection + coaching
+        // Build coaching items for detector (current items on screen)
+        const coachingItemsForDetector = {
+          reca: recaItems.map(i => ({ id: i.id, label: i.label, description: i.description })),
+          raloca: ralocaItems.map(i => ({ id: i.id, label: i.label, description: i.description })),
+          objections: objections.map(o => ({ id: o.id, label: o.objection, description: o.suggested_response })),
+        };
+
+        // Two AI calls in parallel: detector + coaching
         const [scriptResult, coachResult] = await Promise.all([
           supabase.functions.invoke("script-checker", {
             body: {
@@ -112,6 +119,8 @@ export function RealtimeCoachingPanel({
                 apresentacao: apresentacaoItems,
                 show_rate: showRateItems,
               },
+              coachingItems: coachingItemsForDetector,
+              detectorPrompt: coach.instrucoes_detector || undefined,
             },
           }),
           supabase.functions.invoke("coaching-realtime", {
@@ -124,32 +133,48 @@ export function RealtimeCoachingPanel({
           }),
         ]);
 
-        // Process script-checker result
+        // Process detector result (script + coaching items strikethrough)
         if (scriptResult.error) {
           console.error("[Coaching] script-checker error:", scriptResult.error);
         } else {
-          const scriptAnalysis = scriptResult.data?.analysis;
-          console.log("[Coaching] script-checker result:", JSON.stringify(scriptAnalysis));
-          if (scriptAnalysis) {
+          const analysis = scriptResult.data?.analysis;
+          console.log("[Coaching] detector result:", JSON.stringify(analysis));
+          if (analysis) {
             setApresentacaoDone(prev => {
               const merged = new Set(prev);
-              for (const id of (scriptAnalysis.apresentacao_done || [])) merged.add(id);
+              for (const id of (analysis.apresentacao_done || [])) merged.add(id);
               return Array.from(merged);
             });
             setQualificationDone(prev => {
               const merged = new Set(prev);
-              for (const id of (scriptAnalysis.qualification_done || [])) merged.add(id);
+              for (const id of (analysis.qualification_done || [])) merged.add(id);
               return Array.from(merged);
             });
             setShowRateDone(prev => {
               const merged = new Set(prev);
-              for (const id of (scriptAnalysis.show_rate_done || [])) merged.add(id);
+              for (const id of (analysis.show_rate_done || [])) merged.add(id);
               return Array.from(merged);
             });
+            // Mark coaching items as done via detector
+            if (analysis.reca_done?.length) {
+              setRecaItems(prev => prev.map(i =>
+                (analysis.reca_done as string[]).includes(i.id) ? { ...i, done: true } : i
+              ));
+            }
+            if (analysis.raloca_done?.length) {
+              setRalocaItems(prev => prev.map(i =>
+                (analysis.raloca_done as string[]).includes(i.id) ? { ...i, done: true } : i
+              ));
+            }
+            if (analysis.objections_addressed?.length) {
+              setObjections(prev => prev.map(o =>
+                (analysis.objections_addressed as string[]).includes(o.id) ? { ...o, addressed: true } : o
+              ));
+            }
           }
         }
 
-        // Process coaching-realtime result
+        // Process coaching-realtime result (generate new suggestions only)
         if (coachResult.error) {
           console.error("[Coaching] coaching-realtime error:", coachResult.error);
         } else {
@@ -157,17 +182,23 @@ export function RealtimeCoachingPanel({
           if (coachAnalysis) {
             setObjections(prev => {
               const merged = new Map(prev.map(o => [o.id, o]));
-              for (const o of (coachAnalysis.objections || [])) merged.set(o.id, o);
+              for (const o of (coachAnalysis.objections || [])) {
+                if (!merged.has(o.id)) merged.set(o.id, o);
+              }
               return Array.from(merged.values());
             });
             setRecaItems(prev => {
               const merged = new Map(prev.map(i => [i.id, i]));
-              for (const i of (coachAnalysis.reca_items || [])) merged.set(i.id, i);
+              for (const i of (coachAnalysis.reca_items || [])) {
+                if (!merged.has(i.id)) merged.set(i.id, i);
+              }
               return Array.from(merged.values());
             });
             setRalocaItems(prev => {
               const merged = new Map(prev.map(i => [i.id, i]));
-              for (const i of (coachAnalysis.raloca_items || [])) merged.set(i.id, i);
+              for (const i of (coachAnalysis.raloca_items || [])) {
+                if (!merged.has(i.id)) merged.set(i.id, i);
+              }
               return Array.from(merged.values());
             });
           }
@@ -179,7 +210,7 @@ export function RealtimeCoachingPanel({
         isAnalyzingRef.current = false;
       }
     },
-    [coach.instrucoes, leadNome, leadContext, qualificationItems, apresentacaoItems, showRateItems]
+    [coach.instrucoes, coach.instrucoes_detector, leadNome, leadContext, qualificationItems, apresentacaoItems, showRateItems, recaItems, ralocaItems, objections]
   );
 
   // Filter out STT hallucinations that occur during silence
