@@ -23,60 +23,67 @@ export function useAuth() {
 
   const fetchUserData = useCallback(async (userId: string) => {
     try {
-      // Run all 3 queries in parallel for speed
-      const [profileRes, roleRes, permRes] = await Promise.all([
-        supabase.from('profiles').select('*').eq('user_id', userId).single(),
-        supabase.from('user_roles').select('role').eq('user_id', userId).single(),
-        supabase.from('user_permissions').select('page_key').eq('user_id', userId),
-      ]);
+      // Fetch profile
+      const { data: profileData } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('user_id', userId)
+        .single();
 
-      if (profileRes.data) setProfile(profileRes.data);
+      if (profileData) {
+        setProfile(profileData);
+      }
 
-      const isAdmin = roleRes.data?.role === 'admin';
-      const isMarketingManager = roleRes.data?.role === 'marketing_manager';
-      const allowedPages = permRes.data?.map(p => p.page_key) || [];
+      // Fetch role
+      const { data: roleData } = await supabase
+        .from('user_roles')
+        .select('role')
+        .eq('user_id', userId)
+        .single();
+
+      const isAdmin = roleData?.role === 'admin';
+      const isMarketingManager = roleData?.role === 'marketing_manager';
+
+      // Fetch permissions
+      const { data: permData } = await supabase
+        .from('user_permissions')
+        .select('page_key')
+        .eq('user_id', userId);
+
+      const allowedPages = permData?.map(p => p.page_key) || [];
 
       setPermissions({ isAdmin, isMarketingManager, allowedPages });
     } catch (error) {
       console.error('Error fetching user data:', error);
-    } finally {
-      setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    let initialLoadDone = false;
-
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
-        // Skip the INITIAL_SESSION event — getSession handles it below
-        if (!initialLoadDone) return;
-
         if (currentSession?.user) {
-          setLoading(true);
-          await fetchUserData(currentSession.user.id);
+          // Use setTimeout to avoid potential race conditions
+          setTimeout(() => fetchUserData(currentSession.user.id), 0);
         } else {
           setProfile(null);
           setPermissions({ isAdmin: false, isMarketingManager: false, allowedPages: [] });
-          setLoading(false);
         }
+        setLoading(false);
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(async ({ data: { session: existingSession } }) => {
+    supabase.auth.getSession().then(({ data: { session: existingSession } }) => {
       setSession(existingSession);
       setUser(existingSession?.user ?? null);
       if (existingSession?.user) {
-        await fetchUserData(existingSession.user.id);
-      } else {
-        setLoading(false);
+        fetchUserData(existingSession.user.id);
       }
-      initialLoadDone = true;
+      setLoading(false);
     });
 
     return () => subscription.unsubscribe();
