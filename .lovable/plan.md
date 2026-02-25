@@ -1,49 +1,27 @@
 
 
-# Transcrever chamadas interrompidas automaticamente
+# Adicionar indicador visual de transcrição parcial
 
-## Situacao atual
-Quando uma chamada e marcada como "interrompida" pelo cleanup, o audio parcial ja esta salvo no storage (o auto-save a cada 30s garante isso via `savePartialAudio`). Porem, ninguem dispara o processamento de transcricao para essas chamadas -- o `process-chamada-background` so e chamado no fluxo de finalizacao manual (`handleRecordingComplete`).
+## O que muda
+No historico de contatos (`LeadContatosTab.tsx`), chamadas com status `interrompida` que possuem transcrição receberão um indicador visual diferenciado.
 
-## Solucao
+## Alterações
 
-Modificar o `useCleanupOrphanedChamadas` em `src/hooks/useCrmChamadas.ts` para, apos marcar chamadas como "interrompida", verificar se possuem `audio_url` e, caso positivo, disparar o edge function `process-chamada-background` para cada uma delas.
+### 1. Badge "Parcial" no botão de transcrição (linha ~457-465)
+Quando a chamada tem `status === "interrompida"` e possui transcrição, o botão de transcrição exibirá:
+- Icone `FileText` em cor amarela/laranja (em vez do cinza padrão)
+- Tooltip alterado para **"Transcrição Parcial (chamada interrompida)"**
 
-### Alteracoes em `src/hooks/useCrmChamadas.ts`
+### 2. Badge "Parcial" na coluna de Status
+Quando o status for `interrompida` e houver transcrição, será adicionado um mini-badge "Parcial" ao lado do badge "Interrompida" existente, indicando que a transcrição foi recuperada mas pode estar incompleta.
 
-1. No `cleanupOrphans`, apos o UPDATE, iterar sobre as chamadas retornadas
-2. Para cada chamada com `audio_url`, buscar os dados necessarios (lead_id, lead nome, user nome) e chamar `supabase.functions.invoke("process-chamada-background")` em fire-and-forget
-3. O select do update passara a retornar `id, audio_url, lead_id` em vez de apenas `id`
+### 3. Título do dialog de transcrição
+No dialog que abre ao clicar no botão de transcrição (linha ~540+), se a chamada for `interrompida`, o título exibirá **"Transcrição (Parcial)"** com um aviso de que a gravação foi recuperada automaticamente.
 
-### Fluxo resultante
+## Arquivo afetado
+- `src/components/crm/LeadContatosTab.tsx`
 
-```text
-1. Usuario fecha a aba durante uma chamada
-2. Auto-save ja salvou o audio parcial no storage (a cada 30s)
-3. Na proxima vez que o usuario abre o sistema:
-   - useCleanupOrphanedChamadas detecta chamadas com status "em_chamada"/"iniciando" ha mais de 5min
-   - Atualiza status para "interrompida"
-   - Para cada chamada que tem audio_url, dispara process-chamada-background
-   - O edge function transcreve o audio parcial e gera feedback normalmente
-4. A transcricao parcial aparece no historico de contatos do lead
-```
-
-### Detalhes tecnicos
-
-No `useCleanupOrphanedChamadas`:
-
-```text
-// Apos o update:
-// 1. Buscar dados complementares para cada chamada com audio
-// 2. Para cada uma, buscar lead_id -> nome do lead
-// 3. Buscar profile do user -> display_name
-// 4. Invocar process-chamada-background com os dados
-```
-
-O edge function `process-chamada-background` ja lida com a deteccao de chamada nao atendida (verifica se ha 2+ speakers na transcricao). Se o audio parcial tiver apenas o operador falando, o status final sera "nao_atendida" e nao havera feedback IA -- comportamento correto.
-
-### Arquivos afetados
-- **`src/hooks/useCrmChamadas.ts`**: Modificar `useCleanupOrphanedChamadas` para disparar transcricao das chamadas interrompidas que possuem audio
-
-Nenhuma alteracao no edge function e necessaria -- ele ja suporta esse fluxo.
-
+## Detalhes técnicos
+- Nenhuma alteração de banco de dados necessária
+- A lógica é puramente visual: `chamada.status === "interrompida" && hasTranscricao`
+- O icone do botão de transcrição usará `text-yellow-600` para chamadas interrompidas com transcrição parcial
