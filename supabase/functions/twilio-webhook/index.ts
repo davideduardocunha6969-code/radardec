@@ -19,7 +19,60 @@ serve(async (req) => {
     const TWILIO_AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN");
     const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
-    // Twilio sends form-encoded data
+    const contentType = req.headers.get("content-type") || "";
+
+    // ── Handle JSON requests from frontend (start-recording) ──
+    if (contentType.includes("application/json")) {
+      const body = await req.json();
+
+      if (body.action === "start-recording" && body.callSid) {
+        console.log("[Webhook] start-recording requested for CallSid:", body.callSid);
+
+        if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) {
+          throw new Error("TWILIO_ACCOUNT_SID ou TWILIO_AUTH_TOKEN não configurados");
+        }
+
+        const recordingUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Calls/${body.callSid}/Recordings.json`;
+        const authHeader = "Basic " + btoa(`${TWILIO_ACCOUNT_SID}:${TWILIO_AUTH_TOKEN}`);
+
+        const params = new URLSearchParams({
+          RecordingChannels: "dual",
+          RecordingStatusCallback: `${SUPABASE_URL}/functions/v1/twilio-webhook`,
+          RecordingStatusCallbackEvent: "completed",
+        });
+
+        const res = await fetch(recordingUrl, {
+          method: "POST",
+          headers: {
+            Authorization: authHeader,
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: params.toString(),
+        });
+
+        const resData = await res.json();
+        if (!res.ok) {
+          console.error("[Webhook] Twilio recording API error:", res.status, resData);
+          return new Response(JSON.stringify({ error: "Failed to start recording", details: resData }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
+
+        console.log("[Webhook] Recording started:", resData.sid);
+        return new Response(JSON.stringify({ success: true, recordingSid: resData.sid }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Unknown JSON action
+      return new Response(JSON.stringify({ error: "Unknown action" }), {
+        status: 400,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
+    // ── Handle Twilio form-encoded callbacks ──
     const formData = await req.formData();
     const callSid = formData.get("CallSid") as string;
     const recordingSid = formData.get("RecordingSid") as string;
@@ -27,6 +80,7 @@ serve(async (req) => {
     const recordingStatus = formData.get("RecordingStatus") as string;
     const recordingDuration = formData.get("RecordingDuration") as string;
     const callStatus = formData.get("CallStatus") as string;
+    const dialCallStatus = formData.get("DialCallStatus") as string;
 
     console.log("Twilio webhook received:", {
       callSid,
@@ -34,12 +88,45 @@ serve(async (req) => {
       recordingUrl,
       recordingStatus,
       callStatus,
+      dialCallStatus,
       recordingDuration,
     });
 
-    // Handle recording completed — download, upload to storage, then trigger background processing
+    // ── Handle <Dial> action callback (DialCallStatus) ──
+    if (dialCallStatus && callSid && !recordingSid) {
+      const statusMap: Record<string, string> = {
+        "completed": "finalizada",
+        "busy": "ocupado",
+        "no-answer": "sem_resposta",
+        "failed": "falhou",
+        "canceled": "cancelada",
+      };
+      const mappedStatus = statusMap[dialCallStatus] || dialCallStatus;
+
+      const terminatedBy = formData.get("TerminatedBy") as string | null;
+      const encerradoPorMap: Record<string, string> = {
+        "callee": "lead",
+        "caller": "sdr",
+      };
+      const encerradoPor = terminatedBy ? (encerradoPorMap[terminatedBy] || terminatedBy) : undefined;
+
+      const updatePayload: Record<string, unknown> = { status: mappedStatus };
+      if (encerradoPor) updatePayload.encerrado_por = encerradoPor;
+
+      const { error: statusError } = await supabase
+        .from("crm_chamadas")
+        .update(updatePayload)
+        .eq("twilio_call_sid", callSid);
+
+      if (statusError) {
+        console.error("Erro ao atualizar status (DialCallStatus):", statusError);
+      }
+
+      return new Response("<Response/>", { headers: { "Content-Type": "text/xml" } });
+    }
+
+    // ── Handle recording completed ──
     if (recordingStatus === "completed" && recordingUrl && callSid) {
-      // Find the chamada by twilio_call_sid
       const { data: chamada, error: findError } = await supabase
         .from("crm_chamadas")
         .select("id, lead_id")
@@ -111,7 +198,7 @@ serve(async (req) => {
           .eq("id", chamada.lead_id)
           .single();
 
-        // Trigger background processing (transcription + feedback) — same pipeline as WhatsApp
+        // Trigger background processing (transcription + feedback)
         if (audioBlob && audioBlob.size > 0) {
           console.log("[Webhook] Triggering process-chamada-background for:", chamada.id);
           try {
@@ -138,8 +225,8 @@ serve(async (req) => {
       }
     }
 
-    // Handle call status updates
-    if (callStatus && callSid && !recordingSid) {
+    // ── Handle legacy call status updates ──
+    if (callStatus && callSid && !recordingSid && !dialCallStatus) {
       const statusMap: Record<string, string> = {
         "ringing": "discando",
         "in-progress": "em_chamada",
@@ -152,7 +239,6 @@ serve(async (req) => {
 
       const mappedStatus = statusMap[callStatus] || callStatus;
 
-      // Capture who ended the call (Twilio sends "TerminatedBy" field)
       const terminatedBy = formData.get("TerminatedBy") as string | null;
       const encerradoPorMap: Record<string, string> = {
         "callee": "lead",
