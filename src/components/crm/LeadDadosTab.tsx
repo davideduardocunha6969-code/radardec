@@ -132,15 +132,21 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
               <p className="text-sm">{lead.endereco}</p>
             </div>
           )}
-          {campos?.map((campo) => {
+          {campos?.filter((campo) => {
             const value = (lead.dados_extras as Record<string, unknown>)?.[campo.key];
-            return (
-              <div key={campo.id}>
-                <label className="text-xs font-medium text-muted-foreground">{campo.nome}</label>
-                <p className="text-sm">{value ? String(value) : <span className="text-muted-foreground italic">Não informado</span>}</p>
-              </div>
-            );
-          })}
+            return value && String(value).trim() !== "";
+          }).map((campo) => (
+            <div key={campo.id}>
+              <label className="text-xs font-medium text-muted-foreground">{campo.nome}</label>
+              <p className="text-sm">{String((lead.dados_extras as Record<string, unknown>)?.[campo.key])}</p>
+            </div>
+          ))}
+          {!lead.endereco && !campos?.some((c) => {
+            const v = (lead.dados_extras as Record<string, unknown>)?.[c.key];
+            return v && String(v).trim() !== "";
+          }) && (
+            <p className="text-xs text-muted-foreground italic col-span-full">Nenhum dado adicional preenchido. Clique em Editar para preencher.</p>
+          )}
         </div>
       )}
     </div>
