@@ -27,6 +27,12 @@ export function ImportMappingDialog({ open, onOpenChange, funilId, colunas }: Im
 
   const [step, setStep] = useState<ImportStep>("upload");
   const [uploadColunaId, setUploadColunaId] = useState(colunas[0]?.id || "");
+
+  // Sync uploadColunaId when colunas load
+  const currentColunaValid = colunas.some(c => c.id === uploadColunaId);
+  if (!currentColunaValid && colunas.length > 0 && uploadColunaId !== colunas[0].id) {
+    setUploadColunaId(colunas[0].id);
+  }
   const [headers, setHeaders] = useState<string[]>([]);
   const [rows, setRows] = useState<string[][]>([]);
   const [mapping, setMapping] = useState<Record<number, string>>({});
@@ -149,6 +155,7 @@ export function ImportMappingDialog({ open, onOpenChange, funilId, colunas }: Im
   const handleImport = () => {
     const leads = buildLeads();
     if (!leads.length) { toast.error("Nenhum lead encontrado"); return; }
+    if (!uploadColunaId) { toast.error("Selecione uma coluna de destino"); return; }
     bulkCreate.mutate({ funilId, colunaId: uploadColunaId, leads }, {
       onSuccess: () => { handleClose(false); },
     });
