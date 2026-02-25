@@ -40,10 +40,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
 }
 
+const defaultPermissions: UserPermissions = { isAdmin: false, isMarketingManager: false, allowedPages: [] };
+
+const defaultAuth: AuthContextType = {
+  user: null,
+  session: null,
+  profile: null,
+  permissions: defaultPermissions,
+  loading: true,
+  signIn: async () => ({ error: new Error('AuthProvider not mounted') }),
+  signOut: async () => {},
+  hasPageAccess: () => false,
+  canValidateContent: () => false,
+  isAdmin: false,
+  isMarketingManager: false,
+};
+
 export function useAuthContext() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuthContext must be used within an AuthProvider');
+    // During HMR or edge cases, return safe defaults (loading=true keeps UI in spinner)
+    return defaultAuth;
   }
   return context;
 }
