@@ -101,6 +101,10 @@ export function ImportMappingDialog({ open, onOpenChange, funilId, colunas }: Im
       toast.error("Já existe um campo com essa chave");
       return;
     }
+    if (campos?.find((c) => c.nome.toLowerCase() === newFieldName.trim().toLowerCase())) {
+      toast.error("Já existe um campo com esse nome");
+      return;
+    }
     await createCampo.mutateAsync({ nome: newFieldName.trim(), key, ordem: (campos?.length || 0) + 1 });
     setMapping({ ...mapping, [idx]: `campo:${key}` });
     setNewFieldName("");

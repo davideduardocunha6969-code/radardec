@@ -31,6 +31,13 @@ export function useCreateCrmLeadCampo() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (data: { nome: string; key: string; tipo?: string; ordem?: number }) => {
+      // Check for duplicate name
+      const { data: existing } = await supabase
+        .from("crm_lead_campos")
+        .select("id")
+        .ilike("nome", data.nome.trim())
+        .limit(1);
+      if (existing && existing.length > 0) throw new Error("Já existe um campo com esse nome");
       const { error } = await supabase
         .from("crm_lead_campos" as any)
         .insert({
