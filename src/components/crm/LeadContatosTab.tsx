@@ -365,9 +365,16 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
                   </TableCell>
                   <TableCell className="text-xs py-2">{chamada.numero_discado}</TableCell>
                   <TableCell className="py-2">
-                    <Badge variant="outline" className={`text-[10px] ${statusInfo.color}`}>
-                      {statusInfo.label}
-                    </Badge>
+                    <div className="flex items-center gap-1">
+                      <Badge variant="outline" className={`text-[10px] ${statusInfo.color}`}>
+                        {statusInfo.label}
+                      </Badge>
+                      {chamada.status === "interrompida" && hasTranscricao && (
+                        <Badge variant="outline" className="text-[9px] bg-yellow-500/10 text-yellow-700 border-yellow-500/30">
+                          Parcial
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   <TableCell className="text-xs py-2">
                     {chamada.duracao_segundos
@@ -458,10 +465,12 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
                         <Tooltip>
                           <TooltipTrigger asChild>
                             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setTranscricaoOpen(chamada)}>
-                              <FileText className="h-3.5 w-3.5" />
+                              <FileText className={`h-3.5 w-3.5 ${chamada.status === "interrompida" ? "text-yellow-600" : ""}`} />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent>Transcrição</TooltipContent>
+                          <TooltipContent>
+                            {chamada.status === "interrompida" ? "Transcrição Parcial (chamada interrompida)" : "Transcrição"}
+                          </TooltipContent>
                         </Tooltip>
                       )}
                       {hasAudio && (
@@ -614,7 +623,15 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
       <Dialog open={!!transcricaoOpen} onOpenChange={(o) => !o && setTranscricaoOpen(null)}>
         <DialogContent className="max-w-5xl">
           <DialogHeader>
-            <DialogTitle>Transcrição da Ligação</DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-4 w-4" />
+              {transcricaoOpen?.status === "interrompida" ? "Transcrição (Parcial)" : "Transcrição da Ligação"}
+            </DialogTitle>
+            {transcricaoOpen?.status === "interrompida" && (
+              <p className="text-xs text-yellow-600 mt-1">
+                ⚠️ Esta gravação foi recuperada automaticamente. A transcrição pode estar incompleta.
+              </p>
+            )}
           </DialogHeader>
           <ScrollArea className="max-h-[60vh]">
             <div className="space-y-5">
