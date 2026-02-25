@@ -1,6 +1,8 @@
-import { useState, useCallback, useRef } from "react";
+import { useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useUpdateColuna, useDeleteColuna, useCreateLead, useUpdateLead, useDeleteLead, useBulkCreateLeads, useReorderColunas, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
+import { LeadDadosTab } from "@/components/crm/LeadDadosTab";
+import { ImportMappingDialog } from "@/components/crm/ImportMappingDialog";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -17,13 +19,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { Textarea } from "@/components/ui/textarea";
-import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, FileSpreadsheet, AlertCircle, History, Pencil, CalendarDays, Sparkles, ChevronDown } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, Pencil, CalendarDays, Sparkles, ChevronDown } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
-import * as XLSX from "xlsx";
 
 import type { CrmColuna } from "@/hooks/useCrmOutbound";
 
@@ -145,11 +145,6 @@ export default function CrmFunilKanban() {
 
 
   const [uploadDialog, setUploadDialog] = useState(false);
-  const [uploadColunaId, setUploadColunaId] = useState("");
-  const [csvText, setCsvText] = useState("");
-  const [uploadMode, setUploadMode] = useState<"text" | "file">("file");
-  const [parsedPreview, setParsedPreview] = useState<{ nome: string; endereco?: string; telefones: LeadTelefone[]; dados_extras?: Record<string, string> }[]>([]);
-  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const leadsByColuna = useCallback((colunaId: string) => {
     return (leads || []).filter((l) => l.coluna_id === colunaId);
@@ -179,82 +174,7 @@ export default function CrmFunilKanban() {
     });
   };
 
-  const excelDateToString = (value: string): string => {
-    const num = Number(value);
-    if (!isNaN(num) && num > 1000 && num < 100000) {
-      const date = XLSX.SSF.parse_date_code(num);
-      if (date) {
-        const dd = String(date.d).padStart(2, "0");
-        const mm = String(date.m).padStart(2, "0");
-        const yyyy = date.y;
-        return `${dd}/${mm}/${yyyy}`;
-      }
-    }
-    return value;
-  };
 
-  const parseLeadsFromRows = (rows: string[][]): { nome: string; endereco?: string; telefones: LeadTelefone[]; dados_extras?: Record<string, string> }[] => {
-    const parsed: { nome: string; endereco?: string; telefones: LeadTelefone[]; dados_extras?: Record<string, string> }[] = [];
-    for (const parts of rows) {
-      if (!parts[0]?.trim()) continue;
-      const telefones: LeadTelefone[] = [];
-      for (let i = 10; i <= 14; i++) {
-        if (parts[i]?.trim()) telefones.push({ numero: parts[i].trim(), tipo: "celular" });
-      }
-      const dados_extras: Record<string, string> = {};
-      if (parts[1]?.trim()) dados_extras.empresa = parts[1].trim();
-      if (parts[2]?.trim()) dados_extras.data_admissao = excelDateToString(parts[2].trim());
-      if (parts[3]?.trim()) dados_extras.data_demissao = excelDateToString(parts[3].trim());
-      if (parts[4]?.trim()) dados_extras.motivo_demissao = parts[4].trim();
-      if (parts[5]?.trim()) dados_extras.cargo = parts[5].trim();
-      if (parts[7]?.trim()) dados_extras.municipio = parts[7].trim();
-      if (parts[8]?.trim()) dados_extras.uf = parts[8].trim();
-      if (parts[9]?.trim()) dados_extras.cpf = parts[9].trim();
-      const municipioUf = [dados_extras.municipio, dados_extras.uf].filter(Boolean).join(" - ");
-      parsed.push({ nome: parts[0].trim(), endereco: municipioUf || undefined, telefones, dados_extras: Object.keys(dados_extras).length ? dados_extras : undefined });
-    }
-    return parsed;
-  };
-
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (evt) => {
-      try {
-        const data = new Uint8Array(evt.target?.result as ArrayBuffer);
-        const workbook = XLSX.read(data, { type: "array" });
-        const sheet = workbook.Sheets[workbook.SheetNames[0]];
-        const rows: string[][] = XLSX.utils.sheet_to_json(sheet, { header: 1, defval: "" });
-        // Skip header row if first cell matches expected header
-        const startIdx = rows[0]?.[0]?.toString().toLowerCase().includes("nome") ? 1 : 0;
-        const dataRows = rows.slice(startIdx).map(r => r.map(c => String(c)));
-        const leads = parseLeadsFromRows(dataRows);
-        setParsedPreview(leads);
-        if (!leads.length) toast.error("Nenhum lead encontrado na planilha");
-        else toast.success(`${leads.length} leads encontrados na planilha`);
-      } catch {
-        toast.error("Erro ao ler a planilha. Verifique o formato.");
-      }
-    };
-    reader.readAsArrayBuffer(file);
-    if (fileInputRef.current) fileInputRef.current.value = "";
-  };
-
-  const handleCsvImport = () => {
-    if (!uploadColunaId || !funilId) return;
-    let leadsToImport = parsedPreview;
-    if (uploadMode === "text") {
-      if (!csvText.trim()) return;
-      const lines = csvText.trim().split("\n");
-      const rows = lines.map(l => l.split(";").map(s => s.trim()));
-      leadsToImport = parseLeadsFromRows(rows);
-    }
-    if (!leadsToImport.length) { toast.error("Nenhum lead encontrado"); return; }
-    bulkCreate.mutate({ funilId, colunaId: uploadColunaId, leads: leadsToImport.map(l => ({ nome: l.nome, endereco: l.endereco, telefones: l.telefones, dados_extras: l.dados_extras })) }, {
-      onSuccess: () => { setUploadDialog(false); setCsvText(""); setParsedPreview([]); },
-    });
-  };
 
   const handleMoveLead = (lead: CrmLead, newColunaId: string) => {
     if (lead.coluna_id === newColunaId) return;
@@ -276,7 +196,7 @@ export default function CrmFunilKanban() {
           </div>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" onClick={() => { setUploadColunaId(colunas?.[0]?.id || ""); setUploadDialog(true); }}><Upload className="h-4 w-4 mr-2" />Importar Lista</Button>
+          <Button variant="outline" onClick={() => setUploadDialog(true)}><Upload className="h-4 w-4 mr-2" />Importar Lista</Button>
           <Button onClick={() => setNewColunaDialog(true)}><Plus className="h-4 w-4 mr-2" />Nova Coluna</Button>
         </div>
       </div>
@@ -457,98 +377,13 @@ export default function CrmFunilKanban() {
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Upload CSV */}
-      <Dialog open={uploadDialog} onOpenChange={(o) => { setUploadDialog(o); if (!o) { setCsvText(""); setParsedPreview([]); setUploadMode("file"); } }}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Importar Lista de Leads</DialogTitle>
-            <DialogDescription>Envie uma planilha Excel ou cole os dados manualmente.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4">
-            {/* Instruções de formato */}
-            <div className="rounded-lg border border-primary/20 bg-primary/5 p-4 space-y-2">
-              <div className="flex items-center gap-2 font-semibold text-sm text-primary">
-                <AlertCircle className="h-4 w-4" />
-                Formato obrigatório das colunas (nesta ordem):
-              </div>
-              <div className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-sm">
-                <Badge variant="outline" className="justify-center">A</Badge><span>Nome do lead <span className="text-destructive">*</span></span>
-                <Badge variant="outline" className="justify-center">B</Badge><span>Empresa que trabalhou</span>
-                <Badge variant="outline" className="justify-center">C</Badge><span>Data de admissão</span>
-                <Badge variant="outline" className="justify-center">D</Badge><span>Data de demissão</span>
-                <Badge variant="outline" className="justify-center">E</Badge><span>Motivo da demissão</span>
-                <Badge variant="outline" className="justify-center">F</Badge><span>Cargo na última empresa</span>
-                <Badge variant="outline" className="justify-center">G</Badge><span className="text-muted-foreground italic">Reservado</span>
-                <Badge variant="outline" className="justify-center">H</Badge><span>Município</span>
-                <Badge variant="outline" className="justify-center">I</Badge><span>UF</span>
-                <Badge variant="outline" className="justify-center">J</Badge><span>CPF</span>
-                <Badge variant="outline" className="justify-center">K</Badge><span>Telefone 1</span>
-                <Badge variant="outline" className="justify-center">L</Badge><span>Telefone 2</span>
-                <Badge variant="outline" className="justify-center">M</Badge><span>Telefone 3</span>
-                <Badge variant="outline" className="justify-center">N</Badge><span>Telefone 4</span>
-                <Badge variant="outline" className="justify-center">O</Badge><span>Telefone 5</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1">A primeira linha pode ser o cabeçalho (será ignorada automaticamente se começar com "Nome").</p>
-            </div>
-
-            {colunas && colunas.length > 0 && (
-              <div>
-                <label className="text-sm font-medium">Coluna de destino</label>
-                <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={uploadColunaId} onChange={(e) => setUploadColunaId(e.target.value)}>
-                  {colunas.map((c) => <option key={c.id} value={c.id}>{c.nome}</option>)}
-                </select>
-              </div>
-            )}
-
-            {/* Tabs: File vs Text */}
-            <div className="flex gap-2">
-              <Button variant={uploadMode === "file" ? "default" : "outline"} size="sm" onClick={() => setUploadMode("file")}>
-                <FileSpreadsheet className="h-4 w-4 mr-1" />Planilha Excel
-              </Button>
-              <Button variant={uploadMode === "text" ? "default" : "outline"} size="sm" onClick={() => setUploadMode("text")}>
-                <Upload className="h-4 w-4 mr-1" />Colar Texto
-              </Button>
-            </div>
-
-            {uploadMode === "file" ? (
-              <div className="space-y-3">
-                <div className="border-2 border-dashed rounded-lg p-6 text-center cursor-pointer hover:border-primary/50 transition-colors" onClick={() => fileInputRef.current?.click()}>
-                  <FileSpreadsheet className="h-10 w-10 mx-auto text-muted-foreground mb-2" />
-                  <p className="text-sm font-medium">Clique para selecionar a planilha</p>
-                  <p className="text-xs text-muted-foreground">.xlsx, .xls, .csv</p>
-                </div>
-                <input ref={fileInputRef} type="file" accept=".xlsx,.xls,.csv" className="hidden" onChange={handleFileUpload} />
-                {parsedPreview.length > 0 && (
-                  <div className="rounded-md border p-3 space-y-2">
-                    <p className="text-sm font-medium text-primary">{parsedPreview.length} leads encontrados</p>
-                    <div className="max-h-40 overflow-y-auto space-y-1">
-                      {parsedPreview.slice(0, 5).map((l, i) => (
-                        <div key={i} className="text-xs space-y-0.5">
-                          <div className="flex gap-2 flex-wrap">
-                            <span className="font-medium">{l.nome}</span>
-                            {l.dados_extras?.empresa && <span className="text-muted-foreground">• {l.dados_extras.empresa}</span>}
-                            {l.dados_extras?.municipio && <span className="text-muted-foreground">• {l.dados_extras.municipio}/{l.dados_extras?.uf}</span>}
-                            {l.telefones.map((t, j) => <Badge key={j} variant="secondary" className="text-xs">{t.numero}</Badge>)}
-                          </div>
-                        </div>
-                      ))}
-                      {parsedPreview.length > 5 && <p className="text-xs text-muted-foreground">... e mais {parsedPreview.length - 5} leads</p>}
-                    </div>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <Textarea rows={8} value={csvText} onChange={(e) => setCsvText(e.target.value)} placeholder={"João Silva;Empresa X;01/01/2020;31/12/2023;Pedido de demissão;;;São Paulo;SP;123.456.789-00;(11)99999-0001\nMaria Santos;Empresa Y;15/03/2019;20/06/2024;Sem justa causa;;;Campinas;SP;987.654.321-00;(11)99999-0002;(11)99999-0003"} />
-            )}
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setUploadDialog(false)}>Cancelar</Button>
-            <Button onClick={handleCsvImport} disabled={bulkCreate.isPending || (uploadMode === "file" ? !parsedPreview.length : !csvText.trim())}>
-              {bulkCreate.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}Importar
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+      {/* Dialog Importação com Mapeamento */}
+      <ImportMappingDialog
+        open={uploadDialog}
+        onOpenChange={setUploadDialog}
+        funilId={funilId!}
+        colunas={colunas || []}
+      />
 
       {/* Dialog Detalhe Lead */}
       <Dialog open={!!detailLead} onOpenChange={(o) => { if (!o) { setDetailLead(null); setEditingLeadData(false); } }}>
@@ -558,8 +393,9 @@ export default function CrmFunilKanban() {
           </DialogHeader>
           {detailLead && (
             <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
-              <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
+              <Tabs defaultValue="lead-dados" className="flex-1 overflow-hidden flex flex-col">
                 <TabsList className="w-full shrink-0 mx-6" style={{ width: "calc(100% - 3rem)" }}>
+                  <TabsTrigger value="lead-dados" className="flex-1">Dados</TabsTrigger>
                   <TabsTrigger value="dados" className="flex-1">Atendimento SDR</TabsTrigger>
                   <TabsTrigger value="atendimento-closer" className="flex-1">
                     <Phone className="h-3.5 w-3.5 mr-1" />Atendimento Closer
@@ -568,6 +404,9 @@ export default function CrmFunilKanban() {
                     <CalendarDays className="h-3.5 w-3.5 mr-1" />Agenda Closers
                   </TabsTrigger>
                 </TabsList>
+                <TabsContent value="lead-dados" className="flex-1 overflow-auto px-6 pb-6 min-h-0">
+                  <LeadDadosTab lead={detailLead} funilId={funilId!} onLeadUpdate={(updated) => setDetailLead(updated)} />
+                </TabsContent>
                 <TabsContent value="dados" className="flex-1 overflow-auto px-6 pb-6 min-h-0">
                   <div className="space-y-4">
                     {detailLead.dados_extras && (
