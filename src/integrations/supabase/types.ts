@@ -1787,6 +1787,7 @@ export type Database = {
           instrucoes: string
           instrucoes_detector: string
           instrucoes_noshow: string
+          instrucoes_radar: string | null
           instrucoes_radoveca: string
           instrucoes_raloca: string
           instrucoes_reca: string
@@ -1803,6 +1804,7 @@ export type Database = {
           instrucoes: string
           instrucoes_detector?: string
           instrucoes_noshow?: string
+          instrucoes_radar?: string | null
           instrucoes_radoveca?: string
           instrucoes_raloca?: string
           instrucoes_reca?: string
@@ -1819,6 +1821,7 @@ export type Database = {
           instrucoes?: string
           instrucoes_detector?: string
           instrucoes_noshow?: string
+          instrucoes_radar?: string | null
           instrucoes_radoveca?: string
           instrucoes_raloca?: string
           instrucoes_reca?: string
