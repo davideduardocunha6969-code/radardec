@@ -52,10 +52,13 @@ serve(async (req) => {
     const cleanNumber = toNumber.startsWith("+") ? toNumber : `+${toNumber}`;
     console.log("[TwiML] Clean number:", cleanNumber, "CallerID:", TWILIO_PHONE_NUMBER);
 
-    // Generate TwiML for outbound call with recording
+    // Generate TwiML for outbound call WITHOUT automatic recording.
+    // Recording is started via REST API only after the call is confirmed answered,
+    // avoiding recording costs on unanswered/voicemail calls.
+    const SUPABASE_URL = Deno.env.get("SUPABASE_URL");
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Dial callerId="${TWILIO_PHONE_NUMBER}" record="record-from-answer-dual" recordingStatusCallback="${Deno.env.get("SUPABASE_URL")}/functions/v1/twilio-webhook" recordingStatusCallbackEvent="completed">
+  <Dial callerId="${TWILIO_PHONE_NUMBER}" action="${SUPABASE_URL}/functions/v1/twilio-webhook" method="POST">
     <Number>${cleanNumber}</Number>
   </Dial>
 </Response>`;

@@ -152,9 +152,23 @@ export function VoipDialer({ leadId, leadNome, numero, onCallStatusChange, onRec
         updateChamada.mutate({ id: chamada.id, leadId, status: "discando", twilio_call_sid: call.parameters?.CallSid || "" });
       });
 
-      call.on("accept", () => {
+      call.on("accept", async () => {
         setCallStatus("in-progress");
-        updateChamada.mutate({ id: chamada.id, leadId, status: "em_chamada", twilio_call_sid: call.parameters?.CallSid || "" });
+        const callSid = call.parameters?.CallSid || "";
+        updateChamada.mutate({ id: chamada.id, leadId, status: "em_chamada", twilio_call_sid: callSid });
+
+        // Start Twilio server-side recording only now that the call is answered
+        if (callSid) {
+          try {
+            console.log("[VoIP] Starting server-side recording for answered call:", callSid);
+            await supabase.functions.invoke("twilio-webhook", {
+              body: { action: "start-recording", callSid },
+            });
+          } catch (e) {
+            console.warn("[VoIP] Failed to start recording:", e);
+          }
+        }
+
         // Notify parent that call is active (enables coaching panel)
         onRecordingStateChange?.(true, { micStream: null, systemStream: null, mixedStream: null });
       });
