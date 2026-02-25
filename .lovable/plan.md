@@ -1,51 +1,27 @@
 
-# Reorganizar campos da aba Dados do Lead
+# Remover duplicacao do campo Nome no card do lead
 
-## Situacao atual
-Existem 8 campos configurados: CPF, Empresa, Cargo, Data Admissao, Data Demissao, Motivo Demissao, Municipio, UF.
+## Problema
+O componente `LeadDadosTab` exibe o campo "Nome" duas vezes:
+1. Um bloco hardcoded no topo (linhas 131-138 no modo edicao, linhas 163-175 no modo visualizacao)
+2. O campo `__nome__` que aparece dentro da secao "Dados Pessoais" via sistema de secoes
 
-## O que sera feito
+## Solucao
+Remover os blocos hardcoded de "Nome" e "Endereco" que ficam fora das secoes. O campo `__nome__` ja esta cadastrado no banco e atribuido a uma secao, entao ele sera renderizado automaticamente no lugar correto.
 
-### 1. Excluir campos desnecessarios
-Remover da tabela `crm_lead_campos`:
-- Empresa
-- Cargo
-- Data Admissao
-- Data Demissao
-- Motivo Demissao
+### Alteracoes no arquivo `src/components/crm/LeadDadosTab.tsx`
 
-### 2. Criar novos campos
-Adicionar na tabela `crm_lead_campos`:
-- Telefone 1 (key: `telefone_1`, ordem: 2)
-- Telefone 2 (key: `telefone_2`, ordem: 3)
-- Telefone 3 (key: `telefone_3`, ordem: 4)
-- Telefone 4 (key: `telefone_4`, ordem: 5)
-- UF (ja existe, reordenar para ordem 6)
-- Municipio (ja existe, reordenar para ordem 7)
-- Endereco (key: `endereco`, ordem: 8)
-- N (key: `numero`, ordem: 9)
-- Bairro (key: `bairro`, ordem: 10)
-- CEP (key: `cep`, ordem: 11)
+1. **Modo edicao**: Remover o bloco fixo de "Nome" e "Endereco" (linhas 129-139). Os campos `__nome__` e `endereco` ja existem como campos dinamicos e serao renderizados dentro de suas secoes.
 
-### 3. Reordenar campos existentes
-- CPF: ordem 1
-- UF: ordem 6
-- Municipio: ordem 7
+2. **Modo visualizacao**: Remover o bloco fixo de "Nome sempre visivel" e "Endereco" (linhas 163-175). Esses campos aparecerao dentro da secao correspondente.
 
-### Resultado final (ordem)
-1. CPF
-2. Telefone 1
-3. Telefone 2
-4. Telefone 3
-5. Telefone 4
-6. UF
-7. Municipio
-8. Endereco
-9. N
-10. Bairro
-11. CEP
+3. **Ajustar `renderFieldView` e `renderFieldEdit`**: Para campos com key `__nome__`, ler/escrever de `lead.nome` em vez de `dadosExtras`. Mesma logica para `__endereco__` usando `lead.endereco`.
 
-O campo "Nome" ja e nativo do lead (coluna `nome` na tabela `crm_leads`), nao precisa ser criado como campo extra.
+4. **Ajustar `hasValue`**: Para `__nome__`, verificar `lead.nome` em vez de `dadosExtras`.
 
-### Execucao
-Tudo via queries SQL diretas no banco -- sem alteracao de codigo.
+5. **Ajustar `startEditing`**: Ja popula `editValues.__nome__` corretamente, so precisa garantir que nao duplica.
+
+6. **Ajustar `handleSave`**: Extrair `__nome__` e `__endereco__` dos campos dinamicos para salvar nas colunas nativas, e remover do `dados_extras`.
+
+### Resultado
+O nome aparecera apenas uma vez, dentro da secao onde foi configurado (ex: "Dados Pessoais").
