@@ -123,9 +123,21 @@ export function RealtimeCoachingPanel({
 
         const analysis: CoachingAnalysis | undefined = data?.analysis;
         if (analysis) {
-          setApresentacaoDone(analysis.apresentacao_done || []);
-          setQualificationDone(analysis.qualification_done || []);
-          setShowRateDone(analysis.show_rate_done || []);
+          setApresentacaoDone(prev => {
+            const merged = new Set(prev);
+            for (const id of (analysis.apresentacao_done || [])) merged.add(id);
+            return Array.from(merged);
+          });
+          setQualificationDone(prev => {
+            const merged = new Set(prev);
+            for (const id of (analysis.qualification_done || [])) merged.add(id);
+            return Array.from(merged);
+          });
+          setShowRateDone(prev => {
+            const merged = new Set(prev);
+            for (const id of (analysis.show_rate_done || [])) merged.add(id);
+            return Array.from(merged);
+          });
           // Merge objections: keep previously detected, update existing, add new
           setObjections(prev => {
             const merged = new Map(prev.map(o => [o.id, o]));
