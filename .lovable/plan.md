@@ -1,27 +1,51 @@
 
+# Reorganizar campos da aba Dados do Lead
 
-# Adicionar indicador visual de transcrição parcial
+## Situacao atual
+Existem 8 campos configurados: CPF, Empresa, Cargo, Data Admissao, Data Demissao, Motivo Demissao, Municipio, UF.
 
-## O que muda
-No historico de contatos (`LeadContatosTab.tsx`), chamadas com status `interrompida` que possuem transcrição receberão um indicador visual diferenciado.
+## O que sera feito
 
-## Alterações
+### 1. Excluir campos desnecessarios
+Remover da tabela `crm_lead_campos`:
+- Empresa
+- Cargo
+- Data Admissao
+- Data Demissao
+- Motivo Demissao
 
-### 1. Badge "Parcial" no botão de transcrição (linha ~457-465)
-Quando a chamada tem `status === "interrompida"` e possui transcrição, o botão de transcrição exibirá:
-- Icone `FileText` em cor amarela/laranja (em vez do cinza padrão)
-- Tooltip alterado para **"Transcrição Parcial (chamada interrompida)"**
+### 2. Criar novos campos
+Adicionar na tabela `crm_lead_campos`:
+- Telefone 1 (key: `telefone_1`, ordem: 2)
+- Telefone 2 (key: `telefone_2`, ordem: 3)
+- Telefone 3 (key: `telefone_3`, ordem: 4)
+- Telefone 4 (key: `telefone_4`, ordem: 5)
+- UF (ja existe, reordenar para ordem 6)
+- Municipio (ja existe, reordenar para ordem 7)
+- Endereco (key: `endereco`, ordem: 8)
+- N (key: `numero`, ordem: 9)
+- Bairro (key: `bairro`, ordem: 10)
+- CEP (key: `cep`, ordem: 11)
 
-### 2. Badge "Parcial" na coluna de Status
-Quando o status for `interrompida` e houver transcrição, será adicionado um mini-badge "Parcial" ao lado do badge "Interrompida" existente, indicando que a transcrição foi recuperada mas pode estar incompleta.
+### 3. Reordenar campos existentes
+- CPF: ordem 1
+- UF: ordem 6
+- Municipio: ordem 7
 
-### 3. Título do dialog de transcrição
-No dialog que abre ao clicar no botão de transcrição (linha ~540+), se a chamada for `interrompida`, o título exibirá **"Transcrição (Parcial)"** com um aviso de que a gravação foi recuperada automaticamente.
+### Resultado final (ordem)
+1. CPF
+2. Telefone 1
+3. Telefone 2
+4. Telefone 3
+5. Telefone 4
+6. UF
+7. Municipio
+8. Endereco
+9. N
+10. Bairro
+11. CEP
 
-## Arquivo afetado
-- `src/components/crm/LeadContatosTab.tsx`
+O campo "Nome" ja e nativo do lead (coluna `nome` na tabela `crm_leads`), nao precisa ser criado como campo extra.
 
-## Detalhes técnicos
-- Nenhuma alteração de banco de dados necessária
-- A lógica é puramente visual: `chamada.status === "interrompida" && hasTranscricao`
-- O icone do botão de transcrição usará `text-yellow-600` para chamadas interrompidas com transcrição parcial
+### Execucao
+Tudo via queries SQL diretas no banco -- sem alteracao de codigo.
