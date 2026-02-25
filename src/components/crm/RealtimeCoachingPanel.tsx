@@ -22,6 +22,9 @@ import {
   type Objection,
   type DynamicItem,
   type ChecklistItem,
+  type CoachingState,
+  type CoachingSugestaoAtiva,
+  type CoachingRealtimeResponse,
 } from "./coaching/coachingData";
 import ReactMarkdown from "react-markdown";
 
@@ -82,6 +85,11 @@ export function RealtimeCoachingPanel({
   const lastAnalyzedRef = useRef("");
   const isAnalyzingRef = useRef(false);
   const transcriptEndRef = useRef<HTMLDivElement>(null);
+  const lastAnalyzedIndexRef = useRef(0);
+  const coachingStateRef = useRef<CoachingState>({
+    sugestoes_ativas: [],
+    sugestoes_encerradas: [],
+  });
 
   // Qualification items from script or fallback
   const qualificationItems: ChecklistItem[] = activeScript?.qualificacao?.length
@@ -102,8 +110,19 @@ export function RealtimeCoachingPanel({
   const requestAnalysis = useCallback(
     async (transcript: string) => {
       if (!transcript || transcript.trim().length < 10 || transcript === lastAnalyzedRef.current || isAnalyzingRef.current) return;
-      console.log(`[Coaching] Enviando transcript para análise (${transcript.length} chars). Preview: ${transcript.substring(0, 200)}`);
+      
+      // Build delta transcript from new entries only
+      const allEntries = labeledTranscriptsRef.current;
+      const newEntries = allEntries.slice(lastAnalyzedIndexRef.current);
+      if (newEntries.length === 0) return;
+      
+      const newTranscript = newEntries
+        .map((t) => `[${t.speaker === "sdr" ? "SDR" : "Lead"}]: ${t.text}`)
+        .join("\n");
+      
+      console.log(`[Coaching] Delta: ${newEntries.length} novas entradas (${newTranscript.length} chars)`);
       lastAnalyzedRef.current = transcript;
+      lastAnalyzedIndexRef.current = allEntries.length;
       setIsAnalyzing(true);
       isAnalyzingRef.current = true;
 
@@ -115,7 +134,7 @@ export function RealtimeCoachingPanel({
           objections: objections.map(o => ({ id: o.id, label: o.objection, description: o.suggested_response })),
         };
 
-        // Two AI calls in parallel: detector + coaching
+        // Two AI calls in parallel: detector (full transcript) + coaching (delta + state)
         const [scriptResult, coachResult] = await Promise.all([
           supabase.functions.invoke("script-checker", {
             body: {
@@ -131,20 +150,16 @@ export function RealtimeCoachingPanel({
           }),
           supabase.functions.invoke("coaching-realtime", {
             body: {
-              transcript,
+              newTranscript,
+              coachingState: coachingStateRef.current,
               coachInstructions: coach.instrucoes,
               leadName: leadNome,
               leadContext,
-              existingItems: {
-                objections: objections.map(o => ({ id: o.id, objection: o.objection })),
-                reca: recaItems.map(i => ({ id: i.id, label: i.label })),
-                raloca: ralocaItems.map(i => ({ id: i.id, label: i.label })),
-              },
             },
           }),
         ]);
 
-        // Process detector result (script + coaching items strikethrough)
+        // Process detector result (script items strikethrough only)
         if (scriptResult.error) {
           console.error("[Coaching] script-checker error:", scriptResult.error);
         } else {
@@ -166,52 +181,111 @@ export function RealtimeCoachingPanel({
               for (const id of (analysis.show_rate_done || [])) merged.add(id);
               return Array.from(merged);
             });
-            // Mark coaching items as done via detector
-            if (analysis.reca_done?.length) {
-              setRecaItems(prev => prev.map(i =>
-                (analysis.reca_done as string[]).includes(i.id) ? { ...i, done: true } : i
-              ));
-            }
-            if (analysis.raloca_done?.length) {
-              setRalocaItems(prev => prev.map(i =>
-                (analysis.raloca_done as string[]).includes(i.id) ? { ...i, done: true } : i
-              ));
-            }
-            if (analysis.objections_addressed?.length) {
-              setObjections(prev => prev.map(o =>
-                (analysis.objections_addressed as string[]).includes(o.id) ? { ...o, addressed: true } : o
-              ));
-            }
           }
         }
 
-        // Process coaching-realtime result (generate new suggestions only)
+        // Process coaching-realtime result (updates + new_items)
         if (coachResult.error) {
           console.error("[Coaching] coaching-realtime error:", coachResult.error);
         } else {
-          const coachAnalysis = coachResult.data?.analysis;
-          if (coachAnalysis) {
-            setObjections(prev => {
-              const merged = new Map(prev.map(o => [o.id, o]));
-              for (const o of (coachAnalysis.objections || [])) {
-                if (!merged.has(o.id)) merged.set(o.id, o);
+          const response = coachResult.data?.analysis as CoachingRealtimeResponse | undefined;
+          if (response) {
+            // Apply updates to existing items
+            const updates = response.updates || [];
+            for (const upd of updates) {
+              if (upd.new_status === "DITO" || upd.new_status === "TIMING_PASSOU") {
+                // Move from ativas to encerradas in persistent state
+                const item = coachingStateRef.current.sugestoes_ativas.find(s => s.id === upd.id);
+                if (item) {
+                  coachingStateRef.current = {
+                    sugestoes_ativas: coachingStateRef.current.sugestoes_ativas.filter(s => s.id !== upd.id),
+                    sugestoes_encerradas: [...coachingStateRef.current.sugestoes_encerradas, {
+                      id: item.id,
+                      gatilho: item.gatilho,
+                      classificacao: item.classificacao,
+                      status: upd.new_status,
+                    }],
+                  };
+                }
+                // Update UI state
+                if (upd.new_status === "DITO") {
+                  setRecaItems(prev => prev.map(i => i.id === upd.id ? { ...i, done: true } : i));
+                  setRalocaItems(prev => prev.map(i => i.id === upd.id ? { ...i, done: true } : i));
+                  setObjections(prev => prev.map(o => o.id === upd.id ? { ...o, addressed: true } : o));
+                } else {
+                  // TIMING_PASSOU — discard from UI
+                  setDiscardedIds(prev => new Set(prev).add(upd.id));
+                }
               }
-              return Array.from(merged.values());
-            });
-            setRecaItems(prev => {
-              const merged = new Map(prev.map(i => [i.id, i]));
-              for (const i of (coachAnalysis.reca_items || [])) {
-                if (!merged.has(i.id)) merged.set(i.id, i);
+            }
+
+            // Add new items
+            const newItems = response.new_items;
+            if (newItems) {
+              // Add to persistent state + UI
+              for (const o of (newItems.objections || [])) {
+                const exists = coachingStateRef.current.sugestoes_ativas.some(s => s.id === o.id)
+                  || coachingStateRef.current.sugestoes_encerradas.some(s => s.id === o.id);
+                if (!exists) {
+                  coachingStateRef.current.sugestoes_ativas.push({
+                    id: o.id,
+                    gatilho: o.objection,
+                    classificacao: "RAPOVECA",
+                    resposta_sugerida: o.suggested_response,
+                    status: "aguardando",
+                  });
+                }
               }
-              return Array.from(merged.values());
-            });
-            setRalocaItems(prev => {
-              const merged = new Map(prev.map(i => [i.id, i]));
-              for (const i of (coachAnalysis.raloca_items || [])) {
-                if (!merged.has(i.id)) merged.set(i.id, i);
+              for (const i of (newItems.reca_items || [])) {
+                const exists = coachingStateRef.current.sugestoes_ativas.some(s => s.id === i.id)
+                  || coachingStateRef.current.sugestoes_encerradas.some(s => s.id === i.id);
+                if (!exists) {
+                  coachingStateRef.current.sugestoes_ativas.push({
+                    id: i.id,
+                    gatilho: i.label,
+                    classificacao: "RECA",
+                    resposta_sugerida: i.description,
+                    status: "aguardando",
+                  });
+                }
               }
-              return Array.from(merged.values());
-            });
+              for (const i of (newItems.raloca_items || [])) {
+                const exists = coachingStateRef.current.sugestoes_ativas.some(s => s.id === i.id)
+                  || coachingStateRef.current.sugestoes_encerradas.some(s => s.id === i.id);
+                if (!exists) {
+                  coachingStateRef.current.sugestoes_ativas.push({
+                    id: i.id,
+                    gatilho: i.label,
+                    classificacao: "RALOCA",
+                    resposta_sugerida: i.description,
+                    status: "aguardando",
+                  });
+                }
+              }
+
+              // Update UI states (merge, don't replace)
+              setObjections(prev => {
+                const merged = new Map(prev.map(o => [o.id, o]));
+                for (const o of (newItems.objections || [])) {
+                  if (!merged.has(o.id)) merged.set(o.id, o);
+                }
+                return Array.from(merged.values());
+              });
+              setRecaItems(prev => {
+                const merged = new Map(prev.map(i => [i.id, i]));
+                for (const i of (newItems.reca_items || [])) {
+                  if (!merged.has(i.id)) merged.set(i.id, i);
+                }
+                return Array.from(merged.values());
+              });
+              setRalocaItems(prev => {
+                const merged = new Map(prev.map(i => [i.id, i]));
+                for (const i of (newItems.raloca_items || [])) {
+                  if (!merged.has(i.id)) merged.set(i.id, i);
+                }
+                return Array.from(merged.values());
+              });
+            }
           }
         }
       } catch (e) {
@@ -361,6 +435,8 @@ export function RealtimeCoachingPanel({
       sdrScribe.disconnect();
       leadScribe.disconnect();
       labeledTranscriptsRef.current = [];
+      lastAnalyzedIndexRef.current = 0;
+      coachingStateRef.current = { sugestoes_ativas: [], sugestoes_encerradas: [] };
       setLabeledTranscripts([]);
       setSdrPartial("");
       setLeadPartial("");
@@ -451,15 +527,44 @@ export function RealtimeCoachingPanel({
   }, []);
   const handleCheckReca = useCallback((id: string) => {
     setRecaItems(prev => prev.map(i => i.id === id ? { ...i, done: true } : i));
+    // Sync persistent state
+    const item = coachingStateRef.current.sugestoes_ativas.find(s => s.id === id);
+    if (item) {
+      coachingStateRef.current = {
+        sugestoes_ativas: coachingStateRef.current.sugestoes_ativas.filter(s => s.id !== id),
+        sugestoes_encerradas: [...coachingStateRef.current.sugestoes_encerradas, { id: item.id, gatilho: item.gatilho, classificacao: item.classificacao, status: "DITO" }],
+      };
+    }
   }, []);
   const handleCheckRaloca = useCallback((id: string) => {
     setRalocaItems(prev => prev.map(i => i.id === id ? { ...i, done: true } : i));
+    const item = coachingStateRef.current.sugestoes_ativas.find(s => s.id === id);
+    if (item) {
+      coachingStateRef.current = {
+        sugestoes_ativas: coachingStateRef.current.sugestoes_ativas.filter(s => s.id !== id),
+        sugestoes_encerradas: [...coachingStateRef.current.sugestoes_encerradas, { id: item.id, gatilho: item.gatilho, classificacao: item.classificacao, status: "DITO" }],
+      };
+    }
   }, []);
   const handleAddressedObjection = useCallback((id: string) => {
     setObjections(prev => prev.map(o => o.id === id ? { ...o, addressed: true } : o));
+    const item = coachingStateRef.current.sugestoes_ativas.find(s => s.id === id);
+    if (item) {
+      coachingStateRef.current = {
+        sugestoes_ativas: coachingStateRef.current.sugestoes_ativas.filter(s => s.id !== id),
+        sugestoes_encerradas: [...coachingStateRef.current.sugestoes_encerradas, { id: item.id, gatilho: item.gatilho, classificacao: item.classificacao, status: "DITO" }],
+      };
+    }
   }, []);
   const handleDiscard = useCallback((id: string) => {
     setDiscardedIds(prev => new Set(prev).add(id));
+    const item = coachingStateRef.current.sugestoes_ativas.find(s => s.id === id);
+    if (item) {
+      coachingStateRef.current = {
+        sugestoes_ativas: coachingStateRef.current.sugestoes_ativas.filter(s => s.id !== id),
+        sugestoes_encerradas: [...coachingStateRef.current.sugestoes_encerradas, { id: item.id, gatilho: item.gatilho, classificacao: item.classificacao, status: "DESCARTADO" }],
+      };
+    }
   }, []);
 
   // Generate a coaching item from a specific lead phrase
@@ -483,24 +588,35 @@ export function RealtimeCoachingPanel({
       const item = data.item;
 
       if (type === "rapoveca") {
+        const itemId = item.id || `manual-${Date.now()}`;
         setObjections(prev => [...prev, {
-          id: item.id || `manual-${Date.now()}`,
+          id: itemId,
           objection: item.objection,
           suggested_response: item.suggested_response,
           addressed: false,
         }]);
+        coachingStateRef.current.sugestoes_ativas.push({
+          id: itemId, gatilho: item.objection, classificacao: "RAPOVECA",
+          resposta_sugerida: item.suggested_response, status: "aguardando",
+        });
       } else {
+        const itemId = item.id || `manual-${Date.now()}`;
         const newItem: DynamicItem = {
-          id: item.id || `manual-${Date.now()}`,
+          id: itemId,
           label: item.label,
           description: item.description,
           done: false,
         };
+        const classificacao = type === "reca" ? "RECA" as const : "RALOCA" as const;
         if (type === "reca") {
           setRecaItems(prev => [...prev, newItem]);
         } else {
           setRalocaItems(prev => [...prev, newItem]);
         }
+        coachingStateRef.current.sugestoes_ativas.push({
+          id: itemId, gatilho: item.label, classificacao,
+          resposta_sugerida: item.description, status: "aguardando",
+        });
       }
 
       toast({ title: "Sugestão gerada!", description: `Item ${type.toUpperCase()} adicionado com sucesso.` });
