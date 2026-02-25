@@ -20,15 +20,23 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
     );
 
-    const { leadId } = await req.json();
+    const { leadId, papel } = await req.json();
     if (!leadId) throw new Error("leadId é obrigatório");
 
-    // Fetch all chamadas for this lead
-    const { data: chamadas, error } = await supabase
+    const filterPapel = papel || "sdr";
+
+    // Fetch chamadas filtered by papel
+    let query = supabase
       .from("crm_chamadas")
       .select("*")
       .eq("lead_id", leadId)
       .order("created_at", { ascending: true });
+
+    if (filterPapel) {
+      query = query.eq("papel", filterPapel);
+    }
+
+    const { data: chamadas, error } = await query;
 
     if (error) throw error;
     if (!chamadas || chamadas.length === 0) {
@@ -41,9 +49,32 @@ Deno.serve(async (req) => {
     // Fetch lead info
     const { data: lead } = await supabase
       .from("crm_leads")
-      .select("nome, endereco, resumo_caso")
+      .select("nome, endereco, resumo_caso, funil_id")
       .eq("id", leadId)
       .single();
+
+    // Try to get custom instructions from the coach assigned to this funnel
+    let customInstrucoes = "";
+    if (lead?.funil_id) {
+      const coachField = filterPapel === "closer" ? "robo_coach_closer_id" : "robo_coach_sdr_id";
+      const { data: funil } = await supabase
+        .from("crm_funis")
+        .select(`${coachField}`)
+        .eq("id", lead.funil_id)
+        .single();
+
+      const coachId = funil?.[coachField];
+      if (coachId) {
+        const { data: coach } = await supabase
+          .from("robos_coach")
+          .select("instrucoes_resumo")
+          .eq("id", coachId)
+          .single();
+        if (coach?.instrucoes_resumo) {
+          customInstrucoes = coach.instrucoes_resumo;
+        }
+      }
+    }
 
     // Build context for AI
     const totalChamadas = chamadas.length;
@@ -72,25 +103,10 @@ Deno.serve(async (req) => {
       return info;
     });
 
-    const prompt = `Você é um analista de CRM especializado em prospecção outbound para escritórios de advocacia.
+    const papelLabel = filterPapel === "closer" ? "Closer" : "SDR";
 
-Analise TODOS os contatos realizados com o lead "${lead?.nome || "desconhecido"}" e gere um RESUMO EXECUTIVO da situação dos contatos.
-
-## Dados do Lead
-- Nome: ${lead?.nome || "N/A"}
-- Endereço: ${lead?.endereco || "N/A"}
-- Resumo do caso: ${lead?.resumo_caso || "N/A"}
-
-## Estatísticas
-- Total de chamadas: ${totalChamadas}
-- Chamadas atendidas: ${atendidas.length}
-- Chamadas não atendidas: ${naoAtendidas.length}
-- Canais utilizados: ${[...new Set(chamadas.map((c: any) => c.canal === "whatsapp" ? "WhatsApp" : "VoIP"))].join(", ")}
-
-## Histórico completo de chamadas (em ordem cronológica):
-${chamadasInfo.join("\n\n---\n\n")}
-
-## Instruções para o resumo:
+    // Use custom instructions if available, otherwise use default prompt
+    const defaultInstrucoes = `## Instruções para o resumo:
 Gere um resumo estruturado e conciso contendo:
 
 1. **Status Geral**: Se o lead foi contactado com sucesso ou não
@@ -103,7 +119,29 @@ Se o lead NÃO atendeu nenhuma chamada, foque em:
 - Quantidade de tentativas realizadas
 - Canais utilizados
 - Horários das tentativas
-- Sugestão de melhor abordagem
+- Sugestão de melhor abordagem`;
+
+    const instrucoes = customInstrucoes || defaultInstrucoes;
+
+    const prompt = `Você é um analista de CRM especializado em prospecção outbound para escritórios de advocacia.
+
+Analise TODOS os contatos realizados pelo ${papelLabel} com o lead "${lead?.nome || "desconhecido"}" e gere um RESUMO EXECUTIVO da situação dos contatos.
+
+## Dados do Lead
+- Nome: ${lead?.nome || "N/A"}
+- Endereço: ${lead?.endereco || "N/A"}
+- Resumo do caso: ${lead?.resumo_caso || "N/A"}
+
+## Estatísticas
+- Total de chamadas (${papelLabel}): ${totalChamadas}
+- Chamadas atendidas: ${atendidas.length}
+- Chamadas não atendidas: ${naoAtendidas.length}
+- Canais utilizados: ${[...new Set(chamadas.map((c: any) => c.canal === "whatsapp" ? "WhatsApp" : "VoIP"))].join(", ")}
+
+## Histórico completo de chamadas do ${papelLabel} (em ordem cronológica):
+${chamadasInfo.join("\n\n---\n\n")}
+
+${instrucoes}
 
 Responda em português brasileiro, de forma direta e objetiva. Use markdown para formatação.`;
 

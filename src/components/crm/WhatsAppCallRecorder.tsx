@@ -31,6 +31,7 @@ interface WhatsAppCallRecorderProps {
   leadId: string;
   leadNome: string;
   numero: string;
+  papel?: string;
   onRecordingStateChange?: (isRecording: boolean, streams: AudioStreamsInfo) => void;
   onAudioMonitorUpdate?: (info: { hasMicAudio: boolean; hasSystemAudio: boolean; micLevel: number; systemLevel: number; duration: number }) => void;
   stopRef?: React.MutableRefObject<(() => void) | null>;
@@ -46,7 +47,7 @@ const formatPhone = (numero: string): string => {
   return `55${digits}`;
 };
 
-export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStateChange, onAudioMonitorUpdate, stopRef }: WhatsAppCallRecorderProps) {
+export function WhatsAppCallRecorder({ leadId, leadNome, numero, papel, onRecordingStateChange, onAudioMonitorUpdate, stopRef }: WhatsAppCallRecorderProps) {
   const [status, setStatus] = useState<RecordingStatus>("idle");
   const [duration, setDuration] = useState(0);
   const [hasSystemAudio, setHasSystemAudio] = useState(false);
@@ -419,6 +420,7 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, onRecordingStat
         lead_id: leadId,
         numero_discado: numero,
         canal: "whatsapp",
+        papel,
       });
       chamadaIdRef.current = chamada.id;
       updateChamada.mutate({ id: chamada.id, leadId, status: "em_chamada" });

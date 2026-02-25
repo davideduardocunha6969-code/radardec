@@ -12,6 +12,7 @@ interface VoipDialerProps {
   leadId: string;
   leadNome: string;
   numero: string;
+  papel?: string;
   onCallStatusChange?: (status: string) => void;
   onRecordingStateChange?: (isRecording: boolean, streams: { micStream: MediaStream | null; systemStream: MediaStream | null; mixedStream: MediaStream | null }) => void;
   stopRef?: React.MutableRefObject<(() => void) | null>;
@@ -41,7 +42,7 @@ const statusColors: Record<CallStatus, string> = {
   "no-answer": "bg-orange-500/20 text-orange-700",
 };
 
-export function VoipDialer({ leadId, leadNome, numero, onCallStatusChange, onRecordingStateChange, stopRef }: VoipDialerProps) {
+export function VoipDialer({ leadId, leadNome, numero, papel, onCallStatusChange, onRecordingStateChange, stopRef }: VoipDialerProps) {
   const [callStatus, setCallStatus] = useState<CallStatus>("idle");
   const [isMuted, setIsMuted] = useState(false);
   const [duration, setDuration] = useState(0);
@@ -134,6 +135,7 @@ export function VoipDialer({ leadId, leadNome, numero, onCallStatusChange, onRec
       const chamada = await createChamada.mutateAsync({
         lead_id: leadId,
         numero_discado: numero,
+        papel,
       });
       setChamadaId(chamada.id);
 

@@ -22,6 +22,7 @@ interface WhatsAppAICallButtonProps {
   leadId: string;
   leadNome: string;
   numero: string;
+  papel?: string;
 }
 
 type AICallStatus = "idle" | "connecting" | "active" | "done" | "error";
@@ -32,7 +33,7 @@ const formatPhone = (numero: string): string => {
   return `55${digits}`;
 };
 
-export function WhatsAppAICallButton({ leadId, leadNome, numero }: WhatsAppAICallButtonProps) {
+export function WhatsAppAICallButton({ leadId, leadNome, numero, papel }: WhatsAppAICallButtonProps) {
   const [aiStatus, setAiStatus] = useState<AICallStatus>("idle");
   const [error, setError] = useState<string | null>(null);
   const [chamadaId, setChamadaId] = useState<string | null>(null);
@@ -149,6 +150,7 @@ export function WhatsAppAICallButton({ leadId, leadNome, numero }: WhatsAppAICal
         lead_id: leadId,
         numero_discado: numero,
         canal: "whatsapp",
+        papel,
       });
       setChamadaId(chamada.id);
       chamadaIdRef.current = chamada.id;

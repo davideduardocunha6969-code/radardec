@@ -715,6 +715,7 @@ export type Database = {
           lead_id: string
           nota_ia: number | null
           numero_discado: string
+          papel: string
           recording_url: string | null
           resumo_ia: string | null
           status: string
@@ -735,6 +736,7 @@ export type Database = {
           lead_id: string
           nota_ia?: number | null
           numero_discado: string
+          papel?: string
           recording_url?: string | null
           resumo_ia?: string | null
           status?: string
@@ -755,6 +757,7 @@ export type Database = {
           lead_id?: string
           nota_ia?: number | null
           numero_discado?: string
+          papel?: string
           recording_url?: string | null
           resumo_ia?: string | null
           status?: string
@@ -1791,6 +1794,7 @@ export type Database = {
           instrucoes_radoveca: string
           instrucoes_raloca: string
           instrucoes_reca: string
+          instrucoes_resumo: string | null
           nome: string
           tipo: string
           updated_at: string
@@ -1808,6 +1812,7 @@ export type Database = {
           instrucoes_radoveca?: string
           instrucoes_raloca?: string
           instrucoes_reca?: string
+          instrucoes_resumo?: string | null
           nome: string
           tipo?: string
           updated_at?: string
@@ -1825,6 +1830,7 @@ export type Database = {
           instrucoes_radoveca?: string
           instrucoes_raloca?: string
           instrucoes_reca?: string
+          instrucoes_resumo?: string | null
           nome?: string
           tipo?: string
           updated_at?: string
