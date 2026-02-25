@@ -12,6 +12,12 @@ export interface CrmFunil {
   user_id: string;
   created_at: string;
   updated_at: string;
+  script_sdr_id: string | null;
+  robo_coach_sdr_id: string | null;
+  robo_feedback_sdr_id: string | null;
+  script_closer_id: string | null;
+  robo_coach_closer_id: string | null;
+  robo_feedback_closer_id: string | null;
 }
 
 export interface CrmColuna {
@@ -121,6 +127,21 @@ export function useCreateFunil() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["crm_funis"] });
       toast.success("Funil criado com sucesso!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
+export function useUpdateFunil() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ id, ...data }: { id: string; script_sdr_id?: string | null; robo_coach_sdr_id?: string | null; robo_feedback_sdr_id?: string | null; script_closer_id?: string | null; robo_coach_closer_id?: string | null; robo_feedback_closer_id?: string | null }) => {
+      const { error } = await supabase.from("crm_funis").update(data).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm_funis"] });
+      toast.success("Configurações do funil salvas!");
     },
     onError: (e: Error) => toast.error(e.message),
   });

@@ -915,6 +915,12 @@ export type Database = {
           descricao: string | null
           id: string
           nome: string
+          robo_coach_closer_id: string | null
+          robo_coach_sdr_id: string | null
+          robo_feedback_closer_id: string | null
+          robo_feedback_sdr_id: string | null
+          script_closer_id: string | null
+          script_sdr_id: string | null
           tipo_acao: string | null
           updated_at: string
           user_id: string
@@ -926,6 +932,12 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome: string
+          robo_coach_closer_id?: string | null
+          robo_coach_sdr_id?: string | null
+          robo_feedback_closer_id?: string | null
+          robo_feedback_sdr_id?: string | null
+          script_closer_id?: string | null
+          script_sdr_id?: string | null
           tipo_acao?: string | null
           updated_at?: string
           user_id: string
@@ -937,11 +949,60 @@ export type Database = {
           descricao?: string | null
           id?: string
           nome?: string
+          robo_coach_closer_id?: string | null
+          robo_coach_sdr_id?: string | null
+          robo_feedback_closer_id?: string | null
+          robo_feedback_sdr_id?: string | null
+          script_closer_id?: string | null
+          script_sdr_id?: string | null
           tipo_acao?: string | null
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "crm_funis_robo_coach_closer_id_fkey"
+            columns: ["robo_coach_closer_id"]
+            isOneToOne: false
+            referencedRelation: "robos_coach"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_funis_robo_coach_sdr_id_fkey"
+            columns: ["robo_coach_sdr_id"]
+            isOneToOne: false
+            referencedRelation: "robos_coach"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_funis_robo_feedback_closer_id_fkey"
+            columns: ["robo_feedback_closer_id"]
+            isOneToOne: false
+            referencedRelation: "robos_coach"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_funis_robo_feedback_sdr_id_fkey"
+            columns: ["robo_feedback_sdr_id"]
+            isOneToOne: false
+            referencedRelation: "robos_coach"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_funis_script_closer_id_fkey"
+            columns: ["script_closer_id"]
+            isOneToOne: false
+            referencedRelation: "scripts_sdr"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_funis_script_sdr_id_fkey"
+            columns: ["script_sdr_id"]
+            isOneToOne: false
+            referencedRelation: "scripts_sdr"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       crm_lead_campos: {
         Row: {

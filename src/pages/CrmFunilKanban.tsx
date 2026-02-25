@@ -1,6 +1,6 @@
 import { useState, useCallback } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useUpdateColuna, useDeleteColuna, useCreateLead, useUpdateLead, useDeleteLead, useBulkCreateLeads, useReorderColunas, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
+import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useUpdateColuna, useDeleteColuna, useCreateLead, useUpdateLead, useDeleteLead, useBulkCreateLeads, useReorderColunas, useUpdateFunil, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
 import { LeadDadosTab } from "@/components/crm/LeadDadosTab";
 import { ImportMappingDialog } from "@/components/crm/ImportMappingDialog";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
@@ -9,17 +9,17 @@ import { CSS } from "@dnd-kit/utilities";
 import { WhatsAppAICallButton } from "@/components/crm/WhatsAppAICallButton";
 import { LeadContatosTab } from "@/components/crm/LeadContatosTab";
 import { AgendaClosersTab } from "@/components/crm/AgendaClosersTab";
-import { useRobosCoachAtivos, type RoboCoach } from "@/hooks/useRobosCoach";
+import { useRobosCoachAtivos } from "@/hooks/useRobosCoach";
 import { useScriptsSdr } from "@/hooks/useScriptsSdr";
 import { useScriptsCloser } from "@/hooks/useScriptsCloser";
 import { useCleanupOrphanedChamadas } from "@/hooks/useCrmChamadas";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Card, CardContent } from "@/components/ui/card";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, Pencil, CalendarDays, Sparkles, ChevronDown } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, Pencil, CalendarDays, Sparkles, ChevronDown, Settings } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -109,6 +109,7 @@ export default function CrmFunilKanban() {
   const deleteLead = useDeleteLead();
   const bulkCreate = useBulkCreateLeads();
   const reorderColunas = useReorderColunas();
+  const updateFunil = useUpdateFunil();
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
@@ -125,17 +126,12 @@ export default function CrmFunilKanban() {
     reorderColunas.mutate({ funilId, ordens });
   };
 
+  // Column dialogs - simplified (no more coach/script selects)
   const [newColunaDialog, setNewColunaDialog] = useState(false);
   const [newColunaName, setNewColunaName] = useState("");
   const [newColunaColor, setNewColunaColor] = useState("#6366f1");
-  const [newColunaCoachId, setNewColunaCoachId] = useState("");
-  const [newColunaFeedbackId, setNewColunaFeedbackId] = useState("");
-  const [newColunaScriptSdrId, setNewColunaScriptSdrId] = useState("");
-  const [newColunaCoachCloserId, setNewColunaCoachCloserId] = useState("");
-  const [newColunaFeedbackCloserId, setNewColunaFeedbackCloserId] = useState("");
-  const [newColunaScriptCloserId, setNewColunaScriptCloserId] = useState("");
   const [editColunaDialog, setEditColunaDialog] = useState(false);
-  const [editingColuna, setEditingColuna] = useState<{ id: string; nome: string; cor: string; robo_coach_id: string; robo_feedback_id: string; script_sdr_id: string; robo_coach_closer_id: string; robo_feedback_closer_id: string; script_closer_id: string } | null>(null);
+  const [editingColuna, setEditingColuna] = useState<{ id: string; nome: string; cor: string } | null>(null);
   const [leadDialog, setLeadDialog] = useState(false);
   const [leadForm, setLeadForm] = useState({ nome: "", endereco: "", telefones: [{ numero: "", tipo: "celular" }] as LeadTelefone[], coluna_id: "" });
 
@@ -143,6 +139,44 @@ export default function CrmFunilKanban() {
   const [editingLeadData, setEditingLeadData] = useState(false);
   const [editLeadForm, setEditLeadForm] = useState<{ nome: string; endereco: string; telefones: LeadTelefone[] }>({ nome: "", endereco: "", telefones: [] });
 
+  // Funnel config dialog
+  const [funilConfigDialog, setFunilConfigDialog] = useState(false);
+  const [funilConfig, setFunilConfig] = useState({
+    script_sdr_id: "",
+    robo_coach_sdr_id: "",
+    robo_feedback_sdr_id: "",
+    script_closer_id: "",
+    robo_coach_closer_id: "",
+    robo_feedback_closer_id: "",
+  });
+
+  const openFunilConfig = () => {
+    if (!funil) return;
+    setFunilConfig({
+      script_sdr_id: funil.script_sdr_id || "",
+      robo_coach_sdr_id: funil.robo_coach_sdr_id || "",
+      robo_feedback_sdr_id: funil.robo_feedback_sdr_id || "",
+      script_closer_id: funil.script_closer_id || "",
+      robo_coach_closer_id: funil.robo_coach_closer_id || "",
+      robo_feedback_closer_id: funil.robo_feedback_closer_id || "",
+    });
+    setFunilConfigDialog(true);
+  };
+
+  const handleSaveFunilConfig = () => {
+    if (!funilId) return;
+    updateFunil.mutate({
+      id: funilId,
+      script_sdr_id: funilConfig.script_sdr_id || null,
+      robo_coach_sdr_id: funilConfig.robo_coach_sdr_id || null,
+      robo_feedback_sdr_id: funilConfig.robo_feedback_sdr_id || null,
+      script_closer_id: funilConfig.script_closer_id || null,
+      robo_coach_closer_id: funilConfig.robo_coach_closer_id || null,
+      robo_feedback_closer_id: funilConfig.robo_feedback_closer_id || null,
+    }, {
+      onSuccess: () => setFunilConfigDialog(false),
+    });
+  };
 
   const [uploadDialog, setUploadDialog] = useState(false);
 
@@ -154,14 +188,9 @@ export default function CrmFunilKanban() {
     if (!newColunaName || !funilId) return;
     createColuna.mutate({
       funil_id: funilId, nome: newColunaName, cor: newColunaColor, ordem: (colunas?.length || 0),
-      robo_coach_id: newColunaCoachId || null, robo_feedback_id: newColunaFeedbackId || null,
-      script_sdr_id: newColunaScriptSdrId || null,
-      robo_coach_closer_id: newColunaCoachCloserId || null, robo_feedback_closer_id: newColunaFeedbackCloserId || null,
-      script_closer_id: newColunaScriptCloserId || null,
-    } as any, {
+    }, {
       onSuccess: () => {
-        setNewColunaDialog(false); setNewColunaName(""); setNewColunaCoachId(""); setNewColunaFeedbackId("");
-        setNewColunaScriptSdrId(""); setNewColunaCoachCloserId(""); setNewColunaFeedbackCloserId(""); setNewColunaScriptCloserId("");
+        setNewColunaDialog(false); setNewColunaName("");
       },
     });
   };
@@ -173,8 +202,6 @@ export default function CrmFunilKanban() {
       onSuccess: () => { setLeadDialog(false); setLeadForm({ nome: "", endereco: "", telefones: [{ numero: "", tipo: "celular" }], coluna_id: "" }); },
     });
   };
-
-
 
   const handleMoveLead = (lead: CrmLead, newColunaId: string) => {
     if (lead.coluna_id === newColunaId) return;
@@ -194,6 +221,9 @@ export default function CrmFunilKanban() {
             <h1 className="text-xl font-bold">{funil.nome}</h1>
             <p className="text-sm text-muted-foreground">{funil.area_atuacao} {funil.tipo_acao ? `• ${funil.tipo_acao}` : ""}</p>
           </div>
+          <Button variant="outline" size="icon" onClick={openFunilConfig} title="Configurações do Funil">
+            <Settings className="h-4 w-4" />
+          </Button>
         </div>
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setUploadDialog(true)}><Upload className="h-4 w-4 mr-2" />Importar Lista</Button>
@@ -213,125 +243,33 @@ export default function CrmFunilKanban() {
           <SortableContext items={colunas.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
             <div className="flex gap-4 overflow-x-auto pb-4">
               {colunas.map((col) => (
-                <SortableColumn key={col.id} col={col} funilId={funilId!} leadsByColuna={leadsByColuna} setLeadForm={(colId: string) => { setLeadForm({ ...leadForm, coluna_id: colId }); setLeadDialog(true); }} setEditingColuna={(c: typeof col) => { setEditingColuna({ id: c.id, nome: c.nome, cor: c.cor || "#6366f1", robo_coach_id: c.robo_coach_id || "", robo_feedback_id: c.robo_feedback_id || "", script_sdr_id: c.script_sdr_id || "", robo_coach_closer_id: c.robo_coach_closer_id || "", robo_feedback_closer_id: c.robo_feedback_closer_id || "", script_closer_id: c.script_closer_id || "" }); setEditColunaDialog(true); }} deleteColuna={(id: string) => deleteColuna.mutate({ id, funilId: funilId! })} setDetailLead={setDetailLead} />
+                <SortableColumn key={col.id} col={col} funilId={funilId!} leadsByColuna={leadsByColuna} setLeadForm={(colId: string) => { setLeadForm({ ...leadForm, coluna_id: colId }); setLeadDialog(true); }} setEditingColuna={(c: typeof col) => { setEditingColuna({ id: c.id, nome: c.nome, cor: c.cor || "#6366f1" }); setEditColunaDialog(true); }} deleteColuna={(id: string) => deleteColuna.mutate({ id, funilId: funilId! })} setDetailLead={setDetailLead} />
               ))}
             </div>
           </SortableContext>
         </DndContext>
       )}
 
-      {/* Dialog Nova Coluna */}
+      {/* Dialog Nova Coluna - simplified */}
       <Dialog open={newColunaDialog} onOpenChange={setNewColunaDialog}>
         <DialogContent>
           <DialogHeader><DialogTitle>Nova Coluna</DialogTitle></DialogHeader>
-          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+          <div className="space-y-4">
             <div><label className="text-sm font-medium">Nome</label><Input value={newColunaName} onChange={(e) => setNewColunaName(e.target.value)} placeholder="Ex: Primeiro Contato" /></div>
             <div><label className="text-sm font-medium">Cor</label><Input type="color" value={newColunaColor} onChange={(e) => setNewColunaColor(e.target.value)} className="h-10 w-20" /></div>
-            
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">SDR</p>
-            <div>
-              <label className="text-sm font-medium">Coach Tempo Real SDR</label>
-              <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={newColunaCoachId} onChange={(e) => setNewColunaCoachId(e.target.value)}>
-                <option value="">Nenhum</option>
-                {robosCoach?.filter(r => r.tipo !== "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Feedback SDR</label>
-              <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={newColunaFeedbackId} onChange={(e) => setNewColunaFeedbackId(e.target.value)}>
-                <option value="">Nenhum</option>
-                {robosCoach?.filter(r => r.tipo === "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Script SDR</label>
-              <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={newColunaScriptSdrId} onChange={(e) => setNewColunaScriptSdrId(e.target.value)}>
-                <option value="">Nenhum</option>
-                {scriptsSdr?.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
-              </select>
-            </div>
-
-            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1 mt-2">Closer</p>
-            <div>
-              <label className="text-sm font-medium">Coach Tempo Real Closer</label>
-              <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={newColunaCoachCloserId} onChange={(e) => setNewColunaCoachCloserId(e.target.value)}>
-                <option value="">Nenhum</option>
-                {robosCoach?.filter(r => r.tipo !== "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Feedback Closer</label>
-              <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={newColunaFeedbackCloserId} onChange={(e) => setNewColunaFeedbackCloserId(e.target.value)}>
-                <option value="">Nenhum</option>
-                {robosCoach?.filter(r => r.tipo === "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
-              </select>
-            </div>
-            <div>
-              <label className="text-sm font-medium">Script Closer</label>
-              <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={newColunaScriptCloserId} onChange={(e) => setNewColunaScriptCloserId(e.target.value)}>
-                <option value="">Nenhum</option>
-                {scriptsCloser?.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
-              </select>
-            </div>
           </div>
           <DialogFooter><Button variant="outline" onClick={() => setNewColunaDialog(false)}>Cancelar</Button><Button onClick={handleCreateColuna} disabled={!newColunaName}>Criar</Button></DialogFooter>
         </DialogContent>
       </Dialog>
 
-      {/* Dialog Editar Coluna */}
+      {/* Dialog Editar Coluna - simplified (only name + color) */}
       <Dialog open={editColunaDialog} onOpenChange={setEditColunaDialog}>
         <DialogContent>
           <DialogHeader><DialogTitle>Editar Coluna</DialogTitle></DialogHeader>
           {editingColuna && (
-            <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+            <div className="space-y-4">
               <div><label className="text-sm font-medium">Nome</label><Input value={editingColuna.nome} onChange={(e) => setEditingColuna({ ...editingColuna, nome: e.target.value })} /></div>
               <div><label className="text-sm font-medium">Cor</label><Input type="color" value={editingColuna.cor} onChange={(e) => setEditingColuna({ ...editingColuna, cor: e.target.value })} className="h-10 w-20" /></div>
-              
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">SDR</p>
-              <div>
-                <label className="text-sm font-medium">Coach Tempo Real SDR</label>
-                <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={editingColuna.robo_coach_id} onChange={(e) => setEditingColuna({ ...editingColuna, robo_coach_id: e.target.value })}>
-                  <option value="">Nenhum</option>
-                  {robosCoach?.filter(r => r.tipo !== "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Feedback SDR</label>
-                <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={editingColuna.robo_feedback_id} onChange={(e) => setEditingColuna({ ...editingColuna, robo_feedback_id: e.target.value })}>
-                  <option value="">Nenhum</option>
-                  {robosCoach?.filter(r => r.tipo === "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Script SDR</label>
-                <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={editingColuna.script_sdr_id} onChange={(e) => setEditingColuna({ ...editingColuna, script_sdr_id: e.target.value })}>
-                  <option value="">Nenhum</option>
-                  {scriptsSdr?.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
-                </select>
-              </div>
-
-              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1 mt-2">Closer</p>
-              <div>
-                <label className="text-sm font-medium">Coach Tempo Real Closer</label>
-                <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={editingColuna.robo_coach_closer_id} onChange={(e) => setEditingColuna({ ...editingColuna, robo_coach_closer_id: e.target.value })}>
-                  <option value="">Nenhum</option>
-                  {robosCoach?.filter(r => r.tipo !== "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Feedback Closer</label>
-                <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={editingColuna.robo_feedback_closer_id} onChange={(e) => setEditingColuna({ ...editingColuna, robo_feedback_closer_id: e.target.value })}>
-                  <option value="">Nenhum</option>
-                  {robosCoach?.filter(r => r.tipo === "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="text-sm font-medium">Script Closer</label>
-                <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={editingColuna.script_closer_id} onChange={(e) => setEditingColuna({ ...editingColuna, script_closer_id: e.target.value })}>
-                  <option value="">Nenhum</option>
-                  {scriptsCloser?.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
-                </select>
-              </div>
             </div>
           )}
           <DialogFooter>
@@ -341,16 +279,71 @@ export default function CrmFunilKanban() {
               updateColuna.mutate({
                 id: editingColuna.id, funilId,
                 nome: editingColuna.nome, cor: editingColuna.cor,
-                robo_coach_id: editingColuna.robo_coach_id || null,
-                robo_feedback_id: editingColuna.robo_feedback_id || null,
-                script_sdr_id: editingColuna.script_sdr_id || null,
-                robo_coach_closer_id: editingColuna.robo_coach_closer_id || null,
-                robo_feedback_closer_id: editingColuna.robo_feedback_closer_id || null,
-                script_closer_id: editingColuna.script_closer_id || null,
               }, {
                 onSuccess: () => setEditColunaDialog(false),
               });
             }} disabled={!editingColuna?.nome}>Salvar</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Dialog Configurações do Funil */}
+      <Dialog open={funilConfigDialog} onOpenChange={setFunilConfigDialog}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader><DialogTitle>Configurações do Funil</DialogTitle></DialogHeader>
+          <div className="space-y-4 max-h-[60vh] overflow-y-auto pr-1">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1">Atendimento SDR</p>
+            <div>
+              <label className="text-sm font-medium">Script SDR</label>
+              <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={funilConfig.script_sdr_id} onChange={(e) => setFunilConfig({ ...funilConfig, script_sdr_id: e.target.value })}>
+                <option value="">Nenhum</option>
+                {scriptsSdr?.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Coach Tempo Real SDR</label>
+              <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={funilConfig.robo_coach_sdr_id} onChange={(e) => setFunilConfig({ ...funilConfig, robo_coach_sdr_id: e.target.value })}>
+                <option value="">Nenhum</option>
+                {robosCoach?.filter(r => r.tipo !== "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Feedback SDR</label>
+              <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={funilConfig.robo_feedback_sdr_id} onChange={(e) => setFunilConfig({ ...funilConfig, robo_feedback_sdr_id: e.target.value })}>
+                <option value="">Nenhum</option>
+                {robosCoach?.filter(r => r.tipo === "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+              </select>
+            </div>
+
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide border-b pb-1 mt-2">Atendimento Closer</p>
+            <div>
+              <label className="text-sm font-medium">Script Closer</label>
+              <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={funilConfig.script_closer_id} onChange={(e) => setFunilConfig({ ...funilConfig, script_closer_id: e.target.value })}>
+                <option value="">Nenhum</option>
+                {scriptsCloser?.map((s) => <option key={s.id} value={s.id}>{s.nome}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Coach Tempo Real Closer</label>
+              <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={funilConfig.robo_coach_closer_id} onChange={(e) => setFunilConfig({ ...funilConfig, robo_coach_closer_id: e.target.value })}>
+                <option value="">Nenhum</option>
+                {robosCoach?.filter(r => r.tipo !== "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-sm font-medium">Feedback Closer</label>
+              <select className="w-full mt-1 rounded-md border bg-background px-3 py-2 text-sm" value={funilConfig.robo_feedback_closer_id} onChange={(e) => setFunilConfig({ ...funilConfig, robo_feedback_closer_id: e.target.value })}>
+                <option value="">Nenhum</option>
+                {robosCoach?.filter(r => r.tipo === "feedback_sdr").map((r) => <option key={r.id} value={r.id}>{r.nome}</option>)}
+              </select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setFunilConfigDialog(false)}>Cancelar</Button>
+            <Button onClick={handleSaveFunilConfig} disabled={updateFunil.isPending}>
+              {updateFunil.isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              Salvar
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -480,7 +473,7 @@ export default function CrmFunilKanban() {
                                   className="gap-1.5 bg-green-600 hover:bg-green-700 text-white h-8 px-2 text-xs"
                                   onClick={() => {
                                     window.open(
-                                      `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=whatsapp&funilId=${funilId}`,
+                                      `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=whatsapp&funilId=${funilId}&papel=sdr`,
                                       `atendimento_${detailLead.id}`,
                                       "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
                                     );
@@ -495,7 +488,7 @@ export default function CrmFunilKanban() {
                                   className="gap-1.5 h-8 px-2 text-xs"
                                   onClick={() => {
                                     window.open(
-                                      `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=voip&funilId=${funilId}`,
+                                      `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=voip&funilId=${funilId}&papel=sdr`,
                                       `atendimento_${detailLead.id}`,
                                       "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
                                     );
@@ -561,7 +554,7 @@ export default function CrmFunilKanban() {
                               className="gap-1.5 bg-green-600 hover:bg-green-700 text-white h-8 px-2 text-xs"
                               onClick={() => {
                                 window.open(
-                                  `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=whatsapp&funilId=${funilId}`,
+                                  `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=whatsapp&funilId=${funilId}&papel=closer`,
                                   `atendimento_${detailLead.id}`,
                                   "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
                                 );
@@ -576,7 +569,7 @@ export default function CrmFunilKanban() {
                               className="gap-1.5 h-8 px-2 text-xs"
                               onClick={() => {
                                 window.open(
-                                  `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=voip&funilId=${funilId}`,
+                                  `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=voip&funilId=${funilId}&papel=closer`,
                                   `atendimento_${detailLead.id}`,
                                   "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
                                 );
