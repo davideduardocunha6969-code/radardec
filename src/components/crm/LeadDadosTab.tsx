@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Pencil, Save, X } from "lucide-react";
 import { toast } from "sonner";
+import { formatCpf, normalizeCpf, isCpfKey } from "@/utils/cpfFormat";
 
 interface LeadDadosTabProps {
   lead: CrmLead;
@@ -65,8 +66,12 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
     const newDadosExtras: Record<string, string> = { ...(dadosExtras as Record<string, string>) };
     camposExtended.forEach((c) => {
       if (nativeKeys.includes(c.key)) return;
-      const val = editValues[c.key]?.trim();
+      let val = editValues[c.key]?.trim();
       if (val) {
+        // Normalize CPF on save
+        if (isCpfKey(c.key)) {
+          val = normalizeCpf(val);
+        }
         newDadosExtras[c.key] = val;
       } else {
         delete newDadosExtras[c.key];
@@ -96,7 +101,8 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
   };
 
   const renderFieldView = (campo: CrmLeadCampo) => {
-    const val = nativeKeys.includes(campo.key) ? getNativeValue(campo.key) : String(dadosExtras[campo.key]);
+    let val = nativeKeys.includes(campo.key) ? getNativeValue(campo.key) : String(dadosExtras[campo.key]);
+    if (isCpfKey(campo.key)) val = formatCpf(val);
     return (
       <div key={campo.id}>
         <label className="text-xs font-medium text-muted-foreground">{campo.nome}</label>
