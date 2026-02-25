@@ -1,50 +1,82 @@
 
 
-# Corrigir Script Não Riscando — Merge de IDs
+# Separar Deteccao de Script em IA Dedicada
 
-## Problema
+## Por que o script nao esta sendo riscado
 
-As linhas 126-128 do arquivo `src/components/crm/RealtimeCoachingPanel.tsx` continuam **substituindo** os arrays de IDs concluídos ao invés de **acumulá-los**:
+O prompt atual da edge function `coaching-realtime` tem mais de 100 linhas e pede que a IA faca 6 analises diferentes numa unica chamada. A deteccao de itens de script (apresentacao, qualificacao, show rate) e a tarefa mais simples, mas acaba sendo negligenciada porque a IA prioriza as tarefas mais complexas (objecoes, RECA, RALOCA). O resultado: arrays vazios para `apresentacao_done`, `qualification_done` e `show_rate_done`.
 
-```text
-// Código ATUAL (linha 126-128) — SUBSTITUI:
-setApresentacaoDone(analysis.apresentacao_done || []);
-setQualificationDone(analysis.qualification_done || []);
-setShowRateDone(analysis.show_rate_done || []);
-```
+## Solucao: Duas IAs em paralelo
 
-Isso significa que se a IA detectou o item "jornada" como feito na análise 1, mas não o retornou na análise 2, ele desaparece. O item volta a ficar sem risco.
-
-## Solução
-
-Trocar as 3 linhas para usar merge com `Set`, igual já é feito para objeções, RECA e RALOCA logo abaixo no mesmo arquivo:
+Criar uma edge function nova `script-checker` dedicada exclusivamente a verificar quais itens do script foram ditos. A IA de coaching existente continua cuidando de RECA, RALOCA e objecoes.
 
 ```text
-// Código NOVO — ACUMULA:
-setApresentacaoDone(prev => {
-  const merged = new Set(prev);
-  for (const id of (analysis.apresentacao_done || [])) merged.add(id);
-  return Array.from(merged);
-});
-setQualificationDone(prev => {
-  const merged = new Set(prev);
-  for (const id of (analysis.qualification_done || [])) merged.add(id);
-  return Array.from(merged);
-});
-setShowRateDone(prev => {
-  const merged = new Set(prev);
-  for (const id of (analysis.show_rate_done || [])) merged.add(id);
-  return Array.from(merged);
-});
+Transcrição nova chega
+        |
+        +---> [script-checker] --> apresentacao_done, qualification_done, show_rate_done
+        |         (simples, rapido)
+        |
+        +---> [coaching-realtime] --> objections, reca_items, raloca_items
+                  (complexo, coach)
 ```
 
-## Arquivo
+### Impacto na latencia
 
-- `src/components/crm/RealtimeCoachingPanel.tsx` — linhas 126-128
+- As duas chamadas rodam **em paralelo** (Promise.all), entao o tempo total e o da mais lenta, nao a soma
+- O `script-checker` sera **mais rapido** que o coaching atual porque o prompt e 5x menor e a resposta e so uma lista de IDs
+- O `coaching-realtime` ficara **mais rapido** porque o prompt encolhe (sem a parte de script)
+- Resultado liquido: **latencia igual ou menor** que a atual
 
-## Por que isso resolve
+### Custo
 
-Uma vez que um ID de script é detectado como feito pela IA, ele permanece no `Set` para sempre durante a sessão. Mesmo que análises posteriores não retornem aquele ID, ele não será removido. Isso garante que o risco (`line-through`) no `ChecklistCard` persista.
+- Ligeiramente mais tokens por ter duas chamadas, mas o prompt do script-checker e muito curto
+- Usa o modelo mais barato (`gemini-2.5-flash-lite`) para o script-checker, reservando o flash para o coaching
 
-Nenhum outro arquivo precisa ser alterado. O `ChecklistCard`, `DynamicChecklistCard`, `ObjectionsCard` e a edge function já estão corretos.
+## Mudancas tecnicas
+
+### 1. Nova edge function: `supabase/functions/script-checker/index.ts`
+
+- Recebe: `transcript` + `scriptItems` (apresentacao, qualificacao, show_rate com IDs e descricoes)
+- Prompt simples: "Analise a transcricao e retorne os IDs dos itens que o SDR ja cobriu. Seja flexivel: se o tema/intencao foi abordado, marque como feito."
+- Usa tool calling com schema minimo (3 arrays de strings)
+- Modelo: `google/gemini-2.5-flash-lite` (mais rapido e barato)
+- Retorna: `{ apresentacao_done: [], qualification_done: [], show_rate_done: [] }`
+
+### 2. Atualizar edge function: `supabase/functions/coaching-realtime/index.ts`
+
+- Remover toda a logica de apresentacao, qualificacao e show_rate do prompt e do tool calling
+- O prompt fica focado apenas em: objecoes, RECA, RALOCA
+- Continua usando `google/gemini-3-flash-preview`
+
+### 3. Atualizar frontend: `src/components/crm/RealtimeCoachingPanel.tsx`
+
+- Na funcao `requestAnalysis`, fazer duas chamadas em paralelo:
+  ```text
+  const [scriptResult, coachResult] = await Promise.all([
+    supabase.functions.invoke("script-checker", { body: { transcript, scriptItems } }),
+    supabase.functions.invoke("coaching-realtime", { body: { transcript, coachInstructions, leadName, leadContext } })
+  ]);
+  ```
+- Processar `scriptResult` para atualizar apresentacaoDone, qualificationDone, showRateDone (com merge via Set)
+- Processar `coachResult` para atualizar objections, recaItems, ralocaItems (com merge via Map)
+
+### 4. Atualizar `supabase/config.toml`
+
+- Adicionar entrada para a nova funcao:
+  ```text
+  [functions.script-checker]
+  verify_jwt = false
+  ```
+
+### 5. Adicionar console.logs de diagnostico
+
+- No `script-checker`: logar os IDs recebidos e os IDs retornados pela IA
+- No frontend: logar o resultado de cada chamada para facilitar debug futuro
+
+## Arquivos a criar/modificar
+
+1. **CRIAR** `supabase/functions/script-checker/index.ts` — nova edge function dedicada
+2. **MODIFICAR** `supabase/functions/coaching-realtime/index.ts` — remover logica de script
+3. **MODIFICAR** `src/components/crm/RealtimeCoachingPanel.tsx` — duas chamadas em paralelo
+4. **MODIFICAR** `supabase/config.toml` — adicionar nova funcao (nota: este arquivo e gerenciado automaticamente, mas a entrada sera adicionada)
 
