@@ -290,26 +290,30 @@ export function useDeleteLead() {
 
 export function useBulkCreateLeads() {
   const queryClient = useQueryClient();
-  const { user } = useAuthContext();
   return useMutation({
     mutationFn: async ({ funilId, colunaId, leads }: { funilId: string; colunaId: string; leads: { nome: string; endereco?: string; telefones: LeadTelefone[]; dados_extras?: Record<string, string> }[] }) => {
-      const rows = leads.map((l, i) => ({
+      const leadsData = leads.map((l, i) => ({
         funil_id: funilId,
         coluna_id: colunaId,
         nome: l.nome,
         endereco: l.endereco || null,
-        telefones: JSON.parse(JSON.stringify(l.telefones)),
-        dados_extras: l.dados_extras ? JSON.parse(JSON.stringify(l.dados_extras)) : null,
+        telefones: l.telefones,
+        dados_extras: l.dados_extras || {},
         ordem: i,
-        user_id: user!.id,
       }));
-      const { error } = await supabase.from("crm_leads").insert(rows);
+      const { data, error } = await supabase.rpc("bulk_insert_leads", {
+        leads_data: JSON.parse(JSON.stringify(leadsData)),
+      });
       if (error) throw error;
+      return { funilId, count: data as number };
     },
-    onSuccess: (_, vars) => {
-      queryClient.invalidateQueries({ queryKey: ["crm_leads", vars.funilId] });
-      toast.success("Leads importados com sucesso!");
+    onSuccess: (result) => {
+      queryClient.invalidateQueries({ queryKey: ["crm_leads", result.funilId] });
+      toast.success(`${result.count} leads importados com sucesso!`);
     },
-    onError: (e: Error) => toast.error(e.message),
+    onError: (e: Error) => {
+      toast.error("Nenhum lead foi importado. Corrija o problema e tente novamente.");
+      console.error("Bulk insert error:", e.message);
+    },
   });
 }

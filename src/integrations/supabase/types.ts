@@ -2286,6 +2286,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      bulk_insert_leads: { Args: { leads_data: Json }; Returns: number }
       can_validate_content: { Args: { _user_id: string }; Returns: boolean }
       has_page_permission: {
         Args: { _page_key: string; _user_id: string }
