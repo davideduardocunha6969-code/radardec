@@ -33,7 +33,7 @@ export default function RobosCoach() {
 
   const [formOpen, setFormOpen] = useState(false);
   const [editing, setEditing] = useState<RoboCoach | null>(null);
-  const [form, setForm] = useState({ nome: "", descricao: "", instrucoes: "", instrucoes_detector: "", instrucoes_radar: "", tipo: "coaching" });
+  const [form, setForm] = useState({ nome: "", descricao: "", instrucoes: "", instrucoes_detector: "", instrucoes_radar: "", instrucoes_resumo: "", tipo: "coaching" });
 
   const coachingSdrRobos = robos?.filter((r) => r.tipo === "coaching") || [];
   const coachingCloserRobos = robos?.filter((r) => r.tipo === "coaching_closer") || [];
@@ -47,6 +47,7 @@ export default function RobosCoach() {
       instrucoes: "",
       instrucoes_detector: (tipo === "coaching" || tipo === "coaching_closer") ? DEFAULT_DETECTOR_PROMPT : "",
       instrucoes_radar: "",
+      instrucoes_resumo: "",
       tipo,
     });
     setFormOpen(true);
@@ -60,6 +61,7 @@ export default function RobosCoach() {
       instrucoes: r.instrucoes,
       instrucoes_detector: r.instrucoes_detector || "",
       instrucoes_radar: r.instrucoes_radar || "",
+      instrucoes_resumo: (r as any).instrucoes_resumo || "",
       tipo: r.tipo || "coaching",
     });
     setFormOpen(true);
@@ -67,7 +69,7 @@ export default function RobosCoach() {
 
   const handleSave = () => {
     if (!form.nome || !form.instrucoes) return;
-    const payload: any = { nome: form.nome, descricao: form.descricao, instrucoes: form.instrucoes, instrucoes_detector: form.instrucoes_detector, instrucoes_radar: form.tipo === "coaching_closer" ? form.instrucoes_radar : null };
+    const payload: any = { nome: form.nome, descricao: form.descricao, instrucoes: form.instrucoes, instrucoes_detector: form.instrucoes_detector, instrucoes_radar: form.tipo === "coaching_closer" ? form.instrucoes_radar : null, instrucoes_resumo: form.instrucoes_resumo || null };
     if (editing) {
       updateRobo.mutate({ id: editing.id, ...payload }, { onSuccess: () => setFormOpen(false) });
     } else {
@@ -347,6 +349,28 @@ export default function RobosCoach() {
                         Usar prompt padrão
                       </Button>
                     )}
+                  </AccordionContent>
+                </AccordionItem>
+              )}
+
+              {isCoachingType && (
+                <AccordionItem value="resumo">
+                  <AccordionTrigger className="text-sm font-medium">
+                    <div className="flex items-center gap-2">
+                      <Sparkles className="h-4 w-4 text-amber-500" />
+                      Instruções de Resumo IA
+                    </div>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <p className="text-xs text-muted-foreground mb-2">
+                      Prompt usado pela IA que gera o resumo dos contatos realizados com o lead. Se vazio, usa o prompt padrão.
+                    </p>
+                    <Textarea
+                      value={form.instrucoes_resumo}
+                      onChange={(e) => setForm({ ...form, instrucoes_resumo: e.target.value })}
+                      placeholder="Instruções customizadas para o resumo IA dos contatos..."
+                      rows={8}
+                    />
                   </AccordionContent>
                 </AccordionItem>
               )}

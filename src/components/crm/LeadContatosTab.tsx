@@ -48,6 +48,7 @@ import { Bot, User } from "lucide-react";
 
 interface LeadContatosTabProps {
   leadId: string;
+  papel?: string;
 }
 
 const statusMap: Record<string, { label: string; icon: typeof Phone; color: string }> = {
@@ -73,8 +74,8 @@ function getNotaColor(nota: number): string {
   return "bg-red-500/10 text-red-700 border-red-500/30";
 }
 
-export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
-  const { data: chamadas, isLoading } = useCrmChamadas(leadId);
+export function LeadContatosTab({ leadId, papel }: LeadContatosTabProps) {
+  const { data: chamadas, isLoading } = useCrmChamadas(leadId, papel);
   const queryClient = useQueryClient();
 
   // Fetch profiles for SDR names
@@ -170,7 +171,7 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
     setResumoContatosExpanded(true);
     try {
       const { data, error } = await supabase.functions.invoke("resumo-contatos-lead", {
-        body: { leadId },
+        body: { leadId, papel },
       });
       if (error) throw error;
       const resumo = data?.resumo || "Não foi possível gerar o resumo.";
@@ -385,7 +386,7 @@ export function LeadContatosTab({ leadId }: LeadContatosTabProps) {
                     {(chamada as any).encerrado_por === "lead" ? (
                       <Badge variant="outline" className="text-[10px] bg-orange-500/10 text-orange-700">Lead</Badge>
                     ) : (chamada as any).encerrado_por === "sdr" ? (
-                      <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-700">SDR</Badge>
+                      <Badge variant="outline" className="text-[10px] bg-blue-500/10 text-blue-700">{papel === "closer" ? "Closer" : "SDR"}</Badge>
                     ) : (
                       <span className="text-xs text-muted-foreground">-</span>
                     )}

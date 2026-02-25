@@ -14,6 +14,7 @@ export interface RoboCoach {
   instrucoes_radoveca: string;
   instrucoes_noshow: string;
   instrucoes_radar: string | null;
+  instrucoes_resumo: string | null;
   ativo: boolean;
   tipo: string;
   user_id: string;
@@ -56,7 +57,7 @@ export function useCreateRoboCoach() {
   const qc = useQueryClient();
   const { user } = useAuthContext();
   return useMutation({
-    mutationFn: async (data: { nome: string; descricao?: string; instrucoes: string; instrucoes_detector?: string; instrucoes_radar?: string; tipo?: string }) => {
+    mutationFn: async (data: { nome: string; descricao?: string; instrucoes: string; instrucoes_detector?: string; instrucoes_radar?: string; instrucoes_resumo?: string; tipo?: string }) => {
       const { data: result, error } = await supabase
         .from("robos_coach" as any)
         .insert({ ...data, tipo: data.tipo || "coaching", user_id: user!.id })
@@ -76,7 +77,7 @@ export function useCreateRoboCoach() {
 export function useUpdateRoboCoach() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (data: { id: string; nome?: string; descricao?: string; instrucoes?: string; instrucoes_detector?: string; instrucoes_radar?: string; ativo?: boolean }) => {
+    mutationFn: async (data: { id: string; nome?: string; descricao?: string; instrucoes?: string; instrucoes_detector?: string; instrucoes_radar?: string; instrucoes_resumo?: string; ativo?: boolean }) => {
       const { id, ...rest } = data;
       const { error } = await supabase
         .from("robos_coach" as any)

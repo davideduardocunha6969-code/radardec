@@ -277,6 +277,7 @@ export default function Atendimento() {
                 leadId={lead.id}
                 leadNome={lead.nome}
                 numero={numero}
+                papel={papel}
                 onRecordingStateChange={handleRecordingStateChange}
                 onAudioMonitorUpdate={handleAudioMonitorUpdate}
                 stopRef={stopCallRef}
@@ -286,6 +287,7 @@ export default function Atendimento() {
                 leadId={lead.id}
                 leadNome={lead.nome}
                 numero={numero}
+                papel={papel}
                 onRecordingStateChange={handleRecordingStateChange}
                 stopRef={stopCallRef}
               />

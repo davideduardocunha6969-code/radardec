@@ -545,7 +545,7 @@ export default function CrmFunilKanban() {
                               <span className="text-sm">{t.numero}</span>
                               <Badge variant="outline" className="text-xs">{t.tipo}</Badge>
                               <div className="flex items-center gap-1 ml-auto">
-                                <WhatsAppAICallButton leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} />
+                                <WhatsAppAICallButton leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} papel="sdr" />
                                 <Button
                                   size="sm"
                                   className="gap-1.5 bg-green-600 hover:bg-green-700 text-white h-8 px-2 text-xs"
@@ -598,7 +598,7 @@ export default function CrmFunilKanban() {
                       </Button>
                   </div>
                     <Separator className="my-6" />
-                    <LeadContatosTab leadId={detailLead.id} />
+                    <LeadContatosTab leadId={detailLead.id} papel="sdr" />
                   </div>
                 </TabsContent>
                 <TabsContent value="atendimento-closer" className="flex-1 overflow-auto px-6 pb-6">
@@ -626,7 +626,7 @@ export default function CrmFunilKanban() {
                           <span className="text-sm">{t.numero}</span>
                           <Badge variant="outline" className="text-xs">{t.tipo}</Badge>
                           <div className="flex items-center gap-1 ml-auto">
-                            <WhatsAppAICallButton leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} />
+                            <WhatsAppAICallButton leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} papel="closer" />
                             <Button
                               size="sm"
                               className="gap-1.5 bg-green-600 hover:bg-green-700 text-white h-8 px-2 text-xs"
@@ -662,6 +662,9 @@ export default function CrmFunilKanban() {
                       ))}
                     </div>
 
+
+                    <Separator className="my-6" />
+                    <LeadContatosTab leadId={detailLead.id} papel="closer" />
 
                     {/* Resumo IA dos Contatos SDR */}
                     {detailLead.resumo_ia_contatos ? (

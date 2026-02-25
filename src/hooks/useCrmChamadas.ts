@@ -22,16 +22,17 @@ export interface CrmChamada {
   updated_at: string;
 }
 
-export function useCrmChamadas(leadId: string | undefined) {
+export function useCrmChamadas(leadId: string | undefined, papel?: string) {
   return useQuery({
-    queryKey: ["crm_chamadas", leadId],
+    queryKey: ["crm_chamadas", leadId, papel],
     queryFn: async () => {
       if (!leadId) return [];
-      const { data, error } = await supabase
+      let query = supabase
         .from("crm_chamadas")
         .select("*")
-        .eq("lead_id", leadId)
-        .order("created_at", { ascending: false });
+        .eq("lead_id", leadId) as any;
+      if (papel) query = query.eq("papel", papel);
+      const { data, error } = await query.order("created_at", { ascending: false });
       if (error) throw error;
       return data as CrmChamada[];
     },
@@ -110,6 +111,7 @@ export function useCreateChamada() {
       numero_discado: string;
       twilio_call_sid?: string;
       canal?: string;
+      papel?: string;
     }) => {
       const { data: chamada, error } = await supabase
         .from("crm_chamadas")
@@ -120,7 +122,8 @@ export function useCreateChamada() {
           user_id: user!.id,
           status: "iniciando",
           canal: data.canal || "voip",
-        })
+          papel: data.papel || "sdr",
+        } as any)
         .select()
         .single();
       if (error) throw error;
