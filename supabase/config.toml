@@ -53,3 +53,6 @@ verify_jwt = false
 
  [functions.script-checker]
  verify_jwt = false
+
+ [functions.generate-coaching-item]
+ verify_jwt = false

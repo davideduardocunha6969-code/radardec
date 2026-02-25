@@ -9,6 +9,10 @@ export interface RoboCoach {
   descricao: string | null;
   instrucoes: string;
   instrucoes_detector: string;
+  instrucoes_reca: string;
+  instrucoes_raloca: string;
+  instrucoes_radoveca: string;
+  instrucoes_noshow: string;
   ativo: boolean;
   tipo: string;
   user_id: string;
