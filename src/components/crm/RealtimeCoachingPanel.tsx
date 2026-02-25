@@ -99,7 +99,6 @@ export function RealtimeCoachingPanel({
       if (!transcript || transcript.trim().length < 10 || transcript === lastAnalyzedRef.current || isAnalyzingRef.current) return;
       console.log(`[Coaching] Enviando transcript para análise (${transcript.length} chars). Preview: ${transcript.substring(0, 200)}`);
       lastAnalyzedRef.current = transcript;
-      lastAnalyzedRef.current = transcript;
       setIsAnalyzing(true);
       isAnalyzingRef.current = true;
 
@@ -131,6 +130,11 @@ export function RealtimeCoachingPanel({
               coachInstructions: coach.instrucoes,
               leadName: leadNome,
               leadContext,
+              existingItems: {
+                objections: objections.map(o => ({ id: o.id, objection: o.objection })),
+                reca: recaItems.map(i => ({ id: i.id, label: i.label })),
+                raloca: ralocaItems.map(i => ({ id: i.id, label: i.label })),
+              },
             },
           }),
         ]);

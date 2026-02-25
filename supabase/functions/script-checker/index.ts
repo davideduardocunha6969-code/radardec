@@ -61,7 +61,10 @@ serve(async (req) => {
     const objectionItems: CheckableItem[] = coachingItems?.objections || [];
 
     const formatList = (items: CheckableItem[]) =>
-      items.map((i) => `- ${i.id}: ${i.description || i.label}`).join("\n") || "Nenhum item.";
+      items.map((i) => `- ${i.id}: "${i.label}"${i.description ? ` — ${i.description}` : ""}`).join("\n") || "Nenhum item.";
+
+    // Log full items for debugging
+    console.log("[script-checker] Qualificação items:", JSON.stringify(qualificacao.slice(0, 3)));
     const formatIds = (items: CheckableItem[]) =>
       items.map((i) => i.id).join(", ") || "nenhum";
 

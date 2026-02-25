@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { transcript, coachInstructions, leadName, leadContext } = await req.json();
+    const { transcript, coachInstructions, leadName, leadContext, existingItems } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -21,6 +21,17 @@ serve(async (req) => {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    // Build existing items context to prevent duplicates
+    const existingObjections = (existingItems?.objections || []) as Array<{id: string; objection: string}>;
+    const existingReca = (existingItems?.reca || []) as Array<{id: string; label: string}>;
+    const existingRaloca = (existingItems?.raloca || []) as Array<{id: string; label: string}>;
+
+    const existingContext = [
+      existingObjections.length ? `OBJEÇÕES JÁ GERADAS (NÃO REPETIR o mesmo tema/gatilho):\n${existingObjections.map(o => `- ${o.id}: ${o.objection}`).join("\n")}` : "",
+      existingReca.length ? `RECA JÁ GERADOS (NÃO REPETIR o mesmo tema/gatilho):\n${existingReca.map(i => `- ${i.id}: ${i.label}`).join("\n")}` : "",
+      existingRaloca.length ? `RALOCA JÁ GERADOS (NÃO REPETIR o mesmo tema/gatilho):\n${existingRaloca.map(i => `- ${i.id}: ${i.label}`).join("\n")}` : "",
+    ].filter(Boolean).join("\n\n");
 
     const systemPrompt = `Você é um assistente de coaching em tempo real de ligações SDR.
 
@@ -31,6 +42,8 @@ ${leadContext ? `- Info: ${leadContext}` : ""}
 INSTRUÇÕES DO COACH (siga rigorosamente para avaliar RECA, RALOCA e RAPOVECA):
 ${coachInstructions || "Sem instruções específicas."}
 
+${existingContext ? `\n--- ITENS JÁ EXISTENTES (NÃO GERAR DUPLICATAS) ---\n${existingContext}\n` : ""}
+
 Analise a transcrição e identifique com precisão:
 
 1. OBJEÇÕES (RAPOVECA) — SOMENTE liste objeções que o lead EXPLICITAMENTE verbalizou na transcrição. Para cada:
@@ -39,22 +52,23 @@ Analise a transcrição e identifique com precisão:
    - Sugira uma resposta/pergunta para o SDR tratar essa objeção (linguagem simples, prefira perguntas que levem o lead a encontrar a resposta sozinho)
    - Indique se o SDR JÁ respondeu adequadamente (addressed: true/false)
 
-2. RECA (Razões Emocionais) — SOMENTE gere itens quando houver evidência CLARA na transcrição de um gatilho emocional do lead (ex: o lead expressou medo, frustração, revolta, insegurança, etc.):
+2. RECA (Razões Emocionais) — SOMENTE gere itens quando houver evidência CLARA na transcrição de um gatilho emocional do lead:
    - Gere perguntas/falas que o SDR deveria usar para explorar esse gatilho DETECTADO
    - Marque como "done: true" se o SDR JÁ explorou esse gatilho na transcrição
    - NÃO gere itens preventivos ou especulativos. Se o lead não demonstrou emoção, retorne array vazio.
 
-3. RALOCA (Razões Lógicas) — SOMENTE gere itens quando houver evidência CLARA na transcrição de uma questão lógica levantada pelo lead (ex: o lead pediu dados, questionou valores, comparou alternativas, etc.):
+3. RALOCA (Razões Lógicas) — SOMENTE gere itens quando houver evidência CLARA na transcrição de uma questão lógica levantada pelo lead:
    - Gere falas/perguntas que o SDR deveria usar para responder a esse questionamento DETECTADO
    - Marque como "done: true" se o SDR JÁ utilizou esse argumento na transcrição
    - NÃO gere itens preventivos ou especulativos. Se o lead não levantou questões lógicas, retorne array vazio.
 
 REGRAS CRÍTICAS:
+- NUNCA gere um item sobre o MESMO TEMA ou GATILHO de um item já existente listado acima. Cada frase-gatilho do lead deve gerar NO MÁXIMO 1 item.
 - Para OBJEÇÕES, RECA e RALOCA: seja RESTRITIVO. Só gere itens com evidência EXPLÍCITA na fala do lead.
 - Não invente fatos sobre a transcrição. Se não está claro, não gere.
 - NÃO gere objeções, RECA ou RALOCA especulativos ou preventivos. SOMENTE baseie-se em falas REAIS do lead.
 - Se não há evidência suficiente, retorne arrays VAZIOS.
-- Para objeções, seja criativo nas sugestões de resposta, mas SOMENTE para objeções que o lead realmente verbalizou.`;
+- Se um gatilho/tema JÁ EXISTE na lista acima, NÃO gere outro item para ele, mesmo com palavras diferentes.`;
 
     const tools = [
       {
