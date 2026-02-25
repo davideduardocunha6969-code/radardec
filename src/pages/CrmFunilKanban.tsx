@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Separator } from "@/components/ui/separator";
 import { Textarea } from "@/components/ui/textarea";
 import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, FileSpreadsheet, AlertCircle, History, Pencil, CalendarDays, Sparkles, ChevronDown } from "lucide-react";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
@@ -559,10 +560,7 @@ export default function CrmFunilKanban() {
             <div className="flex-1 flex flex-col min-h-0 overflow-y-auto">
               <Tabs defaultValue="dados" className="flex-1 overflow-hidden flex flex-col">
                 <TabsList className="w-full shrink-0 mx-6" style={{ width: "calc(100% - 3rem)" }}>
-                  <TabsTrigger value="dados" className="flex-1">Dados</TabsTrigger>
-                  <TabsTrigger value="contatos" className="flex-1">
-                    <History className="h-3.5 w-3.5 mr-1" />Contatos SDR
-                  </TabsTrigger>
+                  <TabsTrigger value="dados" className="flex-1">Atendimento SDR</TabsTrigger>
                   <TabsTrigger value="atendimento-closer" className="flex-1">
                     <Phone className="h-3.5 w-3.5 mr-1" />Atendimento Closer
                   </TabsTrigger>
@@ -688,11 +686,10 @@ export default function CrmFunilKanban() {
                       <Button variant="destructive" size="sm" className="mt-5" onClick={() => { deleteLead.mutate({ id: detailLead.id, funilId: funilId! }); setDetailLead(null); }}>
                         <Trash2 className="h-4 w-4 mr-2" />Excluir Lead
                       </Button>
-                    </div>
                   </div>
-                </TabsContent>
-                <TabsContent value="contatos" className="flex-1 overflow-auto px-3 pb-6 min-h-0">
-                   <LeadContatosTab leadId={detailLead.id} />
+                    <Separator className="my-6" />
+                    <LeadContatosTab leadId={detailLead.id} />
+                  </div>
                 </TabsContent>
                 <TabsContent value="atendimento-closer" className="flex-1 overflow-auto px-6 pb-6">
                   <div className="space-y-4">
