@@ -1,6 +1,6 @@
 import { forwardRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle2, Circle } from "lucide-react";
+import { Check, CheckCircle2, Circle, Trash2 } from "lucide-react";
 import type { ChecklistItem } from "./coachingData";
 import type { LucideIcon } from "lucide-react";
 
@@ -11,9 +11,11 @@ interface ChecklistCardProps {
   items: ChecklistItem[];
   completedIds: string[];
   className?: string;
+  onCheck?: (id: string) => void;
+  onDiscard?: (id: string) => void;
 }
 
-export const ChecklistCard = forwardRef<HTMLDivElement, ChecklistCardProps>(function ChecklistCard({ title, icon: Icon, iconColor = "text-primary", items, completedIds, className }, ref) {
+export const ChecklistCard = forwardRef<HTMLDivElement, ChecklistCardProps>(function ChecklistCard({ title, icon: Icon, iconColor = "text-primary", items, completedIds, className, onCheck, onDiscard }, ref) {
   const doneCount = completedIds.length;
   const total = items.length;
 
@@ -53,7 +55,7 @@ export const ChecklistCard = forwardRef<HTMLDivElement, ChecklistCardProps>(func
                   ) : (
                     <Circle className="h-3.5 w-3.5 shrink-0 mt-0.5 opacity-40" />
                   )}
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <span className={`font-medium ${done ? "line-through opacity-70" : ""}`}>
                       {item.label}
                     </span>
@@ -63,6 +65,28 @@ export const ChecklistCard = forwardRef<HTMLDivElement, ChecklistCardProps>(func
                       </p>
                     )}
                   </div>
+                  {!done && (onCheck || onDiscard) && (
+                    <div className="flex items-center gap-0.5 shrink-0 mt-0.5">
+                      {onCheck && (
+                        <button
+                          onClick={() => onCheck(item.id)}
+                          className="p-0.5 rounded hover:bg-green-500/20 text-green-600 transition-colors"
+                          title="Marcar como feito"
+                        >
+                          <Check className="h-3 w-3" />
+                        </button>
+                      )}
+                      {onDiscard && (
+                        <button
+                          onClick={() => onDiscard(item.id)}
+                          className="p-0.5 rounded hover:bg-destructive/20 text-muted-foreground hover:text-destructive transition-colors"
+                          title="Descartar"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                        </button>
+                      )}
+                    </div>
+                  )}
                 </div>
               );
             })}
