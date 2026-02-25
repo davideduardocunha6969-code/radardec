@@ -33,7 +33,19 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
     return { semSecao, porSecao };
   }, [camposExtended, secoes]);
 
+  const nativeKeys = ["__nome__", "__endereco__"];
+
+  const getNativeValue = (key: string) => {
+    if (key === "__nome__") return lead.nome;
+    if (key === "__endereco__") return lead.endereco || "";
+    return "";
+  };
+
   const hasValue = (campo: CrmLeadCampo) => {
+    if (nativeKeys.includes(campo.key)) {
+      const v = getNativeValue(campo.key);
+      return v && String(v).trim() !== "";
+    }
     const v = dadosExtras[campo.key];
     return v && String(v).trim() !== "";
   };
@@ -52,6 +64,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
   const handleSave = () => {
     const newDadosExtras: Record<string, string> = { ...(dadosExtras as Record<string, string>) };
     camposExtended.forEach((c) => {
+      if (nativeKeys.includes(c.key)) return;
       const val = editValues[c.key]?.trim();
       if (val) {
         newDadosExtras[c.key] = val;
@@ -59,6 +72,8 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
         delete newDadosExtras[c.key];
       }
     });
+    // Remove native keys from dados_extras if they leaked in
+    nativeKeys.forEach((k) => delete newDadosExtras[k]);
 
     const nome = editValues.__nome__?.trim() || lead.nome;
     const endereco = editValues.__endereco__?.trim() || null;
@@ -80,12 +95,15 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
     });
   };
 
-  const renderFieldView = (campo: CrmLeadCampo) => (
-    <div key={campo.id}>
-      <label className="text-xs font-medium text-muted-foreground">{campo.nome}</label>
-      <p className="text-sm">{String(dadosExtras[campo.key])}</p>
-    </div>
-  );
+  const renderFieldView = (campo: CrmLeadCampo) => {
+    const val = nativeKeys.includes(campo.key) ? getNativeValue(campo.key) : String(dadosExtras[campo.key]);
+    return (
+      <div key={campo.id}>
+        <label className="text-xs font-medium text-muted-foreground">{campo.nome}</label>
+        <p className="text-sm">{val}</p>
+      </div>
+    );
+  };
 
   const renderFieldEdit = (campo: CrmLeadCampo) => (
     <div key={campo.id}>
@@ -126,18 +144,6 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
 
       {editing ? (
         <div className="space-y-5">
-          {/* Campos base */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Nome</label>
-              <Input value={editValues.__nome__ || ""} onChange={(e) => setEditValues({ ...editValues, __nome__: e.target.value })} />
-            </div>
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Endereço</label>
-              <Input value={editValues.__endereco__ || ""} onChange={(e) => setEditValues({ ...editValues, __endereco__: e.target.value })} />
-            </div>
-          </div>
-
           {/* Campos sem seção */}
           {groupedCampos.semSecao.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -160,20 +166,6 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Nome sempre visível */}
-          <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-            <div>
-              <label className="text-xs font-medium text-muted-foreground">Nome</label>
-              <p className="text-sm">{lead.nome}</p>
-            </div>
-            {lead.endereco && (
-              <div>
-                <label className="text-xs font-medium text-muted-foreground">Endereço</label>
-                <p className="text-sm">{lead.endereco}</p>
-              </div>
-            )}
-          </div>
-
           {/* Campos sem seção - só com valor */}
           {filledSemSecao.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
