@@ -102,66 +102,75 @@ export function RealtimeCoachingPanel({
       isAnalyzingRef.current = true;
 
       try {
-        const { data, error } = await supabase.functions.invoke("coaching-realtime", {
-          body: {
-            transcript,
-            coachInstructions: coach.instrucoes,
-            leadName: leadNome,
-            leadContext,
-            scriptItems: {
-              qualificacao: qualificationItems,
-              apresentacao: apresentacaoItems,
-              show_rate: showRateItems,
+        // Two AI calls in parallel: script detection + coaching
+        const [scriptResult, coachResult] = await Promise.all([
+          supabase.functions.invoke("script-checker", {
+            body: {
+              transcript,
+              scriptItems: {
+                qualificacao: qualificationItems,
+                apresentacao: apresentacaoItems,
+                show_rate: showRateItems,
+              },
             },
-          },
-        });
+          }),
+          supabase.functions.invoke("coaching-realtime", {
+            body: {
+              transcript,
+              coachInstructions: coach.instrucoes,
+              leadName: leadNome,
+              leadContext,
+            },
+          }),
+        ]);
 
-        if (error) {
-          console.error("[Coaching] AI error:", error);
-          return;
+        // Process script-checker result
+        if (scriptResult.error) {
+          console.error("[Coaching] script-checker error:", scriptResult.error);
+        } else {
+          const scriptAnalysis = scriptResult.data?.analysis;
+          console.log("[Coaching] script-checker result:", JSON.stringify(scriptAnalysis));
+          if (scriptAnalysis) {
+            setApresentacaoDone(prev => {
+              const merged = new Set(prev);
+              for (const id of (scriptAnalysis.apresentacao_done || [])) merged.add(id);
+              return Array.from(merged);
+            });
+            setQualificationDone(prev => {
+              const merged = new Set(prev);
+              for (const id of (scriptAnalysis.qualification_done || [])) merged.add(id);
+              return Array.from(merged);
+            });
+            setShowRateDone(prev => {
+              const merged = new Set(prev);
+              for (const id of (scriptAnalysis.show_rate_done || [])) merged.add(id);
+              return Array.from(merged);
+            });
+          }
         }
 
-        const analysis: CoachingAnalysis | undefined = data?.analysis;
-        if (analysis) {
-          setApresentacaoDone(prev => {
-            const merged = new Set(prev);
-            for (const id of (analysis.apresentacao_done || [])) merged.add(id);
-            return Array.from(merged);
-          });
-          setQualificationDone(prev => {
-            const merged = new Set(prev);
-            for (const id of (analysis.qualification_done || [])) merged.add(id);
-            return Array.from(merged);
-          });
-          setShowRateDone(prev => {
-            const merged = new Set(prev);
-            for (const id of (analysis.show_rate_done || [])) merged.add(id);
-            return Array.from(merged);
-          });
-          // Merge objections: keep previously detected, update existing, add new
-          setObjections(prev => {
-            const merged = new Map(prev.map(o => [o.id, o]));
-            for (const o of (analysis.objections || [])) {
-              merged.set(o.id, o);
-            }
-            return Array.from(merged.values());
-          });
-          // Merge RECA items
-          setRecaItems(prev => {
-            const merged = new Map(prev.map(i => [i.id, i]));
-            for (const i of (analysis.reca_items || [])) {
-              merged.set(i.id, i);
-            }
-            return Array.from(merged.values());
-          });
-          // Merge RALOCA items
-          setRalocaItems(prev => {
-            const merged = new Map(prev.map(i => [i.id, i]));
-            for (const i of (analysis.raloca_items || [])) {
-              merged.set(i.id, i);
-            }
-            return Array.from(merged.values());
-          });
+        // Process coaching-realtime result
+        if (coachResult.error) {
+          console.error("[Coaching] coaching-realtime error:", coachResult.error);
+        } else {
+          const coachAnalysis = coachResult.data?.analysis;
+          if (coachAnalysis) {
+            setObjections(prev => {
+              const merged = new Map(prev.map(o => [o.id, o]));
+              for (const o of (coachAnalysis.objections || [])) merged.set(o.id, o);
+              return Array.from(merged.values());
+            });
+            setRecaItems(prev => {
+              const merged = new Map(prev.map(i => [i.id, i]));
+              for (const i of (coachAnalysis.reca_items || [])) merged.set(i.id, i);
+              return Array.from(merged.values());
+            });
+            setRalocaItems(prev => {
+              const merged = new Map(prev.map(i => [i.id, i]));
+              for (const i of (coachAnalysis.raloca_items || [])) merged.set(i.id, i);
+              return Array.from(merged.values());
+            });
+          }
         }
       } catch (e) {
         console.error("[Coaching] Request error:", e);
