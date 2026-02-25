@@ -47,7 +47,7 @@ const defaultAuth: AuthContextType = {
   session: null,
   profile: null,
   permissions: defaultPermissions,
-  loading: false,
+  loading: true,
   signIn: async () => ({ error: new Error('AuthProvider not mounted') }),
   signOut: async () => {},
   hasPageAccess: () => false,

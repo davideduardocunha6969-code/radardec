@@ -23,34 +23,18 @@ export function useAuth() {
 
   const fetchUserData = useCallback(async (userId: string) => {
     try {
-      // Fetch profile
-      const { data: profileData } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('user_id', userId)
-        .single();
+      // Run all 3 queries in parallel for speed
+      const [profileRes, roleRes, permRes] = await Promise.all([
+        supabase.from('profiles').select('*').eq('user_id', userId).single(),
+        supabase.from('user_roles').select('role').eq('user_id', userId).single(),
+        supabase.from('user_permissions').select('page_key').eq('user_id', userId),
+      ]);
 
-      if (profileData) {
-        setProfile(profileData);
-      }
+      if (profileRes.data) setProfile(profileRes.data);
 
-      // Fetch role
-      const { data: roleData } = await supabase
-        .from('user_roles')
-        .select('role')
-        .eq('user_id', userId)
-        .single();
-
-      const isAdmin = roleData?.role === 'admin';
-      const isMarketingManager = roleData?.role === 'marketing_manager';
-
-      // Fetch permissions
-      const { data: permData } = await supabase
-        .from('user_permissions')
-        .select('page_key')
-        .eq('user_id', userId);
-
-      const allowedPages = permData?.map(p => p.page_key) || [];
+      const isAdmin = roleRes.data?.role === 'admin';
+      const isMarketingManager = roleRes.data?.role === 'marketing_manager';
+      const allowedPages = permRes.data?.map(p => p.page_key) || [];
 
       setPermissions({ isAdmin, isMarketingManager, allowedPages });
     } catch (error) {
