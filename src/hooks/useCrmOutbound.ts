@@ -50,6 +50,8 @@ export interface CrmLead {
   telefones: LeadTelefone[];
   resumo_caso: string | null;
   resumo_ia_contatos: string | null;
+  etapa_desde: string | null;
+  ultimo_contato_em: string | null;
   dados_extras: Record<string, unknown>;
   ordem: number;
   user_id: string;
@@ -255,9 +257,12 @@ export function useCreateLead() {
 export function useUpdateLead() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: async ({ id, funilId, ...data }: { id: string; funilId: string; coluna_id?: string; ordem?: number; resumo_caso?: string; nome?: string; endereco?: string; telefones?: LeadTelefone[] }) => {
+  mutationFn: async ({ id, funilId, ...data }: { id: string; funilId: string; coluna_id?: string; ordem?: number; resumo_caso?: string; nome?: string; endereco?: string; telefones?: LeadTelefone[] }) => {
       const updateData: Record<string, unknown> = { ...data };
       delete updateData.funilId;
+      if (data.coluna_id) {
+        updateData.etapa_desde = new Date().toISOString();
+      }
       if (data.telefones) {
         updateData.telefones = data.telefones as unknown as Record<string, unknown>[];
       }

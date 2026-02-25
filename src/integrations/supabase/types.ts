@@ -1072,6 +1072,7 @@ export type Database = {
           created_at: string
           dados_extras: Json | null
           endereco: string | null
+          etapa_desde: string | null
           funil_id: string
           id: string
           nome: string
@@ -1080,6 +1081,7 @@ export type Database = {
           resumo_ia_contatos: string | null
           resumo_ia_contatos_at: string | null
           telefones: Json
+          ultimo_contato_em: string | null
           updated_at: string
           user_id: string
         }
@@ -1088,6 +1090,7 @@ export type Database = {
           created_at?: string
           dados_extras?: Json | null
           endereco?: string | null
+          etapa_desde?: string | null
           funil_id: string
           id?: string
           nome: string
@@ -1096,6 +1099,7 @@ export type Database = {
           resumo_ia_contatos?: string | null
           resumo_ia_contatos_at?: string | null
           telefones?: Json
+          ultimo_contato_em?: string | null
           updated_at?: string
           user_id: string
         }
@@ -1104,6 +1108,7 @@ export type Database = {
           created_at?: string
           dados_extras?: Json | null
           endereco?: string | null
+          etapa_desde?: string | null
           funil_id?: string
           id?: string
           nome?: string
@@ -1112,6 +1117,7 @@ export type Database = {
           resumo_ia_contatos?: string | null
           resumo_ia_contatos_at?: string | null
           telefones?: Json
+          ultimo_contato_em?: string | null
           updated_at?: string
           user_id?: string
         }

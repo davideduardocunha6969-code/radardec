@@ -73,13 +73,11 @@ function SortableColumn({ col, funilId, leadsByColuna, setLeadForm, setEditingCo
                       <span className="font-medium text-sm">{lead.nome}</span>
                     </div>
                   </div>
-                  {(lead.telefones as any[])?.[0] && (
-                    <div className="flex items-center gap-1 text-xs text-muted-foreground">
-                      <Phone className="h-3 w-3" />
-                      <span>{(lead.telefones as any[])[0].numero}</span>
-                    </div>
-                  )}
-                  {lead.resumo_caso && <p className="text-xs text-muted-foreground line-clamp-2">{lead.resumo_caso}</p>}
+                  <div className="space-y-0.5 text-[11px] text-muted-foreground">
+                    <p>Cadastrado em {new Date(lead.created_at).toLocaleDateString("pt-BR")}</p>
+                    <p>Nesta etapa desde {lead.etapa_desde ? new Date(lead.etapa_desde).toLocaleDateString("pt-BR") : new Date(lead.created_at).toLocaleDateString("pt-BR")}</p>
+                    <p>{lead.ultimo_contato_em ? `Sem contato desde ${new Date(lead.ultimo_contato_em).toLocaleDateString("pt-BR")}` : "Sem contato"}</p>
+                  </div>
                 </CardContent>
               </Card>
             ))}
