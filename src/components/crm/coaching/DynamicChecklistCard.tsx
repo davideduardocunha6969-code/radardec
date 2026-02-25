@@ -44,7 +44,12 @@ export function DynamicChecklistCard({
                 {emptyMessage}
               </p>
             )}
-            {items.map((item) => (
+            {[...items]
+              .sort((a, b) => {
+                if (a.done === b.done) return 0;
+                return a.done ? 1 : -1;
+              })
+              .map((item) => (
               <div
                 key={item.id}
                 className={`flex items-start gap-1.5 rounded px-1.5 py-1 text-xs transition-colors ${

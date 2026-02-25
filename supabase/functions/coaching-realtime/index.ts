@@ -64,29 +64,29 @@ ${qualList || "   Nenhuma pergunta cadastrada."}
 3. SHOW RATE — Quais falas de show rate o SDR JÁ FEZ para garantir comparecimento (IDs válidos: ${showRateIds || "nenhum"}):
 ${showRateList || "   Nenhuma fala de show rate cadastrada."}
 
-4. OBJEÇÕES (RAPOVECA) — Com base nas instruções do coach, identifique TODAS as objeções do lead na transcrição. Para cada:
+4. OBJEÇÕES (RAPOVECA) — SOMENTE liste objeções que o lead EXPLICITAMENTE verbalizou na transcrição. Para cada:
    - Crie um ID único em snake_case
-   - Descreva a objeção detectada
+   - Descreva a objeção detectada (cite a fala exata do lead como evidência)
    - Sugira uma resposta/pergunta para o SDR tratar essa objeção (linguagem simples, prefira perguntas que levem o lead a encontrar a resposta sozinho)
    - Indique se o SDR JÁ respondeu adequadamente (addressed: true/false)
 
-5. RECA (Razões Emocionais) — Com base nas instruções do coach e na análise do perfil psicológico do lead:
-   - Identifique quais gatilhos emocionais são relevantes para ESTE lead específico
-   - Gere perguntas/falas que o SDR deveria usar para ativar esses gatilhos
+5. RECA (Razões Emocionais) — SOMENTE gere itens quando houver evidência CLARA na transcrição de um gatilho emocional do lead (ex: o lead expressou medo, frustração, revolta, insegurança, etc.):
+   - Gere perguntas/falas que o SDR deveria usar para explorar esse gatilho DETECTADO
    - Marque como "done: true" se o SDR JÁ explorou esse gatilho na transcrição
-   - Adapte ao estado emocional detectado do lead (revoltado, resignado, pressionado, etc.)
+   - NÃO gere itens preventivos ou especulativos. Se o lead não demonstrou emoção, retorne array vazio.
 
-6. RALOCA (Razões Lógicas) — Com base nas instruções do coach:
-   - Identifique quais argumentos lógicos são relevantes para ESTE lead
-   - Gere falas/perguntas que o SDR deveria usar para trazer consciência lógica
+6. RALOCA (Razões Lógicas) — SOMENTE gere itens quando houver evidência CLARA na transcrição de uma questão lógica levantada pelo lead (ex: o lead pediu dados, questionou valores, comparou alternativas, etc.):
+   - Gere falas/perguntas que o SDR deveria usar para responder a esse questionamento DETECTADO
    - Marque como "done: true" se o SDR JÁ utilizou esse argumento na transcrição
+   - NÃO gere itens preventivos ou especulativos. Se o lead não levantou questões lógicas, retorne array vazio.
 
-REGRAS:
+REGRAS CRÍTICAS:
 - Só marque como feito/addressed se houver evidência CLARA na transcrição.
 - Não invente fatos sobre a transcrição. Se não está claro, não marque.
-- Para RECA e RALOCA, gere itens DINAMICAMENTE com base no perfil do lead e nas instruções do coach.
-- Para objeções, seja criativo nas sugestões de resposta.
-- Gere entre 3 e 7 itens para RECA e RALOCA, priorizando os mais relevantes.`;
+- NÃO gere objeções, RECA ou RALOCA especulativos ou preventivos. SOMENTE baseie-se em falas REAIS do lead na transcrição.
+- Se não há evidência suficiente na transcrição, retorne arrays VAZIOS para objections, reca_items e raloca_items.
+- Prefira MENOS itens com ALTA precisão a MUITOS itens especulativos.
+- Para objeções, seja criativo nas sugestões de resposta, mas SOMENTE para objeções que o lead realmente verbalizou.`;
 
     const tools = [
       {
