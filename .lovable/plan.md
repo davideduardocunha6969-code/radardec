@@ -1,58 +1,45 @@
 
 
-# Botoes Manuais de Check e Descartar nos Cards de Coaching
+# Clique na Fala do Lead para Gerar RECA/RALOCA/RAPOVECA
 
-## Objetivo
+## Resumo
 
-Adicionar botoes clicaveis ao lado de cada item nos cards do painel de coaching, permitindo que o SDR marque manualmente um item como concluido (check) ou descarte-o (lixeira). Isso funciona **cumulativamente** com a deteccao automatica da IA -- ambos os mecanismos coexistem.
+Cada fala do Lead na transcricao em tempo real tera um indicador visual de clique. Ao clicar, um pequeno popover aparece com 3 opcoes: RECA, RALOCA ou RAPOVECA. Ao selecionar uma, o sistema envia a fala para a IA gerar uma sugestao especifica e a insere no card correspondente.
 
-## Comportamento
+## Comportamento do usuario
 
-- **Botao Check**: Marca o item como concluido (mesmo efeito visual de quando a IA detecta: line-through, mover para o final da lista)
-- **Botao Lixeira**: Remove o item da lista completamente (descartado pelo SDR como irrelevante para aquela chamada)
-- Ambos os botoes aparecem apenas em itens **nao concluidos** (itens ja riscados nao precisam de botoes)
-- Os botoes sao pequenos e discretos para nao poluir a interface compacta
+1. Durante a chamada, o SDR ve as falas do Lead na transcricao
+2. Ao passar o mouse sobre uma fala do Lead, aparece um cursor pointer e highlight sutil
+3. Ao clicar, abre um Popover compacto com 3 botoes: "RECA", "RALOCA", "RAPOVECA"
+4. Ao selecionar, o popover fecha, mostra um loading discreto, e a IA gera uma sugestao baseada naquela frase
+5. A sugestao e inserida no card correspondente (RECA, RALOCA ou Objecoes)
 
-## Cards afetados
+## Mudancas tecnicas
 
-1. **ChecklistCard** (Apresentacao, Qualificacao, Show Rate) -- adicionar `onCheck(id)` e `onDiscard(id)` como callbacks opcionais
-2. **DynamicChecklistCard** (RECA, RALOCA) -- adicionar `onCheck(id)` e `onDiscard(id)`
-3. **ObjectionsCard** (Objecoes) -- adicionar `onAddressed(id)` e `onDiscard(id)`
+### 1. Criar edge function `supabase/functions/generate-coaching-item/index.ts`
 
-## Mudancas Tecnicas
+Nova edge function dedicada que recebe:
+- `leadPhrase`: a fala exata do lead clicada
+- `type`: "reca" | "raloca" | "rapoveca"
+- `leadName`: nome do lead
+- `coachInstructions`: instrucoes do coach
 
-### 1. MODIFICAR `src/components/crm/coaching/ChecklistCard.tsx`
+Retorna um unico item estruturado (id, label, description) gerado pela IA com base na frase do lead. Usa `google/gemini-2.5-flash` para equilibrio custo/qualidade.
 
-- Adicionar props opcionais: `onCheck?: (id: string) => void` e `onDiscard?: (id: string) => void`
-- Ao lado de cada item nao concluido, renderizar dois botoes pequenos (icones `Check` e `Trash2` do lucide-react)
-- `onCheck` adiciona o ID ao array `completedIds` (via callback ao pai)
-- `onDiscard` remove o item da lista (via callback ao pai)
-- Botoes ficam visiveis no hover ou sempre visiveis (melhor para uso rapido durante chamada)
+### 2. Modificar `src/components/crm/RealtimeCoachingPanel.tsx`
 
-### 2. MODIFICAR `src/components/crm/coaching/DynamicChecklistCard.tsx`
+- Importar `Popover`, `PopoverTrigger`, `PopoverContent` de `@/components/ui/popover`
+- Adicionar estado `generatingItemFor` (string | null) para indicar qual fala esta sendo processada
+- Criar handler `handleGenerateFromLead(transcriptId, type)` que:
+  - Chama a edge function `generate-coaching-item`
+  - Insere o resultado no estado correto (`recaItems`, `ralocaItems` ou `objections`)
+- Na renderizacao das falas (linha ~530), envolver cada fala do Lead em um Popover clicavel:
+  - Fala do Lead recebe `cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1`
+  - PopoverContent mostra 3 botoes compactos com icones (Heart = RECA, Brain = RALOCA, AlertTriangle = RAPOVECA)
+  - Enquanto processa, mostra Loader2 no lugar dos botoes
 
-- Mesma logica: adicionar `onCheck?: (id: string) => void` e `onDiscard?: (id: string) => void`
-- Botoes Check e Trash2 ao lado de itens nao concluidos
+### Arquivos a criar/modificar
 
-### 3. MODIFICAR `src/components/crm/coaching/ObjectionsCard.tsx`
-
-- Adicionar `onAddressed?: (id: string) => void` e `onDiscard?: (id: string) => void`
-- Botao Check marca objecao como respondida
-- Botao Trash2 remove a objecao da lista
-
-### 4. MODIFICAR `src/components/crm/RealtimeCoachingPanel.tsx`
-
-- Criar handlers para cada card:
-  - `handleCheckApresentacao(id)` -- adiciona ID ao `apresentacaoDone`
-  - `handleDiscardApresentacao(id)` -- remove item de `apresentacaoItems` (via estado local de itens descartados)
-  - Idem para qualificacao, show rate, RECA, RALOCA, objecoes
-- Manter um estado `discardedIds` (Set) para itens descartados, filtrando-os antes de renderizar
-- Passar os callbacks como props para cada card
-
-### Arquivos a modificar
-
-1. `src/components/crm/coaching/ChecklistCard.tsx` -- botoes check/discard
-2. `src/components/crm/coaching/DynamicChecklistCard.tsx` -- botoes check/discard
-3. `src/components/crm/coaching/ObjectionsCard.tsx` -- botoes addressed/discard
-4. `src/components/crm/RealtimeCoachingPanel.tsx` -- handlers + estado de descartados
+1. `supabase/functions/generate-coaching-item/index.ts` -- nova edge function
+2. `src/components/crm/RealtimeCoachingPanel.tsx` -- popover nas falas do Lead + handler
 
