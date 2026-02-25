@@ -90,6 +90,13 @@ export function RealtimeCoachingPanel({
     sugestoes_ativas: [],
     sugestoes_encerradas: [],
   });
+  // Refs for detector items to avoid stale closures in requestAnalysis
+  const recaItemsRef = useRef<DynamicItem[]>([]);
+  const ralocaItemsRef = useRef<DynamicItem[]>([]);
+  const objectionsRef = useRef<Objection[]>([]);
+  recaItemsRef.current = recaItems;
+  ralocaItemsRef.current = ralocaItems;
+  objectionsRef.current = objections;
 
   // Qualification items from script or fallback
   const qualificationItems: ChecklistItem[] = activeScript?.qualificacao?.length
@@ -129,9 +136,9 @@ export function RealtimeCoachingPanel({
       try {
         // Build coaching items for detector (current items on screen)
         const coachingItemsForDetector = {
-          reca: recaItems.map(i => ({ id: i.id, label: i.label, description: i.description })),
-          raloca: ralocaItems.map(i => ({ id: i.id, label: i.label, description: i.description })),
-          objections: objections.map(o => ({ id: o.id, label: o.objection, description: o.suggested_response })),
+          reca: recaItemsRef.current.map(i => ({ id: i.id, label: i.label, description: i.description })),
+          raloca: ralocaItemsRef.current.map(i => ({ id: i.id, label: i.label, description: i.description })),
+          objections: objectionsRef.current.map(o => ({ id: o.id, label: o.objection, description: o.suggested_response })),
         };
 
         // Two AI calls in parallel: detector (full transcript) + coaching (delta + state)
@@ -295,7 +302,7 @@ export function RealtimeCoachingPanel({
         isAnalyzingRef.current = false;
       }
     },
-    [coach.instrucoes, coach.instrucoes_detector, leadNome, leadContext, qualificationItems, apresentacaoItems, showRateItems, recaItems, ralocaItems, objections]
+    [coach.instrucoes, coach.instrucoes_detector, leadNome, leadContext, qualificationItems, apresentacaoItems, showRateItems]
   );
 
   // Filter out STT hallucinations that occur during silence
