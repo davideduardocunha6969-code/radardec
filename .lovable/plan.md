@@ -1,58 +1,29 @@
 
+# Unificar aba "Dados" + "Contatos SDR" em "Atendimento SDR"
 
-# Corrigir abas sumindo do sidebar
+## Resumo
+Renomear a aba "Dados" para "Atendimento SDR", remover a aba "Contatos SDR" separada, e trazer todo o conteudo do componente `LeadContatosTab` para dentro da aba unificada, posicionado apos as informacoes ja existentes (dados do lead, telefones, resumo do caso, mover coluna).
 
-## Problema
-A correção anterior no `AuthContext.tsx` substituiu o `throw Error` por um fallback com `hasPageAccess: () => false`. Durante re-renderizações (HMR, navegação), o contexto retorna esse fallback e o sidebar oculta todas as abas que dependem de permissão, deixando apenas Agenda e Meu Painel visíveis.
+## Alteracoes
 
-## Solução
-Duas mudanças coordenadas para resolver o problema de forma robusta:
+### 1. `src/pages/CrmFunilKanban.tsx`
 
-### 1. Corrigir `useAuth.ts` - Garantir que `loading` permanece `true` até permissoes carregarem
+- **Renomear tab**: Trocar `<TabsTrigger value="dados">Dados</TabsTrigger>` para `<TabsTrigger value="dados">Atendimento SDR</TabsTrigger>`
+- **Remover tab "contatos"**: Excluir o `<TabsTrigger value="contatos">` e seu `<TabsContent value="contatos">` correspondente
+- **Embutir `LeadContatosTab` na aba "dados"**: Adicionar o componente `<LeadContatosTab leadId={detailLead.id} />` ao final do `<TabsContent value="dados">`, depois da secao de "Mover para coluna / Excluir Lead" (apos a linha ~691)
+- Adicionar um `<Separator />` visual antes do componente para separar as secoes
 
-O `setLoading(false)` acontece no `onAuthStateChange` ANTES do `fetchUserData` completar (que roda num `setTimeout`). Isso cria uma janela onde o usuario esta autenticado mas `isAdmin` ainda e `false`.
+### 2. Nenhuma alteracao no `LeadContatosTab.tsx`
+O componente continua funcionando de forma independente, apenas sera renderizado dentro da aba unificada em vez de uma aba separada.
 
-- Mover `setLoading(false)` para DENTRO do `fetchUserData`, garantindo que so marca como carregado apos buscar perfil e permissoes.
-- Remover o `setTimeout` desnecessario no `onAuthStateChange`.
+## Resultado visual
 
-### 2. Corrigir `AppSidebar.tsx` - Mostrar loading ou todas as abas enquanto carrega
-
-Enquanto `loading` for `true`, o sidebar nao deve filtrar as abas. Duas opcoes:
-- Mostrar um skeleton/spinner no sidebar durante loading
-- OU tratar `loading === true` como "mostrar tudo" temporariamente
-
-A abordagem mais simples: se `loading` for `true`, nao filtrar (mostrar todas as abas). Quando loading terminar, as permissoes corretas ja estarao carregadas.
-
-## Arquivos a modificar
-
-1. **`src/hooks/useAuth.ts`**
-   - Mover `setLoading(false)` para depois do `fetchUserData` completar
-   - Remover `setTimeout` wrapper no `onAuthStateChange`
-
-2. **`src/components/AppSidebar.tsx`**
-   - Adicionar verificacao de `loading` do contexto
-   - Quando `loading === true`, pular filtragem de permissoes (mostrar todos os itens)
-
-## Detalhes tecnicos
-
-No `useAuth.ts`, a funcao `fetchUserData` passara a chamar `setLoading(false)` ao final:
-
-```text
-fetchUserData:
-  fetch profile -> set profile
-  fetch role -> set isAdmin
-  fetch permissions -> set allowedPages
-  setLoading(false)  // <-- mover para ca
-```
-
-No `AppSidebar.tsx`, a filtragem muda para:
-
-```text
-const { loading, isAdmin, hasPageAccess } = useAuthContext();
-
-const visibleRadarItems = loading
-  ? radarItems           // mostra tudo durante loading
-  : radarItems.filter(item => hasPageAccess(item.pageKey));
-```
-
-Isso garante que as abas nunca "somem" durante carregamento, e quando o carregamento termina, as permissoes corretas ja estao aplicadas.
+A aba "Atendimento SDR" tera:
+1. Dados extras do lead (empresa, cargo, CPF, etc.)
+2. Endereco
+3. Telefones (com botoes de ligar/WhatsApp e edicao)
+4. Resumo do Caso (IA)
+5. Mover coluna / Excluir Lead
+6. --- Separador ---
+7. Resumo IA dos Contatos (do LeadContatosTab)
+8. Tabela de chamadas realizadas (do LeadContatosTab)
