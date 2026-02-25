@@ -12,7 +12,7 @@ serve(async (req) => {
   }
 
   try {
-    const { transcript, coachInstructions, leadName, leadContext, existingItems } = await req.json();
+    const { newTranscript, coachingState, coachInstructions, leadName, leadContext } = await req.json();
 
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
@@ -22,15 +22,17 @@ serve(async (req) => {
       });
     }
 
-    // Build existing items context to prevent duplicates
-    const existingObjections = (existingItems?.objections || []) as Array<{id: string; objection: string}>;
-    const existingReca = (existingItems?.reca || []) as Array<{id: string; label: string}>;
-    const existingRaloca = (existingItems?.raloca || []) as Array<{id: string; label: string}>;
+    // Build state context for the model
+    const ativas = (coachingState?.sugestoes_ativas || []) as Array<{id: string; gatilho: string; classificacao: string; resposta_sugerida: string}>;
+    const encerradas = (coachingState?.sugestoes_encerradas || []) as Array<{id: string; gatilho: string; classificacao: string; status: string}>;
 
-    const existingContext = [
-      existingObjections.length ? `OBJEÇÕES JÁ GERADAS (NÃO REPETIR o mesmo tema/gatilho):\n${existingObjections.map(o => `- ${o.id}: ${o.objection}`).join("\n")}` : "",
-      existingReca.length ? `RECA JÁ GERADOS (NÃO REPETIR o mesmo tema/gatilho):\n${existingReca.map(i => `- ${i.id}: ${i.label}`).join("\n")}` : "",
-      existingRaloca.length ? `RALOCA JÁ GERADOS (NÃO REPETIR o mesmo tema/gatilho):\n${existingRaloca.map(i => `- ${i.id}: ${i.label}`).join("\n")}` : "",
+    const stateContext = [
+      ativas.length
+        ? `SUGESTÕES ATIVAS (podem ter status atualizado):\n${ativas.map(s => `- [${s.classificacao}] id="${s.id}" | gatilho: "${s.gatilho}" | sugestão: "${s.resposta_sugerida}"`).join("\n")}`
+        : "SUGESTÕES ATIVAS: nenhuma.",
+      encerradas.length
+        ? `SUGESTÕES ENCERRADAS (NÃO gerar novas sobre estes gatilhos):\n${encerradas.map(s => `- [${s.classificacao}] id="${s.id}" | gatilho: "${s.gatilho}" | status: ${s.status}`).join("\n")}`
+        : "",
     ].filter(Boolean).join("\n\n");
 
     const systemPrompt = `Você é um assistente de coaching em tempo real de ligações SDR.
@@ -39,89 +41,103 @@ CONTEXTO:
 - Lead: ${leadName || "Desconhecido"}
 ${leadContext ? `- Info: ${leadContext}` : ""}
 
-INSTRUÇÕES DO COACH (siga rigorosamente para avaliar RECA, RALOCA e RAPOVECA):
+INSTRUÇÕES DO COACH:
 ${coachInstructions || "Sem instruções específicas."}
 
-${existingContext ? `\n--- ITENS JÁ EXISTENTES (NÃO GERAR DUPLICATAS) ---\n${existingContext}\n` : ""}
+--- ESTADO ATUAL DAS SUGESTÕES ---
+${stateContext}
+--- FIM DO ESTADO ---
 
-Analise a transcrição e identifique com precisão:
+Você receberá APENAS as falas NOVAS da ligação (delta desde a última análise). Você tem DUAS responsabilidades:
 
-1. OBJEÇÕES (RAPOVECA) — SOMENTE liste objeções que o lead EXPLICITAMENTE verbalizou na transcrição. Para cada:
-   - Crie um ID único em snake_case
-   - Descreva a objeção detectada (cite a fala exata do lead como evidência)
-   - Sugira uma resposta/pergunta para o SDR tratar essa objeção (linguagem simples, prefira perguntas que levem o lead a encontrar a resposta sozinho)
-   - Indique se o SDR JÁ respondeu adequadamente (addressed: true/false)
+1. **UPDATES** — Para cada sugestão ATIVA listada acima, avalie se algo mudou nas falas novas:
+   - "DITO": o SDR já usou essa sugestão ou tratou o gatilho
+   - "TIMING_PASSOU": o momento ideal para usar essa sugestão já passou
+   - "MANTER": nada mudou, manter como está
+   Retorne updates APENAS para itens cujo status mudou (DITO ou TIMING_PASSOU). Não retorne "MANTER".
 
-2. RECA (Razões Emocionais) — SOMENTE gere itens quando houver evidência CLARA na transcrição de um gatilho emocional do lead:
-   - Gere perguntas/falas que o SDR deveria usar para explorar esse gatilho DETECTADO
-   - Marque como "done: true" se o SDR JÁ explorou esse gatilho na transcrição
-   - NÃO gere itens preventivos ou especulativos. Se o lead não demonstrou emoção, retorne array vazio.
+2. **NEW_ITEMS** — Gere novas sugestões APENAS se houver gatilhos GENUINAMENTE NOVOS nas falas recebidas:
 
-3. RALOCA (Razões Lógicas) — SOMENTE gere itens quando houver evidência CLARA na transcrição de uma questão lógica levantada pelo lead:
-   - Gere falas/perguntas que o SDR deveria usar para responder a esse questionamento DETECTADO
-   - Marque como "done: true" se o SDR JÁ utilizou esse argumento na transcrição
-   - NÃO gere itens preventivos ou especulativos. Se o lead não levantou questões lógicas, retorne array vazio.
+   a) OBJEÇÕES (RAPOVECA) — SOMENTE objeções que o lead EXPLICITAMENTE verbalizou. Cite a fala exata como evidência.
+   b) RECA (Emocionais) — SOMENTE quando houver evidência CLARA de gatilho emocional do lead.
+   c) RALOCA (Lógicos) — SOMENTE quando houver evidência CLARA de questão lógica do lead.
 
 REGRAS CRÍTICAS:
-- NUNCA gere um item sobre o MESMO TEMA ou GATILHO de um item já existente listado acima. Cada frase-gatilho do lead deve gerar NO MÁXIMO 1 item.
-- Para OBJEÇÕES, RECA e RALOCA: seja RESTRITIVO. Só gere itens com evidência EXPLÍCITA na fala do lead.
-- Não invente fatos sobre a transcrição. Se não está claro, não gere.
-- NÃO gere objeções, RECA ou RALOCA especulativos ou preventivos. SOMENTE baseie-se em falas REAIS do lead.
-- Se não há evidência suficiente, retorne arrays VAZIOS.
-- Se um gatilho/tema JÁ EXISTE na lista acima, NÃO gere outro item para ele, mesmo com palavras diferentes.`;
+- NUNCA gere um item sobre um gatilho que já existe nas sugestões ativas OU encerradas acima.
+- Cada frase-gatilho do lead gera NO MÁXIMO 1 item.
+- Seja RESTRITIVO. Só gere com evidência EXPLÍCITA na fala do lead.
+- Se não há novos gatilhos, retorne arrays VAZIOS em new_items.
+- NÃO invente fatos. NÃO gere itens especulativos ou preventivos.`;
 
     const tools = [
       {
         type: "function",
         function: {
           name: "analyze_coaching",
-          description: "Return coaching analysis of the SDR call transcript",
+          description: "Return coaching analysis with status updates and genuinely new items",
           parameters: {
             type: "object",
             properties: {
-              objections: {
+              updates: {
                 type: "array",
+                description: "Status updates for existing active suggestions (only DITO or TIMING_PASSOU)",
                 items: {
                   type: "object",
                   properties: {
-                    id: { type: "string", description: "Unique snake_case ID for this objection" },
-                    objection: { type: "string", description: "Description of the objection detected" },
-                    suggested_response: { type: "string", description: "Suggested response/question for the SDR" },
-                    addressed: { type: "boolean", description: "Whether the SDR already addressed this objection" },
+                    id: { type: "string", description: "ID of the existing suggestion" },
+                    new_status: { type: "string", enum: ["DITO", "TIMING_PASSOU"], description: "New status" },
                   },
-                  required: ["id", "objection", "suggested_response", "addressed"],
+                  required: ["id", "new_status"],
                 },
               },
-              reca_items: {
-                type: "array",
-                description: "Dynamically generated emotional triggers relevant to this lead",
-                items: {
-                  type: "object",
-                  properties: {
-                    id: { type: "string", description: "Unique snake_case ID" },
-                    label: { type: "string", description: "Short label for the emotional trigger" },
-                    description: { type: "string", description: "Suggested question/phrase for the SDR to use" },
-                    done: { type: "boolean", description: "Whether the SDR already explored this trigger" },
+              new_items: {
+                type: "object",
+                description: "Genuinely new suggestions based on new transcript content",
+                properties: {
+                  objections: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        id: { type: "string" },
+                        objection: { type: "string" },
+                        suggested_response: { type: "string" },
+                        addressed: { type: "boolean" },
+                      },
+                      required: ["id", "objection", "suggested_response", "addressed"],
+                    },
                   },
-                  required: ["id", "label", "description", "done"],
-                },
-              },
-              raloca_items: {
-                type: "array",
-                description: "Dynamically generated logical arguments relevant to this lead",
-                items: {
-                  type: "object",
-                  properties: {
-                    id: { type: "string", description: "Unique snake_case ID" },
-                    label: { type: "string", description: "Short label for the logical argument" },
-                    description: { type: "string", description: "Suggested phrase for the SDR to use" },
-                    done: { type: "boolean", description: "Whether the SDR already used this argument" },
+                  reca_items: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        id: { type: "string" },
+                        label: { type: "string" },
+                        description: { type: "string" },
+                        done: { type: "boolean" },
+                      },
+                      required: ["id", "label", "description", "done"],
+                    },
                   },
-                  required: ["id", "label", "description", "done"],
+                  raloca_items: {
+                    type: "array",
+                    items: {
+                      type: "object",
+                      properties: {
+                        id: { type: "string" },
+                        label: { type: "string" },
+                        description: { type: "string" },
+                        done: { type: "boolean" },
+                      },
+                      required: ["id", "label", "description", "done"],
+                    },
+                  },
                 },
+                required: ["objections", "reca_items", "raloca_items"],
               },
             },
-            required: ["objections", "reca_items", "raloca_items"],
+            required: ["updates", "new_items"],
           },
         },
       },
@@ -137,7 +153,7 @@ REGRAS CRÍTICAS:
         model: "google/gemini-3-flash-preview",
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Transcrição atual da ligação:\n\n${transcript}` },
+          { role: "user", content: `Falas NOVAS da ligação (delta):\n\n${newTranscript}` },
         ],
         tools,
         tool_choice: { type: "function", function: { name: "analyze_coaching" } },
@@ -148,21 +164,18 @@ REGRAS CRÍTICAS:
     if (!response.ok) {
       if (response.status === 429) {
         return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
-          status: 429,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 429, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       if (response.status === 402) {
         return new Response(JSON.stringify({ error: "Payment required" }), {
-          status: 402,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 402, headers: { ...corsHeaders, "Content-Type": "application/json" },
         });
       }
       const t = await response.text();
       console.error("[coaching-realtime] AI error:", response.status, t);
       return new Response(JSON.stringify({ error: "AI gateway error" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -171,8 +184,7 @@ REGRAS CRÍTICAS:
     if (!toolCall) {
       console.error("[coaching-realtime] No tool call:", JSON.stringify(result));
       return new Response(JSON.stringify({ error: "No structured response from AI" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -184,8 +196,7 @@ REGRAS CRÍTICAS:
     } catch {
       console.error("[coaching-realtime] Parse error:", toolCall.function.arguments);
       return new Response(JSON.stringify({ error: "Invalid AI response format" }), {
-        status: 500,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
+        status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -195,8 +206,7 @@ REGRAS CRÍTICAS:
   } catch (e) {
     console.error("[coaching-realtime] error:", e);
     return new Response(JSON.stringify({ error: e.message }), {
-      status: 500,
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   }
 });

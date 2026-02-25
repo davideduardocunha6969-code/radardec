@@ -27,6 +27,48 @@ export interface CoachingAnalysis {
   raloca_items: DynamicItem[];
 }
 
+// --- Persistent coaching state types ---
+
+export type SugestaoClassificacao = "RECA" | "RALOCA" | "RAPOVECA";
+export type SugestaoStatusAtiva = "aguardando";
+export type SugestaoStatusEncerrada = "DITO" | "TIMING_PASSOU" | "DESCARTADO";
+
+export interface CoachingSugestaoAtiva {
+  id: string;
+  gatilho: string;
+  classificacao: SugestaoClassificacao;
+  resposta_sugerida: string;
+  status: SugestaoStatusAtiva;
+}
+
+export interface CoachingSugestaoEncerrada {
+  id: string;
+  gatilho: string;
+  classificacao: SugestaoClassificacao;
+  status: SugestaoStatusEncerrada;
+}
+
+export interface CoachingState {
+  sugestoes_ativas: CoachingSugestaoAtiva[];
+  sugestoes_encerradas: CoachingSugestaoEncerrada[];
+}
+
+export interface CoachingUpdate {
+  id: string;
+  new_status: "DITO" | "TIMING_PASSOU" | "MANTER";
+}
+
+export interface CoachingNewItems {
+  objections: Objection[];
+  reca_items: DynamicItem[];
+  raloca_items: DynamicItem[];
+}
+
+export interface CoachingRealtimeResponse {
+  updates: CoachingUpdate[];
+  new_items: CoachingNewItems;
+}
+
 export const QUALIFICATION_QUESTIONS: ChecklistItem[] = [
   { id: "jornada", label: "Jornada diária", description: "Qual era sua jornada diária de trabalho?" },
   { id: "descanso_11h", label: "Descanso 11h", description: "Tinha o descanso de 11 horas entre jornadas?" },
