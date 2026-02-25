@@ -1,35 +1,58 @@
 
-# Correcao: IA Detectora nao risca itens do script
 
-## Diagnostico Real
+# Botoes Manuais de Check e Descartar nos Cards de Coaching
 
-O usuario falou exatamente o texto que consta no script de qualificacao, mas a IA detectora retornou todos os arrays vazios. Analisando o codigo:
+## Objetivo
 
-1. **Modelo de IA inadequado**: O `script-checker` usa `google/gemini-2.5-flash-lite`, descrito como "Fastest + cheapest. **Weakest on nuance and complex reasoning**". Este modelo e fraco demais para deteccao confiavel de itens em transcricoes. Precisa ser atualizado para `google/gemini-2.5-flash` (equilibrio entre custo/velocidade e qualidade).
+Adicionar botoes clicaveis ao lado de cada item nos cards do painel de coaching, permitindo que o SDR marque manualmente um item como concluido (check) ou descarte-o (lixeira). Isso funciona **cumulativamente** com a deteccao automatica da IA -- ambos os mecanismos coexistem.
 
-2. **Sem log do transcript enviado**: Nao ha nenhum `console.log` do conteudo da transcricao recebida no backend, tornando impossivel saber se o texto do SDR chegou corretamente.
+## Comportamento
 
-3. **Filtro de alucinacoes incompleto**: Expressoes como "que e o?" do canal Lead poluem o transcript com dezenas de linhas inuteis, dificultando a deteccao mesmo com um modelo melhor.
+- **Botao Check**: Marca o item como concluido (mesmo efeito visual de quando a IA detecta: line-through, mover para o final da lista)
+- **Botao Lixeira**: Remove o item da lista completamente (descartado pelo SDR como irrelevante para aquela chamada)
+- Ambos os botoes aparecem apenas em itens **nao concluidos** (itens ja riscados nao precisam de botoes)
+- Os botoes sao pequenos e discretos para nao poluir a interface compacta
 
-## Mudancas tecnicas
+## Cards afetados
 
-### 1. MODIFICAR `supabase/functions/script-checker/index.ts`
+1. **ChecklistCard** (Apresentacao, Qualificacao, Show Rate) -- adicionar `onCheck(id)` e `onDiscard(id)` como callbacks opcionais
+2. **DynamicChecklistCard** (RECA, RALOCA) -- adicionar `onCheck(id)` e `onDiscard(id)`
+3. **ObjectionsCard** (Objecoes) -- adicionar `onAddressed(id)` e `onDiscard(id)`
 
-- **Trocar modelo**: de `google/gemini-2.5-flash-lite` para `google/gemini-2.5-flash` (melhor deteccao, latencia aceitavel)
-- **Adicionar log do transcript**: `console.log` dos primeiros 300 caracteres da transcricao recebida para debug
-- **Adicionar validacao minima**: se a transcricao tiver menos de 20 caracteres uteis, retornar arrays vazios sem chamar a IA
+## Mudancas Tecnicas
 
-### 2. MODIFICAR `src/components/crm/RealtimeCoachingPanel.tsx`
+### 1. MODIFICAR `src/components/crm/coaching/ChecklistCard.tsx`
 
-- **Expandir `hallucinationPatterns`** com novos padroes de silencio:
-  - `/^que\s+[ée]\s+o\??$/i` -- "que e o?", "que e o"
-  - `/^o\s+qu[ée]\??$/i` -- "o que?", "o que?"  
-  - `/^\.+$/` -- so pontuacao
-  - `/^[\s\W]{0,5}$/` -- textos quase vazios
-- **Adicionar filtro de texto curto**: menos de 2 palavras significativas = provavel alucinacao
-- **Adicionar `console.log` de diagnostico**: logar tamanho e resumo da transcricao antes de enviar ao script-checker
+- Adicionar props opcionais: `onCheck?: (id: string) => void` e `onDiscard?: (id: string) => void`
+- Ao lado de cada item nao concluido, renderizar dois botoes pequenos (icones `Check` e `Trash2` do lucide-react)
+- `onCheck` adiciona o ID ao array `completedIds` (via callback ao pai)
+- `onDiscard` remove o item da lista (via callback ao pai)
+- Botoes ficam visiveis no hover ou sempre visiveis (melhor para uso rapido durante chamada)
+
+### 2. MODIFICAR `src/components/crm/coaching/DynamicChecklistCard.tsx`
+
+- Mesma logica: adicionar `onCheck?: (id: string) => void` e `onDiscard?: (id: string) => void`
+- Botoes Check e Trash2 ao lado de itens nao concluidos
+
+### 3. MODIFICAR `src/components/crm/coaching/ObjectionsCard.tsx`
+
+- Adicionar `onAddressed?: (id: string) => void` e `onDiscard?: (id: string) => void`
+- Botao Check marca objecao como respondida
+- Botao Trash2 remove a objecao da lista
+
+### 4. MODIFICAR `src/components/crm/RealtimeCoachingPanel.tsx`
+
+- Criar handlers para cada card:
+  - `handleCheckApresentacao(id)` -- adiciona ID ao `apresentacaoDone`
+  - `handleDiscardApresentacao(id)` -- remove item de `apresentacaoItems` (via estado local de itens descartados)
+  - Idem para qualificacao, show rate, RECA, RALOCA, objecoes
+- Manter um estado `discardedIds` (Set) para itens descartados, filtrando-os antes de renderizar
+- Passar os callbacks como props para cada card
 
 ### Arquivos a modificar
 
-1. `supabase/functions/script-checker/index.ts` -- upgrade do modelo + log + validacao
-2. `src/components/crm/RealtimeCoachingPanel.tsx` -- filtros de alucinacao + logs
+1. `src/components/crm/coaching/ChecklistCard.tsx` -- botoes check/discard
+2. `src/components/crm/coaching/DynamicChecklistCard.tsx` -- botoes check/discard
+3. `src/components/crm/coaching/ObjectionsCard.tsx` -- botoes addressed/discard
+4. `src/components/crm/RealtimeCoachingPanel.tsx` -- handlers + estado de descartados
+
