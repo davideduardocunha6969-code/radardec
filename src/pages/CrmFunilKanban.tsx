@@ -3,7 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useUpdateColuna, useDeleteColuna, useCreateLead, useUpdateLead, useDeleteLead, useBulkCreateLeads, useReorderColunas, useUpdateFunil, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
 import { LeadDadosTab } from "@/components/crm/LeadDadosTab";
 import { ImportMappingDialog } from "@/components/crm/ImportMappingDialog";
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent, useDroppable, useDraggable, type DragStartEvent, DragOverlay } from "@dnd-kit/core";
 import { SortableContext, horizontalListSortingStrategy, useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { WhatsAppAICallButton } from "@/components/crm/WhatsAppAICallButton";
@@ -19,7 +19,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, Pencil, CalendarDays, Sparkles, ChevronDown, Settings } from "lucide-react";
+import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, Pencil, CalendarDays, Sparkles, ChevronDown, Settings, MoveRight } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -27,7 +28,58 @@ import { toast } from "sonner";
 
 import type { CrmColuna } from "@/hooks/useCrmOutbound";
 
-function SortableColumn({ col, funilId, leadsByColuna, setLeadForm, setEditingColuna, deleteColuna, setDetailLead }: {
+function DraggableLeadCard({ lead, setDetailLead }: { lead: CrmLead; setDetailLead: (lead: CrmLead) => void }) {
+  const { attributes, listeners, setNodeRef, transform, isDragging } = useDraggable({
+    id: `lead-${lead.id}`,
+    data: { type: "lead", lead },
+  });
+  const style = {
+    transform: transform ? `translate3d(${transform.x}px, ${transform.y}px, 0)` : undefined,
+    opacity: isDragging ? 0.4 : 1,
+  };
+
+  return (
+    <Card
+      ref={setNodeRef}
+      style={style}
+      {...attributes}
+      {...listeners}
+      className="cursor-grab active:cursor-grabbing hover:shadow-sm transition-shadow touch-none"
+      onClick={(e) => {
+        if (!isDragging) setDetailLead(lead);
+      }}
+    >
+      <CardContent className="p-3 space-y-2">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-2">
+            <User className="h-4 w-4 text-muted-foreground" />
+            <span className="font-medium text-sm">{lead.nome}</span>
+          </div>
+        </div>
+        <div className="space-y-0.5 text-[11px] text-muted-foreground">
+          <p>Cadastrado em {new Date(lead.created_at).toLocaleDateString("pt-BR")}</p>
+          <p>Nesta etapa desde {lead.etapa_desde ? new Date(lead.etapa_desde).toLocaleDateString("pt-BR") : new Date(lead.created_at).toLocaleDateString("pt-BR")}</p>
+          <p>{lead.ultimo_contato_em ? `Sem contato desde ${new Date(lead.ultimo_contato_em).toLocaleDateString("pt-BR")}` : "Sem contato"}</p>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function LeadCardOverlay({ lead }: { lead: CrmLead }) {
+  return (
+    <Card className="w-72 shadow-lg border-primary/50 rotate-2">
+      <CardContent className="p-3 space-y-2">
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium text-sm">{lead.nome}</span>
+        </div>
+      </CardContent>
+    </Card>
+  );
+}
+
+function DroppableColumn({ col, funilId, leadsByColuna, setLeadForm, setEditingColuna, deleteColuna, setDetailLead }: {
   col: CrmColuna;
   funilId: string;
   leadsByColuna: (colunaId: string) => CrmLead[];
@@ -36,12 +88,17 @@ function SortableColumn({ col, funilId, leadsByColuna, setLeadForm, setEditingCo
   deleteColuna: (id: string) => void;
   setDetailLead: (lead: CrmLead) => void;
 }) {
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: col.id });
-  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  const { attributes, listeners, setNodeRef: setSortableRef, transform, transition, isDragging } = useSortable({ id: col.id });
+  const sortableStyle = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+
+  const { setNodeRef: setDropRef, isOver } = useDroppable({
+    id: `col-drop-${col.id}`,
+    data: { type: "column", colId: col.id, colNome: col.nome },
+  });
 
   return (
-    <div ref={setNodeRef} style={style} className="flex-shrink-0 w-72">
-      <div className="rounded-lg border bg-card">
+    <div ref={setSortableRef} style={sortableStyle} className="flex-shrink-0 w-72">
+      <div className={`rounded-lg border bg-card transition-colors ${isOver ? "ring-2 ring-primary/50 bg-primary/5" : ""}`}>
         <div className="flex items-center justify-between p-3 border-b" style={{ borderTopColor: col.cor || "#6366f1", borderTopWidth: 3 }}>
           <div className="flex items-center gap-2">
             <button {...attributes} {...listeners} className="cursor-grab active:cursor-grabbing text-muted-foreground hover:text-foreground touch-none">
@@ -63,23 +120,9 @@ function SortableColumn({ col, funilId, leadsByColuna, setLeadForm, setEditingCo
           </div>
         </div>
         <ScrollArea className="h-[calc(100vh-280px)]">
-          <div className="p-2 space-y-2">
+          <div ref={setDropRef} className="p-2 space-y-2 min-h-[60px]">
             {leadsByColuna(col.id).map((lead) => (
-              <Card key={lead.id} className="cursor-pointer hover:shadow-sm transition-shadow" onClick={() => setDetailLead(lead)}>
-                <CardContent className="p-3 space-y-2">
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      <span className="font-medium text-sm">{lead.nome}</span>
-                    </div>
-                  </div>
-                  <div className="space-y-0.5 text-[11px] text-muted-foreground">
-                    <p>Cadastrado em {new Date(lead.created_at).toLocaleDateString("pt-BR")}</p>
-                    <p>Nesta etapa desde {lead.etapa_desde ? new Date(lead.etapa_desde).toLocaleDateString("pt-BR") : new Date(lead.created_at).toLocaleDateString("pt-BR")}</p>
-                    <p>{lead.ultimo_contato_em ? `Sem contato desde ${new Date(lead.ultimo_contato_em).toLocaleDateString("pt-BR")}` : "Sem contato"}</p>
-                  </div>
-                </CardContent>
-              </Card>
+              <DraggableLeadCard key={lead.id} lead={lead} setDetailLead={setDetailLead} />
             ))}
           </div>
         </ScrollArea>
@@ -111,17 +154,51 @@ export default function CrmFunilKanban() {
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 8 } }));
 
-  const handleColumnDragEnd = (event: DragEndEvent) => {
+  // Drag state for lead move confirmation
+  const [draggedLead, setDraggedLead] = useState<CrmLead | null>(null);
+  const [pendingMove, setPendingMove] = useState<{ lead: CrmLead; targetColId: string; targetColNome: string; sourceColNome: string } | null>(null);
+
+  const handleDragStart = (event: DragStartEvent) => {
+    const { active } = event;
+    if (active.data.current?.type === "lead") {
+      setDraggedLead(active.data.current.lead as CrmLead);
+    }
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event;
-    if (!over || active.id === over.id || !colunas || !funilId) return;
-    const oldIndex = colunas.findIndex((c) => c.id === active.id);
-    const newIndex = colunas.findIndex((c) => c.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
-    const reordered = [...colunas];
-    const [moved] = reordered.splice(oldIndex, 1);
-    reordered.splice(newIndex, 0, moved);
-    const ordens = reordered.map((c, i) => ({ id: c.id, ordem: i }));
-    reorderColunas.mutate({ funilId, ordens });
+    setDraggedLead(null);
+
+    if (!over || !colunas || !funilId) return;
+
+    // Lead dropped on a column
+    if (active.data.current?.type === "lead" && over.data.current?.type === "column") {
+      const lead = active.data.current.lead as CrmLead;
+      const targetColId = over.data.current.colId as string;
+      const targetColNome = over.data.current.colNome as string;
+      if (lead.coluna_id === targetColId) return;
+      const sourceCol = colunas.find((c) => c.id === lead.coluna_id);
+      setPendingMove({ lead, targetColId, targetColNome, sourceColNome: sourceCol?.nome || "" });
+      return;
+    }
+
+    // Column reorder (sortable)
+    if (!active.data.current?.type && active.id !== over.id) {
+      const oldIndex = colunas.findIndex((c) => c.id === active.id);
+      const newIndex = colunas.findIndex((c) => c.id === over.id);
+      if (oldIndex === -1 || newIndex === -1) return;
+      const reordered = [...colunas];
+      const [moved] = reordered.splice(oldIndex, 1);
+      reordered.splice(newIndex, 0, moved);
+      const ordens = reordered.map((c, i) => ({ id: c.id, ordem: i }));
+      reorderColunas.mutate({ funilId, ordens });
+    }
+  };
+
+  const confirmMove = () => {
+    if (!pendingMove || !funilId) return;
+    updateLead.mutate({ id: pendingMove.lead.id, funilId, coluna_id: pendingMove.targetColId });
+    setPendingMove(null);
   };
 
   // Column dialogs - simplified (no more coach/script selects)
@@ -237,14 +314,17 @@ export default function CrmFunilKanban() {
           <Button className="mt-4" onClick={() => setNewColunaDialog(true)}><Plus className="h-4 w-4 mr-2" />Criar Coluna</Button>
         </CardContent></Card>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleColumnDragEnd}>
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
           <SortableContext items={colunas.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
             <div className="flex gap-4 overflow-x-auto pb-4">
               {colunas.map((col) => (
-                <SortableColumn key={col.id} col={col} funilId={funilId!} leadsByColuna={leadsByColuna} setLeadForm={(colId: string) => { setLeadForm({ ...leadForm, coluna_id: colId }); setLeadDialog(true); }} setEditingColuna={(c: typeof col) => { setEditingColuna({ id: c.id, nome: c.nome, cor: c.cor || "#6366f1" }); setEditColunaDialog(true); }} deleteColuna={(id: string) => deleteColuna.mutate({ id, funilId: funilId! })} setDetailLead={setDetailLead} />
+                <DroppableColumn key={col.id} col={col} funilId={funilId!} leadsByColuna={leadsByColuna} setLeadForm={(colId: string) => { setLeadForm({ ...leadForm, coluna_id: colId }); setLeadDialog(true); }} setEditingColuna={(c: typeof col) => { setEditingColuna({ id: c.id, nome: c.nome, cor: c.cor || "#6366f1" }); setEditColunaDialog(true); }} deleteColuna={(id: string) => deleteColuna.mutate({ id, funilId: funilId! })} setDetailLead={setDetailLead} />
               ))}
             </div>
           </SortableContext>
+          <DragOverlay>
+            {draggedLead ? <LeadCardOverlay lead={draggedLead} /> : null}
+          </DragOverlay>
         </DndContext>
       )}
 
@@ -627,6 +707,27 @@ export default function CrmFunilKanban() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Confirmação de mover lead */}
+      <AlertDialog open={!!pendingMove} onOpenChange={(open) => { if (!open) setPendingMove(null); }}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <MoveRight className="h-5 w-5 text-primary" />
+              Mover lead de etapa?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Deseja mover <strong>{pendingMove?.lead.nome}</strong> de{" "}
+              <strong>{pendingMove?.sourceColNome}</strong> para{" "}
+              <strong>{pendingMove?.targetColNome}</strong>?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction onClick={confirmMove}>Confirmar</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
