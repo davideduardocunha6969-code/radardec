@@ -50,3 +50,6 @@ verify_jwt = false
 
  [functions.elevenlabs-conversation-token]
  verify_jwt = false
+
+ [functions.script-checker]
+ verify_jwt = false
