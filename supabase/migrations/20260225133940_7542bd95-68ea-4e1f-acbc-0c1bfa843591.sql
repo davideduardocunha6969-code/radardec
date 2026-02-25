@@ -1,0 +1,1 @@
+ALTER TABLE public.crm_lead_campos ADD CONSTRAINT crm_lead_campos_nome_unique UNIQUE (nome);
