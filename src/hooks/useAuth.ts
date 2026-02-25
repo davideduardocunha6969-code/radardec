@@ -61,13 +61,19 @@ export function useAuth() {
   }, []);
 
   useEffect(() => {
+    let initialLoadDone = false;
+
     // Set up auth state listener FIRST
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, currentSession) => {
         setSession(currentSession);
         setUser(currentSession?.user ?? null);
 
+        // Skip the INITIAL_SESSION event — getSession handles it below
+        if (!initialLoadDone) return;
+
         if (currentSession?.user) {
+          setLoading(true);
           await fetchUserData(currentSession.user.id);
         } else {
           setProfile(null);
@@ -86,6 +92,7 @@ export function useAuth() {
       } else {
         setLoading(false);
       }
+      initialLoadDone = true;
     });
 
     return () => subscription.unsubscribe();
