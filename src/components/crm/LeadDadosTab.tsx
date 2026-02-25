@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Pencil, Save, X } from "lucide-react";
 import { toast } from "sonner";
 import { formatCpf, normalizeCpf, isCpfKey } from "@/utils/cpfFormat";
+import { formatDateValue } from "@/utils/dateFormat";
 
 interface LeadDadosTabProps {
   lead: CrmLead;
@@ -103,6 +104,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
   const renderFieldView = (campo: CrmLeadCampo) => {
     let val = nativeKeys.includes(campo.key) ? getNativeValue(campo.key) : String(dadosExtras[campo.key]);
     if (isCpfKey(campo.key)) val = formatCpf(val);
+    if (campo.tipo === "data") val = formatDateValue(val);
     return (
       <div key={campo.id}>
         <label className="text-xs font-medium text-muted-foreground">{campo.nome}</label>
