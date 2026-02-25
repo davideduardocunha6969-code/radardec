@@ -32,7 +32,12 @@ export function ObjectionsCard({ objections }: ObjectionsCardProps) {
                 Nenhuma objeção detectada ainda.
               </p>
             )}
-            {objections.map((obj) => (
+            {[...objections]
+              .sort((a, b) => {
+                if (a.addressed === b.addressed) return 0;
+                return a.addressed ? 1 : -1;
+              })
+              .map((obj) => (
               <div
                 key={obj.id}
                 className={`rounded-md border px-2.5 py-2 text-xs transition-colors ${

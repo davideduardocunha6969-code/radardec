@@ -354,7 +354,7 @@ export function RealtimeCoachingPanel({
   };
 
   const topBar = (
-    <Card className="border-primary/20 flex flex-col h-full">
+    <Card className="border-primary/20 flex flex-col h-full max-h-full overflow-hidden">
       <CardHeader className="pb-1 px-3 pt-2 shrink-0">
         <div className="flex items-center justify-between">
           <CardTitle className="text-xs flex items-center gap-1.5">
@@ -407,9 +407,9 @@ export function RealtimeCoachingPanel({
           </div>
         </div>
       </CardHeader>
-      <CardContent className="px-3 pb-2 flex-1 min-h-0">
+      <CardContent className="px-3 pb-2 flex-1 min-h-0 overflow-hidden">
         {connectionError && <p className="text-[10px] text-destructive mb-1">{connectionError}</p>}
-        <ScrollArea className="h-full">
+        <ScrollArea className="h-full max-h-[180px]">
           <div className="space-y-0.5 text-xs">
             {labeledTranscripts.map((t) => (
               <p key={t.id} className={t.speaker === "sdr" ? "text-primary" : "text-foreground"}>

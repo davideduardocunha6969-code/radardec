@@ -32,7 +32,14 @@ export const ChecklistCard = forwardRef<HTMLDivElement, ChecklistCardProps>(func
       </CardHeader>
       <CardContent className="px-2.5 pb-2">
         <div className="space-y-0.5">
-            {items.map((item) => {
+            {[...items]
+              .sort((a, b) => {
+                const aDone = completedIds.includes(a.id);
+                const bDone = completedIds.includes(b.id);
+                if (aDone === bDone) return 0;
+                return aDone ? 1 : -1;
+              })
+              .map((item) => {
               const done = completedIds.includes(item.id);
               return (
                 <div
