@@ -4,8 +4,10 @@ import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { Mic, MicOff, Loader2, ClipboardList, Heart, Brain, BookOpen, Presentation, Star, Volume2, CheckCircle2, AlertTriangle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 import { type RoboCoach } from "@/hooks/useRobosCoach";
 import { useActiveScriptSdr } from "@/hooks/useScriptsSdr";
 import { Progress } from "@/components/ui/progress";
@@ -70,6 +72,8 @@ export function RealtimeCoachingPanel({
   const [recaItems, setRecaItems] = useState<DynamicItem[]>([]);
   const [ralocaItems, setRalocaItems] = useState<DynamicItem[]>([]);
   const [discardedIds, setDiscardedIds] = useState<Set<string>>(new Set());
+  const [generatingItemFor, setGeneratingItemFor] = useState<string | null>(null);
+  const { toast } = useToast();
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [connectionError, setConnectionError] = useState<string | null>(null);
   const [labeledTranscripts, setLabeledTranscripts] = useState<LabeledTranscript[]>([]);
@@ -458,6 +462,56 @@ export function RealtimeCoachingPanel({
     setDiscardedIds(prev => new Set(prev).add(id));
   }, []);
 
+  // Generate a coaching item from a specific lead phrase
+  const handleGenerateFromLead = useCallback(async (transcriptEntry: LabeledTranscript, type: "reca" | "raloca" | "rapoveca") => {
+    setGeneratingItemFor(transcriptEntry.id);
+    try {
+      const { data, error } = await supabase.functions.invoke("generate-coaching-item", {
+        body: {
+          leadPhrase: transcriptEntry.text,
+          type,
+          leadName: leadNome,
+          coachInstructions: type === "reca" ? coach.instrucoes_reca
+            : type === "raloca" ? coach.instrucoes_raloca
+            : coach.instrucoes_radoveca,
+        },
+      });
+
+      if (error) throw error;
+      if (!data?.item) throw new Error("No item returned");
+
+      const item = data.item;
+
+      if (type === "rapoveca") {
+        setObjections(prev => [...prev, {
+          id: item.id || `manual-${Date.now()}`,
+          objection: item.objection,
+          suggested_response: item.suggested_response,
+          addressed: false,
+        }]);
+      } else {
+        const newItem: DynamicItem = {
+          id: item.id || `manual-${Date.now()}`,
+          label: item.label,
+          description: item.description,
+          done: false,
+        };
+        if (type === "reca") {
+          setRecaItems(prev => [...prev, newItem]);
+        } else {
+          setRalocaItems(prev => [...prev, newItem]);
+        }
+      }
+
+      toast({ title: "Sugestão gerada!", description: `Item ${type.toUpperCase()} adicionado com sucesso.` });
+    } catch (e: any) {
+      console.error("[Coaching] generate-coaching-item error:", e);
+      toast({ title: "Erro ao gerar sugestão", description: e.message || "Tente novamente.", variant: "destructive" });
+    } finally {
+      setGeneratingItemFor(null);
+    }
+  }, [leadNome, coach.instrucoes_reca, coach.instrucoes_raloca, coach.instrucoes_radoveca, toast]);
+
   if (!isRecording) return null;
 
   const isConnected = sdrScribe.isConnected || leadScribe.isConnected;
@@ -528,10 +582,57 @@ export function RealtimeCoachingPanel({
         <div className="h-[180px] overflow-y-auto pr-1">
           <div className="space-y-0.5 text-xs">
             {labeledTranscripts.map((t) => (
-              <p key={t.id} className={t.speaker === "sdr" ? "text-primary" : "text-foreground"}>
-                <span className="font-semibold text-muted-foreground">{t.speaker === "sdr" ? "SDR" : "Lead"}:</span>{" "}
-                {t.text}
-              </p>
+              t.speaker === "lead" ? (
+                <Popover key={t.id}>
+                  <PopoverTrigger asChild>
+                    <p className="cursor-pointer hover:bg-muted/50 rounded px-1 -mx-1 transition-colors text-foreground">
+                      <span className="font-semibold text-muted-foreground">Lead:</span>{" "}
+                      {t.text}
+                      {generatingItemFor === t.id && <Loader2 className="inline h-3 w-3 ml-1 animate-spin text-primary" />}
+                    </p>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-1.5 flex gap-1" side="top" align="start">
+                    {generatingItemFor === t.id ? (
+                      <Loader2 className="h-4 w-4 animate-spin text-primary mx-4 my-1" />
+                    ) : (
+                      <>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-[10px] gap-1 px-2"
+                          onClick={() => handleGenerateFromLead(t, "reca")}
+                        >
+                          <Heart className="h-3 w-3 text-red-500" />
+                          RECA
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-[10px] gap-1 px-2"
+                          onClick={() => handleGenerateFromLead(t, "raloca")}
+                        >
+                          <Brain className="h-3 w-3 text-purple-500" />
+                          RALOCA
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="h-6 text-[10px] gap-1 px-2"
+                          onClick={() => handleGenerateFromLead(t, "rapoveca")}
+                        >
+                          <AlertTriangle className="h-3 w-3 text-amber-500" />
+                          RAPOVECA
+                        </Button>
+                      </>
+                    )}
+                  </PopoverContent>
+                </Popover>
+              ) : (
+                <p key={t.id} className="text-primary">
+                  <span className="font-semibold text-muted-foreground">SDR:</span>{" "}
+                  {t.text}
+                </p>
+              )
             ))}
             {(sdrPartial || leadPartial) && (
               <>
