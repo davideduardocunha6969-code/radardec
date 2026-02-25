@@ -9,6 +9,7 @@ import { useBulkCreateLeads, type LeadTelefone } from "@/hooks/useCrmOutbound";
 import { FileSpreadsheet, Loader2, Plus, ArrowRight, Upload } from "lucide-react";
 import { toast } from "sonner";
 import * as XLSX from "xlsx";
+import { normalizeCpf, isCpfKey } from "@/utils/cpfFormat";
 
 interface ImportMappingDialogProps {
   open: boolean;
@@ -138,7 +139,12 @@ export function ImportMappingDialog({ open, onOpenChange, funilId, colunas }: Im
           const key = target.replace("campo:", "");
           // Auto-convert excel dates for date fields
           const campo = campos?.find((c) => c.key === key);
-          dados_extras[key] = campo?.tipo === "data" ? excelDateToString(val) : val;
+          let processedVal = campo?.tipo === "data" ? excelDateToString(val) : val;
+          // Normalize CPF
+          if (isCpfKey(key)) {
+            processedVal = normalizeCpf(processedVal);
+          }
+          dados_extras[key] = processedVal;
         }
       }
 
