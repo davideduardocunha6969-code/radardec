@@ -20,6 +20,28 @@ serve(async (req) => {
   try {
     const { transcript, scriptItems, coachingItems, detectorPrompt } = await req.json();
 
+    // Log transcript preview for debugging
+    const transcriptPreview = (transcript || "").substring(0, 300);
+    console.log(`[script-checker] Transcript recebido (${(transcript || "").length} chars): ${transcriptPreview}`);
+
+    // Early return if transcript is too short to be meaningful
+    const cleanedTranscript = (transcript || "").replace(/\[(?:SDR|Lead)\]:\s*/g, "").trim();
+    if (cleanedTranscript.length < 20) {
+      console.log("[script-checker] Transcript muito curto, retornando arrays vazios");
+      return new Response(JSON.stringify({
+        analysis: {
+          apresentacao_done: [],
+          qualification_done: [],
+          show_rate_done: [],
+          reca_done: [],
+          raloca_done: [],
+          objections_addressed: [],
+        }
+      }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
     if (!LOVABLE_API_KEY) {
       return new Response(JSON.stringify({ error: "LOVABLE_API_KEY not configured" }), {
@@ -139,7 +161,7 @@ ${formatList(objectionItems)}`;
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        model: "google/gemini-2.5-flash-lite",
+        model: "google/gemini-2.5-flash",
         messages: [
           { role: "system", content: systemPrompt },
           { role: "user", content: `Transcrição da ligação:\n\n${transcript}` },
