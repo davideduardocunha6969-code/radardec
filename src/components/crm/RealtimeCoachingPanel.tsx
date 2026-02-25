@@ -9,7 +9,7 @@ import { Mic, MicOff, Loader2, ClipboardList, Heart, Brain, BookOpen, Presentati
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
 import { type RoboCoach } from "@/hooks/useRobosCoach";
-import { useActiveScriptSdr } from "@/hooks/useScriptsSdr";
+import { useActiveScriptSdr, type ScriptSdr } from "@/hooks/useScriptsSdr";
 import { Progress } from "@/components/ui/progress";
 import { useScribe, CommitStrategy, AudioFormat } from "@elevenlabs/react";
 import { ChecklistCard } from "./coaching/ChecklistCard";
@@ -46,6 +46,7 @@ interface RealtimeCoachingPanelProps {
   topBarOnly?: boolean;
   bottomOnly?: boolean;
   audioMonitor?: AudioMonitorInfo;
+  script?: ScriptSdr | null;
 }
 
 interface LabeledTranscript {
@@ -65,8 +66,11 @@ export function RealtimeCoachingPanel({
   topBarOnly,
   bottomOnly,
   audioMonitor,
+  script: scriptProp,
 }: RealtimeCoachingPanelProps) {
-  const { data: activeScript } = useActiveScriptSdr();
+  // Use script from prop (funil config) or fallback to global active script
+  const { data: fallbackScript } = useActiveScriptSdr();
+  const activeScript = scriptProp !== undefined ? scriptProp : fallbackScript;
 
   const [apresentacaoDone, setApresentacaoDone] = useState<string[]>([]);
   const [qualificationDone, setQualificationDone] = useState<string[]>([]);

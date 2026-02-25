@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { chamadaId } = await req.json();
+    const { chamadaId, papel } = await req.json();
     if (!chamadaId) {
       return new Response(JSON.stringify({ error: "chamadaId is required" }), {
         status: 400,
@@ -57,29 +57,39 @@ serve(async (req) => {
     // Fetch the lead info
     const { data: lead } = await supabase
       .from("crm_leads")
-      .select("nome, coluna_id")
+      .select("nome, funil_id")
       .eq("id", chamada.lead_id)
       .single();
 
-    // Find the column's specific feedback coach via lead's coluna_id
-    const { data: coluna } = await supabase
-      .from("crm_colunas")
-      .select("robo_feedback_id")
-      .eq("id", lead?.coluna_id)
-      .single();
+    // Determine the role: use explicit papel param, or default to "sdr"
+    const resolvedPapel = papel || "sdr";
 
+    // Fetch feedback coach from the funnel based on papel
     let coachInstructions = "";
-    if (coluna?.robo_feedback_id) {
-      const { data: feedbackCoach } = await supabase
-        .from("robos_coach")
-        .select("instrucoes")
-        .eq("id", coluna.robo_feedback_id)
-        .eq("ativo", true)
+    if (lead?.funil_id) {
+      const feedbackColumn = resolvedPapel === "closer" ? "robo_feedback_closer_id" : "robo_feedback_sdr_id";
+      const { data: funilData } = await supabase
+        .from("crm_funis")
+        .select("robo_feedback_sdr_id, robo_feedback_closer_id")
+        .eq("id", lead.funil_id)
         .single();
-      coachInstructions = feedbackCoach?.instrucoes || "";
+
+      const feedbackCoachId = resolvedPapel === "closer"
+        ? funilData?.robo_feedback_closer_id
+        : funilData?.robo_feedback_sdr_id;
+
+      if (feedbackCoachId) {
+        const { data: feedbackCoach } = await supabase
+          .from("robos_coach")
+          .select("instrucoes")
+          .eq("id", feedbackCoachId)
+          .eq("ativo", true)
+          .single();
+        coachInstructions = feedbackCoach?.instrucoes || "";
+      }
     }
 
-    // Fallback: if no column-specific coach, try any active feedback_sdr coach
+    // Fallback: if no funnel-specific coach, try any active feedback_sdr coach
     if (!coachInstructions) {
       const { data: fallbackCoach } = await supabase
         .from("robos_coach")
@@ -91,27 +101,24 @@ serve(async (req) => {
       coachInstructions = fallbackCoach?.instrucoes || "";
     }
 
-    
-
     let systemPrompt: string;
 
     if (coachInstructions) {
-      // Use the coach's full instructions as-is, only append context metadata
       systemPrompt = `${coachInstructions}
 
 CONTEXTO DA LIGAÇÃO:
 - Lead: ${lead?.nome || "Desconhecido"}
 - Canal: ${chamada.canal}
+- Papel: ${resolvedPapel.toUpperCase()}
 - Duração: ${chamada.duracao_segundos ? `${Math.floor(chamada.duracao_segundos / 60)}m${chamada.duracao_segundos % 60}s` : "N/A"}
 
 IMPORTANTE: Siga EXATAMENTE o formato obrigatório descrito nas instruções acima. Não omita nenhuma seção.`;
     } else {
-      // Fallback generic prompt when no coach is configured
-      systemPrompt = `Você é um avaliador de atendimentos de SDR (Sales Development Representative).
+      systemPrompt = `Você é um avaliador de atendimentos de ${resolvedPapel === "closer" ? "Closer" : "SDR (Sales Development Representative)"}.
 
 Analise a transcrição da ligação abaixo e forneça:
 
-1. Uma NOTA de 0 a 10 para o atendimento do SDR
+1. Uma NOTA de 0 a 10 para o atendimento
 2. Um FEEDBACK detalhado e construtivo
 
 REGRAS:
@@ -121,6 +128,7 @@ REGRAS:
 CONTEXTO:
 - Lead: ${lead?.nome || "Desconhecido"}
 - Canal: ${chamada.canal}
+- Papel: ${resolvedPapel.toUpperCase()}
 - Duração: ${chamada.duracao_segundos ? `${Math.floor(chamada.duracao_segundos / 60)}m${chamada.duracao_segundos % 60}s` : "N/A"}`;
     }
 
@@ -165,17 +173,16 @@ CONTEXTO:
     const feedback = result.choices?.[0]?.message?.content || "";
     const usage = result.usage || {};
 
-    // Estimate AI cost based on tokens (Gemini 2.5 Flash pricing ~$0.15/1M input, $0.60/1M output)
+    // Estimate AI cost
     const inputTokens = usage.prompt_tokens || 0;
     const outputTokens = usage.completion_tokens || 0;
     const aiCost = (inputTokens * 0.00000015) + (outputTokens * 0.0000006);
 
-    // Extract nota - support both "NOTA: X" (0-10) and "Nota Final: XX/100" (0-100) formats
+    // Extract nota
     const notaMatch100 = feedback.match(/Nota\s*Final:\s*(\d+)\s*\/\s*100/i);
     const notaMatch10 = feedback.match(/NOTA:\s*(\d+)/i);
     let nota: number | null = null;
     if (notaMatch100) {
-      // Convert 0-100 scale to 0-10
       nota = Math.round(parseInt(notaMatch100[1], 10) / 10);
     } else if (notaMatch10) {
       nota = parseInt(notaMatch10[1], 10);
@@ -193,7 +200,6 @@ CONTEXTO:
     custoDetalhado.ia_tokens_input = inputTokens;
     custoDetalhado.ia_tokens_output = outputTokens;
 
-    // Ensure cotacao_brl exists (fetch if missing)
     if (!custoDetalhado.cotacao_brl) {
       try {
         const fxRes = await fetch("https://open.er-api.com/v6/latest/USD");

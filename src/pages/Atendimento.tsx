@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Phone, User, MapPin, FileText, Loader2 } from "lucide-react";
 import type { RoboCoach } from "@/hooks/useRobosCoach";
 import type { LeadTelefone } from "@/hooks/useCrmOutbound";
+import type { ScriptSdr } from "@/hooks/useScriptsSdr";
 import logoEscritorio from "@/assets/logo-escritorio.webp";
 
 interface LeadData {
@@ -18,6 +19,7 @@ interface LeadData {
   resumo_caso: string | null;
   telefones: LeadTelefone[];
   coluna_id: string;
+  funil_id: string;
   dados_extras: Record<string, string> | null;
 }
 
@@ -27,9 +29,11 @@ export default function Atendimento() {
   const numero = searchParams.get("numero") || "";
   const tipo = searchParams.get("tipo") || "whatsapp";
   const funilId = searchParams.get("funilId") || "";
+  const papel = searchParams.get("papel") || "sdr";
 
   const [lead, setLead] = useState<LeadData | null>(null);
   const [coach, setCoach] = useState<RoboCoach | null>(null);
+  const [script, setScript] = useState<ScriptSdr | null>(null);
   const [loading, setLoading] = useState(true);
   const [authChecked, setAuthChecked] = useState(false);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -52,14 +56,11 @@ export default function Atendimento() {
 
   // Wait for auth session to be restored from localStorage
   useEffect(() => {
-    // Listen for auth state changes FIRST — this is the authoritative source
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
       setIsAuthenticated(!!session);
       setAuthChecked(true);
     });
 
-    // Then check for existing session; if found, use it immediately
-    // If not found, DON'T mark authChecked yet — wait for onAuthStateChange
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         setIsAuthenticated(true);
@@ -67,7 +68,6 @@ export default function Atendimento() {
       }
     });
 
-    // Fallback timeout: if after 3s neither callback fired, mark as checked
     const timeout = setTimeout(() => {
       setAuthChecked(true);
     }, 3000);
@@ -86,28 +86,53 @@ export default function Atendimento() {
         // Fetch lead
         const { data: leadData } = await supabase
           .from("crm_leads")
-          .select("id, nome, endereco, resumo_caso, telefones, coluna_id, dados_extras")
+          .select("id, nome, endereco, resumo_caso, telefones, coluna_id, funil_id, dados_extras")
           .eq("id", leadId)
           .single();
 
         if (!leadData) return;
         setLead(leadData as unknown as LeadData);
 
-        // Fetch column to get coach
-        const { data: colunaData } = await supabase
-          .from("crm_colunas")
-          .select("robo_coach_id, robo_coach_closer_id")
-          .eq("id", leadData.coluna_id)
-          .single();
-
-        const coachId = colunaData?.robo_coach_id || colunaData?.robo_coach_closer_id;
-        if (coachId) {
-          const { data: coachData } = await supabase
-            .from("robos_coach")
-            .select("*")
-            .eq("id", coachId)
+        // Fetch funnel to get coach and script based on papel
+        const resolvedFunilId = funilId || leadData.funil_id;
+        if (resolvedFunilId) {
+          const { data: funilData } = await supabase
+            .from("crm_funis")
+            .select("robo_coach_sdr_id, robo_coach_closer_id, script_sdr_id, script_closer_id")
+            .eq("id", resolvedFunilId)
             .single();
-          if (coachData) setCoach(coachData as unknown as RoboCoach);
+
+          if (funilData) {
+            // Get coach based on papel
+            const coachId = papel === "closer" ? funilData.robo_coach_closer_id : funilData.robo_coach_sdr_id;
+            if (coachId) {
+              const { data: coachData } = await supabase
+                .from("robos_coach")
+                .select("*")
+                .eq("id", coachId)
+                .single();
+              if (coachData) setCoach(coachData as unknown as RoboCoach);
+            }
+
+            // Get script based on papel
+            const scriptId = papel === "closer" ? funilData.script_closer_id : funilData.script_sdr_id;
+            if (scriptId) {
+              const { data: scriptData } = await supabase
+                .from("scripts_sdr")
+                .select("*")
+                .eq("id", scriptId)
+                .single();
+              if (scriptData) {
+                const s = scriptData as unknown as ScriptSdr;
+                setScript({
+                  ...s,
+                  apresentacao: Array.isArray(s.apresentacao) ? s.apresentacao : [],
+                  qualificacao: Array.isArray(s.qualificacao) ? s.qualificacao : [],
+                  show_rate: Array.isArray(s.show_rate) ? s.show_rate : [],
+                });
+              }
+            }
+          }
         }
       } catch (e) {
         console.error("[Atendimento] Error fetching data:", e);
@@ -116,17 +141,12 @@ export default function Atendimento() {
       }
     };
     fetchData();
-  }, [leadId, isAuthenticated]);
+  }, [leadId, isAuthenticated, funilId, papel]);
 
-  // Auto-stop call ONLY on actual page close/navigation (not protocol dialogs)
-  // We use 'pagehide' instead of 'beforeunload' because protocol handler dialogs
-  // (e.g. "Open WhatsApp?") can trigger 'beforeunload' on some browsers.
+  // Auto-stop call on page close
   useEffect(() => {
     if (!activeRecording) return;
-    const handlePageHide = (e: PageTransitionEvent) => {
-      // persisted === true means the page is just being put in bfcache (not destroyed)
-      // We still want to stop in that case too, but the key thing is pagehide
-      // does NOT fire for protocol handler dialogs.
+    const handlePageHide = () => {
       if (stopCallRef.current) {
         stopCallRef.current();
       }
@@ -143,7 +163,6 @@ export default function Atendimento() {
     return () => { document.title = "RadarDEC"; };
   }, [lead]);
 
-  // Auth guard: wait for check, then redirect if not authenticated
   if (!authChecked) {
     return (
       <div className="flex items-center justify-center h-screen bg-background">
@@ -174,7 +193,7 @@ export default function Atendimento() {
 
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
-      {/* Header — azul marinho escuro */}
+      {/* Header */}
       <header className="gradient-primary px-4 py-2 shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -190,6 +209,9 @@ export default function Atendimento() {
                 {lead.endereco}
               </div>
             )}
+            <Badge variant="outline" className="text-xs text-white/80 border-white/30">
+              {papel === "closer" ? "Closer" : "SDR"}
+            </Badge>
           </div>
           <div className="flex items-center gap-3">
             {activeRecording && (
@@ -232,7 +254,6 @@ export default function Atendimento() {
       <div className="flex-1 min-h-0 p-3 flex flex-col gap-2">
         {/* Top row: Transcription (left) + Call controls (right) */}
         <div className="shrink-0 flex gap-2 items-start">
-          {/* Transcription card — fills remaining space left of call controls */}
           {activeRecording && coach && (
             <div className="flex-1 min-w-0">
               <CoachingErrorBoundary>
@@ -245,6 +266,7 @@ export default function Atendimento() {
                   systemStream={audioStreams.systemStream}
                   topBarOnly
                   audioMonitor={audioMonitor}
+                  script={script}
                 />
               </CoachingErrorBoundary>
             </div>
@@ -283,6 +305,7 @@ export default function Atendimento() {
                   micStream={audioStreams.micStream}
                   systemStream={audioStreams.systemStream}
                   bottomOnly
+                  script={script}
               />
             </CoachingErrorBoundary>
           </div>
