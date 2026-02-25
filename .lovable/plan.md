@@ -1,27 +1,55 @@
 
-# Remover duplicacao do campo Nome no card do lead
+
+# Importacao transacional (tudo ou nada)
 
 ## Problema
-O componente `LeadDadosTab` exibe o campo "Nome" duas vezes:
-1. Um bloco hardcoded no topo (linhas 131-138 no modo edicao, linhas 163-175 no modo visualizacao)
-2. O campo `__nome__` que aparece dentro da secao "Dados Pessoais" via sistema de secoes
+Com a abordagem de lotes, se um lote falha apos outros terem sido inseridos, o usuario precisaria editar a planilha manualmente para remover os leads ja cadastrados antes de tentar novamente -- processo confuso e propenso a erro.
 
 ## Solucao
-Remover os blocos hardcoded de "Nome" e "Endereco" que ficam fora das secoes. O campo `__nome__` ja esta cadastrado no banco e atribuido a uma secao, entao ele sera renderizado automaticamente no lugar correto.
+Criar uma funcao no banco de dados que recebe todos os leads de uma vez e os insere dentro de uma unica transacao. Se qualquer erro ocorrer, nenhum lead e inserido (rollback automatico). Isso garante comportamento "tudo ou nada".
 
-### Alteracoes no arquivo `src/components/crm/LeadDadosTab.tsx`
+## Alteracoes
 
-1. **Modo edicao**: Remover o bloco fixo de "Nome" e "Endereco" (linhas 129-139). Os campos `__nome__` e `endereco` ja existem como campos dinamicos e serao renderizados dentro de suas secoes.
+### 1. Migracao: criar funcao `bulk_insert_leads` no banco
 
-2. **Modo visualizacao**: Remover o bloco fixo de "Nome sempre visivel" e "Endereco" (linhas 163-175). Esses campos aparecerao dentro da secao correspondente.
+Funcao RPC que:
+- Recebe um array JSON com todos os leads
+- Insere todos dentro da mesma transacao (comportamento padrao de funcoes PL/pgSQL)
+- Se qualquer insert falhar, toda a transacao e revertida automaticamente
+- Sem limite de 1000 linhas (o limite do PostgREST nao se aplica a chamadas RPC)
 
-3. **Ajustar `renderFieldView` e `renderFieldEdit`**: Para campos com key `__nome__`, ler/escrever de `lead.nome` em vez de `dadosExtras`. Mesma logica para `__endereco__` usando `lead.endereco`.
+```text
+Fluxo:
+App envia JSON[] --> RPC bulk_insert_leads --> BEGIN (implicito)
+  --> INSERT lead 1 OK
+  --> INSERT lead 2 OK
+  --> ...
+  --> INSERT lead N ERRO --> ROLLBACK automatico (nenhum lead inserido)
+  ou
+  --> INSERT lead N OK --> COMMIT (todos inseridos)
+```
 
-4. **Ajustar `hasValue`**: Para `__nome__`, verificar `lead.nome` em vez de `dadosExtras`.
+### 2. `src/hooks/useCrmOutbound.ts` - Usar RPC em vez de insert direto
 
-5. **Ajustar `startEditing`**: Ja popula `editValues.__nome__` corretamente, so precisa garantir que nao duplica.
+Modificar `useBulkCreateLeads` para:
+- Chamar `supabase.rpc('bulk_insert_leads', { leads: [...] })` em vez de `supabase.from('crm_leads').insert()`
+- Remover logica de batching (nao e mais necessaria)
+- Manter a interface publica do hook inalterada
 
-6. **Ajustar `handleSave`**: Extrair `__nome__` e `__endereco__` dos campos dinamicos para salvar nas colunas nativas, e remover do `dados_extras`.
+### 3. `src/components/crm/ImportMappingDialog.tsx` - Feedback adequado
 
-### Resultado
-O nome aparecera apenas uma vez, dentro da secao onde foi configurado (ex: "Dados Pessoais").
+- Manter feedback simples: "Importando..." durante o processo
+- Em caso de sucesso: "X leads importados com sucesso!"
+- Em caso de erro: "Nenhum lead foi importado. Corrija o problema e tente novamente." -- sem preocupacao com estado parcial
+
+## Vantagens
+- Zero risco de importacao parcial
+- Usuario pode sempre re-importar a mesma planilha sem medo de duplicatas
+- Mais simples de entender e manter
+- Suporta milhares de linhas (sem limite do PostgREST)
+
+## Arquivos modificados
+- Nova migracao SQL (funcao `bulk_insert_leads`)
+- `src/hooks/useCrmOutbound.ts`
+- `src/components/crm/ImportMappingDialog.tsx` (ajustes menores no feedback)
+
