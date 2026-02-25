@@ -943,6 +943,36 @@ export type Database = {
         }
         Relationships: []
       }
+      crm_lead_campos: {
+        Row: {
+          created_at: string
+          id: string
+          key: string
+          nome: string
+          obrigatorio: boolean
+          ordem: number
+          tipo: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          key: string
+          nome: string
+          obrigatorio?: boolean
+          ordem?: number
+          tipo?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          key?: string
+          nome?: string
+          obrigatorio?: boolean
+          ordem?: number
+          tipo?: string
+        }
+        Relationships: []
+      }
       crm_leads: {
         Row: {
           coluna_id: string
