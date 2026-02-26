@@ -4,10 +4,11 @@ import { useCrmLeadSecoes } from "@/hooks/useCrmLeadSecoes";
 import { useUpdateLead, type CrmLead } from "@/hooks/useCrmOutbound";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pencil, Save, X } from "lucide-react";
+import { Pencil, Save, X, Info } from "lucide-react";
 import { toast } from "sonner";
 import { formatCpf, normalizeCpf, isCpfKey } from "@/utils/cpfFormat";
 import { formatDateValue } from "@/utils/dateFormat";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface LeadDadosTabProps {
   lead: CrmLead;
@@ -101,13 +102,35 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
     });
   };
 
+  const FieldLabel = ({ campo }: { campo: CrmLeadCampo }) => {
+    const desc = (campo as any).descricao;
+    if (desc && desc.trim()) {
+      return (
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <label className="text-xs font-medium text-muted-foreground inline-flex items-center gap-1 cursor-help">
+                {campo.nome}
+                <Info className="h-3 w-3 text-muted-foreground/60" />
+              </label>
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs">
+              <p className="text-xs">{desc}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      );
+    }
+    return <label className="text-xs font-medium text-muted-foreground">{campo.nome}</label>;
+  };
+
   const renderFieldView = (campo: CrmLeadCampo) => {
     let val = nativeKeys.includes(campo.key) ? getNativeValue(campo.key) : String(dadosExtras[campo.key]);
     if (isCpfKey(campo.key)) val = formatCpf(val);
     if (campo.tipo === "data") val = formatDateValue(val);
     return (
       <div key={campo.id}>
-        <label className="text-xs font-medium text-muted-foreground">{campo.nome}</label>
+        <FieldLabel campo={campo} />
         <p className="text-sm">{val}</p>
       </div>
     );
@@ -115,7 +138,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
 
   const renderFieldEdit = (campo: CrmLeadCampo) => (
     <div key={campo.id}>
-      <label className="text-xs font-medium text-muted-foreground">{campo.nome}</label>
+      <FieldLabel campo={campo} />
       <Input
         type={campo.tipo === "numero" ? "number" : "text"}
         value={editValues[campo.key] || ""}

@@ -10,6 +10,7 @@ export interface CrmLeadCampo {
   ordem: number;
   obrigatorio: boolean;
   secao_id: string | null;
+  descricao: string | null;
   created_at: string;
 }
 

@@ -12,7 +12,11 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Trash2, GripVertical, FolderOpen, Pencil, Check, X } from "lucide-react";
+import { Plus, Trash2, GripVertical, FolderOpen, Pencil, Check, X, Info } from "lucide-react";
+import { Textarea } from "@/components/ui/textarea";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, type DragEndEvent, DragOverlay, type DragStartEvent } from "@dnd-kit/core";
 import { toast } from "sonner";
 
@@ -21,7 +25,8 @@ interface DraggableCampoProps {
   isDragging?: boolean;
 }
 
-function DraggableCampo({ campo, isDragging }: DraggableCampoProps) {
+function DraggableCampo({ campo, isDragging, onEditDescricao }: DraggableCampoProps & { onEditDescricao?: (campo: CrmLeadCampo & { secao_id?: string | null }) => void }) {
+  const desc = (campo as any).descricao;
   return (
     <div
       className={`flex items-center gap-2 px-3 py-2 rounded-md border text-sm transition-colors ${
@@ -30,7 +35,28 @@ function DraggableCampo({ campo, isDragging }: DraggableCampoProps) {
     >
       <GripVertical className="h-3.5 w-3.5 text-muted-foreground cursor-grab shrink-0" />
       <span>{campo.nome}</span>
+      {desc && desc.trim() ? (
+        <TooltipProvider delayDuration={200}>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Info className="h-3 w-3 text-primary/60 shrink-0" />
+            </TooltipTrigger>
+            <TooltipContent side="top" className="max-w-xs">
+              <p className="text-xs">{desc}</p>
+            </TooltipContent>
+          </Tooltip>
+        </TooltipProvider>
+      ) : null}
       <Badge variant="secondary" className="text-[10px] ml-auto">{campo.key}</Badge>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 shrink-0"
+        onClick={(e) => { e.stopPropagation(); onEditDescricao?.(campo); }}
+        title="Editar descrição"
+      >
+        <Info className="h-3 w-3" />
+      </Button>
     </div>
   );
 }
@@ -47,6 +73,9 @@ export function LeadSecoesConfig() {
   const [editingSecao, setEditingSecao] = useState<string | null>(null);
   const [editingSecaoName, setEditingSecaoName] = useState("");
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
+  const [editingDescCampo, setEditingDescCampo] = useState<(CrmLeadCampo & { secao_id?: string | null }) | null>(null);
+  const [editingDescText, setEditingDescText] = useState("");
+  const queryClient = useQueryClient();
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 5 } })
@@ -118,6 +147,28 @@ export function LeadSecoesConfig() {
     updateCampoSecao.mutate({ campoId, secaoId: finalSecaoId });
   };
 
+  const handleEditDescricao = (campo: CrmLeadCampo & { secao_id?: string | null }) => {
+    setEditingDescCampo(campo);
+    setEditingDescText((campo as any).descricao || "");
+  };
+
+  const handleSaveDescricao = async () => {
+    if (!editingDescCampo) return;
+    const { error } = await supabase
+      .from("crm_lead_campos" as any)
+      .update({ descricao: editingDescText.trim() } as any)
+      .eq("id", editingDescCampo.id);
+    if (error) {
+      const { toast } = await import("sonner");
+      toast.error(error.message);
+    } else {
+      queryClient.invalidateQueries({ queryKey: ["crm_lead_campos"] });
+      const { toast } = await import("sonner");
+      toast.success("Descrição atualizada!");
+    }
+    setEditingDescCampo(null);
+  };
+
   const activeCampo = activeDragId
     ? camposExtended.find((c) => c.id === activeDragId)
     : null;
@@ -131,9 +182,37 @@ export function LeadSecoesConfig() {
       <div>
         <h2 className="text-lg font-semibold mb-1">Seções dos Dados do Lead</h2>
         <p className="text-sm text-muted-foreground">
-          Organize os campos em seções arrastando-os. Campos sem seção aparecerão no topo.
+          Organize os campos em seções arrastando-os. Clique no ícone <Info className="h-3 w-3 inline" /> para adicionar uma descrição explicativa ao campo.
         </p>
       </div>
+
+      {/* Editar descrição do campo */}
+      {editingDescCampo && (
+        <Card className="border-primary/30 bg-primary/5">
+          <CardContent className="p-4 space-y-3">
+            <div className="flex items-center gap-2">
+              <Info className="h-4 w-4 text-primary" />
+              <span className="text-sm font-semibold">Descrição do campo: {editingDescCampo.nome}</span>
+            </div>
+            <Textarea
+              value={editingDescText}
+              onChange={(e) => setEditingDescText(e.target.value)}
+              placeholder="Explique o que este campo representa (ex: CPF do titular da conta bancária)"
+              rows={2}
+              className="text-sm"
+              autoFocus
+            />
+            <div className="flex gap-2 justify-end">
+              <Button variant="outline" size="sm" onClick={() => setEditingDescCampo(null)}>
+                <X className="h-3.5 w-3.5 mr-1" />Cancelar
+              </Button>
+              <Button size="sm" onClick={handleSaveDescricao}>
+                <Check className="h-3.5 w-3.5 mr-1" />Salvar
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Criar nova seção */}
       <div className="flex items-center gap-2">
@@ -161,6 +240,7 @@ export function LeadSecoesConfig() {
           title="Sem seção"
           icon={<FolderOpen className="h-4 w-4 text-muted-foreground" />}
           campos={camposSemSecao}
+          onEditDescricao={handleEditDescricao}
         />
 
         {/* Seções */}
@@ -177,6 +257,7 @@ export function LeadSecoesConfig() {
             onConfirmEdit={() => handleRenameSecao(secao.id)}
             onCancelEdit={() => setEditingSecao(null)}
             onDelete={() => handleDeleteSecao(secao.id)}
+            onEditDescricao={handleEditDescricao}
           />
         ))}
 
@@ -204,6 +285,7 @@ function DroppableSection({
   onConfirmEdit,
   onCancelEdit,
   onDelete,
+  onEditDescricao,
 }: {
   id: string;
   title: string;
@@ -216,6 +298,7 @@ function DroppableSection({
   onConfirmEdit?: () => void;
   onCancelEdit?: () => void;
   onDelete?: () => void;
+  onEditDescricao?: (campo: CrmLeadCampo & { secao_id?: string | null }) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
@@ -266,7 +349,7 @@ function DroppableSection({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {campos.map((campo) => (
-              <DraggableCampoWrapper key={campo.id} campo={campo} />
+              <DraggableCampoWrapper key={campo.id} campo={campo} onEditDescricao={onEditDescricao} />
             ))}
           </div>
         )}
@@ -275,12 +358,12 @@ function DroppableSection({
   );
 }
 
-function DraggableCampoWrapper({ campo }: { campo: CrmLeadCampo & { secao_id?: string | null } }) {
+function DraggableCampoWrapper({ campo, onEditDescricao }: { campo: CrmLeadCampo & { secao_id?: string | null }; onEditDescricao?: (campo: CrmLeadCampo & { secao_id?: string | null }) => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: campo.id });
 
   return (
     <div ref={setNodeRef} {...attributes} {...listeners}>
-      <DraggableCampo campo={campo} isDragging={isDragging} />
+      <DraggableCampo campo={campo} isDragging={isDragging} onEditDescricao={onEditDescricao} />
     </div>
   );
 }
