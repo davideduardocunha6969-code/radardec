@@ -1010,6 +1010,7 @@ export type Database = {
       crm_lead_campos: {
         Row: {
           created_at: string
+          descricao: string | null
           id: string
           key: string
           nome: string
@@ -1020,6 +1021,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          descricao?: string | null
           id?: string
           key: string
           nome: string
@@ -1030,6 +1032,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          descricao?: string | null
           id?: string
           key?: string
           nome?: string
