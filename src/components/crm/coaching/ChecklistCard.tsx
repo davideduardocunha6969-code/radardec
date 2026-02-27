@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { Check, CheckCircle2, Circle, Trash2, Database } from "lucide-react";
 import type { ChecklistItem } from "./coachingData";
 import type { LucideIcon } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
 
 interface ChecklistCardProps {
   title: string;
