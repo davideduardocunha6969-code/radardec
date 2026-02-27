@@ -3,6 +3,8 @@ export interface ChecklistItem {
   label: string;
   description?: string;
   depth?: number;
+  campo_lead_key?: string;
+  tipo_campo?: string;
 }
 
 export interface Objection {

@@ -1,7 +1,9 @@
 import { forwardRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, CheckCircle2, Circle, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Check, CheckCircle2, Circle, Trash2, Database } from "lucide-react";
 import type { ChecklistItem } from "./coachingData";
+import type { LucideIcon } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
 interface ChecklistCardProps {
