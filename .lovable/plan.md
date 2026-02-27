@@ -1,26 +1,33 @@
 
+# Tres Paineis de Atendimento — Status
 
-# Mover chamada de SDR para Closer
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-## Problema
-A chamada com ID `cefd1463-a199-43b9-b29e-e8e9e910aac8` (25/02/26 17:26, WhatsApp, 21988801469, 18m46s, nota 8/10, R$9.61) esta registrada como `papel = 'sdr'` mas foi feita por um Closer.
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-## Correcao
+## Fase 2 — Painel 3 (Estimativa de Valores) ⏳ AGUARDANDO
+- Motor de cálculo v5.2 (27 fases) — aguardando entrega do usuário
+- `calcular_periodo_modulado()` — aguardando lógica completa
+- `estimarImpactoCampo()` — aguardando motor
+- UI do accordion hierárquico com tabela
 
-Executar um UPDATE simples para alterar o campo `papel` de `'sdr'` para `'closer'`:
+## Fase 3 — Painel 1 (Extrator de Dados) ⏳ AGUARDANDO
+- Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- UI com lista de campos extraídos + confiança
+- Integração com transcrição em tempo real
 
-```sql
-UPDATE crm_chamadas 
-SET papel = 'closer' 
-WHERE id = 'cefd1463-a199-43b9-b29e-e8e9e910aac8';
-```
+## Fase 4 — Painel 2 (Lacunas) ⏳ AGUARDANDO
+- Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- Ordenação por impacto via `estimarImpactoCampo()` (não pela IA)
+- UI com lista priorizada
 
-## Resultado
-
-- O registro desaparecera da aba "Contatos SDR"
-- O registro aparecera na aba "Atendimento Closer" (na secao de historico de contatos que acabamos de criar)
-- Nenhuma outra alteracao necessaria
-
-## Arquivos modificados
-
-Nenhum arquivo de codigo sera alterado. Apenas um UPDATE de dados no banco.
+## Fase 5 — Integração Final ⏳ AGUARDANDO
+- Layout na página de Atendimento com os 3 painéis
+- Testes de sincronização
