@@ -22,6 +22,9 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, Plus, Trash2, Phone, Upload, Loader2, GripVertical, User, Pencil, CalendarDays, Sparkles, ChevronDown, Settings, MoveRight } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { GapsPanel } from "@/components/crm/lacunas/GapsPanel";
+import { DataExtractorPanel } from "@/components/crm/extrator/DataExtractorPanel";
+import { ValuesEstimationPanel } from "@/components/crm/estimativa/ValuesEstimationPanel";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { toast } from "sonner";
@@ -662,6 +665,13 @@ export default function CrmFunilKanban() {
                       ))}
                     </div>
 
+
+                    {/* Painéis de IA: Lacunas, Extrator, Estimativa */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                      <GapsPanel leadId={detailLead.id} />
+                      <DataExtractorPanel leadId={detailLead.id} />
+                      <ValuesEstimationPanel leadId={detailLead.id} />
+                    </div>
 
                     <Separator className="my-6" />
                     <LeadContatosTab leadId={detailLead.id} papel="closer" />
