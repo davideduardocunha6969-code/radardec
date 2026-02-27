@@ -6,7 +6,11 @@ import { VoipDialer } from "@/components/crm/VoipDialer";
 import { RealtimeCoachingPanel, type AudioMonitorInfo } from "@/components/crm/RealtimeCoachingPanel";
 import { CoachingErrorBoundary } from "@/components/crm/coaching/CoachingErrorBoundary";
 import { Badge } from "@/components/ui/badge";
-import { Phone, User, MapPin, FileText, Loader2 } from "lucide-react";
+import { Phone, User, MapPin, FileText, Loader2, FileSearch, HelpCircle, Calculator } from "lucide-react";
+import { GapsPanel } from "@/components/crm/lacunas/GapsPanel";
+import { DataExtractorPanel } from "@/components/crm/extrator/DataExtractorPanel";
+import { ValuesEstimationPanel } from "@/components/crm/estimativa/ValuesEstimationPanel";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import type { RoboCoach } from "@/hooks/useRobosCoach";
 import type { LeadTelefone } from "@/hooks/useCrmOutbound";
 import type { ScriptSdr } from "@/hooks/useScriptsSdr";
@@ -42,6 +46,7 @@ export default function Atendimento() {
 
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [audioMonitor, setAudioMonitor] = useState<AudioMonitorInfo | undefined>(undefined);
+  const [activePanel, setActivePanel] = useState<"extrator" | "lacunas" | "estimativa" | null>(null);
   const stopCallRef = useRef<(() => void) | null>(null);
 
   const handleRecordingStateChange = useCallback((isRecording: boolean, streams: AudioStreamsInfo) => {
@@ -313,6 +318,47 @@ export default function Atendimento() {
           </div>
         )}
       </div>
+
+      {/* Overlay sidebar — icon bar + sliding panel */}
+      <TooltipProvider delayDuration={200}>
+        {/* Icon bar */}
+        <div className="fixed right-0 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-1 bg-card border border-border rounded-l-lg shadow-lg p-1">
+          {([
+            { key: "extrator" as const, icon: FileSearch, label: "Extrator de Dados" },
+            { key: "lacunas" as const, icon: HelpCircle, label: "Lacunas" },
+            { key: "estimativa" as const, icon: Calculator, label: "Estimativa de Valores" },
+          ]).map(({ key, icon: Icon, label }) => (
+            <Tooltip key={key}>
+              <TooltipTrigger asChild>
+                <button
+                  onClick={() => setActivePanel(prev => prev === key ? null : key)}
+                  className={`p-2 rounded-md transition-colors ${
+                    activePanel === key
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                  }`}
+                >
+                  <Icon className="h-5 w-5" />
+                </button>
+              </TooltipTrigger>
+              <TooltipContent side="left">{label}</TooltipContent>
+            </Tooltip>
+          ))}
+        </div>
+
+        {/* Sliding overlay panel */}
+        <div
+          className={`fixed top-0 bottom-0 right-12 w-1/3 min-w-[320px] max-w-[480px] z-40 bg-background border-l border-border shadow-2xl transition-transform duration-300 ease-in-out overflow-y-auto ${
+            activePanel ? "translate-x-0" : "translate-x-full"
+          }`}
+        >
+          <div className="p-4">
+            {activePanel === "extrator" && lead && <DataExtractorPanel leadId={lead.id} />}
+            {activePanel === "lacunas" && lead && <GapsPanel leadId={lead.id} />}
+            {activePanel === "estimativa" && lead && <ValuesEstimationPanel leadId={lead.id} />}
+          </div>
+        </div>
+      </TooltipProvider>
     </div>
   );
 }

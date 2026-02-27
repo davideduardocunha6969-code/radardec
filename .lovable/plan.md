@@ -1,59 +1,33 @@
 
+# Tres Paineis de Atendimento — Status
 
-# Barra lateral com overlay na tela de Atendimento
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-## Resumo
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-Adicionar uma barra de icones fixa no lado direito da tela de Atendimento. Ao clicar em um icone, o painel correspondente desliza **por cima** do conteudo principal (overlay), ocupando ~1/3 da largura. O conteudo principal permanece 100% da largura -- nao encolhe.
+## Fase 2 — Painel 3 (Estimativa de Valores) ⏳ AGUARDANDO
+- Motor de cálculo v5.2 (27 fases) — aguardando entrega do usuário
+- `calcular_periodo_modulado()` — aguardando lógica completa
+- `estimarImpactoCampo()` — aguardando motor
+- UI do accordion hierárquico com tabela
 
-## Layout visual
+## Fase 3 — Painel 1 (Extrator de Dados) ⏳ AGUARDANDO
+- Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- UI com lista de campos extraídos + confiança
+- Integração com transcrição em tempo real
 
-```text
-Estado fechado:
-+------------------------------------------------------+------+
-|                                                      | [E]  |
-|              Conteudo principal (100%)                | [L]  |
-|                                                      | [V]  |
-+------------------------------------------------------+------+
+## Fase 4 — Painel 2 (Lacunas) ⏳ AGUARDANDO
+- Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- Ordenação por impacto via `estimarImpactoCampo()` (não pela IA)
+- UI com lista priorizada
 
-Estado aberto (painel sobrepoe o conteudo):
-+------------------------------------------------------+------+
-|                              |  Painel overlay  | [E]  |
-|              Conteudo        |  (1/3 da tela)   | [L]  |
-|              (continua 100%) |  position fixed  | [V]  |
-+------------------------------------------------------+------+
-```
-
-E = Extrator de Dados (FileSearch)
-L = Lacunas (HelpCircle)  
-V = Estimativa de Valores (Calculator)
-
-## Comportamento
-
-- Conteudo principal **nao muda de tamanho** -- o painel aparece por cima (overlay com sombra)
-- Clicar no mesmo icone fecha o painel
-- Clicar em outro icone troca o conteudo do painel
-- Apenas 1 painel aberto por vez
-- Animacao slide da direita para a esquerda com `transition-transform duration-300`
-
-## Implementacao tecnica
-
-### Arquivo alterado: `src/pages/Atendimento.tsx`
-
-1. **Imports**: Adicionar `FileSearch`, `HelpCircle`, `Calculator` do lucide-react e os 3 componentes de painel (`GapsPanel`, `DataExtractorPanel`, `ValuesEstimationPanel`)
-
-2. **Estado**: Adicionar `activePanel: "extrator" | "lacunas" | "estimativa" | null` (inicia `null`)
-
-3. **Layout**: Dentro do container principal (`h-screen flex flex-col`), envolver a area de conteudo em um `relative` container:
-   - O conteudo principal permanece com layout inalterado (100% da largura)
-   - Adicionar uma barra de icones com `position: fixed` no canto direito (z-50, ~48px de largura, centrada verticalmente)
-   - Adicionar o painel overlay com `position: fixed`, `right: 48px`, `top` abaixo do header, `bottom: 0`, `w-1/3`, com `translate-x` controlado pelo estado (translate-x-0 quando aberto, translate-x-full quando fechado)
-   - O painel overlay tera `bg-background shadow-2xl border-l` para se destacar do conteudo abaixo
-
-4. **Icones**: Cada icone tera tooltip e destaque visual (bg colorido) quando ativo. Ao clicar, alterna `activePanel`
-
-5. **Conteudo do painel**: Renderiza condicionalmente `DataExtractorPanel`, `GapsPanel` ou `ValuesEstimationPanel` passando `leadId={lead.id}`
-
-### Nenhum outro arquivo sera alterado
-
-Os componentes de painel ja existem e aceitam `leadId` como prop.
+## Fase 5 — Integração Final ⏳ AGUARDANDO
+- Layout na página de Atendimento com os 3 painéis
+- Testes de sincronização
