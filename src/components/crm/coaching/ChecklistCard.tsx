@@ -49,14 +49,21 @@ export const ChecklistCard = forwardRef<HTMLDivElement, ChecklistCardProps>(func
                   className={`flex items-start gap-1.5 rounded px-1.5 py-1 text-xs transition-colors ${
                     done ? "bg-primary/8 text-foreground" : "text-muted-foreground"
                   }`}
+                  style={{ paddingLeft: item.depth ? `${item.depth * 16 + 6}px` : undefined }}
                 >
-                  {done ? (
+                  {item.depth ? (
+                    done ? (
+                      <CheckCircle2 className="h-3 w-3 text-green-500 shrink-0 mt-0.5" />
+                    ) : (
+                      <Circle className="h-3 w-3 shrink-0 mt-0.5 opacity-30" />
+                    )
+                  ) : done ? (
                     <CheckCircle2 className="h-3.5 w-3.5 text-green-500 shrink-0 mt-0.5" />
                   ) : (
                     <Circle className="h-3.5 w-3.5 shrink-0 mt-0.5 opacity-40" />
                   )}
                   <div className="min-w-0 flex-1">
-                    <span className={`font-medium ${done ? "line-through opacity-70" : ""}`}>
+                    <span className={`font-medium ${done ? "line-through opacity-70" : ""} ${item.depth ? "text-[11px]" : ""}`}>
                       {item.label}
                     </span>
                     {item.description && !done && (
