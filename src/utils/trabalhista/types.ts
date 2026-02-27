@@ -1,5 +1,5 @@
 // ========================================
-// Tipos do Motor de Cálculo Trabalhista
+// Tipos do Motor de Cálculo Trabalhista v5.2
 // ========================================
 
 /** Metadados de um campo em dados_extras */
@@ -67,14 +67,14 @@ export interface RubricaResult {
   dataInicioCalculo?: string;
   dataVencimentoRef?: string;
   mesesCalculados?: number;
+  observacao?: string;
 }
 
 export interface CategoriaResult {
-  id: string;
   nome: string;
   rubricas: RubricaResult[];
-  subtotalNominal: number;
-  subtotalAtualizado: number;
+  totalNominal: number;
+  totalAtualizado: number;
 }
 
 export interface CalculoCompleto {
@@ -87,10 +87,24 @@ export interface CalculoCompleto {
   totalGeralAtualizado: number;
   pensaoVitalicia: number | null;
   totalComPensao: number | null;
+  erro?: string;
+  metadados?: {
+    dataCalculo: string;
+    mesesTrabalhados: number;
+    remuneracaoBaseCorreta: number;
+    baseComDSR: number;
+    divisorUtilizado: number;
+    regime: string;
+    modulacaoSTF: PeriodoModulado;
+    baseEstimativaEmpresa: number;
+    aviso: string;
+  };
 }
 
 export interface PeriodoModulado {
   meses_calculados: number;
-  data_inicio_calculo: Date;
-  data_vencimento_ref: Date;
+  data_inicio_calculo: string;
+  data_vencimento_ref: string;
+  status: 'NAO_CALCULADO' | 'CALCULADO' | 'PARCIAL';
+  motivo: string | null;
 }
