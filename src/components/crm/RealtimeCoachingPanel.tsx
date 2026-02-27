@@ -12,6 +12,7 @@ import { useActiveScriptSdr, type ScriptSdr } from "@/hooks/useScriptsSdr";
 import { Progress } from "@/components/ui/progress";
 import { useScribe, CommitStrategy, AudioFormat } from "@elevenlabs/react";
 import { ChecklistCard } from "./coaching/ChecklistCard";
+import { ScriptChecklistCard } from "./coaching/ScriptChecklistCard";
 import { ObjectionsCard } from "./coaching/ObjectionsCard";
 import { DynamicChecklistCard } from "./coaching/DynamicChecklistCard";
 import { RadarCard } from "./coaching/RadarCard";
