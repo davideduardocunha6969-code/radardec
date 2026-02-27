@@ -352,17 +352,15 @@ export default function Atendimento() {
         </div>
 
         {/* Sliding overlay panel */}
-        <div
-          className={`fixed top-0 bottom-0 right-14 w-1/3 min-w-[320px] max-w-[480px] z-40 bg-background border-l border-border shadow-2xl transition-transform duration-300 ease-in-out overflow-y-auto ${
-            activePanel ? "translate-x-0" : "translate-x-full"
-          }`}
-        >
-          <div className="p-4">
-            {activePanel === "extrator" && lead && <DataExtractorPanel leadId={lead.id} />}
-            {activePanel === "lacunas" && lead && <GapsPanel leadId={lead.id} />}
-            {activePanel === "estimativa" && lead && <ValuesEstimationPanel leadId={lead.id} />}
+        {activePanel && (
+          <div className="fixed top-0 bottom-0 right-14 w-1/3 min-w-[320px] max-w-[480px] z-40 bg-background border-l border-border shadow-2xl overflow-y-auto animate-in slide-in-from-right duration-300">
+            <div className="p-4">
+              {activePanel === "extrator" && lead && <DataExtractorPanel leadId={lead.id} />}
+              {activePanel === "lacunas" && lead && <GapsPanel leadId={lead.id} />}
+              {activePanel === "estimativa" && lead && <ValuesEstimationPanel leadId={lead.id} />}
+            </div>
           </div>
-        </div>
+        )}
       </TooltipProvider>
     </div>
   );
