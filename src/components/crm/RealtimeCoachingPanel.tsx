@@ -12,6 +12,7 @@ import { useActiveScriptSdr, type ScriptSdr } from "@/hooks/useScriptsSdr";
 import { Progress } from "@/components/ui/progress";
 import { useScribe, CommitStrategy, AudioFormat } from "@elevenlabs/react";
 import { ChecklistCard } from "./coaching/ChecklistCard";
+import { ScriptChecklistCard } from "./coaching/ScriptChecklistCard";
 import { ObjectionsCard } from "./coaching/ObjectionsCard";
 import { DynamicChecklistCard } from "./coaching/DynamicChecklistCard";
 import { RadarCard } from "./coaching/RadarCard";
@@ -850,15 +851,28 @@ export function RealtimeCoachingPanel({
             onDiscard={handleDiscard}
           />
         )}
-        <ChecklistCard
-          title="Qualificação"
-          icon={ClipboardList}
-          iconColor="text-blue-500"
-          items={qualificationItems.filter(i => !discardedIds.has(i.id))}
-          completedIds={qualificationDone}
-          onCheck={handleCheckQualificacao}
-          onDiscard={handleDiscard}
-        />
+        {activeScript?.qualificacao?.length ? (
+          <ScriptChecklistCard
+            title="Qualificação"
+            icon={ClipboardList}
+            iconColor="text-blue-500"
+            items={activeScript.qualificacao}
+            completedIds={qualificationDone}
+            discardedIds={discardedIds}
+            onCheck={handleCheckQualificacao}
+            onDiscard={handleDiscard}
+          />
+        ) : (
+          <ChecklistCard
+            title="Qualificação"
+            icon={ClipboardList}
+            iconColor="text-blue-500"
+            items={qualificationItems.filter(i => !discardedIds.has(i.id))}
+            completedIds={qualificationDone}
+            onCheck={handleCheckQualificacao}
+            onDiscard={handleDiscard}
+          />
+        )}
         {showRateItems.length > 0 && (
           <ChecklistCard
             title="Show Rate"
