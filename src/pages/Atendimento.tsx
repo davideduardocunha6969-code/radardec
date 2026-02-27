@@ -319,10 +319,15 @@ export default function Atendimento() {
         )}
       </div>
 
+      {/* Backdrop — click outside to close */}
+      {activePanel && (
+        <div className="fixed inset-0 z-30" onClick={() => setActivePanel(null)} />
+      )}
+
       {/* Overlay sidebar — icon bar + sliding panel */}
       <TooltipProvider delayDuration={200}>
         {/* Icon bar */}
-        <div className="fixed right-0 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-1 bg-card border border-border rounded-l-lg shadow-lg p-1">
+        <div className="fixed right-2 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2">
           {([
             { key: "extrator" as const, icon: FileSearch, label: "Extrator de Dados" },
             { key: "lacunas" as const, icon: HelpCircle, label: "Lacunas" },
@@ -332,10 +337,10 @@ export default function Atendimento() {
               <TooltipTrigger asChild>
                 <button
                   onClick={() => setActivePanel(prev => prev === key ? null : key)}
-                  className={`p-2 rounded-md transition-colors ${
+                  className={`p-2.5 rounded-full transition-all shadow-md border ${
                     activePanel === key
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                      ? "bg-primary text-primary-foreground border-primary shadow-lg scale-110"
+                      : "bg-card/80 backdrop-blur-sm text-foreground border-border/50 hover:bg-card hover:shadow-lg hover:scale-105"
                   }`}
                 >
                   <Icon className="h-5 w-5" />
@@ -348,7 +353,7 @@ export default function Atendimento() {
 
         {/* Sliding overlay panel */}
         <div
-          className={`fixed top-0 bottom-0 right-12 w-1/3 min-w-[320px] max-w-[480px] z-40 bg-background border-l border-border shadow-2xl transition-transform duration-300 ease-in-out overflow-y-auto ${
+          className={`fixed top-0 bottom-0 right-14 w-1/3 min-w-[320px] max-w-[480px] z-40 bg-background border-l border-border shadow-2xl transition-transform duration-300 ease-in-out overflow-y-auto ${
             activePanel ? "translate-x-0" : "translate-x-full"
           }`}
         >
