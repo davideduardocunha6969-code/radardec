@@ -1792,6 +1792,8 @@ export type Database = {
           id: string
           instrucoes: string
           instrucoes_detector: string
+          instrucoes_extrator: string
+          instrucoes_lacunas: string
           instrucoes_noshow: string
           instrucoes_radar: string | null
           instrucoes_radoveca: string
@@ -1810,6 +1812,8 @@ export type Database = {
           id?: string
           instrucoes: string
           instrucoes_detector?: string
+          instrucoes_extrator?: string
+          instrucoes_lacunas?: string
           instrucoes_noshow?: string
           instrucoes_radar?: string | null
           instrucoes_radoveca?: string
@@ -1828,6 +1832,8 @@ export type Database = {
           id?: string
           instrucoes?: string
           instrucoes_detector?: string
+          instrucoes_extrator?: string
+          instrucoes_lacunas?: string
           instrucoes_noshow?: string
           instrucoes_radar?: string | null
           instrucoes_radoveca?: string
