@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -22,84 +21,13 @@ import {
   FileText,
   Loader2,
   ClipboardList,
-  X,
-  GripVertical,
   Briefcase,
   HandshakeIcon,
 } from "lucide-react";
+import { ScriptItemEditor } from "./ScriptItemEditor";
 
-function generateId(label: string): string {
-  return label
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_|_$/g, "")
-    .slice(0, 30) || `item_${Date.now()}`;
-}
 
-interface ScriptItemEditorProps {
-  title: string;
-  icon: React.ReactNode;
-  items: ScriptItem[];
-  onChange: (items: ScriptItem[]) => void;
-}
 
-function ScriptItemEditor({ title, icon, items, onChange }: ScriptItemEditorProps) {
-  const addItem = () => {
-    onChange([...items, { id: `item_${Date.now()}`, label: "", description: "" }]);
-  };
-  const removeItem = (index: number) => onChange(items.filter((_, i) => i !== index));
-  const updateItem = (index: number, field: "label" | "description", value: string) => {
-    const updated = items.map((item, i) => {
-      if (i !== index) return item;
-      const newItem = { ...item, [field]: value };
-      if (field === "label") newItem.id = generateId(value);
-      return newItem;
-    });
-    onChange(updated);
-  };
-
-  return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <h4 className="text-sm font-medium flex items-center gap-1.5">{icon}{title}</h4>
-        <Button variant="ghost" size="sm" onClick={addItem} className="h-7 text-xs">
-          <Plus className="h-3 w-3 mr-1" />Item
-        </Button>
-      </div>
-      {items.length === 0 && (
-        <p className="text-xs text-muted-foreground text-center py-3 border border-dashed rounded-md">
-          Nenhum item. Clique em "+ Item" para adicionar.
-        </p>
-      )}
-      <div className="space-y-2">
-        {items.map((item, i) => (
-          <div key={i} className="flex gap-2 items-start bg-muted/30 rounded-md p-2">
-            <GripVertical className="h-4 w-4 text-muted-foreground shrink-0 mt-2 opacity-40" />
-            <div className="flex-1 space-y-1">
-              <Input
-                value={item.label}
-                onChange={(e) => updateItem(i, "label", e.target.value)}
-                placeholder="Título (ex: Apresentação do serviço)"
-                className="h-8 text-sm"
-              />
-              <Textarea
-                value={item.description}
-                onChange={(e) => updateItem(i, "description", e.target.value)}
-                placeholder="Fala/pergunta sugerida"
-                className="text-xs min-h-[60px] resize-y"
-              />
-            </div>
-            <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => removeItem(i)}>
-              <X className="h-3.5 w-3.5 text-destructive" />
-            </Button>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 export default function ScriptsCloserTab() {
   const { data: scripts, isLoading } = useScriptsCloser();
