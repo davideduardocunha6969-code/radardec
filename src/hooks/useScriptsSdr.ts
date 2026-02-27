@@ -7,6 +7,7 @@ export interface ScriptItem {
   id: string;
   label: string;
   description: string;
+  sub_items?: ScriptItem[];
 }
 
 export interface ScriptSdr {
