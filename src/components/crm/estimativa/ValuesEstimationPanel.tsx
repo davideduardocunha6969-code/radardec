@@ -258,7 +258,7 @@ function RubricaRow({ rubrica }: { rubrica: RubricaResult }) {
   if (isNotCalc) {
     return (
       <div className="flex items-start gap-1 py-1 text-xs text-muted-foreground">
-        <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5 text-amber-500" />
+        <AlertTriangle className="h-3 w-3 shrink-0 mt-0.5 text-destructive" />
         <div>
           <span>{rubrica.nome}</span>
           <span className="block text-[10px]">
