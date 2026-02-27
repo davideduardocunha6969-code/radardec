@@ -57,6 +57,19 @@ export const ScriptChecklistCard = forwardRef<HTMLDivElement, ScriptChecklistCar
       return { total, done };
     }, [completedIds, discardedIds, answers]);
 
+    // Check if item AND all visible sub-items are completed/discarded
+    const isFullyCompleted = useCallback((item: ScriptItem, idPrefix = ""): boolean => {
+      const fullId = idPrefix ? `${idPrefix}__${item.id}` : item.id;
+      const done = completedIds.includes(fullId) || !!answers[fullId];
+      if (!done) return false;
+      const answer = answers[fullId];
+      if (!item.sub_items?.length || !answer) return true;
+      const visibleSubs = filterSubItems(item.sub_items, answer);
+      return visibleSubs.every(sub =>
+        discardedIds.has(`${fullId}__${sub.id}`) || isFullyCompleted(sub, fullId)
+      );
+    }, [completedIds, answers, discardedIds]);
+
     const { total, done: doneCount } = countItems(items);
 
     return (
@@ -77,10 +90,10 @@ export const ScriptChecklistCard = forwardRef<HTMLDivElement, ScriptChecklistCar
             {items
               .filter(item => !discardedIds.has(item.id))
               .sort((a, b) => {
-                const aDone = completedIds.includes(a.id) || !!answers[a.id];
-                const bDone = completedIds.includes(b.id) || !!answers[b.id];
-                if (aDone === bDone) return 0;
-                return aDone ? 1 : -1;
+                const aFull = isFullyCompleted(a);
+                const bFull = isFullyCompleted(b);
+                if (aFull === bFull) return 0;
+                return aFull ? 1 : -1;
               })
               .map(item => (
                 <ScriptItemRow
