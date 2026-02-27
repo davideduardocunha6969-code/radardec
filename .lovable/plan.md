@@ -1,42 +1,33 @@
 
-# Ajustes nos Paineis Laterais do Atendimento
+# Tres Paineis de Atendimento — Status
 
-## 4 Correções
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-### 1. Fechar painel ao clicar fora
-Adicionar um backdrop invisivel (overlay transparente) atras do painel quando aberto. Ao clicar nele, `setActivePanel(null)`. Isso fecha o painel ao clicar em qualquer area fora dele e fora da barra de icones.
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-### 2. Remover cards do CrmFunilKanban
-No arquivo `src/pages/CrmFunilKanban.tsx`, remover:
-- Imports de `GapsPanel`, `DataExtractorPanel`, `ValuesEstimationPanel` (linhas 25-27)
-- O bloco de grid com os 3 paineis (linhas 669-674)
+## Fase 2 — Painel 3 (Estimativa de Valores) ⏳ AGUARDANDO
+- Motor de cálculo v5.2 (27 fases) — aguardando entrega do usuário
+- `calcular_periodo_modulado()` — aguardando lógica completa
+- `estimarImpactoCampo()` — aguardando motor
+- UI do accordion hierárquico com tabela
 
-### 3. Remover faixa branca da barra de icones
-A barra de icones atual tem `bg-card border border-border rounded-l-lg shadow-lg p-1` — isso cria o fundo branco visivel na imagem. Trocar para um estilo transparente/minimalista: remover `bg-card`, `border`, `shadow-lg`. Os icones ficarao flutuando diretamente sobre o conteudo, sem caixa branca.
+## Fase 3 — Painel 1 (Extrator de Dados) ⏳ AGUARDANDO
+- Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- UI com lista de campos extraídos + confiança
+- Integração com transcrição em tempo real
 
-### 4. Melhorar visual dos icones
-Os icones estao com `text-muted-foreground` (cinza claro) que fica quase invisivel. Trocar para:
-- Estado inativo: icones com fundo semi-transparente escuro (`bg-card/80 backdrop-blur-sm shadow-md border border-border/50`) e cor `text-foreground`
-- Estado ativo: manter `bg-primary text-primary-foreground`
-- Aumentar tamanho dos icones de `h-5 w-5` para `h-6 w-6`
-- Adicionar `rounded-full` nos botoes para visual mais limpo
+## Fase 4 — Painel 2 (Lacunas) ⏳ AGUARDANDO
+- Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- Ordenação por impacto via `estimarImpactoCampo()` (não pela IA)
+- UI com lista priorizada
 
-## Arquivos alterados
-
-1. `src/pages/Atendimento.tsx` — backdrop clicavel, barra de icones sem fundo, icones melhorados
-2. `src/pages/CrmFunilKanban.tsx` — remover imports e grid dos 3 paineis
-
-## Detalhes tecnicos
-
-### Atendimento.tsx — Overlay sidebar reescrito
-
-```text
-Estrutura:
-1. Backdrop (quando activePanel != null): div fixed inset-0 z-30, onClick fecha
-2. Barra de icones: fixed right-2 z-50, sem bg-card, botoes individuais com bg-card/80 rounded-full shadow
-3. Painel sliding: z-40, right-14 (para nao ficar atras dos icones)
-```
-
-### CrmFunilKanban.tsx — Remoção simples
-
-Remover as 3 linhas de import e o bloco de 6 linhas do grid com os paineis.
+## Fase 5 — Integração Final ⏳ AGUARDANDO
+- Layout na página de Atendimento com os 3 painéis
+- Testes de sincronização
