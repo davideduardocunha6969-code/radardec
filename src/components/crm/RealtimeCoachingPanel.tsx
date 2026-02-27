@@ -188,11 +188,6 @@ export function RealtimeCoachingPanel({
             supabase.functions.invoke("script-checker", {
               body: {
                 transcript,
-                scriptItems: {
-                  qualificacao: qualificationItems,
-                  apresentacao: apresentacaoItems,
-                  show_rate: showRateItems,
-                },
                 coachingItems: coachingItemsForDetector,
                 detectorPrompt: coach.instrucoes_detector || undefined,
               },
@@ -232,11 +227,6 @@ export function RealtimeCoachingPanel({
             supabase.functions.invoke("script-checker", {
               body: {
                 transcript,
-                scriptItems: {
-                  qualificacao: qualificationItems,
-                  apresentacao: apresentacaoItems,
-                  show_rate: showRateItems,
-                },
                 coachingItems: coachingItemsForDetector,
                 detectorPrompt: coach.instrucoes_detector || undefined,
               },
@@ -265,29 +255,14 @@ export function RealtimeCoachingPanel({
     [coach.instrucoes, coach.instrucoes_detector, coach.instrucoes_radar, leadNome, leadContext, qualificationItems, apresentacaoItems, showRateItems, isCloser]
   );
 
-  // Helper: process detector (script-checker) result
-  const processDetectorResult = useCallback((scriptResult: any) => {
-    if (scriptResult.error) {
-      console.error("[Coaching] script-checker error:", scriptResult.error);
-      return;
+  // Helper: process detector (script-checker) result — only coaching items (RECA, RALOCA, objections)
+  // Script items (apresentação, qualificação, show rate) are now managed manually by the user
+  const processDetectorResult = useCallback((_scriptResult: any) => {
+    // Detector no longer handles script items — coaching item detection (DITO)
+    // is handled by coaching-realtime via processCoachResult
+    if (_scriptResult.error) {
+      console.error("[Coaching] script-checker error:", _scriptResult.error);
     }
-    const analysis = scriptResult.data?.analysis;
-    if (!analysis) return;
-    setApresentacaoDone(prev => {
-      const merged = new Set(prev);
-      for (const id of (analysis.apresentacao_done || [])) merged.add(id);
-      return Array.from(merged);
-    });
-    setQualificationDone(prev => {
-      const merged = new Set(prev);
-      for (const id of (analysis.qualification_done || [])) merged.add(id);
-      return Array.from(merged);
-    });
-    setShowRateDone(prev => {
-      const merged = new Set(prev);
-      for (const id of (analysis.show_rate_done || [])) merged.add(id);
-      return Array.from(merged);
-    });
   }, []);
 
   // Helper: process coaching-realtime result

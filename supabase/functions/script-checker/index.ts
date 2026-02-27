@@ -30,9 +30,6 @@ serve(async (req) => {
       console.log("[script-checker] Transcript muito curto, retornando arrays vazios");
       return new Response(JSON.stringify({
         analysis: {
-          apresentacao_done: [],
-          qualification_done: [],
-          show_rate_done: [],
           reca_done: [],
           raloca_done: [],
           objections_addressed: [],
@@ -50,11 +47,6 @@ serve(async (req) => {
       });
     }
 
-    // Script items (from scripts_sdr)
-    const apresentacao: CheckableItem[] = scriptItems?.apresentacao || [];
-    const qualificacao: CheckableItem[] = scriptItems?.qualificacao || [];
-    const showRate: CheckableItem[] = scriptItems?.show_rate || [];
-
     // Coaching dynamic items (from coaching cards currently on screen)
     const recaItems: CheckableItem[] = coachingItems?.reca || [];
     const ralocaItems: CheckableItem[] = coachingItems?.raloca || [];
@@ -63,28 +55,22 @@ serve(async (req) => {
     const formatList = (items: CheckableItem[]) =>
       items.map((i) => `- ${i.id}: "${i.label}"${i.description ? ` — ${i.description}` : ""}`).join("\n") || "Nenhum item.";
 
-    // Log full items for debugging
-    console.log("[script-checker] Qualificação items:", JSON.stringify(qualificacao.slice(0, 3)));
     const formatIds = (items: CheckableItem[]) =>
       items.map((i) => i.id).join(", ") || "nenhum";
 
     console.log("[script-checker] IDs recebidos:", {
-      apresentacao: formatIds(apresentacao),
-      qualificacao: formatIds(qualificacao),
-      showRate: formatIds(showRate),
       reca: formatIds(recaItems),
       raloca: formatIds(ralocaItems),
       objections: formatIds(objectionItems),
     });
 
     // Use stored detector prompt if available, otherwise use default
-    const defaultPrompt = `Você é um detector de progresso de ligação SDR. Sua ÚNICA tarefa é analisar a transcrição e identificar quais itens JÁ FORAM DITOS ou COBERTOS pelo SDR.
+    const defaultPrompt = `Você é um detector de progresso de ligação. Sua ÚNICA tarefa é analisar a transcrição e identificar quais itens de coaching JÁ FORAM DITOS ou COBERTOS.
 
 REGRAS GERAIS:
-- Seja MUITO FLEXÍVEL na detecção. Se o SDR cobriu o MESMO TEMA ou INTENÇÃO de um item, mesmo com palavras completamente diferentes, marque como feito.
+- Seja MUITO FLEXÍVEL na detecção. Se o vendedor cobriu o MESMO TEMA ou INTENÇÃO de um item, mesmo com palavras completamente diferentes, marque como feito.
 - Erre para o lado de MARCAR MAIS itens como feitos. Na dúvida, marque.
-- Analise APENAS as falas marcadas como [SDR] para itens de script (apresentação, qualificação, show rate).
-- Para itens de coaching (RECA, RALOCA, objeções), verifique se o SDR JÁ UTILIZOU a sugestão dada ou abordou o tema.
+- Para itens de coaching (RECA, RALOCA, objeções), verifique se o vendedor JÁ UTILIZOU a sugestão dada ou abordou o tema.
 - Retorne TODOS os IDs que foram cobertos, mesmo que parcialmente.
 - Se um item foi coberto com sinônimos, paráfrases ou intenção similar, MARQUE COMO FEITO.
 - NUNCA retorne IDs que não existem na lista fornecida.`;
@@ -92,15 +78,6 @@ REGRAS GERAIS:
     const systemPrompt = `${detectorPrompt || defaultPrompt}
 
 --- ITENS PARA VERIFICAR ---
-
-APRESENTAÇÃO (IDs válidos: ${formatIds(apresentacao)}):
-${formatList(apresentacao)}
-
-QUALIFICAÇÃO (IDs válidos: ${formatIds(qualificacao)}):
-${formatList(qualificacao)}
-
-SHOW RATE (IDs válidos: ${formatIds(showRate)}):
-${formatList(showRate)}
 
 RECA — Gatilhos Emocionais (IDs válidos: ${formatIds(recaItems)}):
 ${formatList(recaItems)}
@@ -116,42 +93,27 @@ ${formatList(objectionItems)}`;
         type: "function",
         function: {
           name: "check_progress",
-          description: "Return which items have been covered by the SDR in the transcript",
+          description: "Return which coaching items have been covered in the transcript",
           parameters: {
             type: "object",
             properties: {
-              apresentacao_done: {
-                type: "array",
-                items: { type: "string" },
-                description: `IDs of presentation items covered. Valid: ${formatIds(apresentacao)}`,
-              },
-              qualification_done: {
-                type: "array",
-                items: { type: "string" },
-                description: `IDs of qualification items covered. Valid: ${formatIds(qualificacao)}`,
-              },
-              show_rate_done: {
-                type: "array",
-                items: { type: "string" },
-                description: `IDs of show rate items covered. Valid: ${formatIds(showRate)}`,
-              },
               reca_done: {
                 type: "array",
                 items: { type: "string" },
-                description: `IDs of RECA items the SDR already explored. Valid: ${formatIds(recaItems)}`,
+                description: `IDs of RECA items the seller already explored. Valid: ${formatIds(recaItems)}`,
               },
               raloca_done: {
                 type: "array",
                 items: { type: "string" },
-                description: `IDs of RALOCA items the SDR already used. Valid: ${formatIds(ralocaItems)}`,
+                description: `IDs of RALOCA items the seller already used. Valid: ${formatIds(ralocaItems)}`,
               },
               objections_addressed: {
                 type: "array",
                 items: { type: "string" },
-                description: `IDs of objections the SDR already addressed. Valid: ${formatIds(objectionItems)}`,
+                description: `IDs of objections the seller already addressed. Valid: ${formatIds(objectionItems)}`,
               },
             },
-            required: ["apresentacao_done", "qualification_done", "show_rate_done", "reca_done", "raloca_done", "objections_addressed"],
+            required: ["reca_done", "raloca_done", "objections_addressed"],
           },
         },
       },
