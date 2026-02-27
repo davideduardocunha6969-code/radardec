@@ -116,13 +116,19 @@ export function RealtimeCoachingPanel({
   radarValuesRef.current = radarValues;
 
   // Flatten ScriptItems with sub_items into ChecklistItems with depth
-  const flattenScriptItems = useCallback((items: { id: string; label: string; description?: string; sub_items?: any[] }[], depth = 0): ChecklistItem[] => {
+  const flattenScriptItems = useCallback((items: { id: string; label: string; description?: string; sub_items?: any[]; campo_lead_key?: string; tipo_campo?: string }[], depth = 0): ChecklistItem[] => {
     const result: ChecklistItem[] = [];
     for (const item of items) {
-      result.push({ id: item.id, label: item.label, description: item.description, depth });
+      result.push({ id: item.id, label: item.label, description: item.description, depth, campo_lead_key: item.campo_lead_key, tipo_campo: item.tipo_campo });
       if (item.sub_items?.length) {
         for (const sub of item.sub_items) {
-          result.push({ id: `${item.id}__${sub.id}`, label: sub.label, description: sub.description, depth: depth + 1 });
+          result.push({ id: `${item.id}__${sub.id}`, label: sub.label, description: sub.description, depth: depth + 1, campo_lead_key: sub.campo_lead_key, tipo_campo: sub.tipo_campo });
+          // Support nested sub_items (depth 2)
+          if (sub.sub_items?.length) {
+            for (const subsub of sub.sub_items) {
+              result.push({ id: `${item.id}__${sub.id}__${subsub.id}`, label: subsub.label, description: subsub.description, depth: depth + 2, campo_lead_key: subsub.campo_lead_key, tipo_campo: subsub.tipo_campo });
+            }
+          }
         }
       }
     }

@@ -3,8 +3,20 @@ import type { ScriptItem } from "@/hooks/useScriptsSdr";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Plus, X, GripVertical, GitBranch, ChevronDown, ChevronRight } from "lucide-react";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Plus, X, GripVertical, GitBranch, ChevronDown, ChevronRight, Database } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+
+const TIPO_CAMPO_OPTIONS = [
+  { value: "", label: "Nenhum" },
+  { value: "texto", label: "Texto" },
+  { value: "data", label: "Data" },
+  { value: "numero", label: "Número" },
+  { value: "sim_nao", label: "Sim/Não" },
+  { value: "selecao", label: "Seleção" },
+  { value: "valor", label: "Valor (R$)" },
+  { value: "horario", label: "Horário" },
+];
 
 function generateId(label: string): string {
   return label
@@ -23,6 +35,45 @@ interface ScriptItemEditorProps {
   onChange: (items: ScriptItem[]) => void;
 }
 
+function CampoLeadFields({
+  item,
+  onChange,
+  compact,
+}: {
+  item: ScriptItem;
+  onChange: (field: string, value: any) => void;
+  compact?: boolean;
+}) {
+  return (
+    <div className={`flex gap-1.5 items-center ${compact ? "mt-1" : "mt-1.5"}`}>
+      <div className="flex items-center gap-1 flex-1">
+        <Database className="h-3 w-3 text-muted-foreground shrink-0" />
+        <Input
+          value={item.campo_lead_key || ""}
+          onChange={(e) => onChange("campo_lead_key", e.target.value)}
+          placeholder="campo_lead_key"
+          className={`${compact ? "h-6 text-[10px]" : "h-7 text-xs"} font-mono`}
+        />
+      </div>
+      <Select
+        value={item.tipo_campo || ""}
+        onValueChange={(v) => onChange("tipo_campo", v || undefined)}
+      >
+        <SelectTrigger className={`${compact ? "h-6 text-[10px] w-[90px]" : "h-7 text-xs w-[100px]"}`}>
+          <SelectValue placeholder="Tipo" />
+        </SelectTrigger>
+        <SelectContent>
+          {TIPO_CAMPO_OPTIONS.map((o) => (
+            <SelectItem key={o.value} value={o.value || "__none__"}>
+              {o.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 function SubItemEditor({
   subItems,
   onChange,
@@ -34,11 +85,12 @@ function SubItemEditor({
     onChange([...subItems, { id: `sub_${Date.now()}`, label: "", description: "" }]);
   };
   const removeSubItem = (index: number) => onChange(subItems.filter((_, i) => i !== index));
-  const updateSubItem = (index: number, field: "label" | "description", value: string) => {
+  const updateSubItem = (index: number, field: string, value: any) => {
     const updated = subItems.map((item, i) => {
       if (i !== index) return item;
       const newItem = { ...item, [field]: value };
       if (field === "label") newItem.id = generateId(value) || `sub_${Date.now()}`;
+      if (field === "tipo_campo" && value === "__none__") newItem.tipo_campo = undefined;
       return newItem;
     });
     onChange(updated);
@@ -62,6 +114,17 @@ function SubItemEditor({
               placeholder="Pergunta condicional"
               className="text-xs min-h-[40px] resize-y"
             />
+            <CampoLeadFields
+              item={sub}
+              onChange={(field, value) => updateSubItem(j, field, value)}
+              compact
+            />
+            {sub.campo_lead_key && (
+              <Badge variant="outline" className="text-[9px] h-4 px-1.5 gap-1 mt-0.5">
+                <Database className="h-2.5 w-2.5" />
+                {sub.campo_lead_key}
+              </Badge>
+            )}
           </div>
           <Button variant="ghost" size="icon" className="h-7 w-7 shrink-0" onClick={() => removeSubItem(j)}>
             <X className="h-3 w-3 text-destructive" />
@@ -85,11 +148,12 @@ export function ScriptItemEditor({ title, icon, items, onChange }: ScriptItemEdi
     onChange(items.filter((_, i) => i !== index));
     setExpandedItems(prev => { const n = new Set(prev); n.delete(index); return n; });
   };
-  const updateItem = (index: number, field: "label" | "description", value: string) => {
+  const updateItem = (index: number, field: string, value: any) => {
     const updated = items.map((item, i) => {
       if (i !== index) return item;
       const newItem = { ...item, [field]: value };
       if (field === "label") newItem.id = generateId(value);
+      if (field === "tipo_campo" && value === "__none__") newItem.tipo_campo = undefined;
       return newItem;
     });
     onChange(updated);
@@ -147,6 +211,17 @@ export function ScriptItemEditor({ title, icon, items, onChange }: ScriptItemEdi
                     placeholder="Fala/pergunta sugerida"
                     className="text-xs min-h-[60px] resize-y"
                   />
+                  <CampoLeadFields
+                    item={item}
+                    onChange={(field, value) => updateItem(i, field, value)}
+                  />
+                  {item.campo_lead_key && (
+                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 gap-1 mt-0.5">
+                      <Database className="h-3 w-3" />
+                      {item.campo_lead_key}
+                      {item.tipo_campo && <span className="text-muted-foreground">({item.tipo_campo})</span>}
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex flex-col items-center gap-1 shrink-0">
                   <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => addCondicional(i)} title="Adicionar pergunta condicional">

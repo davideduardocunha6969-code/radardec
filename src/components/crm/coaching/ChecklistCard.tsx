@@ -1,6 +1,7 @@
 import { forwardRef } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Check, CheckCircle2, Circle, Trash2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Check, CheckCircle2, Circle, Trash2, Database } from "lucide-react";
 import type { ChecklistItem } from "./coachingData";
 import type { LucideIcon } from "lucide-react";
 
@@ -66,6 +67,12 @@ export const ChecklistCard = forwardRef<HTMLDivElement, ChecklistCardProps>(func
                     <span className={`font-medium ${done ? "line-through opacity-70" : ""} ${item.depth ? "text-[11px]" : ""}`}>
                       {item.label}
                     </span>
+                    {item.campo_lead_key && !done && (
+                      <Badge variant="outline" className="text-[8px] h-3.5 px-1 ml-1.5 gap-0.5 align-middle">
+                        <Database className="h-2 w-2" />
+                        {item.campo_lead_key}
+                      </Badge>
+                    )}
                     {item.description && !done && (
                       <p className="text-[10px] text-muted-foreground/70 mt-0.5 leading-tight">
                         {item.description}

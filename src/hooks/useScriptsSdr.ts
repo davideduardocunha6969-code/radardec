@@ -8,6 +8,9 @@ export interface ScriptItem {
   label: string;
   description: string;
   sub_items?: ScriptItem[];
+  campo_lead_key?: string;
+  tipo_campo?: string;
+  opcoes_campo?: string[];
 }
 
 export interface ScriptSdr {
