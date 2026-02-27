@@ -1,32 +1,33 @@
 
-# Fix: Painel lateral visivel mesmo quando fechado
+# Tres Paineis de Atendimento — Status
 
-## Problema
-O painel deslizante esta posicionado com `right-14` e usa `translate-x-full` para esconder. Como `translate-x-full` desloca o painel pela sua propria largura (1/3 da tela), mas ele comeca em `right-14` (nao `right-0`), uma faixa do painel continua visivel, tampando parte dos botoes de chamada.
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-## Solucao
-Renderizar o painel **somente quando `activePanel` nao for null**. Isso elimina qualquer residuo visual. Manter a animacao de entrada usando CSS, mas nao depender de `translate-x` para esconder.
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-## Alteracao
+## Fase 2 — Painel 3 (Estimativa de Valores) ⏳ AGUARDANDO
+- Motor de cálculo v5.2 (27 fases) — aguardando entrega do usuário
+- `calcular_periodo_modulado()` — aguardando lógica completa
+- `estimarImpactoCampo()` — aguardando motor
+- UI do accordion hierárquico com tabela
 
-**Arquivo: `src/pages/Atendimento.tsx`**
+## Fase 3 — Painel 1 (Extrator de Dados) ⏳ AGUARDANDO
+- Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- UI com lista de campos extraídos + confiança
+- Integração com transcrição em tempo real
 
-Linha 354-365 — O bloco do sliding panel sera envolto em uma condicional `{activePanel && (...)}` e a classe de translate sera removida (ja que ele so existe quando aberto):
+## Fase 4 — Painel 2 (Lacunas) ⏳ AGUARDANDO
+- Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- Ordenação por impacto via `estimarImpactoCampo()` (não pela IA)
+- UI com lista priorizada
 
-```tsx
-{/* Sliding overlay panel */}
-{activePanel && (
-  <div className="fixed top-0 bottom-0 right-14 w-1/3 min-w-[320px] max-w-[480px] z-40 bg-background border-l border-border shadow-2xl overflow-y-auto animate-in slide-in-from-right duration-300">
-    <div className="p-4">
-      {activePanel === "extrator" && lead && <DataExtractorPanel leadId={lead.id} />}
-      {activePanel === "lacunas" && lead && <GapsPanel leadId={lead.id} />}
-      {activePanel === "estimativa" && lead && <ValuesEstimationPanel leadId={lead.id} />}
-    </div>
-  </div>
-)}
-```
-
-Mudancas especificas:
-- Envolver o `div` do painel em `{activePanel && (...)}`
-- Remover a logica `activePanel ? "translate-x-0" : "translate-x-full"`
-- Adicionar `animate-in slide-in-from-right duration-300` (do tailwindcss-animate, ja instalado) para manter a animacao de entrada
+## Fase 5 — Integração Final ⏳ AGUARDANDO
+- Layout na página de Atendimento com os 3 painéis
+- Testes de sincronização
