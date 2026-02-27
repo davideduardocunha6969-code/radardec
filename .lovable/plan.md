@@ -12,11 +12,12 @@
 - [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
 - [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-## Fase 2 — Painel 3 (Estimativa de Valores) ⏳ AGUARDANDO
-- Motor de cálculo v5.2 (27 fases) — aguardando entrega do usuário
-- `calcular_periodo_modulado()` — aguardando lógica completa
-- `estimarImpactoCampo()` — aguardando motor
-- UI do accordion hierárquico com tabela
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
 ## Fase 3 — Painel 1 (Extrator de Dados) ⏳ AGUARDANDO
 - Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
