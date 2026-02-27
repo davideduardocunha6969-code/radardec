@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { formatCpf, normalizeCpf, isCpfKey } from "@/utils/cpfFormat";
 import { formatDateValue } from "@/utils/dateFormat";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { getFieldValue, createField, type DadosExtrasMap } from "@/utils/trabalhista/types";
 
 interface LeadDadosTabProps {
   lead: CrmLead;
@@ -24,7 +25,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
   const [editValues, setEditValues] = useState<Record<string, string>>({});
 
   const camposExtended = (campos as (CrmLeadCampo & { secao_id?: string | null })[]) || [];
-  const dadosExtras = (lead.dados_extras as Record<string, unknown>) || {};
+  const dadosExtras = (lead.dados_extras as DadosExtrasMap) || {};
 
   // Group campos by secao for display
   const groupedCampos = useMemo(() => {
@@ -49,14 +50,14 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
       const v = getNativeValue(campo.key);
       return v && String(v).trim() !== "";
     }
-    const v = dadosExtras[campo.key];
-    return v && String(v).trim() !== "";
+    const { valor } = getFieldValue(dadosExtras, campo.key);
+    return valor.trim() !== "";
   };
 
   const startEditing = () => {
     const values: Record<string, string> = {};
     camposExtended.forEach((c) => {
-      values[c.key] = String(dadosExtras[c.key] || "");
+      values[c.key] = getFieldValue(dadosExtras, c.key).valor;
     });
     values.__nome__ = lead.nome;
     values.__endereco__ = lead.endereco || "";
@@ -65,16 +66,21 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
   };
 
   const handleSave = () => {
-    const newDadosExtras: Record<string, string> = { ...(dadosExtras as Record<string, string>) };
+    const newDadosExtras: DadosExtrasMap = {};
+    // Preserve existing metadata for fields not edited
+    for (const key of Object.keys(dadosExtras)) {
+      if (!nativeKeys.includes(key)) {
+        newDadosExtras[key] = dadosExtras[key];
+      }
+    }
     camposExtended.forEach((c) => {
       if (nativeKeys.includes(c.key)) return;
       let val = editValues[c.key]?.trim();
       if (val) {
-        // Normalize CPF on save
         if (isCpfKey(c.key)) {
           val = normalizeCpf(val);
         }
-        newDadosExtras[c.key] = val;
+        newDadosExtras[c.key] = createField(val, "preenchimento_manual");
       } else {
         delete newDadosExtras[c.key];
       }
@@ -125,13 +131,40 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
   };
 
   const renderFieldView = (campo: CrmLeadCampo) => {
-    let val = nativeKeys.includes(campo.key) ? getNativeValue(campo.key) : String(dadosExtras[campo.key]);
+    let val: string;
+    let meta = null as ReturnType<typeof getFieldValue>["meta"];
+    if (nativeKeys.includes(campo.key)) {
+      val = getNativeValue(campo.key);
+    } else {
+      const result = getFieldValue(dadosExtras, campo.key);
+      val = result.valor;
+      meta = result.meta;
+    }
     if (isCpfKey(campo.key)) val = formatCpf(val);
     if (campo.tipo === "data") val = formatDateValue(val);
+
+    const isManual = meta?.origem === "preenchimento_manual";
+    const confianca = meta?.confianca;
+
     return (
       <div key={campo.id}>
         <FieldLabel campo={campo} />
-        <p className="text-sm">{val}</p>
+        <div className="flex items-center gap-1">
+          <p className="text-sm">{val}</p>
+          {isManual && <Pencil className="h-3 w-3 text-muted-foreground/50" />}
+          {confianca && confianca !== "alta" && (
+            <span
+              className={`inline-block h-2 w-2 rounded-full ${
+                confianca === "media"
+                  ? "bg-yellow-400"
+                  : confianca === "baixa"
+                  ? "bg-red-400"
+                  : "bg-orange-400"
+              }`}
+              title={`Confiança: ${confianca}`}
+            />
+          )}
+        </div>
       </div>
     );
   };
