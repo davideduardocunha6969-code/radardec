@@ -46,6 +46,7 @@ export default function Atendimento() {
 
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [audioMonitor, setAudioMonitor] = useState<AudioMonitorInfo | undefined>(undefined);
+  const [activePanel, setActivePanel] = useState<"extrator" | "lacunas" | "estimativa" | null>(null);
   const stopCallRef = useRef<(() => void) | null>(null);
 
   const handleRecordingStateChange = useCallback((isRecording: boolean, streams: AudioStreamsInfo) => {
