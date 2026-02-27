@@ -115,16 +115,30 @@ export function RealtimeCoachingPanel({
   const radarValuesRef = useRef<RadarValues | null>(null);
   radarValuesRef.current = radarValues;
 
+  // Flatten ScriptItems with sub_items into ChecklistItems with depth
+  const flattenScriptItems = useCallback((items: { id: string; label: string; description?: string; sub_items?: any[] }[], depth = 0): ChecklistItem[] => {
+    const result: ChecklistItem[] = [];
+    for (const item of items) {
+      result.push({ id: item.id, label: item.label, description: item.description, depth });
+      if (item.sub_items?.length) {
+        for (const sub of item.sub_items) {
+          result.push({ id: `${item.id}__${sub.id}`, label: sub.label, description: sub.description, depth: depth + 1 });
+        }
+      }
+    }
+    return result;
+  }, []);
+
   const qualificationItems: ChecklistItem[] = activeScript?.qualificacao?.length
-    ? activeScript.qualificacao
+    ? flattenScriptItems(activeScript.qualificacao)
     : QUALIFICATION_QUESTIONS;
   
   const apresentacaoItems: ChecklistItem[] = activeScript?.apresentacao?.length
-    ? activeScript.apresentacao
+    ? flattenScriptItems(activeScript.apresentacao)
     : [];
 
   const showRateItems: ChecklistItem[] = activeScript?.show_rate?.length
-    ? activeScript.show_rate
+    ? flattenScriptItems(activeScript.show_rate)
     : [];
 
   const instructionsText = INSTRUCTIONS_TEXT;

@@ -2,6 +2,7 @@ export interface ChecklistItem {
   id: string;
   label: string;
   description?: string;
+  depth?: number;
 }
 
 export interface Objection {
