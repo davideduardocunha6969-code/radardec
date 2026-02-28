@@ -266,65 +266,66 @@ export default function Atendimento() {
 
       {/* Main content */}
       <div className="flex-1 min-h-0 p-3 flex flex-col gap-2">
-        {/* Call controls — always visible */}
-        <div className="shrink-0 flex gap-2 items-start">
-          {activeRecording && coach && (
-            <div className="flex-1 min-w-0" style={{ maxHeight: '220px' }}>
-              <CoachingErrorBoundary>
-                <RealtimeCoachingPanel
-                  coach={coach}
+        {activeRecording && coach ? (
+          <CoachingErrorBoundary>
+            <RealtimeCoachingPanel
+              coach={coach}
+              leadNome={lead.nome}
+              leadContext={lead.resumo_caso || undefined}
+              isRecording={activeRecording}
+              micStream={audioStreams.micStream}
+              systemStream={audioStreams.systemStream}
+              audioMonitor={audioMonitor}
+              script={script}
+              onTranscriptUpdate={handleTranscriptUpdate}
+              callControls={
+                tipo === "whatsapp" ? (
+                  <WhatsAppCallRecorder
+                    leadId={lead.id}
+                    leadNome={lead.nome}
+                    numero={numero}
+                    papel={papel}
+                    onRecordingStateChange={handleRecordingStateChange}
+                    onAudioMonitorUpdate={handleAudioMonitorUpdate}
+                    stopRef={stopCallRef}
+                  />
+                ) : (
+                  <VoipDialer
+                    leadId={lead.id}
+                    leadNome={lead.nome}
+                    numero={numero}
+                    papel={papel}
+                    onRecordingStateChange={handleRecordingStateChange}
+                    stopRef={stopCallRef}
+                  />
+                )
+              }
+            />
+          </CoachingErrorBoundary>
+        ) : (
+          <div className="shrink-0 flex gap-2 items-start">
+            <div className="w-fit shrink-0">
+              {tipo === "whatsapp" ? (
+                <WhatsAppCallRecorder
+                  leadId={lead.id}
                   leadNome={lead.nome}
-                  leadContext={lead.resumo_caso || undefined}
-                  isRecording={activeRecording}
-                  micStream={audioStreams.micStream}
-                  systemStream={audioStreams.systemStream}
-                  topBarOnly
-                  audioMonitor={audioMonitor}
-                  script={script}
-                  onTranscriptUpdate={handleTranscriptUpdate}
+                  numero={numero}
+                  papel={papel}
+                  onRecordingStateChange={handleRecordingStateChange}
+                  onAudioMonitorUpdate={handleAudioMonitorUpdate}
+                  stopRef={stopCallRef}
                 />
-              </CoachingErrorBoundary>
+              ) : (
+                <VoipDialer
+                  leadId={lead.id}
+                  leadNome={lead.nome}
+                  numero={numero}
+                  papel={papel}
+                  onRecordingStateChange={handleRecordingStateChange}
+                  stopRef={stopCallRef}
+                />
+              )}
             </div>
-          )}
-          <div className="w-fit shrink-0">
-            {tipo === "whatsapp" ? (
-              <WhatsAppCallRecorder
-                leadId={lead.id}
-                leadNome={lead.nome}
-                numero={numero}
-                papel={papel}
-                onRecordingStateChange={handleRecordingStateChange}
-                onAudioMonitorUpdate={handleAudioMonitorUpdate}
-                stopRef={stopCallRef}
-              />
-            ) : (
-              <VoipDialer
-                leadId={lead.id}
-                leadNome={lead.nome}
-                numero={numero}
-                papel={papel}
-                onRecordingStateChange={handleRecordingStateChange}
-                stopRef={stopCallRef}
-              />
-            )}
-          </div>
-        </div>
-
-        {/* Coaching panel — script cards below (same instance, no duplicate Scribe) */}
-        {activeRecording && coach && (
-          <div className="flex-1 min-h-0">
-            <CoachingErrorBoundary>
-              <RealtimeCoachingPanel
-                coach={coach}
-                leadNome={lead.nome}
-                leadContext={lead.resumo_caso || undefined}
-                isRecording={activeRecording}
-                micStream={audioStreams.micStream}
-                systemStream={audioStreams.systemStream}
-                bottomOnly
-                script={script}
-              />
-            </CoachingErrorBoundary>
           </div>
         )}
       </div>
