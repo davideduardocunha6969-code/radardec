@@ -1,34 +1,32 @@
 
-# Tres Paineis de Atendimento — Status
 
-## Fase 1 — Infraestrutura ✅ CONCLUÍDA
+# Campo de Prompt da IA Analisadora de Lacunas no Script Closer
 
-- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
-- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
-- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
-- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
-- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
-- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
-- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
-- [x] Interface `RoboCoach` e mutations atualizados com novos campos
+## Alteracoes
 
-## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
-- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
-- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
-- [x] `estimarImpactoCampo()` — para ordenação de lacunas
-- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
-- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
+### 1. Migracao de banco
 
-## Fase 3 — Painel 1 (Extrator de Dados) ⏳ AGUARDANDO
-- Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
-- UI com lista de campos extraídos + confiança
-- Integração com transcrição em tempo real
+Adicionar coluna `instrucoes_lacunas` (text, nullable, default vazio) na tabela `scripts_sdr`:
 
-## Fase 4 — Painel 2 (Lacunas) ⏳ AGUARDANDO
-- Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
-- Ordenação por impacto via `estimarImpactoCampo()` (não pela IA)
-- UI com lista priorizada
+```sql
+ALTER TABLE public.scripts_sdr ADD COLUMN IF NOT EXISTS instrucoes_lacunas text DEFAULT '';
+```
 
-## Fase 5 — Integração Final ⏳ AGUARDANDO
-- Layout na página de Atendimento com os 3 painéis
-- Testes de sincronização
+### 2. Hook `useScriptsCloser.ts`
+
+- Adicionar `instrucoes_lacunas: string` ao tipo `ScriptCloser`
+- Incluir no mapeamento da query (fallback para string vazia)
+- Incluir nos payloads de create e update
+
+### 3. Componente `ScriptsCloserTab.tsx`
+
+- Adicionar `instrucoes_lacunas: ""` ao estado do form
+- Preencher ao abrir para edicao (`openEdit`)
+- Incluir no payload do `handleSave`
+- No dialog, logo apos o bloco do Extrator e antes do DialogFooter, adicionar:
+  - Separator
+  - Label "Prompt da IA Analisadora de Lacunas" com icone HelpCircle (roxo)
+  - Descricao curta do proposito
+  - Textarea min-h-[200px] font-mono
+- No card da listagem, adicionar badge "Lacunas IA" quando o campo estiver preenchido
+
