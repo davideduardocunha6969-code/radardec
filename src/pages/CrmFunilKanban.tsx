@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { getFieldValue, type DadosExtrasMap } from "@/utils/trabalhista/types";
+import { formatElapsedTime } from "@/utils/dateFormat";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useUpdateColuna, useDeleteColuna, useCreateLead, useUpdateLead, useDeleteLead, useBulkCreateLeads, useReorderColunas, useUpdateFunil, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
 import { LeadDadosTab } from "@/components/crm/LeadDadosTab";
@@ -58,9 +59,9 @@ function DraggableLeadCard({ lead, setDetailLead }: { lead: CrmLead; setDetailLe
           </div>
         </div>
         <div className="space-y-0.5 text-[11px] text-muted-foreground">
-          <p>Cadastrado em {new Date(lead.created_at).toLocaleDateString("pt-BR")}</p>
-          <p>Nesta etapa desde {lead.etapa_desde ? new Date(lead.etapa_desde).toLocaleDateString("pt-BR") : new Date(lead.created_at).toLocaleDateString("pt-BR")}</p>
-          <p>{lead.ultimo_contato_em ? `Sem contato desde ${new Date(lead.ultimo_contato_em).toLocaleDateString("pt-BR")}` : "Sem contato"}</p>
+          <p>Cadastrado há {formatElapsedTime(lead.created_at)}</p>
+          <p>Nesta etapa há {formatElapsedTime(lead.etapa_desde || lead.created_at)}</p>
+          <p>{lead.ultimo_contato_em ? `Sem contato há ${formatElapsedTime(lead.ultimo_contato_em)}` : "Sem contato"}</p>
         </div>
       </CardContent>
     </Card>
