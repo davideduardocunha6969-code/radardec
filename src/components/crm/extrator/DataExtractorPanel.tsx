@@ -59,7 +59,7 @@ export function DataExtractorPanel({ leadId, coachId, scriptId, transcriptChunks
     setExtracting(true);
 
     supabase.functions.invoke("extract-lead-data", {
-      body: { leadId, coachId, transcript },
+      body: { leadId, coachId, scriptId, transcript },
     }).then(({ data, error }) => {
       if (error) {
         console.error("[Extrator] Error:", error);
