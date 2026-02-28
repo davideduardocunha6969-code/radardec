@@ -225,6 +225,7 @@ export default function ScriptsCloserTab() {
                 />
               </div>
             </div>
+          </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setFormOpen(false)}>Cancelar</Button>
             <Button onClick={handleSave} disabled={!form.nome || createScript.isPending || updateScript.isPending}>
