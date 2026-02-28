@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { getFieldValue, type DadosExtrasMap } from "@/utils/trabalhista/types";
+import { formatElapsedTime } from "@/utils/dateFormat";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useUpdateColuna, useDeleteColuna, useCreateLead, useUpdateLead, useDeleteLead, useBulkCreateLeads, useReorderColunas, useUpdateFunil, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
 import { LeadDadosTab } from "@/components/crm/LeadDadosTab";
