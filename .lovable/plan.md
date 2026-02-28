@@ -1,51 +1,42 @@
 
-# Fix: Abas SDR e Closer nao carregam — objeto renderizado como React child
+# Tres Paineis de Atendimento — Status
 
-## Causa raiz
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-O erro no console e:
-```text
-Objects are not valid as a React child
-(found: object with keys {valor, origem, confianca, turno_extracao, data_ultima_atualizacao})
-```
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-Apos a implementacao do Extrator de Dados, os campos em `dados_extras` passaram a ser salvos como objetos `DadosExtrasField` (com metadados de confianca, origem, etc.) em vez de strings simples. Porem, o `CrmFunilKanban.tsx` renderiza esses valores diretamente com `{(detailLead.dados_extras as Record<string, string>).empresa}`, o que faz o React crashar ao tentar renderizar um objeto.
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-O problema afeta dois blocos identicos:
-- **Linhas 484-491**: Aba "Atendimento SDR" — grid de dados extras
-- **Linhas 608-616**: Aba "Atendimento Closer" — grid de dados extras
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-## Solucao
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-Usar a funcao `getFieldValue` (ja existente em `src/utils/trabalhista/types.ts`) para extrair o valor string de cada campo, com retrocompatibilidade para strings legadas.
-
-### Mudanca em `src/pages/CrmFunilKanban.tsx`
-
-1. Adicionar import no topo do arquivo:
-```typescript
-import { getFieldValue, type DadosExtrasMap } from "@/utils/trabalhista/types";
-```
-
-2. Criar helper local para simplificar o acesso:
-```typescript
-const getExtra = (dados: any, key: string): string => 
-  getFieldValue(dados as DadosExtrasMap, key).valor;
-```
-
-3. Substituir todas as ocorrencias de:
-```text
-(detailLead.dados_extras as Record<string, string>).empresa
-```
-por:
-```text
-getExtra(detailLead.dados_extras, "empresa")
-```
-
-Isso afeta ~14 ocorrencias nos dois blocos (SDR e Closer), cobrindo os campos: `empresa`, `cargo`, `data_admissao`, `data_demissao`, `motivo_demissao`, `cpf`, `municipio`, `uf`.
-
-## Resultado esperado
-
-- As abas SDR e Closer voltam a renderizar normalmente
-- Campos com metadados (salvos pelo Extrator) exibem apenas o valor textual
-- Campos legados (strings puras) continuam funcionando sem alteracao
-- Nenhum impacto na aba Dados (que ja usa `getFieldValue` via `LeadDadosTab`)
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções
