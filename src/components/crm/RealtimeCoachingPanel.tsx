@@ -74,6 +74,7 @@ export function RealtimeCoachingPanel({
   audioMonitor,
   script: scriptProp,
   onTranscriptUpdate,
+  callControls,
 }: RealtimeCoachingPanelProps) {
   const isCloser = coach.tipo === "coaching_closer";
   const { data: fallbackScript } = useActiveScriptSdr();
