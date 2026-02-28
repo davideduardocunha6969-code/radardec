@@ -1857,6 +1857,7 @@ export type Database = {
           id: string
           instrucoes_extrator: string | null
           instrucoes_gerais: string | null
+          instrucoes_lacunas: string | null
           nome: string
           qualificacao: Json
           raloca: Json
@@ -1875,6 +1876,7 @@ export type Database = {
           id?: string
           instrucoes_extrator?: string | null
           instrucoes_gerais?: string | null
+          instrucoes_lacunas?: string | null
           nome: string
           qualificacao?: Json
           raloca?: Json
@@ -1893,6 +1895,7 @@ export type Database = {
           id?: string
           instrucoes_extrator?: string | null
           instrucoes_gerais?: string | null
+          instrucoes_lacunas?: string | null
           nome?: string
           qualificacao?: Json
           raloca?: Json

@@ -1,0 +1,1 @@
+ALTER TABLE public.scripts_sdr ADD COLUMN IF NOT EXISTS instrucoes_lacunas text DEFAULT '';
