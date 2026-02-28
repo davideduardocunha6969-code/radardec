@@ -6,6 +6,7 @@ import type { ScriptItem, ScriptSdr } from "./useScriptsSdr";
 
 export interface ScriptCloser extends ScriptSdr {
   fechamento: ScriptItem[];
+  instrucoes_extrator: string;
 }
 
 export function useScriptsCloser() {
@@ -23,6 +24,7 @@ export function useScriptsCloser() {
         apresentacao: Array.isArray(s.apresentacao) ? s.apresentacao : [],
         qualificacao: Array.isArray(s.qualificacao) ? s.qualificacao : [],
         fechamento: Array.isArray((s as any).fechamento) ? (s as any).fechamento : [],
+        instrucoes_extrator: (s as any).instrucoes_extrator || '',
       }));
     },
   });
@@ -38,6 +40,7 @@ export function useCreateScriptCloser() {
       apresentacao: ScriptItem[];
       qualificacao: ScriptItem[];
       fechamento: ScriptItem[];
+      instrucoes_extrator?: string;
     }) => {
       const { error } = await supabase.from("scripts_sdr" as any).insert({
         nome: data.nome,
@@ -45,6 +48,7 @@ export function useCreateScriptCloser() {
         apresentacao: JSON.parse(JSON.stringify(data.apresentacao)),
         qualificacao: JSON.parse(JSON.stringify(data.qualificacao)),
         fechamento: JSON.parse(JSON.stringify(data.fechamento)),
+        instrucoes_extrator: data.instrucoes_extrator || '',
         tipo: "closer",
         user_id: user!.id,
       });
@@ -68,6 +72,7 @@ export function useUpdateScriptCloser() {
       apresentacao?: ScriptItem[];
       qualificacao?: ScriptItem[];
       fechamento?: ScriptItem[];
+      instrucoes_extrator?: string;
       ativo?: boolean;
     }) => {
       const { id, ...rest } = data;
