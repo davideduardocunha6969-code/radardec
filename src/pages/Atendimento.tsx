@@ -266,10 +266,10 @@ export default function Atendimento() {
 
       {/* Main content */}
       <div className="flex-1 min-h-0 p-3 flex flex-col gap-2">
-        {/* Top row: Transcription (left) + Call controls (right) */}
+        {/* Call controls — always visible */}
         <div className="shrink-0 flex gap-2 items-start">
           {activeRecording && coach && (
-            <div className="flex-1 min-w-0">
+            <div className="flex-1 min-w-0" style={{ maxHeight: '220px' }}>
               <CoachingErrorBoundary>
                 <RealtimeCoachingPanel
                   coach={coach}
@@ -310,7 +310,7 @@ export default function Atendimento() {
           </div>
         </div>
 
-        {/* Coaching panel — script cards below */}
+        {/* Coaching panel — script cards below (same instance, no duplicate Scribe) */}
         {activeRecording && coach && (
           <div className="flex-1 min-h-0">
             <CoachingErrorBoundary>
@@ -318,11 +318,11 @@ export default function Atendimento() {
                 coach={coach}
                 leadNome={lead.nome}
                 leadContext={lead.resumo_caso || undefined}
-                  isRecording={activeRecording}
-                  micStream={audioStreams.micStream}
-                  systemStream={audioStreams.systemStream}
-                  bottomOnly
-                  script={script}
+                isRecording={activeRecording}
+                micStream={audioStreams.micStream}
+                systemStream={audioStreams.systemStream}
+                bottomOnly
+                script={script}
               />
             </CoachingErrorBoundary>
           </div>
