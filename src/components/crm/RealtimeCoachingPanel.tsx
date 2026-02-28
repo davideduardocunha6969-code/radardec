@@ -50,9 +50,10 @@ interface RealtimeCoachingPanelProps {
   bottomOnly?: boolean;
   audioMonitor?: AudioMonitorInfo;
   script?: ScriptSdr | null;
+  onTranscriptUpdate?: (transcripts: LabeledTranscript[]) => void;
 }
 
-interface LabeledTranscript {
+export interface LabeledTranscript {
   id: string;
   text: string;
   speaker: "sdr" | "lead";
@@ -70,6 +71,7 @@ export function RealtimeCoachingPanel({
   bottomOnly,
   audioMonitor,
   script: scriptProp,
+  onTranscriptUpdate,
 }: RealtimeCoachingPanelProps) {
   const isCloser = coach.tipo === "coaching_closer";
   const { data: fallbackScript } = useActiveScriptSdr();
