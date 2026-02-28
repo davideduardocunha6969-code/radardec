@@ -51,6 +51,8 @@ interface RealtimeCoachingPanelProps {
   audioMonitor?: AudioMonitorInfo;
   script?: ScriptSdr | null;
   onTranscriptUpdate?: (transcripts: LabeledTranscript[]) => void;
+  /** Render prop: call controls to inject next to the top bar (used in unified mode) */
+  callControls?: React.ReactNode;
 }
 
 export interface LabeledTranscript {
@@ -72,6 +74,7 @@ export function RealtimeCoachingPanel({
   audioMonitor,
   script: scriptProp,
   onTranscriptUpdate,
+  callControls,
 }: RealtimeCoachingPanelProps) {
   const isCloser = coach.tipo === "coaching_closer";
   const { data: fallbackScript } = useActiveScriptSdr();
@@ -476,9 +479,10 @@ export function RealtimeCoachingPanel({
   });
 
   useEffect(() => {
+    // Skip Scribe connection for bottomOnly — the topBarOnly instance handles it
+    if (bottomOnly) return;
     if (!isRecording) return;
     let cancelled = false;
-
     const connectBoth = async () => {
       try {
         setConnectionError(null);
@@ -583,6 +587,7 @@ export function RealtimeCoachingPanel({
   }, []);
 
   useEffect(() => {
+    if (bottomOnly) return;
     if (!micStream || !sdrScribe.isConnected) return;
     const cleanup = pipeStreamToScribe(micStream, sdrScribe);
     console.log("[Coaching] Mic audio piping started (SDR)");
@@ -590,6 +595,7 @@ export function RealtimeCoachingPanel({
   }, [micStream, sdrScribe.isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (bottomOnly) return;
     if (!systemStream || !leadScribe.isConnected) return;
     const cleanup = pipeStreamToScribe(systemStream, leadScribe);
     console.log("[Coaching] System audio piping started (Lead)");
@@ -927,8 +933,9 @@ export function RealtimeCoachingPanel({
 
   return (
     <div className="flex flex-col gap-2 overflow-hidden h-full">
-      <div className="shrink-0" style={{ maxHeight: '160px' }}>
-        {topBar}
+      <div className="shrink-0 flex gap-2 items-start" style={{ maxHeight: '220px' }}>
+        <div className="flex-1 min-w-0">{topBar}</div>
+        {callControls && <div className="w-fit shrink-0">{callControls}</div>}
       </div>
       {scriptCards}
     </div>
