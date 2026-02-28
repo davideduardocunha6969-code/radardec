@@ -15,13 +15,13 @@ import {
   CollapsibleTrigger,
 } from "@/components/ui/collapsible";
 import { Calculator, AlertTriangle, ChevronDown, Info, Scale } from "lucide-react";
-import { useLeadDadosSync } from "@/hooks/useLeadDadosSync";
 import { calcularTudo } from "@/utils/trabalhista/calculator";
 import { getFieldValue } from "@/utils/trabalhista/types";
-import type { CalculoCompleto, CategoriaResult, RubricaResult } from "@/utils/trabalhista/types";
+import type { CalculoCompleto, CategoriaResult, RubricaResult, DadosExtrasMap } from "@/utils/trabalhista/types";
 
 interface ValuesEstimationPanelProps {
-  leadId: string;
+  dados: DadosExtrasMap;
+  loading: boolean;
 }
 
 const fmt = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL" });
@@ -31,8 +31,7 @@ function formatCurrency(value: number | null | undefined): string {
   return fmt.format(value);
 }
 
-export function ValuesEstimationPanel({ leadId }: ValuesEstimationPanelProps) {
-  const { dados, loading } = useLeadDadosSync(leadId);
+export function ValuesEstimationPanel({ dados, loading }: ValuesEstimationPanelProps) {
 
   const resultado: CalculoCompleto | null = useMemo(() => {
     if (!dados || Object.keys(dados).length === 0) return null;

@@ -4,15 +4,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { HelpCircle, Copy, Loader2, AlertCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useLeadDadosSync } from "@/hooks/useLeadDadosSync";
 import { useCrmLeadCampos } from "@/hooks/useCrmLeadCampos";
 import { estimarImpactoCampo } from "@/utils/trabalhista/calculator";
 import { getFieldValue } from "@/utils/trabalhista/types";
 import { useToast } from "@/hooks/use-toast";
+import type { DadosExtrasMap } from "@/utils/trabalhista/types";
 
 interface GapsPanelProps {
   leadId: string;
   coachId: string;
+  dados: DadosExtrasMap;
+  dadosLoading: boolean;
 }
 
 interface GapWithImpact {
@@ -30,8 +32,7 @@ interface AiGapResult {
   contexto_para_o_closer?: string;
 }
 
-export function GapsPanel({ leadId, coachId }: GapsPanelProps) {
-  const { dados, loading: dadosLoading } = useLeadDadosSync(leadId);
+export function GapsPanel({ leadId, coachId, dados, dadosLoading }: GapsPanelProps) {
   const { data: campos } = useCrmLeadCampos();
   const { toast } = useToast();
   const [aiResults, setAiResults] = useState<AiGapResult[]>([]);
