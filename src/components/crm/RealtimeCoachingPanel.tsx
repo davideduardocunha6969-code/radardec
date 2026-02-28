@@ -451,6 +451,7 @@ export function RealtimeCoachingPanel({
     };
     labeledTranscriptsRef.current = [...labeledTranscriptsRef.current, entry];
     setLabeledTranscripts([...labeledTranscriptsRef.current]);
+    onTranscriptUpdate?.(labeledTranscriptsRef.current);
     setTimeout(() => transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     requestAnalysis(buildFullTranscript());
   }, [isHallucination, requestAnalysis, buildFullTranscript]);
