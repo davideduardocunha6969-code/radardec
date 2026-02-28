@@ -277,6 +277,7 @@ export default function Atendimento() {
                   topBarOnly
                   audioMonitor={audioMonitor}
                   script={script}
+                  onTranscriptUpdate={handleTranscriptUpdate}
                 />
               </CoachingErrorBoundary>
             </div>
