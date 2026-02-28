@@ -8,6 +8,7 @@ import { CoachingErrorBoundary } from "@/components/crm/coaching/CoachingErrorBo
 import { Badge } from "@/components/ui/badge";
 import { Phone, User, MapPin, FileText, Loader2, FileSearch, HelpCircle, Calculator } from "lucide-react";
 import { GapsPanel } from "@/components/crm/lacunas/GapsPanel";
+import { getFieldValue, type DadosExtrasMap } from "@/utils/trabalhista/types";
 import { DataExtractorPanel } from "@/components/crm/extrator/DataExtractorPanel";
 import { ValuesEstimationPanel } from "@/components/crm/estimativa/ValuesEstimationPanel";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -246,14 +247,16 @@ export default function Atendimento() {
       {(lead.resumo_caso || lead.dados_extras) && (
         <div className="border-b bg-muted/30 px-4 py-2 shrink-0">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
-            {Object.entries((lead.dados_extras as Record<string, string>) || {}).map(([key, value]) => (
-              value ? (
+            {Object.entries((lead.dados_extras as DadosExtrasMap) || {}).map(([key, raw]) => {
+              const val = getFieldValue({ [key]: raw }, key).valor;
+              if (!val) return null;
+              return (
                 <span key={key} className="inline-flex items-center gap-1 bg-background/60 rounded px-2 py-0.5 border border-border/50">
                   <span className="text-muted-foreground capitalize">{key.replace(/_/g, ' ')}:</span>
-                  <strong className="text-foreground">{value}</strong>
+                  <strong className="text-foreground">{val}</strong>
                 </span>
-              ) : null
-            ))}
+              );
+            })}
             {lead.resumo_caso && (
               <span className="inline-flex items-center gap-1 bg-background/60 rounded px-2 py-0.5 border border-border/50">
                 <FileText className="h-3 w-3 text-muted-foreground" />

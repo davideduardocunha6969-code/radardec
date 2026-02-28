@@ -1,32 +1,42 @@
 
+# Tres Paineis de Atendimento — Status
 
-# Fix: Tela de Atendimento nao carrega — mesmo problema de objeto renderizado
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-## Causa raiz
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-Identico ao bug corrigido no CrmFunilKanban: o campo `dados_extras` agora contem objetos com metadados (`{valor, confianca, origem, ...}`) em vez de strings simples. Na linha 253 de `Atendimento.tsx`, o valor e renderizado diretamente:
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-```typescript
-<strong>{value}</strong>
-```
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-Quando `value` e um objeto, o React lanca o erro "Objects are not valid as a React child" e a pagina inteira nao renderiza.
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-## Solucao
-
-Atualizar o bloco "Lead context bar" (linhas 249-254) para extrair o valor textual de cada campo antes de renderizar, usando a mesma abordagem ja aplicada no CrmFunilKanban.
-
-### Mudanca em `src/pages/Atendimento.tsx`
-
-1. Importar `getFieldValue` e `DadosExtrasMap` de `@/utils/trabalhista/types`
-
-2. Substituir o bloco de renderizacao dos dados extras (linhas 249-256) para:
-   - Extrair o valor string com `getFieldValue`
-   - Ignorar campos cujo valor extraido seja vazio
-
-Isso corrige a renderizacao tanto para campos novos (objetos com metadados) quanto para campos legados (strings simples).
-
-## Resultado esperado
-
-- A tela de atendimento volta a abrir normalmente ao clicar no botao de ligar pelo WhatsApp
-- Os dados extras do lead aparecem corretamente na barra de contexto no topo da pagina
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções
