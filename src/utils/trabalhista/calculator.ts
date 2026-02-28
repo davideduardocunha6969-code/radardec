@@ -1364,51 +1364,167 @@ export function estimarImpactoCampo(
   }
 
   const impactos: Record<string, number> = {
-    // Campos críticos — bloqueiam tudo
-    salario_ctps_mensal: salario * meses * 0.5,
+    // =============================================
+    // LINHA DO TEMPO (4 campos)
+    // =============================================
     data_admissao: salario * meses * 0.3,
+    data_demissao: salario * meses * 0.3,
+    contrato_ativo: salario * meses * 0.1,
+    regime_semanal_contratual: salario * meses * 0.05,
 
-    // Jornada — alto impacto
+    // =============================================
+    // REMUNERAÇÃO (17 campos)
+    // =============================================
+    salario_ctps_mensal: salario * meses * 0.5,
+    media_comissao_mensal: salario * 0.15 * meses,
+    media_premio_mensal: salario * 0.10 * meses,
+    media_gratificacao_mensal: salario * 0.10 * meses,
+    media_diarias_mensal: salario * 0.08 * meses,
+    valor_por_fora_mensal_medio: salario * 0.20 * meses,
+    media_ajuda_custo_mensal: salario * 0.05 * meses,
+    existe_acumulo: salario * 0.20 * meses,
+    existe_equiparacao: salario * 0.20 * meses,
+    salario_paradigma: salario * 0.20 * meses,
+    tempo_paradigma_na_funcao_anos: salario * 0.05 * meses,
+    recebia_gratificacao_funcao: salario * 0.10 * meses,
+    gratificacao_foi_suprimida: salario * 0.10 * meses,
+    tempo_recebendo_gratificacao_anos: salario * 0.03 * meses,
+    valor_gratificacao_suprimida: salario * 0.10 * meses,
+    data_supressao_gratificacao: salario * 0.03 * meses,
+
+    // =============================================
+    // JORNADA (22 campos)
+    // =============================================
     hora_inicio_media: horaNormal * 2 * diasTrabalhadosMes * meses,
     hora_fim_media: horaNormal * 2 * diasTrabalhadosMes * meses,
+    jornada_contratual_diaria_horas: horaNormal * 2 * diasTrabalhadosMes * meses * 0.3,
+    intervalo_refeicao_minutos_medio: horaNormal * 1 * diasTrabalhadosMes * meses,
+    intervalo_real_minutos: horaNormal * 1 * diasTrabalhadosMes * meses,
+    intervalo_menor_1hora: horaNormal * 1 * diasTrabalhadosMes * meses,
     descanso_entre_jornadas_horas_medio: horaNormal * 1.5 * diasTrabalhadosMes * meses,
+    violacao_interjornada: horaNormal * 1.5 * diasTrabalhadosMes * meses,
+    frequencia_violacao_interjornada: horaNormal * 0.5 * diasTrabalhadosMes * meses,
+    descanso_coincidia_com_pausa_conducao: horaNormal * 1 * diasTrabalhadosMes * meses,
+    fazia_pausa_30min_direcao: horaNormal * 0.5 * diasTrabalhadosMes * meses,
+    dirigia_apos_22: salario * 0.10 * meses,
+    horas_noturnas_dia_media: salario * 0.10 * meses,
+    adicional_noturno_pago: salario * 0.03 * meses,
+    valor_noturno_pago_mensal: salario * 0.03 * meses,
+    aplicar_hora_reduzida_noturna: salario * 0.02 * meses,
+    trabalhava_domingos: horaNormal * 8 * 4 * meses,
+    domingos_trabalhados_mes_medio: horaNormal * 8 * 2 * meses,
+    recebia_folga_compensatoria: horaNormal * 8 * 2 * meses * 0.3,
+    pagava_horas_extras: horaNormal * 2 * diasTrabalhadosMes * meses * 0.2,
+    horas_extras_pagas_horas_mes_media: horaNormal * 2 * diasTrabalhadosMes * meses * 0.2,
+    banco_horas: horaNormal * 1 * diasTrabalhadosMes * meses * 0.1,
 
-    // Tempo à disposição (modulado — desde 12/07/2023)
+    // =============================================
+    // TEMPO À DISPOSIÇÃO (13 campos)
+    // =============================================
+    ficava_aguardando_carga_descarga: horaNormal * 1.5 * diasTrabalhadosMes * Math.min(meses, 20),
     tempo_espera_carga_descarga_horas_dia_medio: horaNormal * 1.5 * diasTrabalhadosMes * Math.min(meses, 20),
+    tempo_espera_era_pago: horaNormal * 0.5 * diasTrabalhadosMes * Math.min(meses, 20),
+    percentual_pago_tempo_espera: horaNormal * 0.3 * diasTrabalhadosMes * Math.min(meses, 20),
+    ficava_em_barreiras_fiscais: horaNormal * 1.5 * diasTrabalhadosMes * Math.min(meses, 20),
     tempo_fiscalizacao_barreira_horas_dia_medio: horaNormal * 1.5 * diasTrabalhadosMes * Math.min(meses, 20),
+    ficava_em_fila_balanca: horaNormal * 1 * diasTrabalhadosMes * Math.min(meses, 20),
+    tempo_balanca_horas_dia_medio: horaNormal * 1 * diasTrabalhadosMes * Math.min(meses, 20),
+    dormia_no_veiculo: horaNormal * 2 * diasTrabalhadosMes * Math.min(meses, 20),
+    era_obrigatorio_permanecer: horaNormal * 2 * diasTrabalhadosMes * Math.min(meses, 20),
+    horas_berco_dia_medio: horaNormal * 2 * diasTrabalhadosMes * Math.min(meses, 20),
+    repouso_era_feito_com_veiculo_em_movimento: horaNormal * 2 * diasTrabalhadosMes * Math.min(meses, 20),
+    horas_repouso_invalido_dia_medio: horaNormal * 2 * diasTrabalhadosMes * Math.min(meses, 20),
 
-    // Adicionais sobre base completa
-    periculosidade_devida: salario * 0.30 * meses,
-    insalubridade_devida: SALARIO_MINIMO * 0.20 * meses,
-    adicional_noturno_pago: salario * 0.10 * meses,
-
-    // Repouso viagem
-    repouso_semanal_concedido_na_viagem: (salario / 4.5) * 2 * Math.min(meses, 20),
-
-    // Rescisão
-    fgts_depositado_corretamente: salario * 0.08 * meses * 1.4,
-    modalidade_desligamento: salario * 0.08 * meses * 0.40,
-    aviso_previo_indenizado: (salario / 30) * 30 * 1.1,
-
-    // Danos
-    houve_acidente_ou_doenca: 30000,
-    sofreu_assedio_moral: 15000,
-    sequela_atual: 25000,
-
-    // Férias
-    periodos_ferias_vencidos_nao_gozados: salario * 2.67,
-    ferias_pagas_2_dias_antes: salario,
-
-    // Domingos
-    trabalhava_domingos: horaNormal * 8 * 2 * 4 * meses,
-
-    // Equiparação
-    salario_paradigma: salario * 0.20 * meses,
-
-    // Outros
-    empresa_fazia_descontos_indevidos: 300 * meses * 2,
+    // =============================================
+    // SOBREAVISO E VIAGENS (12 campos)
+    // =============================================
     ficava_de_sobreaviso: salario * 0.11 * meses,
+    tinha_obrigacao_atender_chamado: salario * 0.11 * meses * 0.3,
+    horas_sobreaviso_dia_medio: salario * 0.11 * meses,
+    recebia_sobreaviso: salario * 0.03 * meses,
+    valor_sobreaviso_pago: salario * 0.03 * meses,
+    fazia_viagens_longa_distancia: (salario / 4.5) * 2 * Math.min(meses, 20),
+    semanas_em_viagem_por_mes_media: (salario / 4.5) * 2 * Math.min(meses, 20),
+    repouso_semanal_concedido_na_viagem: (salario / 4.5) * 2 * Math.min(meses, 20),
+    repouso_semanal_era_fracionado: (salario / 4.5) * 1 * Math.min(meses, 20),
+    periodos_fracionados_mes_medio: (salario / 4.5) * 1 * Math.min(meses, 20),
+    empresa_acumulava_repousos: (salario / 4.5) * 2 * Math.min(meses, 20),
+    repousos_acumulados_consecutivos_maximo: (salario / 4.5) * 1 * Math.min(meses, 20),
+
+    // =============================================
+    // ADICIONAIS (10 campos)
+    // =============================================
+    transportava_carga_perigosa: salario * 0.30 * meses,
+    fazia_abastecimento_frequente: salario * 0.30 * meses,
+    periculosidade_paga: salario * 0.10 * meses,
+    percentual_periculosidade_pago: salario * 0.05 * meses,
+    trabalhava_camara_fria: SALARIO_MINIMO * 0.20 * meses,
+    exposto_ruido_excessivo: SALARIO_MINIMO * 0.20 * meses,
+    vibracao_constante: SALARIO_MINIMO * 0.20 * meses,
+    insalubridade_paga: SALARIO_MINIMO * 0.05 * meses,
+    percentual_insalubridade_pago: SALARIO_MINIMO * 0.03 * meses,
+    grau_insalubridade: SALARIO_MINIMO * 0.10 * meses,
+
+    // =============================================
+    // RESCISÃO (15 campos)
+    // =============================================
+    modalidade_desligamento: salario * 0.08 * meses * 0.40,
+    aviso_previo_indenizado: salario * 1.1,
+    dias_aviso_previo_efetivamente_pago: salario * 0.5,
+    rescisao_paga_10_dias: salario * 0.3,
+    verbas_incontroversas_atrasadas: salario * 0.5,
+    valor_verbas_incontroversas: salario * 0.5,
+    ferias_regulares: salario * 0.1 * meses,
+    ferias_pagas_2_dias_antes: salario,
+    ferias_vencidas_nao_gozadas: salario * 2.67,
+    periodos_ferias_vencidos_nao_gozados: salario * 2.67,
+    decimo_terceiro_base_real: salario * 0.05 * meses,
+    fgts_depositado_corretamente: salario * 0.08 * meses * 1.4,
+    havia_convencao_coletiva: salario * 0.5,
+    empresa_cumpria_convencao: salario * 0.5,
+    valor_multa_normativa_convencao: salario * 0.3,
+
+    // =============================================
+    // VERBAS DIVERSAS (15 campos)
+    // =============================================
+    foi_transferido: salario * 0.25 * meses * 0.3,
+    transferencia_definitiva: salario * 0.25 * meses * 0.1,
+    meses_transferido: salario * 0.25 * meses * 0.1,
+    empresa_fazia_descontos_indevidos: 300 * meses * 2,
+    valor_medio_desconto_mensal: 300 * meses,
+    precisava_deslocamento_ate_patio: 200 * meses,
+    recebia_vale_transporte: 200 * meses * 0.3,
+    custo_medio_transporte_mensal: 200 * meses,
+    conseguiu_receber_seguro: salario * 5,
+    valor_parcelas_seguro_perdidas: salario * 5,
+    tinha_plano_saude_empresa: 500 * 24,
+    contribuia_plano: 500 * 24 * 0.3,
+    empresa_manteve_plano_pos_demissao: 500 * 24 * 0.3,
+    custo_plano_mensal: 500 * 24,
+    meses_manutencao_devidos: 500 * 12,
+
+    // =============================================
+    // DANOS E ACIDENTE (18 campos)
+    // =============================================
+    sofreu_assedio_moral: 15000,
+    gravidade_assedio: 10000,
+    sofreu_revista_intima: 10000,
+    jornada_habitual_superior_12h: 20000,
+    periodos_fora_de_casa: 15000,
+    impacto_familiar_declarado: 10000,
+    motivo_real_dispensa_suspeito: 30000,
+    houve_acidente: 30000,
+    periodo_afastamento_meses: 5000,
+    valor_auxilio_recebido: 3000,
+    sequela_atual: 25000,
+    capacidade_laboral_atual: 20000,
+    gravidade_sequela: 15000,
+    percentual_incapacidade: 20000,
+    gastos_medicos_comprovados: 5000,
+    valor_gastos_medicos: 5000,
+    data_nascimento: 10000,
+    doenca_ocupacional: 25000,
   };
 
-  return Math.round((impactos[campo] || 500) * 100) / 100;
+  return Math.round((impactos[campo] || 0) * 100) / 100;
 }
