@@ -476,8 +476,9 @@ export function RealtimeCoachingPanel({
   });
 
   useEffect(() => {
+    // Skip Scribe connection for bottomOnly — the topBarOnly instance handles it
+    if (bottomOnly) return;
     if (!isRecording) return;
-    let cancelled = false;
 
     const connectBoth = async () => {
       try {
@@ -583,6 +584,7 @@ export function RealtimeCoachingPanel({
   }, []);
 
   useEffect(() => {
+    if (bottomOnly) return;
     if (!micStream || !sdrScribe.isConnected) return;
     const cleanup = pipeStreamToScribe(micStream, sdrScribe);
     console.log("[Coaching] Mic audio piping started (SDR)");
@@ -590,6 +592,7 @@ export function RealtimeCoachingPanel({
   }, [micStream, sdrScribe.isConnected]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
+    if (bottomOnly) return;
     if (!systemStream || !leadScribe.isConnected) return;
     const cleanup = pipeStreamToScribe(systemStream, leadScribe);
     console.log("[Coaching] System audio piping started (Lead)");
