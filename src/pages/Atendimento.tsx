@@ -47,6 +47,7 @@ export default function Atendimento() {
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [audioMonitor, setAudioMonitor] = useState<AudioMonitorInfo | undefined>(undefined);
   const [activePanel, setActivePanel] = useState<"extrator" | "lacunas" | "estimativa" | null>(null);
+  const [transcriptChunks, setTranscriptChunks] = useState<LabeledTranscript[]>([]);
   const stopCallRef = useRef<(() => void) | null>(null);
 
   const handleRecordingStateChange = useCallback((isRecording: boolean, streams: AudioStreamsInfo) => {
@@ -57,6 +58,10 @@ export default function Atendimento() {
 
   const handleAudioMonitorUpdate = useCallback((info: AudioMonitorInfo) => {
     setAudioMonitor(info);
+  }, []);
+
+  const handleTranscriptUpdate = useCallback((transcripts: LabeledTranscript[]) => {
+    setTranscriptChunks(transcripts);
   }, []);
 
   // Wait for auth session to be restored from localStorage
