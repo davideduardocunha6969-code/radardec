@@ -24,6 +24,7 @@ import {
   Briefcase,
   HandshakeIcon,
   FileSearch,
+  HelpCircle,
 } from "lucide-react";
 import { ScriptItemEditor } from "./ScriptItemEditor";
 import { Textarea } from "@/components/ui/textarea";
@@ -46,11 +47,12 @@ export default function ScriptsCloserTab() {
     qualificacao: [] as ScriptItem[],
     fechamento: [] as ScriptItem[],
     instrucoes_extrator: "",
+    instrucoes_lacunas: "",
   });
 
   const openNew = () => {
     setEditing(null);
-    setForm({ nome: "", descricao: "", apresentacao: [], qualificacao: [], fechamento: [], instrucoes_extrator: "" });
+    setForm({ nome: "", descricao: "", apresentacao: [], qualificacao: [], fechamento: [], instrucoes_extrator: "", instrucoes_lacunas: "" });
     setFormOpen(true);
   };
 
@@ -63,6 +65,7 @@ export default function ScriptsCloserTab() {
       qualificacao: s.qualificacao,
       fechamento: (s as any).fechamento || [],
       instrucoes_extrator: s.instrucoes_extrator || "",
+      instrucoes_lacunas: s.instrucoes_lacunas || "",
     });
     setFormOpen(true);
   };
@@ -76,6 +79,7 @@ export default function ScriptsCloserTab() {
       qualificacao: form.qualificacao.filter((i) => i.label.trim()),
       fechamento: form.fechamento.filter((i) => i.label.trim()),
       instrucoes_extrator: form.instrucoes_extrator,
+      instrucoes_lacunas: form.instrucoes_lacunas,
     };
     if (editing) {
       updateScript.mutate({ id: editing.id, ...payload }, { onSuccess: () => setFormOpen(false) });
@@ -155,6 +159,11 @@ export default function ScriptsCloserTab() {
                       <FileSearch className="h-3 w-3" />Extrator IA
                     </Badge>
                   )}
+                  {s.instrucoes_lacunas && (
+                    <Badge variant="secondary" className="gap-1">
+                      <HelpCircle className="h-3 w-3" />Lacunas IA
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex justify-end gap-1">
                   <Button variant="ghost" size="sm" onClick={() => openEdit(s)}>
@@ -221,6 +230,22 @@ export default function ScriptsCloserTab() {
                   value={form.instrucoes_extrator}
                   onChange={(e) => setForm({ ...form, instrucoes_extrator: e.target.value })}
                   placeholder="Cole aqui o prompt completo da IA Extratora..."
+                  className="min-h-[200px] font-mono text-xs"
+                />
+              </div>
+              <Separator />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <HelpCircle className="h-4 w-4 text-violet-500" />
+                  <label className="text-sm font-medium">Prompt da IA Analisadora de Lacunas</label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Instruções que a IA usará para identificar lacunas e sugerir perguntas priorizadas durante o atendimento.
+                </p>
+                <Textarea
+                  value={form.instrucoes_lacunas}
+                  onChange={(e) => setForm({ ...form, instrucoes_lacunas: e.target.value })}
+                  placeholder="Cole aqui o prompt completo da IA Analisadora de Lacunas..."
                   className="min-h-[200px] font-mono text-xs"
                 />
               </div>
