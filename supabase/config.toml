@@ -59,3 +59,9 @@ verify_jwt = false
 
  [functions.coaching-radar]
  verify_jwt = false
+
+ [functions.extract-lead-data]
+ verify_jwt = false
+
+ [functions.analyze-gaps]
+ verify_jwt = false

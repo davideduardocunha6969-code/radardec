@@ -50,9 +50,10 @@ interface RealtimeCoachingPanelProps {
   bottomOnly?: boolean;
   audioMonitor?: AudioMonitorInfo;
   script?: ScriptSdr | null;
+  onTranscriptUpdate?: (transcripts: LabeledTranscript[]) => void;
 }
 
-interface LabeledTranscript {
+export interface LabeledTranscript {
   id: string;
   text: string;
   speaker: "sdr" | "lead";
@@ -70,6 +71,7 @@ export function RealtimeCoachingPanel({
   bottomOnly,
   audioMonitor,
   script: scriptProp,
+  onTranscriptUpdate,
 }: RealtimeCoachingPanelProps) {
   const isCloser = coach.tipo === "coaching_closer";
   const { data: fallbackScript } = useActiveScriptSdr();
@@ -449,6 +451,7 @@ export function RealtimeCoachingPanel({
     };
     labeledTranscriptsRef.current = [...labeledTranscriptsRef.current, entry];
     setLabeledTranscripts([...labeledTranscriptsRef.current]);
+    onTranscriptUpdate?.(labeledTranscriptsRef.current);
     setTimeout(() => transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
     requestAnalysis(buildFullTranscript());
   }, [isHallucination, requestAnalysis, buildFullTranscript]);

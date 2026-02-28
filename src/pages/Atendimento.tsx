@@ -3,7 +3,7 @@ import { useSearchParams, Navigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { WhatsAppCallRecorder, type AudioStreamsInfo } from "@/components/crm/WhatsAppCallRecorder";
 import { VoipDialer } from "@/components/crm/VoipDialer";
-import { RealtimeCoachingPanel, type AudioMonitorInfo } from "@/components/crm/RealtimeCoachingPanel";
+import { RealtimeCoachingPanel, type AudioMonitorInfo, type LabeledTranscript } from "@/components/crm/RealtimeCoachingPanel";
 import { CoachingErrorBoundary } from "@/components/crm/coaching/CoachingErrorBoundary";
 import { Badge } from "@/components/ui/badge";
 import { Phone, User, MapPin, FileText, Loader2, FileSearch, HelpCircle, Calculator } from "lucide-react";
@@ -47,6 +47,7 @@ export default function Atendimento() {
   const [showCloseWarning, setShowCloseWarning] = useState(false);
   const [audioMonitor, setAudioMonitor] = useState<AudioMonitorInfo | undefined>(undefined);
   const [activePanel, setActivePanel] = useState<"extrator" | "lacunas" | "estimativa" | null>(null);
+  const [transcriptChunks, setTranscriptChunks] = useState<LabeledTranscript[]>([]);
   const stopCallRef = useRef<(() => void) | null>(null);
 
   const handleRecordingStateChange = useCallback((isRecording: boolean, streams: AudioStreamsInfo) => {
@@ -57,6 +58,10 @@ export default function Atendimento() {
 
   const handleAudioMonitorUpdate = useCallback((info: AudioMonitorInfo) => {
     setAudioMonitor(info);
+  }, []);
+
+  const handleTranscriptUpdate = useCallback((transcripts: LabeledTranscript[]) => {
+    setTranscriptChunks(transcripts);
   }, []);
 
   // Wait for auth session to be restored from localStorage
@@ -272,6 +277,7 @@ export default function Atendimento() {
                   topBarOnly
                   audioMonitor={audioMonitor}
                   script={script}
+                  onTranscriptUpdate={handleTranscriptUpdate}
                 />
               </CoachingErrorBoundary>
             </div>
@@ -355,8 +361,8 @@ export default function Atendimento() {
         {activePanel && (
           <div className="fixed top-0 bottom-0 right-14 w-1/3 min-w-[320px] max-w-[480px] z-40 bg-background border-l border-border shadow-2xl overflow-y-auto animate-in slide-in-from-right duration-300">
             <div className="p-4">
-              {activePanel === "extrator" && lead && <DataExtractorPanel leadId={lead.id} />}
-              {activePanel === "lacunas" && lead && <GapsPanel leadId={lead.id} />}
+              {activePanel === "extrator" && lead && coach && <DataExtractorPanel leadId={lead.id} coachId={coach.id} transcriptChunks={transcriptChunks} />}
+              {activePanel === "lacunas" && lead && coach && <GapsPanel leadId={lead.id} coachId={coach.id} />}
               {activePanel === "estimativa" && lead && <ValuesEstimationPanel leadId={lead.id} />}
             </div>
           </div>
