@@ -4,21 +4,19 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { FileSearch, CheckCircle, AlertTriangle, Lock, Loader2, Check } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { useLeadDadosSync } from "@/hooks/useLeadDadosSync";
 import { useCrmLeadCampos } from "@/hooks/useCrmLeadCampos";
-import type { DadosExtrasField } from "@/utils/trabalhista/types";
-
-export interface LabeledTranscript {
-  id: string;
-  text: string;
-  speaker: "sdr" | "lead";
-  timestamp: number;
-}
+import type { LabeledTranscript } from "@/components/crm/RealtimeCoachingPanel";
+import type { DadosExtrasField, DadosExtrasMap } from "@/utils/trabalhista/types";
+import type { UseLeadDadosSyncReturn } from "@/hooks/useLeadDadosSync";
 
 interface DataExtractorPanelProps {
   leadId: string;
   coachId: string;
   transcriptChunks: LabeledTranscript[];
+  dados: DadosExtrasMap;
+  dadosLoading: boolean;
+  setField: UseLeadDadosSyncReturn["setField"];
+  setFields: UseLeadDadosSyncReturn["setFields"];
 }
 
 interface ExtractedField {
@@ -27,8 +25,7 @@ interface ExtractedField {
   confianca: string;
 }
 
-export function DataExtractorPanel({ leadId, coachId, transcriptChunks }: DataExtractorPanelProps) {
-  const { dados, loading: dadosLoading, setField, setFields } = useLeadDadosSync(leadId);
+export function DataExtractorPanel({ leadId, coachId, transcriptChunks, dados, dadosLoading, setField, setFields }: DataExtractorPanelProps) {
   const { data: campos } = useCrmLeadCampos();
   const [extracting, setExtracting] = useState(false);
   const [pendingReview, setPendingReview] = useState<ExtractedField[]>([]);

@@ -11,6 +11,7 @@ import { GapsPanel } from "@/components/crm/lacunas/GapsPanel";
 import { DataExtractorPanel } from "@/components/crm/extrator/DataExtractorPanel";
 import { ValuesEstimationPanel } from "@/components/crm/estimativa/ValuesEstimationPanel";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useLeadDadosSync } from "@/hooks/useLeadDadosSync";
 import type { RoboCoach } from "@/hooks/useRobosCoach";
 import type { LeadTelefone } from "@/hooks/useCrmOutbound";
 import type { ScriptSdr } from "@/hooks/useScriptsSdr";
@@ -49,6 +50,9 @@ export default function Atendimento() {
   const [activePanel, setActivePanel] = useState<"extrator" | "lacunas" | "estimativa" | null>(null);
   const [transcriptChunks, setTranscriptChunks] = useState<LabeledTranscript[]>([]);
   const stopCallRef = useRef<(() => void) | null>(null);
+
+  // Single source of truth for lead dados — shared across all 3 panels
+  const leadDadosSync = useLeadDadosSync(lead?.id ?? null);
 
   const handleRecordingStateChange = useCallback((isRecording: boolean, streams: AudioStreamsInfo) => {
     setActiveRecording(isRecording);
@@ -361,9 +365,31 @@ export default function Atendimento() {
         {activePanel && (
           <div className="fixed top-0 bottom-0 right-14 w-1/3 min-w-[320px] max-w-[480px] z-40 bg-background border-l border-border shadow-2xl overflow-y-auto animate-in slide-in-from-right duration-300">
             <div className="p-4">
-              {activePanel === "extrator" && lead && coach && <DataExtractorPanel leadId={lead.id} coachId={coach.id} transcriptChunks={transcriptChunks} />}
-              {activePanel === "lacunas" && lead && coach && <GapsPanel leadId={lead.id} coachId={coach.id} />}
-              {activePanel === "estimativa" && lead && <ValuesEstimationPanel leadId={lead.id} />}
+              {activePanel === "extrator" && lead && coach && (
+                <DataExtractorPanel
+                  leadId={lead.id}
+                  coachId={coach.id}
+                  transcriptChunks={transcriptChunks}
+                  dados={leadDadosSync.dados}
+                  dadosLoading={leadDadosSync.loading}
+                  setField={leadDadosSync.setField}
+                  setFields={leadDadosSync.setFields}
+                />
+              )}
+              {activePanel === "lacunas" && lead && coach && (
+                <GapsPanel
+                  leadId={lead.id}
+                  coachId={coach.id}
+                  dados={leadDadosSync.dados}
+                  dadosLoading={leadDadosSync.loading}
+                />
+              )}
+              {activePanel === "estimativa" && lead && (
+                <ValuesEstimationPanel
+                  dados={leadDadosSync.dados}
+                  loading={leadDadosSync.loading}
+                />
+              )}
             </div>
           </div>
         )}
