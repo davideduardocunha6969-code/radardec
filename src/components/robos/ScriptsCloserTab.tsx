@@ -23,8 +23,10 @@ import {
   ClipboardList,
   Briefcase,
   HandshakeIcon,
+  FileSearch,
 } from "lucide-react";
 import { ScriptItemEditor } from "./ScriptItemEditor";
+import { Textarea } from "@/components/ui/textarea";
 
 
 
@@ -43,11 +45,12 @@ export default function ScriptsCloserTab() {
     apresentacao: [] as ScriptItem[],
     qualificacao: [] as ScriptItem[],
     fechamento: [] as ScriptItem[],
+    instrucoes_extrator: "",
   });
 
   const openNew = () => {
     setEditing(null);
-    setForm({ nome: "", descricao: "", apresentacao: [], qualificacao: [], fechamento: [] });
+    setForm({ nome: "", descricao: "", apresentacao: [], qualificacao: [], fechamento: [], instrucoes_extrator: "" });
     setFormOpen(true);
   };
 
@@ -59,6 +62,7 @@ export default function ScriptsCloserTab() {
       apresentacao: s.apresentacao,
       qualificacao: s.qualificacao,
       fechamento: (s as any).fechamento || [],
+      instrucoes_extrator: s.instrucoes_extrator || "",
     });
     setFormOpen(true);
   };
@@ -71,6 +75,7 @@ export default function ScriptsCloserTab() {
       apresentacao: form.apresentacao.filter((i) => i.label.trim()),
       qualificacao: form.qualificacao.filter((i) => i.label.trim()),
       fechamento: form.fechamento.filter((i) => i.label.trim()),
+      instrucoes_extrator: form.instrucoes_extrator,
     };
     if (editing) {
       updateScript.mutate({ id: editing.id, ...payload }, { onSuccess: () => setFormOpen(false) });
@@ -145,6 +150,11 @@ export default function ScriptsCloserTab() {
                   <Badge variant="outline" className="gap-1">
                     <HandshakeIcon className="h-3 w-3" />{((s as any).fechamento || []).length} fechamento
                   </Badge>
+                  {s.instrucoes_extrator && (
+                    <Badge variant="secondary" className="gap-1">
+                      <FileSearch className="h-3 w-3" />Extrator IA
+                    </Badge>
+                  )}
                 </div>
                 <div className="flex justify-end gap-1">
                   <Button variant="ghost" size="sm" onClick={() => openEdit(s)}>
@@ -198,6 +208,22 @@ export default function ScriptsCloserTab() {
                 items={form.fechamento}
                 onChange={(fechamento) => setForm({ ...form, fechamento })}
               />
+              <Separator />
+              <div className="space-y-2">
+                <div className="flex items-center gap-2">
+                  <FileSearch className="h-4 w-4 text-amber-500" />
+                  <label className="text-sm font-medium">Prompt da IA Extratora</label>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Instruções que a IA usará para extrair dados estruturados da transcrição do atendimento.
+                </p>
+                <Textarea
+                  value={form.instrucoes_extrator}
+                  onChange={(e) => setForm({ ...form, instrucoes_extrator: e.target.value })}
+                  placeholder="Cole aqui o prompt completo da IA Extratora..."
+                  className="min-h-[200px] font-mono text-xs"
+                />
+              </div>
             </div>
           </div>
           <DialogFooter>
