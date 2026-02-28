@@ -369,6 +369,7 @@ export default function Atendimento() {
                 <DataExtractorPanel
                   leadId={lead.id}
                   coachId={coach.id}
+                  scriptId={script?.id}
                   transcriptChunks={transcriptChunks}
                   dados={leadDadosSync.dados}
                   dadosLoading={leadDadosSync.loading}
@@ -380,6 +381,7 @@ export default function Atendimento() {
                 <GapsPanel
                   leadId={lead.id}
                   coachId={coach.id}
+                  scriptId={script?.id}
                   dados={leadDadosSync.dados}
                   dadosLoading={leadDadosSync.loading}
                 />

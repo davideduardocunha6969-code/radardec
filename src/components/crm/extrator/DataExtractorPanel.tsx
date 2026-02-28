@@ -12,6 +12,7 @@ import type { UseLeadDadosSyncReturn } from "@/hooks/useLeadDadosSync";
 interface DataExtractorPanelProps {
   leadId: string;
   coachId: string;
+  scriptId?: string;
   transcriptChunks: LabeledTranscript[];
   dados: DadosExtrasMap;
   dadosLoading: boolean;
@@ -25,7 +26,7 @@ interface ExtractedField {
   confianca: string;
 }
 
-export function DataExtractorPanel({ leadId, coachId, transcriptChunks, dados, dadosLoading, setField, setFields }: DataExtractorPanelProps) {
+export function DataExtractorPanel({ leadId, coachId, scriptId, transcriptChunks, dados, dadosLoading, setField, setFields }: DataExtractorPanelProps) {
   const { data: campos } = useCrmLeadCampos();
   const [extracting, setExtracting] = useState(false);
   const [pendingReview, setPendingReview] = useState<ExtractedField[]>([]);
