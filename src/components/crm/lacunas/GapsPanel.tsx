@@ -123,16 +123,21 @@ export function GapsPanel({ leadId, coachId, scriptId, dados, dadosLoading }: Ga
   return (
     <Card className="h-full">
       <CardHeader className="pb-3">
-        <CardTitle className="text-sm font-semibold flex items-center gap-2">
-          <HelpCircle className="h-4 w-4 text-primary" />
-          Lacunas e Perguntas Sugeridas
-          {gapsWithImpact.length > 0 && (
-            <Badge variant="secondary" className="text-xs ml-auto">
-              {gapsWithImpact.length} lacuna{gapsWithImpact.length !== 1 ? "s" : ""}
-            </Badge>
-          )}
-          {analyzing && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground ml-1" />}
-        </CardTitle>
+        <div>
+          <CardTitle className="text-sm font-semibold flex items-center gap-2">
+            <HelpCircle className="h-4 w-4 text-primary" />
+            Lacunas e Perguntas Sugeridas
+            {gapsWithImpact.length > 0 && (
+              <Badge variant="secondary" className="text-xs ml-auto">
+                {gapsWithImpact.length} lacuna{gapsWithImpact.length !== 1 ? "s" : ""}
+              </Badge>
+            )}
+            {analyzing && <Loader2 className="h-3.5 w-3.5 animate-spin text-muted-foreground ml-1" />}
+          </CardTitle>
+          <p className="text-[10px] text-muted-foreground mt-1">
+            Campos faltantes que mais impactam o valor da causa
+          </p>
+        </div>
       </CardHeader>
       <CardContent className="space-y-2">
         {dadosLoading ? (
@@ -152,7 +157,7 @@ export function GapsPanel({ leadId, coachId, scriptId, dados, dadosLoading }: Ga
             {gapsWithImpact.map(g => (
               <div key={g.key} className="flex items-center justify-between text-xs bg-muted/30 rounded px-2 py-1.5 border border-border/50">
                 <span className="truncate">{g.nome}</span>
-                <span className="text-muted-foreground shrink-0">{formatBRL(g.impacto_estimado)}</span>
+                <span className="text-muted-foreground shrink-0">Impacto: ~{formatBRL(g.impacto_estimado)}</span>
               </div>
             ))}
           </div>
@@ -169,7 +174,7 @@ export function GapsPanel({ leadId, coachId, scriptId, dados, dadosLoading }: Ga
                     {getPriorityBadge(g.impacto_estimado)}
                     <span className="text-xs font-medium truncate flex-1">{g.nome}</span>
                     <span className="text-[10px] text-muted-foreground shrink-0">
-                      {formatBRL(g.impacto_estimado)}
+                      Impacto: ~{formatBRL(g.impacto_estimado)}
                     </span>
                   </div>
 
