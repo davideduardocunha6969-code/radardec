@@ -933,8 +933,9 @@ export function RealtimeCoachingPanel({
 
   return (
     <div className="flex flex-col gap-2 overflow-hidden h-full">
-      <div className="shrink-0" style={{ maxHeight: '160px' }}>
-        {topBar}
+      <div className="shrink-0 flex gap-2 items-start" style={{ maxHeight: '220px' }}>
+        <div className="flex-1 min-w-0">{topBar}</div>
+        {callControls && <div className="w-fit shrink-0">{callControls}</div>}
       </div>
       {scriptCards}
     </div>
