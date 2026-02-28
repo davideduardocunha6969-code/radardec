@@ -479,7 +479,7 @@ export function RealtimeCoachingPanel({
     // Skip Scribe connection for bottomOnly — the topBarOnly instance handles it
     if (bottomOnly) return;
     if (!isRecording) return;
-
+    let cancelled = false;
     const connectBoth = async () => {
       try {
         setConnectionError(null);
