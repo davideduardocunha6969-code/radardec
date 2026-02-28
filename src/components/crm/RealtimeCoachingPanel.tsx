@@ -51,6 +51,8 @@ interface RealtimeCoachingPanelProps {
   audioMonitor?: AudioMonitorInfo;
   script?: ScriptSdr | null;
   onTranscriptUpdate?: (transcripts: LabeledTranscript[]) => void;
+  /** Render prop: call controls to inject next to the top bar (used in unified mode) */
+  callControls?: React.ReactNode;
 }
 
 export interface LabeledTranscript {
