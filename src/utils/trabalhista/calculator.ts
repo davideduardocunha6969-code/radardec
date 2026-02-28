@@ -1337,12 +1337,31 @@ export function estimarImpactoCampo(
   dadosAtuais: DadosExtrasMap
 ): number {
   const params = calcularParametrosBase(dadosAtuais);
-  if (!params) return 0;
 
-  const rem = calcularRemuneracaoBase(dadosAtuais, params);
-  const salario = rem?.salarioCtps || getNum(dadosAtuais, 'salario_ctps_mensal') || 2000;
-  const meses = params.mesesTrabalhados || 24;
-  const horaNormal = salario / (params.divisor || 220);
+  // When params is null (e.g. data_admissao missing), use fallback defaults
+  // so that critical empty fields still appear with estimated impact
+  const salarioFallback = getNum(dadosAtuais, 'salario_ctps_mensal') || 2000;
+  const mesesFallback = 24;
+  const divisorFallback = 220;
+  const diasMesFallback = 27;
+
+  let salario: number;
+  let meses: number;
+  let horaNormal: number;
+  let diasTrabalhadosMes: number;
+
+  if (params) {
+    const rem = calcularRemuneracaoBase(dadosAtuais, params);
+    salario = rem?.salarioCtps || getNum(dadosAtuais, 'salario_ctps_mensal') || 2000;
+    meses = params.mesesTrabalhados || mesesFallback;
+    horaNormal = salario / (params.divisor || divisorFallback);
+    diasTrabalhadosMes = params.diasTrabalhadosMes || diasMesFallback;
+  } else {
+    salario = salarioFallback;
+    meses = mesesFallback;
+    horaNormal = salario / divisorFallback;
+    diasTrabalhadosMes = diasMesFallback;
+  }
 
   const impactos: Record<string, number> = {
     // Campos críticos — bloqueiam tudo
@@ -1350,13 +1369,13 @@ export function estimarImpactoCampo(
     data_admissao: salario * meses * 0.3,
 
     // Jornada — alto impacto
-    hora_inicio_media: horaNormal * 2 * params.diasTrabalhadosMes * meses,
-    hora_fim_media: horaNormal * 2 * params.diasTrabalhadosMes * meses,
-    descanso_entre_jornadas_horas_medio: horaNormal * 1.5 * params.diasTrabalhadosMes * meses,
+    hora_inicio_media: horaNormal * 2 * diasTrabalhadosMes * meses,
+    hora_fim_media: horaNormal * 2 * diasTrabalhadosMes * meses,
+    descanso_entre_jornadas_horas_medio: horaNormal * 1.5 * diasTrabalhadosMes * meses,
 
     // Tempo à disposição (modulado — desde 12/07/2023)
-    tempo_espera_carga_descarga_horas_dia_medio: horaNormal * 1.5 * params.diasTrabalhadosMes * Math.min(meses, 20),
-    tempo_fiscalizacao_barreira_horas_dia_medio: horaNormal * 1.5 * params.diasTrabalhadosMes * Math.min(meses, 20),
+    tempo_espera_carga_descarga_horas_dia_medio: horaNormal * 1.5 * diasTrabalhadosMes * Math.min(meses, 20),
+    tempo_fiscalizacao_barreira_horas_dia_medio: horaNormal * 1.5 * diasTrabalhadosMes * Math.min(meses, 20),
 
     // Adicionais sobre base completa
     periculosidade_devida: salario * 0.30 * meses,

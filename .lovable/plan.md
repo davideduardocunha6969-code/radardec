@@ -1,83 +1,42 @@
 
+# Tres Paineis de Atendimento — Status
 
-# Fase 5 — Fix: Edge Functions buscando prompts na tabela errada + Lacunas sempre vazias
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-## Causa Raiz (confirmada com imagem do usuario)
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-Os prompts `instrucoes_extrator` e `instrucoes_lacunas` estao salvos na tabela **`scripts_sdr`** (tipo `closer`, card "Atendimento Closer - Motorista de Caminhao"). Porem:
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-1. **Edge functions** (`extract-lead-data` e `analyze-gaps`) buscam esses campos na tabela `robos_coach` via `coachId` -- onde estao **vazios**. Resultado: retorna 404 e nada funciona.
-2. **`estimarImpactoCampo()`** retorna 0 para TODOS os campos quando `data_admissao` nao esta preenchida (linha 1340: `if (!params) return 0`). Como o extrator nunca funciona, nenhum dado e preenchido, e o painel de lacunas mostra "todos preenchidos" -- quando na verdade nenhum esta.
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-## Correcoes (4 arquivos + 2 edge functions)
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-### 1. Edge Function `extract-lead-data/index.ts`
-
-- Aceitar `scriptId` no body (alem de `coachId`)
-- Se `scriptId` presente: buscar `instrucoes_extrator` de `scripts_sdr` pelo id
-- Se apenas `coachId`: fallback em `robos_coach` (compatibilidade SDR)
-
-Trecho afetado: linhas 14-36 (parsing do body + busca do prompt)
-
-### 2. Edge Function `analyze-gaps/index.ts`
-
-- Mesma logica: aceitar `scriptId`, buscar `instrucoes_lacunas` de `scripts_sdr`
-- Fallback em `robos_coach` se apenas `coachId`
-
-Trecho afetado: linhas 14-36
-
-### 3. `src/pages/Atendimento.tsx`
-
-- Passar `scriptId={script?.id}` como prop ao `DataExtractorPanel` e `GapsPanel`
-- Linhas 369-377 (DataExtractorPanel) e 380-385 (GapsPanel)
-
-### 4. `src/components/crm/extrator/DataExtractorPanel.tsx`
-
-- Adicionar prop `scriptId?: string` na interface (linha 13)
-- Enviar `scriptId` no body da chamada `invoke("extract-lead-data")` (linha 61)
-
-### 5. `src/components/crm/lacunas/GapsPanel.tsx`
-
-- Adicionar prop `scriptId?: string` na interface (linha 14)
-- Enviar `scriptId` no body da chamada `invoke("analyze-gaps")` (linha 75)
-
-### 6. `src/utils/trabalhista/calculator.ts` (linha 1339-1340)
-
-Quando `calcularParametrosBase` retorna `null` (porque `data_admissao` esta vazia), usar valores default razoaveis em vez de retornar 0:
-
-```text
-Antes:
-  const params = calcularParametrosBase(dadosAtuais);
-  if (!params) return 0;
-
-Depois:
-  const params = calcularParametrosBase(dadosAtuais);
-  if (!params) {
-    // Sem data_admissao, usar defaults para que lacunas criticas aparecam
-    const salFallback = getNum(dadosAtuais, 'salario_ctps_mensal') || 2000;
-    const mesesFallback = 24;
-    // Retornar impactos fixos baseados no campo
-    const impactosDefault: Record<string, number> = {
-      data_admissao: salFallback * mesesFallback * 0.3,
-      salario_ctps_mensal: 2000 * 24 * 0.5,
-      ... (mesma tabela de impactos, com salFallback e mesesFallback)
-    };
-    return Math.round((impactosDefault[campo] || 500) * 100) / 100;
-  }
-```
-
-Isso garante que campos criticos como `data_admissao` e `salario_ctps_mensal` aparecam com impacto alto no painel de lacunas **mesmo antes de qualquer dado ser preenchido**.
-
-## Resumo
-
-| Arquivo | Acao |
-|---|---|
-| `supabase/functions/extract-lead-data/index.ts` | Aceitar `scriptId`, buscar prompt de `scripts_sdr` |
-| `supabase/functions/analyze-gaps/index.ts` | Aceitar `scriptId`, buscar prompt de `scripts_sdr` |
-| `src/pages/Atendimento.tsx` | Passar `scriptId={script?.id}` aos paineis |
-| `src/components/crm/extrator/DataExtractorPanel.tsx` | Adicionar prop `scriptId`, enviar na chamada |
-| `src/components/crm/lacunas/GapsPanel.tsx` | Adicionar prop `scriptId`, enviar na chamada |
-| `src/utils/trabalhista/calculator.ts` | Fallback com valores default quando `calcularParametrosBase` retorna null |
-
-Nenhuma migracao de banco. Deploy automatico das edge functions.
-
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções

@@ -13,6 +13,7 @@ import type { DadosExtrasMap } from "@/utils/trabalhista/types";
 interface GapsPanelProps {
   leadId: string;
   coachId: string;
+  scriptId?: string;
   dados: DadosExtrasMap;
   dadosLoading: boolean;
 }
@@ -32,7 +33,7 @@ interface AiGapResult {
   contexto_para_o_closer?: string;
 }
 
-export function GapsPanel({ leadId, coachId, dados, dadosLoading }: GapsPanelProps) {
+export function GapsPanel({ leadId, coachId, scriptId, dados, dadosLoading }: GapsPanelProps) {
   const { data: campos } = useCrmLeadCampos();
   const { toast } = useToast();
   const [aiResults, setAiResults] = useState<AiGapResult[]>([]);
@@ -75,6 +76,7 @@ export function GapsPanel({ leadId, coachId, dados, dadosLoading }: GapsPanelPro
           body: {
             leadId,
             coachId,
+            scriptId,
             gaps: gapsWithImpact.map(g => ({
               key: g.key,
               nome: g.nome,

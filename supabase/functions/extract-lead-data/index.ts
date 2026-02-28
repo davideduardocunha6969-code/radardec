@@ -11,9 +11,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { leadId, coachId, transcript } = await req.json();
-    if (!leadId || !coachId || !transcript) {
-      return new Response(JSON.stringify({ error: "leadId, coachId and transcript are required" }), {
+    const { leadId, coachId, scriptId, transcript } = await req.json();
+    if (!leadId || (!coachId && !scriptId) || !transcript) {
+      return new Response(JSON.stringify({ error: "leadId, (coachId or scriptId) and transcript are required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -22,15 +22,33 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const sb = createClient(supabaseUrl, serviceKey);
 
-    // 1. Fetch coach instrucoes_extrator
-    const { data: coach, error: coachErr } = await sb
-      .from("robos_coach")
-      .select("instrucoes_extrator")
-      .eq("id", coachId)
-      .single();
+    // 1. Fetch instrucoes_extrator — prefer scriptId (scripts_sdr), fallback to coachId (robos_coach)
+    let instrucoes_extrator: string | null = null;
 
-    if (coachErr || !coach?.instrucoes_extrator) {
-      return new Response(JSON.stringify({ error: "Coach not found or instrucoes_extrator empty" }), {
+    if (scriptId) {
+      const { data: scriptData, error: scriptErr } = await sb
+        .from("scripts_sdr")
+        .select("instrucoes_extrator")
+        .eq("id", scriptId)
+        .single();
+      if (!scriptErr && scriptData?.instrucoes_extrator) {
+        instrucoes_extrator = scriptData.instrucoes_extrator;
+      }
+    }
+
+    if (!instrucoes_extrator && coachId) {
+      const { data: coach, error: coachErr } = await sb
+        .from("robos_coach")
+        .select("instrucoes_extrator")
+        .eq("id", coachId)
+        .single();
+      if (!coachErr && coach?.instrucoes_extrator) {
+        instrucoes_extrator = coach.instrucoes_extrator;
+      }
+    }
+
+    if (!instrucoes_extrator) {
+      return new Response(JSON.stringify({ error: "instrucoes_extrator not found in script or coach" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -100,7 +118,7 @@ Extraia os dados da transcrição acima seguindo as instruções do sistema. Ret
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: coach.instrucoes_extrator },
+          { role: "system", content: instrucoes_extrator },
           { role: "user", content: userPrompt },
         ],
       }),

@@ -11,9 +11,9 @@ serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
   try {
-    const { leadId, coachId, gaps } = await req.json();
-    if (!leadId || !coachId || !gaps?.length) {
-      return new Response(JSON.stringify({ error: "leadId, coachId and gaps are required" }), {
+    const { leadId, coachId, scriptId, gaps } = await req.json();
+    if (!leadId || (!coachId && !scriptId) || !gaps?.length) {
+      return new Response(JSON.stringify({ error: "leadId, (coachId or scriptId) and gaps are required" }), {
         status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -22,15 +22,33 @@ serve(async (req) => {
     const serviceKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const sb = createClient(supabaseUrl, serviceKey);
 
-    // 1. Fetch coach instrucoes_lacunas
-    const { data: coach, error: coachErr } = await sb
-      .from("robos_coach")
-      .select("instrucoes_lacunas")
-      .eq("id", coachId)
-      .single();
+    // 1. Fetch instrucoes_lacunas — prefer scriptId (scripts_sdr), fallback to coachId (robos_coach)
+    let instrucoes_lacunas: string | null = null;
 
-    if (coachErr || !coach?.instrucoes_lacunas) {
-      return new Response(JSON.stringify({ error: "Coach not found or instrucoes_lacunas empty" }), {
+    if (scriptId) {
+      const { data: scriptData, error: scriptErr } = await sb
+        .from("scripts_sdr")
+        .select("instrucoes_lacunas")
+        .eq("id", scriptId)
+        .single();
+      if (!scriptErr && scriptData?.instrucoes_lacunas) {
+        instrucoes_lacunas = scriptData.instrucoes_lacunas;
+      }
+    }
+
+    if (!instrucoes_lacunas && coachId) {
+      const { data: coach, error: coachErr } = await sb
+        .from("robos_coach")
+        .select("instrucoes_lacunas")
+        .eq("id", coachId)
+        .single();
+      if (!coachErr && coach?.instrucoes_lacunas) {
+        instrucoes_lacunas = coach.instrucoes_lacunas;
+      }
+    }
+
+    if (!instrucoes_lacunas) {
+      return new Response(JSON.stringify({ error: "instrucoes_lacunas not found in script or coach" }), {
         status: 404, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -69,7 +87,7 @@ Analise as lacunas acima e gere perguntas sugeridas para o Closer fazer ao lead,
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
         messages: [
-          { role: "system", content: coach.instrucoes_lacunas },
+          { role: "system", content: instrucoes_lacunas },
           { role: "user", content: userPrompt },
         ],
       }),
