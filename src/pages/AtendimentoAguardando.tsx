@@ -3,7 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Phone, PhoneOff, CheckCircle2 } from "lucide-react";
+import { Loader2, Phone, PhoneOff } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 
@@ -21,25 +21,45 @@ export default function AtendimentoAguardando() {
 
   const [session, setSession] = useState<any>(null);
   const [cancelling, setCancelling] = useState(false);
+  const [authReady, setAuthReady] = useState(false);
 
-  // Initial fetch
+  // Wait for auth to be ready before any data fetching
   useEffect(() => {
-    if (!sessionId) return;
-    const fetchSession = async () => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
+      if (sess) setAuthReady(true);
+    });
+    // Check if already authenticated
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) setAuthReady(true);
+    });
+    return () => subscription.unsubscribe();
+  }, []);
+
+  // Fetch session only after auth is ready
+  useEffect(() => {
+    if (!sessionId || !authReady) return;
+
+    const fetchSession = async (retries = 2) => {
       const { data, error } = await (supabase
         .from("power_dialer_sessions" as any)
         .select("*")
         .eq("id", sessionId)
         .single() as any);
-      if (error) console.error("Fetch session error:", error);
+      if (error) {
+        console.error("Fetch session error:", error);
+        if (retries > 0) {
+          setTimeout(() => fetchSession(retries - 1), 1000);
+          return;
+        }
+      }
       if (data) setSession(data);
     };
     fetchSession();
-  }, [sessionId]);
+  }, [sessionId, authReady]);
 
-  // Realtime subscription
+  // Realtime subscription only after auth is ready
   useEffect(() => {
-    if (!sessionId) return;
+    if (!sessionId || !authReady) return;
 
     const channel = supabase
       .channel(`pds-${sessionId}`)
@@ -60,7 +80,7 @@ export default function AtendimentoAguardando() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [sessionId]);
+  }, [sessionId, authReady]);
 
   // Redirect when lead is answered
   useEffect(() => {
@@ -80,6 +100,9 @@ export default function AtendimentoAguardando() {
       if (error) {
         toast.error("Erro ao cancelar discagem");
         console.error("Cancel error:", error);
+      } else {
+        // Update local state immediately
+        setSession((prev: any) => prev ? { ...prev, status: "cancelado" } : prev);
       }
     } catch (e) {
       toast.error("Erro ao cancelar discagem");
@@ -97,7 +120,7 @@ export default function AtendimentoAguardando() {
 
   const isFinished = session?.status === "finalizado_sem_atendimento" || session?.status === "cancelado" || session?.status === "expirado";
 
-  if (status === "iniciando" && !sessionId) {
+  if ((status === "iniciando" && !sessionId) || (!authReady && sessionId)) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Card className="w-96">
