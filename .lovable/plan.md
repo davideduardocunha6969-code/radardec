@@ -1,42 +1,42 @@
 
-# Tres Paineis de Atendimento — Status
+# Corrigir Power Dialer: erro "now is not defined" no twilio-token
 
-## Fase 1 — Infraestrutura ✅ CONCLUÍDA
+## Problema raiz
 
-- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
-- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
-- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
-- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
-- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
-- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
-- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
-- [x] Interface `RoboCoach` e mutations atualizados com novos campos
+O erro `Edge function returned 500: {"error":"now is not defined"}` vem da funcao `twilio-token/index.ts`. Nas linhas 67-76, o codigo referencia variaveis `now`, `expiry` e `header` que nunca foram declaradas. Isso impede a geracao do token JWT do Twilio.
 
-## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
-- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
-- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
-- [x] `estimarImpactoCampo()` — para ordenação de lacunas
-- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
-- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
+O `PowerDialerButton` chama `twilio-token` ao montar o componente para inicializar o Twilio Device. Sem o device registrado, as chamadas de entrada (quando um lead atende) nao podem ser aceitas pelo navegador.
 
-## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
-- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
-- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
-- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
-- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
-- [x] Botão Confirmar promove campo para manual
-- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
+## Correcao
 
-## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
-- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
-- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
-- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
-- [x] Debounce de 2s nas mudanças de dados
-- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
-- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
+### 1. Adicionar variaveis faltantes no `twilio-token/index.ts`
 
-## Fase 5 — Integração Final ✅ CONCLUÍDA
-- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
-- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
-- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
-- [x] Config.toml atualizado com as duas novas funções
+Depois da linha 65 (apos o bloco `grants`), adicionar as declaracoes que estao faltando:
+
+```text
+const now = Math.floor(Date.now() / 1000);
+const expiry = now + 3600; // 1 hora de validade
+
+const header = { alg: "HS256", typ: "JWT" };
+```
+
+Essas variaveis sao usadas nas linhas 67-76 para construir o payload e o header do JWT.
+
+### 2. O arquivo corrigido tera este fluxo
+
+1. Validar usuario via `getUser()`
+2. Montar o objeto `grants` com permissoes de voz
+3. Declarar `now`, `expiry` e `header`
+4. Construir payload JWT com `jti`, `iss`, `sub`, `iat`, `exp`, `grants`
+5. Assinar com HMAC-SHA256 usando `API_SECRET`
+6. Retornar o token
+
+### Resultado esperado
+
+- O `twilio-token` vai gerar tokens JWT validos
+- O `PowerDialerButton` vai conseguir registrar o Twilio Device
+- O Power Dialer vai funcionar corretamente: discar, receber chamadas atendidas, e cancelar
+
+## Arquivo modificado
+
+- `supabase/functions/twilio-token/index.ts` -- adicionar declaracoes de `now`, `expiry` e `header`
