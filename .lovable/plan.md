@@ -1,42 +1,81 @@
 
-# Tres Paineis de Atendimento — Status
 
-## Fase 1 — Infraestrutura ✅ CONCLUÍDA
+# Auto-importar numeros Twilio
 
-- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
-- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
-- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
-- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
-- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
-- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
-- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
-- [x] Interface `RoboCoach` e mutations atualizados com novos campos
+## O que muda
 
-## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
-- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
-- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
-- [x] `estimarImpactoCampo()` — para ordenação de lacunas
-- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
-- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
+Em vez de cadastrar manualmente cada numero na aba "Numeros VoIP", adicionar um botao "Importar do Twilio" que busca todos os numeros comprados na conta via API REST e os cadastra automaticamente com DDD e regiao extraidos do numero.
 
-## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
-- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
-- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
-- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
-- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
-- [x] Botão Confirmar promove campo para manual
-- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
+---
 
-## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
-- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
-- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
-- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
-- [x] Debounce de 2s nas mudanças de dados
-- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
-- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
+## Implementacao
 
-## Fase 5 — Integração Final ✅ CONCLUÍDA
-- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
-- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
-- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
-- [x] Config.toml atualizado com as duas novas funções
+### 1. Nova Edge Function `sync-twilio-numeros`
+
+Arquivo: `supabase/functions/sync-twilio-numeros/index.ts`
+
+- Autentica o usuario via JWT (apenas admins)
+- Chama a API REST do Twilio: `GET https://api.twilio.com/2010-04-01/Accounts/{SID}/IncomingPhoneNumbers.json`
+- Usa `TWILIO_ACCOUNT_SID` e `TWILIO_AUTH_TOKEN` (Basic Auth)
+- Para cada numero retornado:
+  - Extrai DDD do numero (posicoes 3-4 para numeros +55XX...)
+  - Usa `friendly_name` ou logica de mapeamento DDD-para-cidade como regiao
+  - Faz upsert na tabela `twilio_numeros` (ON CONFLICT numero)
+- Retorna lista de numeros sincronizados e quantos foram novos vs atualizados
+
+### 2. Registrar no config.toml
+
+```toml
+[functions.sync-twilio-numeros]
+verify_jwt = false
+```
+
+(verify_jwt = false porque a validacao de admin e feita manualmente no codigo)
+
+### 3. Atualizar a aba "Numeros VoIP" em Configuracoes
+
+- Adicionar botao "Importar do Twilio" ao lado do formulario de cadastro manual
+- Ao clicar, chama `supabase.functions.invoke('sync-twilio-numeros')`
+- Exibe toast com resultado: "X numeros importados, Y ja existiam"
+- Invalida query `twilio_numeros` para atualizar a lista
+
+### 4. Mapeamento DDD para Regiao
+
+Tabela estatica no codigo da edge function com os principais DDDs brasileiros:
+
+```text
+11 -> Sao Paulo
+21 -> Rio de Janeiro
+31 -> Belo Horizonte
+41 -> Curitiba
+51 -> Porto Alegre
+61 -> Brasilia
+71 -> Salvador
+81 -> Recife
+85 -> Fortaleza
+62 -> Goiania
+... (demais DDDs)
+```
+
+---
+
+## Arquivos envolvidos
+
+| Arquivo | Acao |
+|---------|------|
+| `supabase/functions/sync-twilio-numeros/index.ts` | Nova edge function |
+| `supabase/config.toml` | Registrar nova funcao |
+| `src/pages/Configuracoes.tsx` | Botao "Importar do Twilio" |
+
+---
+
+## Fluxo do usuario
+
+1. Vai em Configuracoes > Numeros VoIP
+2. Clica "Importar do Twilio"
+3. Sistema busca todos os numeros da conta Twilio
+4. Numeros aparecem na lista com DDD e regiao preenchidos automaticamente
+5. Usuario pode ativar/desativar individualmente conforme necessidade
+
+O cadastro manual continua disponivel como alternativa.
+
