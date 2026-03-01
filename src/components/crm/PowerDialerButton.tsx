@@ -233,7 +233,7 @@ export function PowerDialerButton({ funilId, colunaId, leadsCount }: PowerDialer
               onClick={() => {
                 if (missedAlert) {
                   window.open(
-                    `/atendimento?leadId=${missedAlert.leadId}&numero=${encodeURIComponent(missedAlert.numero)}&tipo=voip&funilId=${funilId}&papel=sdr`,
+                    `/atendimento?leadId=${missedAlert.leadId}&numero=${encodeURIComponent(missedAlert.numero)}&tipo=voip&funilId=${funilId}&papel=${(missedAlert as any).papel || "sdr"}`,
                     `atendimento_${missedAlert.leadId}`,
                     "width=1200,height=800"
                   );

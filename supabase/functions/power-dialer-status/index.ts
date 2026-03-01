@@ -21,10 +21,33 @@ serve(async (req) => {
   const AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN")!;
 
   try {
-    const formData = await req.formData();
-    const callSid = formData.get("CallSid") as string;
-    const callStatus = formData.get("CallStatus") as string;
-    const callDuration = parseInt(formData.get("CallDuration") as string || "0", 10);
+    // Resilient parsing: try formData first, fallback to text + URLSearchParams
+    let callSid = "";
+    let callStatus = "";
+    let callDuration = 0;
+
+    const contentType = req.headers.get("content-type") || "";
+    if (contentType.includes("application/x-www-form-urlencoded")) {
+      try {
+        const formData = await req.formData();
+        callSid = (formData.get("CallSid") as string) || "";
+        callStatus = (formData.get("CallStatus") as string) || "";
+        callDuration = parseInt((formData.get("CallDuration") as string) || "0", 10);
+      } catch {
+        // Fallback: parse as text
+        const text = await req.text();
+        const params = new URLSearchParams(text);
+        callSid = params.get("CallSid") || "";
+        callStatus = params.get("CallStatus") || "";
+        callDuration = parseInt(params.get("CallDuration") || "0", 10);
+      }
+    } else {
+      const text = await req.text();
+      const params = new URLSearchParams(text);
+      callSid = params.get("CallSid") || "";
+      callStatus = params.get("CallStatus") || "";
+      callDuration = parseInt(params.get("CallDuration") || "0", 10);
+    }
 
     console.log(`[power-dialer-status] CallSid=${callSid} Status=${callStatus} Duration=${callDuration}`);
 
@@ -49,10 +72,9 @@ serve(async (req) => {
 
     switch (callStatus) {
       case "in-progress": {
-        // Call connected to client = human answered!
+        // Call connected — fallback winner logic (TwiML should have done this already)
         newStatus = "em_chamada";
 
-        // Set lead_atendido_id on session to trigger frontend redirect IMMEDIATELY
         if (chamada.power_dialer_session_id) {
           const { data: session } = await supabase
             .from("power_dialer_sessions")
@@ -60,9 +82,9 @@ serve(async (req) => {
             .eq("id", chamada.power_dialer_session_id)
             .single();
 
-          // Only set if not already set (first human to answer wins)
+          // Fallback: set winner if TwiML didn't (idempotent)
           if (session && !session.lead_atendido_id) {
-            console.log(`[power-dialer-status] Human answered! Lead=${chamada.lead_id}, cancelling other calls`);
+            console.log(`[power-dialer-status] Fallback winner! Lead=${chamada.lead_id}`);
 
             await supabase
               .from("power_dialer_sessions")
@@ -73,10 +95,10 @@ serve(async (req) => {
               })
               .eq("id", chamada.power_dialer_session_id);
 
-            // Cancel all OTHER calls in this batch
+            // Cancel other calls
             const allSids = (session.call_sids || {}) as Record<string, string>;
             for (const [sid, chamadaId] of Object.entries(allSids)) {
-              if (sid === callSid) continue; // skip the answered call
+              if (sid === callSid) continue;
               try {
                 const url = `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Calls/${sid}.json`;
                 await fetch(url, {
@@ -91,7 +113,6 @@ serve(async (req) => {
               } catch (e) {
                 console.error(`[power-dialer-status] Error cancelling ${sid}:`, e);
               }
-              // Update chamada status to cancelada
               await supabase
                 .from("crm_chamadas")
                 .update({ status: "cancelada" })
@@ -108,7 +129,6 @@ serve(async (req) => {
           newStatus = "finalizada";
           updateData.duracao_segundos = callDuration;
         } else {
-          // Duration 0 = voicemail hangup or machine detected by AMD
           newStatus = "nao_atendida";
         }
         break;
