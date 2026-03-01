@@ -50,18 +50,16 @@ serve(async (req) => {
       });
     }
 
-    const identity = `user_${user.id.replace(/-/g, "")}`;
+    const identity = `user_${user.id}`;
 
-    // Generate JWT Access Token for Twilio Voice
-    const now = Math.floor(Date.now() / 1000);
-    const expiry = now + 3600;
-
-    const header = { alg: "HS256", typ: "JWT", cty: "twilio-fpa;v=1" };
     const grants: Record<string, unknown> = {
       identity,
       voice: {
         outgoing: {
           application_sid: TWILIO_APP_ID || "",
+        },
+        incoming: {
+          allow: true,
         },
       },
     };

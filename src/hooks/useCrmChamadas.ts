@@ -20,6 +20,13 @@ export interface CrmChamada {
   nota_ia: number | null;
   created_at: string;
   updated_at: string;
+  power_dialer_session_id: string | null;
+  caller_id_usado: string | null;
+  coluna_id_no_momento: string | null;
+  tentativa_numero: number;
+  ddd_destino: string | null;
+  ddd_caller: string | null;
+  observacoes: string | null;
 }
 
 export function useCrmChamadas(leadId: string | undefined, papel?: string) {

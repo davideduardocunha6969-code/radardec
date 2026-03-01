@@ -34,7 +34,6 @@ export function PowerDialerButton({ funilId, colunaId, leadsCount }: PowerDialer
         if (error || !data?.token) return;
 
         const device = new Device(data.token, {
-          codecPreferences: [Device.Codec.Opus, Device.Codec.PCMU],
           logLevel: 1,
         });
 
