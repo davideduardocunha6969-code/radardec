@@ -41,6 +41,7 @@ import RadarOutbound from "./pages/RadarOutbound";
  import MeuPainel from "./pages/MeuPainel";
  import Atendimento from "./pages/Atendimento";
  import Configuracoes from "./pages/Configuracoes";
+ import AtendimentoAguardando from "./pages/AtendimentoAguardando";
 const queryClient = new QueryClient();
 
 const App = () => (
@@ -53,6 +54,7 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/atendimento" element={<Atendimento />} />
+            <Route path="/atendimento-aguardando" element={<AtendimentoAguardando />} />
             <Route element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
               <Route path="/" element={<ProtectedRoute pageKey="gestao-geral"><GestaoGeral /></ProtectedRoute>} />
               <Route path="/radar-controladoria" element={<ProtectedRoute pageKey="radar-controladoria"><RadarControladoria /></ProtectedRoute>} />

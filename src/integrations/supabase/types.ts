@@ -705,9 +705,13 @@ export type Database = {
       crm_chamadas: {
         Row: {
           audio_url: string | null
+          caller_id_usado: string | null
           canal: string
+          coluna_id_no_momento: string | null
           created_at: string
           custo_detalhado: Json | null
+          ddd_caller: string | null
+          ddd_destino: string | null
           duracao_segundos: number | null
           encerrado_por: string | null
           feedback_ia: string | null
@@ -715,10 +719,13 @@ export type Database = {
           lead_id: string
           nota_ia: number | null
           numero_discado: string
+          observacoes: string | null
           papel: string
+          power_dialer_session_id: string | null
           recording_url: string | null
           resumo_ia: string | null
           status: string
+          tentativa_numero: number
           transcricao: string | null
           twilio_call_sid: string | null
           updated_at: string
@@ -726,9 +733,13 @@ export type Database = {
         }
         Insert: {
           audio_url?: string | null
+          caller_id_usado?: string | null
           canal?: string
+          coluna_id_no_momento?: string | null
           created_at?: string
           custo_detalhado?: Json | null
+          ddd_caller?: string | null
+          ddd_destino?: string | null
           duracao_segundos?: number | null
           encerrado_por?: string | null
           feedback_ia?: string | null
@@ -736,10 +747,13 @@ export type Database = {
           lead_id: string
           nota_ia?: number | null
           numero_discado: string
+          observacoes?: string | null
           papel?: string
+          power_dialer_session_id?: string | null
           recording_url?: string | null
           resumo_ia?: string | null
           status?: string
+          tentativa_numero?: number
           transcricao?: string | null
           twilio_call_sid?: string | null
           updated_at?: string
@@ -747,9 +761,13 @@ export type Database = {
         }
         Update: {
           audio_url?: string | null
+          caller_id_usado?: string | null
           canal?: string
+          coluna_id_no_momento?: string | null
           created_at?: string
           custo_detalhado?: Json | null
+          ddd_caller?: string | null
+          ddd_destino?: string | null
           duracao_segundos?: number | null
           encerrado_por?: string | null
           feedback_ia?: string | null
@@ -757,10 +775,13 @@ export type Database = {
           lead_id?: string
           nota_ia?: number | null
           numero_discado?: string
+          observacoes?: string | null
           papel?: string
+          power_dialer_session_id?: string | null
           recording_url?: string | null
           resumo_ia?: string | null
           status?: string
+          tentativa_numero?: number
           transcricao?: string | null
           twilio_call_sid?: string | null
           updated_at?: string
@@ -772,6 +793,13 @@ export type Database = {
             columns: ["lead_id"]
             isOneToOne: false
             referencedRelation: "crm_leads"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "crm_chamadas_power_dialer_session_id_fkey"
+            columns: ["power_dialer_session_id"]
+            isOneToOne: false
+            referencedRelation: "power_dialer_sessions"
             referencedColumns: ["id"]
           },
         ]
@@ -1760,6 +1788,60 @@ export type Database = {
         }
         Relationships: []
       }
+      power_dialer_sessions: {
+        Row: {
+          call_sids: Json
+          coluna_id: string
+          created_at: string
+          funil_id: string
+          id: string
+          lead_atendido_id: string | null
+          leads_info: Json
+          lote_atual: number
+          numeros_fila: Json
+          papel: string
+          resultado_por_numero: Json
+          status: string
+          telefone_atendido: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          call_sids?: Json
+          coluna_id: string
+          created_at?: string
+          funil_id: string
+          id?: string
+          lead_atendido_id?: string | null
+          leads_info?: Json
+          lote_atual?: number
+          numeros_fila?: Json
+          papel?: string
+          resultado_por_numero?: Json
+          status?: string
+          telefone_atendido?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          call_sids?: Json
+          coluna_id?: string
+          created_at?: string
+          funil_id?: string
+          id?: string
+          lead_atendido_id?: string | null
+          leads_info?: Json
+          lote_atual?: number
+          numeros_fila?: Json
+          papel?: string
+          resultado_por_numero?: Json
+          status?: string
+          telefone_atendido?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           created_at: string
@@ -2119,6 +2201,33 @@ export type Database = {
         }
         Relationships: []
       }
+      twilio_numeros: {
+        Row: {
+          ativo: boolean
+          created_at: string
+          ddd: string
+          id: string
+          numero: string
+          regiao: string | null
+        }
+        Insert: {
+          ativo?: boolean
+          created_at?: string
+          ddd: string
+          id?: string
+          numero: string
+          regiao?: string | null
+        }
+        Update: {
+          ativo?: boolean
+          created_at?: string
+          ddd?: string
+          id?: string
+          numero?: string
+          regiao?: string | null
+        }
+        Relationships: []
+      }
       user_horario_trabalho: {
         Row: {
           ativo: boolean
@@ -2318,6 +2427,7 @@ export type Database = {
     Functions: {
       bulk_insert_leads: { Args: { leads_data: Json }; Returns: number }
       can_validate_content: { Args: { _user_id: string }; Returns: boolean }
+      expire_old_dialer_sessions: { Args: never; Returns: undefined }
       has_page_permission: {
         Args: { _page_key: string; _user_id: string }
         Returns: boolean

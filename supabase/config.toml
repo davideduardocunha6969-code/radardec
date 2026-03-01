@@ -65,3 +65,15 @@ verify_jwt = false
 
  [functions.analyze-gaps]
  verify_jwt = false
+
+ [functions.power-dialer]
+ verify_jwt = false
+
+ [functions.power-dialer-twiml]
+ verify_jwt = false
+
+ [functions.power-dialer-status]
+ verify_jwt = false
+
+ [functions.expire-dialer-sessions]
+ schedule = "0 * * * *"
