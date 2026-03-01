@@ -26,11 +26,12 @@ export default function AtendimentoAguardando() {
   useEffect(() => {
     if (!sessionId) return;
     const fetchSession = async () => {
-      const { data } = await (supabase
+      const { data, error } = await (supabase
         .from("power_dialer_sessions" as any)
         .select("*")
         .eq("id", sessionId)
         .single() as any);
+      if (error) console.error("Fetch session error:", error);
       if (data) setSession(data);
     };
     fetchSession();
@@ -73,10 +74,15 @@ export default function AtendimentoAguardando() {
     if (!sessionId) return;
     setCancelling(true);
     try {
-      await supabase.functions.invoke("power-dialer", {
+      const { error } = await supabase.functions.invoke("power-dialer", {
         body: { action: "cancel", sessionId },
       });
+      if (error) {
+        toast.error("Erro ao cancelar discagem");
+        console.error("Cancel error:", error);
+      }
     } catch (e) {
+      toast.error("Erro ao cancelar discagem");
       console.error("Cancel error:", e);
     }
     setCancelling(false);
