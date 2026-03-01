@@ -1,76 +1,42 @@
 
+# Tres Paineis de Atendimento — Status
 
-# Corrigir Power Dialer: dados nao carregam e cancelar nao funciona
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-## Problemas identificados
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-### 1. Bug de autenticacao no edge function `power-dialer`
-A linha 81 do `supabase/functions/power-dialer/index.ts` usa `supabase.auth.getClaims(token)` que nao existe no SDK. Esse mesmo bug foi corrigido no `sync-twilio-numeros` anteriormente. Isso faz com que:
-- A acao `cancel` retorne 401 (Unauthorized), impedindo o cancelamento
-- A acao `start` pode ter funcionado por cache de deploy anterior, mas e instavel
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-### 2. Pagina mostra "0 leads na fila"
-O banco de dados confirma que a sessao tem 324 leads na fila e 5 no lote atual. A sessao foi criada com sucesso (status `ativo`). O problema pode estar na leitura dos dados na pagina popup -- o fetch inicial retorna null se houver problemas de autenticacao ou o componente nao re-renderiza corretamente.
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-### 3. Botao Cancelar nao responde
-O `handleCancel` chama o edge function com `action: "cancel"`, mas a funcao rejeita com 401 por causa do `getClaims`. O `supabase.functions.invoke` nao lanca excecao em erros HTTP, entao o frontend nao exibe feedback de erro ao usuario.
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-## Correcoes planejadas
-
-### Correcao 1: Edge function `power-dialer/index.ts`
-Substituir `getClaims` por `getUser()` (linhas 80-88):
-
-```text
-Antes:
-  const token = authHeader.replace("Bearer ", "");
-  const { data: claimsData, error: claimsErr } = await supabaseUser.auth.getClaims(token);
-  if (claimsErr || !claimsData?.claims) { ... }
-  const userId = claimsData.claims.sub as string;
-
-Depois:
-  const { data: userData, error: userError } = await supabaseUser.auth.getUser();
-  if (userError || !userData?.user) { ... }
-  const userId = userData.user.id;
-```
-
-### Correcao 2: Feedback de erro no cancelamento (`AtendimentoAguardando.tsx`)
-Adicionar tratamento de erro no `handleCancel` para informar o usuario caso a operacao falhe:
-
-```text
-const handleCancel = async () => {
-  if (!sessionId) return;
-  setCancelling(true);
-  try {
-    const { error } = await supabase.functions.invoke("power-dialer", {
-      body: { action: "cancel", sessionId },
-    });
-    if (error) {
-      toast.error("Erro ao cancelar discagem");
-    }
-  } catch (e) {
-    toast.error("Erro ao cancelar discagem");
-  }
-  setCancelling(false);
-};
-```
-
-### Correcao 3: Tratamento de erro no fetch da sessao (`AtendimentoAguardando.tsx`)
-Adicionar log/feedback quando o fetch da sessao falhar para facilitar debug:
-
-```text
-const { data, error } = await (supabase
-  .from("power_dialer_sessions" as any)
-  .select("*")
-  .eq("id", sessionId)
-  .single() as any);
-if (error) console.error("Fetch session error:", error);
-if (data) setSession(data);
-```
-
-### Deploy
-Redeployar a edge function `power-dialer` apos a correcao.
-
-## Resultado esperado
-- O Power Dialer vai exibir corretamente os leads do lote atual e o total na fila
-- O botao "Cancelar Discagem" vai funcionar, cancelando as chamadas Twilio ativas
-- Erros serao exibidos ao usuario via toast
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções
