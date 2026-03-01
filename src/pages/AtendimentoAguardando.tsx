@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -22,14 +22,14 @@ export default function AtendimentoAguardando() {
   const [session, setSession] = useState<any>(null);
   const [cancelling, setCancelling] = useState(false);
   const [fetchError, setFetchError] = useState(false);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mountedRef = useRef(true);
 
   const fetchSession = useCallback(async (retries = 8) => {
-    if (!sessionId) return;
+    if (!sessionId || !mountedRef.current) return;
 
-    // Wait for auth to be available before querying (RLS depends on it)
     const { data: { session: authSession } } = await supabase.auth.getSession();
     if (!authSession) {
-      console.log("Auth not ready yet, retries left:", retries);
       if (retries > 0) {
         setTimeout(() => fetchSession(retries - 1), 1500);
         return;
@@ -44,7 +44,6 @@ export default function AtendimentoAguardando() {
       .eq("id", sessionId)
       .single() as any);
     if (error || !data) {
-      console.error("Fetch session error:", error, `retries left: ${retries}`);
       if (retries > 0) {
         setTimeout(() => fetchSession(retries - 1), 1500);
         return;
@@ -56,14 +55,14 @@ export default function AtendimentoAguardando() {
     setSession(data);
   }, [sessionId]);
 
-  // Fetch session with small initial delay for auth restoration
+  // Initial fetch with delay for auth restoration
   useEffect(() => {
     if (!sessionId) return;
     const timer = setTimeout(() => fetchSession(), 500);
     return () => clearTimeout(timer);
   }, [sessionId, fetchSession]);
 
-  // Re-fetch when auth state changes (backup)
+  // Auth state change backup
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
       if (sess && sessionId) {
@@ -74,7 +73,7 @@ export default function AtendimentoAguardando() {
     return () => subscription.unsubscribe();
   }, [sessionId, fetchSession]);
 
-  // Realtime subscription - start immediately
+  // Realtime subscription
   useEffect(() => {
     if (!sessionId) return;
 
@@ -89,7 +88,7 @@ export default function AtendimentoAguardando() {
           filter: `id=eq.${sessionId}`,
         },
         (payload: any) => {
-          setSession(payload.new);
+          if (mountedRef.current) setSession(payload.new);
         }
       )
       .subscribe();
@@ -98,6 +97,43 @@ export default function AtendimentoAguardando() {
       supabase.removeChannel(channel);
     };
   }, [sessionId]);
+
+  // POLLING FALLBACK: every 2s while session is active
+  useEffect(() => {
+    if (!sessionId || !session) return;
+    const isActive = session.status === "ativo";
+    if (!isActive) {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+      return;
+    }
+
+    pollingRef.current = setInterval(async () => {
+      if (!mountedRef.current) return;
+      const { data } = await (supabase
+        .from("power_dialer_sessions" as any)
+        .select("lead_atendido_id, telefone_atendido, status, funil_id, papel")
+        .eq("id", sessionId)
+        .single() as any);
+      if (data && mountedRef.current) {
+        // Check for redirect trigger
+        if (data.lead_atendido_id) {
+          setSession((prev: any) => ({ ...prev, ...data }));
+        } else if (["cancelado", "finalizado_sem_atendimento", "expirado", "atendida"].includes(data.status)) {
+          setSession((prev: any) => ({ ...prev, ...data }));
+        }
+      }
+    }, 2000);
+
+    return () => {
+      if (pollingRef.current) clearInterval(pollingRef.current);
+    };
+  }, [sessionId, session?.status]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => { mountedRef.current = false; };
+  }, []);
 
   // Redirect when lead is answered
   useEffect(() => {
@@ -116,13 +152,11 @@ export default function AtendimentoAguardando() {
       });
       if (error) {
         toast.error("Erro ao cancelar discagem");
-        console.error("Cancel error:", error);
       } else {
         setSession((prev: any) => prev ? { ...prev, status: "cancelado" } : prev);
       }
     } catch (e) {
       toast.error("Erro ao cancelar discagem");
-      console.error("Cancel error:", e);
     }
     setCancelling(false);
   };
@@ -136,7 +170,6 @@ export default function AtendimentoAguardando() {
 
   const isFinished = session?.status === "finalizado_sem_atendimento" || session?.status === "cancelado" || session?.status === "expirado";
 
-  // Error state
   if (fetchError) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -155,7 +188,6 @@ export default function AtendimentoAguardando() {
     );
   }
 
-  // Loading state
   if ((status === "iniciando" && !sessionId) || !session) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
