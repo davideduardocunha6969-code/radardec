@@ -25,34 +25,46 @@ export default function AtendimentoAguardando() {
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
 
-  const fetchSession = useCallback(async (retries = 8) => {
+  const fetchSession = useCallback(async (retries = 15) => {
     if (!sessionId || !mountedRef.current) return;
 
-    const { data: { session: authSession } } = await supabase.auth.getSession();
-    if (!authSession) {
-      if (retries > 0) {
-        setTimeout(() => fetchSession(retries - 1), 1500);
+    try {
+      const { data: { session: authSession } } = await supabase.auth.getSession();
+      if (!authSession) {
+        if (retries > 0) {
+          setTimeout(() => fetchSession(retries - 1), 1000);
+          return;
+        }
+        setFetchError(true);
         return;
       }
-      setFetchError(true);
-      return;
-    }
 
-    const { data, error } = await (supabase
-      .from("power_dialer_sessions" as any)
-      .select("*")
-      .eq("id", sessionId)
-      .single() as any);
-    if (error || !data) {
+      const { data, error } = await (supabase
+        .from("power_dialer_sessions" as any)
+        .select("*")
+        .eq("id", sessionId)
+        .maybeSingle() as any);
+
+      if (data) {
+        setFetchError(false);
+        setSession(data);
+        return;
+      }
+
+      // Session not found yet (might still be creating) — retry
       if (retries > 0) {
-        setTimeout(() => fetchSession(retries - 1), 1500);
+        setTimeout(() => fetchSession(retries - 1), 1000);
         return;
       }
       setFetchError(true);
-      return;
+    } catch (e) {
+      console.error("[AtendimentoAguardando] fetchSession error:", e);
+      if (retries > 0) {
+        setTimeout(() => fetchSession(retries - 1), 1000);
+        return;
+      }
+      setFetchError(true);
     }
-    setFetchError(false);
-    setSession(data);
   }, [sessionId]);
 
   // Initial fetch with delay for auth restoration

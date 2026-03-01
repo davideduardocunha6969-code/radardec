@@ -42,9 +42,12 @@ serve(async (req) => {
 
     console.log(`[power-dialer-twiml] CallSid=${callSid} AnsweredBy=${answeredBy} SessionId=${sessionId}`);
 
-    // STRICT: Only "human" connects — everything else hangs up (no audio leak)
-    if (answeredBy !== "human") {
-      console.log(`[power-dialer-twiml] Not human (${answeredBy || "empty"}), hanging up`);
+    // Accept "human" and "unknown" (AMD timeout = likely human). Reject confirmed machines.
+    const machineValues = ["machine_start", "machine_end_beep", "machine_end_silence", "machine_end_other", "fax"];
+    const isMachine = machineValues.includes(answeredBy);
+
+    if (isMachine) {
+      console.log(`[power-dialer-twiml] Machine detected (${answeredBy}), hanging up`);
       const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Hangup/>
