@@ -26,6 +26,11 @@ async function twilioCall(
     StatusCallback: statusCallbackUrl,
     StatusCallbackEvent: "initiated ringing answered completed",
     StatusCallbackMethod: "POST",
+    MachineDetection: "DetectMessageEnd",
+    MachineDetectionTimeout: "5",
+    AsyncAmd: "true",
+    AsyncAmdStatusCallback: statusCallbackUrl,
+    AsyncAmdStatusCallbackMethod: "POST",
   });
 
   const resp = await fetch(url, {

@@ -1,9 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Phone, PhoneOff } from "lucide-react";
+import { Loader2, Phone, PhoneOff, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 
@@ -21,45 +21,47 @@ export default function AtendimentoAguardando() {
 
   const [session, setSession] = useState<any>(null);
   const [cancelling, setCancelling] = useState(false);
-  const [authReady, setAuthReady] = useState(false);
+  const [fetchError, setFetchError] = useState(false);
 
-  // Wait for auth to be ready before any data fetching
+  const fetchSession = useCallback(async (retries = 5) => {
+    if (!sessionId) return;
+    const { data, error } = await (supabase
+      .from("power_dialer_sessions" as any)
+      .select("*")
+      .eq("id", sessionId)
+      .single() as any);
+    if (error || !data) {
+      console.error("Fetch session error:", error, `retries left: ${retries}`);
+      if (retries > 0) {
+        setTimeout(() => fetchSession(retries - 1), 1500);
+        return;
+      }
+      setFetchError(true);
+      return;
+    }
+    setSession(data);
+  }, [sessionId]);
+
+  // Fetch session with small initial delay for auth restoration
+  useEffect(() => {
+    if (!sessionId) return;
+    const timer = setTimeout(() => fetchSession(), 500);
+    return () => clearTimeout(timer);
+  }, [sessionId, fetchSession]);
+
+  // Re-fetch when auth state changes (backup)
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
-      if (sess) setAuthReady(true);
-    });
-    // Check if already authenticated
-    supabase.auth.getSession().then(({ data }) => {
-      if (data.session) setAuthReady(true);
+      if (sess && !session && sessionId) {
+        fetchSession();
+      }
     });
     return () => subscription.unsubscribe();
-  }, []);
+  }, [session, sessionId, fetchSession]);
 
-  // Fetch session only after auth is ready
+  // Realtime subscription - start immediately
   useEffect(() => {
-    if (!sessionId || !authReady) return;
-
-    const fetchSession = async (retries = 2) => {
-      const { data, error } = await (supabase
-        .from("power_dialer_sessions" as any)
-        .select("*")
-        .eq("id", sessionId)
-        .single() as any);
-      if (error) {
-        console.error("Fetch session error:", error);
-        if (retries > 0) {
-          setTimeout(() => fetchSession(retries - 1), 1000);
-          return;
-        }
-      }
-      if (data) setSession(data);
-    };
-    fetchSession();
-  }, [sessionId, authReady]);
-
-  // Realtime subscription only after auth is ready
-  useEffect(() => {
-    if (!sessionId || !authReady) return;
+    if (!sessionId) return;
 
     const channel = supabase
       .channel(`pds-${sessionId}`)
@@ -80,7 +82,7 @@ export default function AtendimentoAguardando() {
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [sessionId, authReady]);
+  }, [sessionId]);
 
   // Redirect when lead is answered
   useEffect(() => {
@@ -101,7 +103,6 @@ export default function AtendimentoAguardando() {
         toast.error("Erro ao cancelar discagem");
         console.error("Cancel error:", error);
       } else {
-        // Update local state immediately
         setSession((prev: any) => prev ? { ...prev, status: "cancelado" } : prev);
       }
     } catch (e) {
@@ -120,7 +121,27 @@ export default function AtendimentoAguardando() {
 
   const isFinished = session?.status === "finalizado_sem_atendimento" || session?.status === "cancelado" || session?.status === "expirado";
 
-  if ((status === "iniciando" && !sessionId) || (!authReady && sessionId)) {
+  // Error state
+  if (fetchError) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Card className="w-96">
+          <CardContent className="flex flex-col items-center gap-4 py-12">
+            <AlertCircle className="h-12 w-12 text-destructive" />
+            <p className="text-lg font-medium">Erro ao carregar sessão</p>
+            <p className="text-sm text-muted-foreground text-center">Não foi possível conectar à sessão do Power Dialer. Tente novamente.</p>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => { setFetchError(false); fetchSession(); }}>Tentar novamente</Button>
+              <Button variant="outline" onClick={() => window.close()}>Fechar</Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Loading state
+  if ((status === "iniciando" && !sessionId) || !session) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Card className="w-96">
