@@ -20,7 +20,7 @@ export function PowerDialerButton({ funilId, colunaId, leadsCount }: PowerDialer
   const [loading, setLoading] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
-  const [missedAlert, setMissedAlert] = useState<{ leadNome: string; leadId: string; numero: string } | null>(null);
+  const [missedAlert, setMissedAlert] = useState<{ leadNome: string; leadId: string; numero: string; papel: string } | null>(null);
   const windowRef = useRef<Window | null>(null);
   const deviceRef = useRef<Device | null>(null);
 
@@ -88,6 +88,7 @@ export function PowerDialerButton({ funilId, colunaId, leadsCount }: PowerDialer
                 leadNome: info?.leadNome || "Lead",
                 leadId: sess.lead_atendido_id,
                 numero: sess.telefone_atendido || "",
+                papel: sess.papel || "sdr",
               });
             }
             setActiveSessionId(null);
