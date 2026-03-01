@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Settings, Plus, Trash2, ToggleLeft, ToggleRight } from "lucide-react";
+import { Settings, Plus, Trash2, ToggleLeft, ToggleRight, RefreshCw } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { LeadSecoesConfig } from "@/components/configuracoes/LeadSecoesConfig";
 import { useTwilioNumeros, useCreateTwilioNumero, useToggleTwilioNumero, useDeleteTwilioNumero } from "@/hooks/useTwilioNumeros";
@@ -8,6 +8,8 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
+import { useQueryClient } from "@tanstack/react-query";
 
 function NumerosVoipTab() {
   const { data: numeros, isLoading } = useTwilioNumeros();
@@ -15,6 +17,22 @@ function NumerosVoipTab() {
   const toggleNumero = useToggleTwilioNumero();
   const deleteNumero = useDeleteTwilioNumero();
   const [form, setForm] = useState({ numero: "", ddd: "", regiao: "" });
+  const [syncing, setSyncing] = useState(false);
+  const qc = useQueryClient();
+
+  const handleSync = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke("sync-twilio-numeros");
+      if (error) throw error;
+      toast.success(`${data.importados} números importados, ${data.existentes} já existiam`);
+      qc.invalidateQueries({ queryKey: ["twilio_numeros"] });
+    } catch (e: any) {
+      toast.error(e.message || "Erro ao importar números");
+    } finally {
+      setSyncing(false);
+    }
+  };
 
   const handleCreate = () => {
     if (!form.numero || !form.ddd) {
@@ -30,9 +48,15 @@ function NumerosVoipTab() {
     <Card>
       <CardHeader>
         <CardTitle className="text-lg">Números VoIP (Local Presence)</CardTitle>
-        <p className="text-sm text-muted-foreground">
-          Cadastre números Twilio por DDD para aumentar a taxa de atendimento com Local Presence.
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Cadastre números Twilio por DDD para aumentar a taxa de atendimento com Local Presence.
+          </p>
+          <Button variant="outline" size="sm" onClick={handleSync} disabled={syncing}>
+            <RefreshCw className={`h-4 w-4 mr-1 ${syncing ? "animate-spin" : ""}`} />
+            Importar do Twilio
+          </Button>
+        </div>
       </CardHeader>
       <CardContent className="space-y-4">
         <div className="flex gap-2 items-end">
