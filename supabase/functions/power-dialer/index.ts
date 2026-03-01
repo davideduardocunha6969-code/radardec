@@ -28,9 +28,6 @@ async function twilioCall(
     StatusCallbackMethod: "POST",
     MachineDetection: "DetectMessageEnd",
     MachineDetectionTimeout: "5",
-    AsyncAmd: "true",
-    AsyncAmdStatusCallback: statusCallbackUrl,
-    AsyncAmdStatusCallbackMethod: "POST",
   });
 
   const resp = await fetch(url, {
