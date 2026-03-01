@@ -66,12 +66,13 @@ export default function AtendimentoAguardando() {
   // Re-fetch when auth state changes (backup)
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
-      if (sess && !session && sessionId) {
+      if (sess && sessionId) {
+        setFetchError(false);
         fetchSession();
       }
     });
     return () => subscription.unsubscribe();
-  }, [session, sessionId, fetchSession]);
+  }, [sessionId, fetchSession]);
 
   // Realtime subscription - start immediately
   useEffect(() => {
