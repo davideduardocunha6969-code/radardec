@@ -116,6 +116,7 @@ function DroppableColumn({ col, funilId, leadsByColuna, setLeadForm, setEditingC
             {leadsWithPhone > 0 && (
               <PowerDialerButton funilId={funilId} colunaId={col.id} leadsCount={leadsWithPhone} />
             )}
+            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setLeadForm(col.id)}>
               <Plus className="h-3.5 w-3.5" />
             </Button>
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingColuna(col)}>
