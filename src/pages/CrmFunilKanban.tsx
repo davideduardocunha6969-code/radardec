@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { getFieldValue, type DadosExtrasMap } from "@/utils/trabalhista/types";
+import { PowerDialerButton } from "@/components/crm/PowerDialerButton";
 import { formatElapsedTime } from "@/utils/dateFormat";
 import { useParams, useNavigate } from "react-router-dom";
 import { useCrmColunas, useCrmLeads, useCrmFunis, useCreateColuna, useUpdateColuna, useDeleteColuna, useCreateLead, useUpdateLead, useDeleteLead, useBulkCreateLeads, useReorderColunas, useUpdateFunil, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
@@ -90,6 +91,8 @@ function DroppableColumn({ col, funilId, leadsByColuna, setLeadForm, setEditingC
   deleteColuna: (id: string) => void;
   setDetailLead: (lead: CrmLead) => void;
 }) {
+  const colLeads = leadsByColuna(col.id);
+  const leadsWithPhone = colLeads.filter((l) => l.telefones?.length > 0).length;
   const { attributes, listeners, setNodeRef: setSortableRef, transform, transition, isDragging } = useSortable({ id: col.id });
   const sortableStyle = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
 
@@ -107,10 +110,12 @@ function DroppableColumn({ col, funilId, leadsByColuna, setLeadForm, setEditingC
               <GripVertical className="h-4 w-4" />
             </button>
             <h3 className="font-semibold text-sm">{col.nome}</h3>
-            <Badge variant="secondary" className="text-xs">{leadsByColuna(col.id).length}</Badge>
+            <Badge variant="secondary" className="text-xs">{colLeads.length}</Badge>
           </div>
           <div className="flex gap-1">
-            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setLeadForm(col.id)}>
+            {leadsWithPhone > 0 && (
+              <PowerDialerButton funilId={funilId} colunaId={col.id} leadsCount={leadsWithPhone} />
+            )}
               <Plus className="h-3.5 w-3.5" />
             </Button>
             <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setEditingColuna(col)}>
@@ -123,7 +128,7 @@ function DroppableColumn({ col, funilId, leadsByColuna, setLeadForm, setEditingC
         </div>
         <ScrollArea className="h-[calc(100vh-280px)]">
           <div ref={setDropRef} className="p-2 space-y-2 min-h-[60px]">
-            {leadsByColuna(col.id).map((lead) => (
+            {colLeads.map((lead) => (
               <DraggableLeadCard key={lead.id} lead={lead} setDetailLead={setDetailLead} />
             ))}
           </div>
