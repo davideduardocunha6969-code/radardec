@@ -23,8 +23,21 @@ export default function AtendimentoAguardando() {
   const [cancelling, setCancelling] = useState(false);
   const [fetchError, setFetchError] = useState(false);
 
-  const fetchSession = useCallback(async (retries = 5) => {
+  const fetchSession = useCallback(async (retries = 8) => {
     if (!sessionId) return;
+
+    // Wait for auth to be available before querying (RLS depends on it)
+    const { data: { session: authSession } } = await supabase.auth.getSession();
+    if (!authSession) {
+      console.log("Auth not ready yet, retries left:", retries);
+      if (retries > 0) {
+        setTimeout(() => fetchSession(retries - 1), 1500);
+        return;
+      }
+      setFetchError(true);
+      return;
+    }
+
     const { data, error } = await (supabase
       .from("power_dialer_sessions" as any)
       .select("*")
@@ -39,6 +52,7 @@ export default function AtendimentoAguardando() {
       setFetchError(true);
       return;
     }
+    setFetchError(false);
     setSession(data);
   }, [sessionId]);
 
@@ -52,12 +66,13 @@ export default function AtendimentoAguardando() {
   // Re-fetch when auth state changes (backup)
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
-      if (sess && !session && sessionId) {
+      if (sess && sessionId) {
+        setFetchError(false);
         fetchSession();
       }
     });
     return () => subscription.unsubscribe();
-  }, [session, sessionId, fetchSession]);
+  }, [sessionId, fetchSession]);
 
   // Realtime subscription - start immediately
   useEffect(() => {
