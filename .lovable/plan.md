@@ -1,42 +1,126 @@
 
-# Tres Paineis de Atendimento — Status
+# Corrigir Power Dialer: popup travada e audio de secretaria eletronica
 
-## Fase 1 — Infraestrutura ✅ CONCLUÍDA
+## Problema 1: Popup travada em "Iniciando Power Dialer..."
 
-- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
-- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
-- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
-- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
-- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
-- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
-- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
-- [x] Interface `RoboCoach` e mutations atualizados com novos campos
+A pagina `AtendimentoAguardando.tsx` espera que `authReady` fique `true` antes de buscar os dados da sessao. Na janela popup aberta via `window.open()`, a restauracao da sessao de autenticacao do localStorage pode falhar ou demorar, fazendo com que `authReady` nunca fique `true`. O resultado: a pagina fica presa na tela de carregamento para sempre.
 
-## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
-- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
-- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
-- [x] `estimarImpactoCampo()` — para ordenação de lacunas
-- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
-- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
+### Correcao
 
-## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
-- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
-- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
-- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
-- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
-- [x] Botão Confirmar promove campo para manual
-- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
+Remover a dependencia de `authReady` como condicao obrigatoria para buscar dados. Em vez disso:
 
-## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
-- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
-- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
-- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
-- [x] Debounce de 2s nas mudanças de dados
-- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
-- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
+1. Tentar buscar a sessao imediatamente com retries (ate 5 tentativas com delay crescente de 1s)
+2. Remover o guard `!authReady` dos useEffects de fetch e realtime
+3. Manter o listener de auth apenas para acionar um re-fetch caso a sessao seja restaurada depois
+4. Se apos todas as tentativas a sessao nao for encontrada, mostrar uma mensagem de erro em vez de ficar carregando infinitamente
 
-## Fase 5 — Integração Final ✅ CONCLUÍDA
-- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
-- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
-- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
-- [x] Config.toml atualizado com as duas novas funções
+### Arquivo: `src/pages/AtendimentoAguardando.tsx`
+
+```text
+Antes:
+  useEffect(() => {
+    if (!sessionId || !authReady) return;
+    const fetchSession = async (retries = 2) => { ... };
+    fetchSession();
+  }, [sessionId, authReady]);
+
+Depois:
+  useEffect(() => {
+    if (!sessionId) return;
+    const fetchSession = async (retries = 5) => {
+      const { data, error } = await supabase...;
+      if (error || !data) {
+        if (retries > 0) {
+          setTimeout(() => fetchSession(retries - 1), 1500);
+          return;
+        }
+        setFetchError(true);
+        return;
+      }
+      setSession(data);
+    };
+    // Small delay for auth to restore from localStorage
+    setTimeout(() => fetchSession(), 500);
+  }, [sessionId]);
+```
+
+Mesma logica para o realtime: remover dependencia de `authReady`, iniciar imediatamente.
+
+Para a tela de loading, adicionar timeout com mensagem de erro caso os dados nao carreguem.
+
+---
+
+## Problema 2: Audio de secretaria eletronica tocando no navegador
+
+Quando o lead nao atende e a chamada vai para o correio de voz, o TwiML `<Dial><Client>` conecta o audio do correio de voz ao navegador do usuario. O usuario ouve "deixe sua mensagem apos o sinal".
+
+### Correcao
+
+Ativar **Answering Machine Detection (AMD)** nas chamadas do Power Dialer. Isso faz com que o Twilio detecte automaticamente se quem atendeu foi uma pessoa ou uma secretaria eletronica:
+
+- Se for **maquina/secretaria**, o Twilio encerra a chamada automaticamente (nao conecta ao navegador)
+- Se for **humano**, a chamada segue normalmente e conecta ao Client
+
+### Arquivo: `supabase/functions/power-dialer/index.ts`
+
+Adicionar parametros AMD ao criar a chamada (funcao `twilioCall`):
+
+```text
+Antes:
+  const body = new URLSearchParams({
+    From: from,
+    To: to,
+    Url: twimlUrl,
+    Timeout: "20",
+    StatusCallback: statusCallbackUrl,
+    StatusCallbackEvent: "initiated ringing answered completed",
+    StatusCallbackMethod: "POST",
+  });
+
+Depois:
+  const body = new URLSearchParams({
+    From: from,
+    To: to,
+    Url: twimlUrl,
+    Timeout: "20",
+    StatusCallback: statusCallbackUrl,
+    StatusCallbackEvent: "initiated ringing answered completed",
+    StatusCallbackMethod: "POST",
+    MachineDetection: "DetectMessageEnd",
+    MachineDetectionTimeout: "5",
+    AsyncAmd: "true",
+    AsyncAmdStatusCallback: statusCallbackUrl,
+    AsyncAmdStatusCallbackMethod: "POST",
+  });
+```
+
+### Arquivo: `supabase/functions/power-dialer-status/index.ts`
+
+Adicionar tratamento para o callback AMD. Quando o resultado for `machine_end_beep` ou `machine_end_other`, encerrar a chamada automaticamente:
+
+```text
+// Handle AMD callback
+const answeredBy = formData.get("AnsweredBy") as string;
+if (answeredBy && ["machine_end_beep", "machine_end_other", "machine_end_silence", "machine_start"].includes(answeredBy)) {
+  // Cancel this call - it's a voicemail
+  await cancelTwilioCall(ACCOUNT_SID, AUTH_TOKEN, callSid);
+  // Update chamada status
+  await supabase.from("crm_chamadas").update({ status: "secretaria_eletronica" }).eq("twilio_call_sid", callSid);
+  // Update resultado_por_numero
+  ...
+}
+```
+
+---
+
+## Resumo dos arquivos modificados
+
+1. `src/pages/AtendimentoAguardando.tsx` -- remover dependencia de authReady, adicionar retries com delay e fallback de erro
+2. `supabase/functions/power-dialer/index.ts` -- adicionar parametros AMD nas chamadas
+3. `supabase/functions/power-dialer-status/index.ts` -- tratar callback AMD para encerrar chamadas de secretaria eletronica
+
+## Resultado esperado
+
+- A janela popup vai carregar os dados da sessao mesmo se a autenticacao demorar a restaurar
+- Chamadas para secretaria eletronica serao detectadas e encerradas automaticamente
+- O usuario nao ouvira mais mensagens de correio de voz
