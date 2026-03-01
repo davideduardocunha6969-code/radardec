@@ -25,67 +25,60 @@ export default function AtendimentoAguardando() {
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
 
-  const fetchSession = useCallback(async (retries = 15) => {
-    if (!sessionId || !mountedRef.current) return;
-
+  // Fetch session via edge function (bypasses RLS)
+  const fetchSessionViaEdge = useCallback(async (): Promise<any | null> => {
     try {
-      const { data: { session: authSession } } = await supabase.auth.getSession();
-      if (!authSession) {
-        if (retries > 0) {
-          setTimeout(() => fetchSession(retries - 1), 1000);
-          return;
-        }
-        setFetchError(true);
-        return;
+      const { data, error } = await supabase.functions.invoke("power-dialer-session-status", {
+        body: { sessionId },
+      });
+
+      if (error) {
+        console.error("[AtendimentoAguardando] Edge function error:", error);
+        return null;
       }
 
-      const { data, error } = await (supabase
-        .from("power_dialer_sessions" as any)
-        .select("*")
-        .eq("id", sessionId)
-        .maybeSingle() as any);
-
-      if (data) {
-        setFetchError(false);
-        setSession(data);
-        return;
+      if (data?.session) {
+        return data.session;
       }
 
-      // Session not found yet (might still be creating) — retry
-      if (retries > 0) {
-        setTimeout(() => fetchSession(retries - 1), 1000);
-        return;
+      if (data?.notFound) {
+        return null;
       }
-      setFetchError(true);
+
+      return null;
     } catch (e) {
-      console.error("[AtendimentoAguardando] fetchSession error:", e);
-      if (retries > 0) {
-        setTimeout(() => fetchSession(retries - 1), 1000);
-        return;
-      }
-      setFetchError(true);
+      console.error("[AtendimentoAguardando] fetchSessionViaEdge error:", e);
+      return null;
     }
   }, [sessionId]);
 
-  // Initial fetch with delay for auth restoration
+  const fetchSession = useCallback(async (retries = 15) => {
+    if (!sessionId || !mountedRef.current) return;
+
+    const result = await fetchSessionViaEdge();
+
+    if (result) {
+      setFetchError(false);
+      setSession(result);
+      return;
+    }
+
+    // Session not found yet — retry
+    if (retries > 0) {
+      setTimeout(() => fetchSession(retries - 1), 1000);
+      return;
+    }
+    setFetchError(true);
+  }, [sessionId, fetchSessionViaEdge]);
+
+  // Initial fetch — no need to wait for auth since edge function handles it
   useEffect(() => {
     if (!sessionId) return;
-    const timer = setTimeout(() => fetchSession(), 500);
+    const timer = setTimeout(() => fetchSession(), 300);
     return () => clearTimeout(timer);
   }, [sessionId, fetchSession]);
 
-  // Auth state change backup
-  useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, sess) => {
-      if (sess && sessionId) {
-        setFetchError(false);
-        fetchSession();
-      }
-    });
-    return () => subscription.unsubscribe();
-  }, [sessionId, fetchSession]);
-
-  // Realtime subscription
+  // Realtime subscription (works when auth is available)
   useEffect(() => {
     if (!sessionId) return;
 
@@ -110,7 +103,7 @@ export default function AtendimentoAguardando() {
     };
   }, [sessionId]);
 
-  // POLLING FALLBACK: every 2s while session is active
+  // POLLING FALLBACK: every 2s while session is active (uses edge function)
   useEffect(() => {
     if (!sessionId || !session) return;
     const isActive = session.status === "ativo";
@@ -121,17 +114,12 @@ export default function AtendimentoAguardando() {
 
     pollingRef.current = setInterval(async () => {
       if (!mountedRef.current) return;
-      const { data } = await (supabase
-        .from("power_dialer_sessions" as any)
-        .select("lead_atendido_id, telefone_atendido, status, funil_id, papel")
-        .eq("id", sessionId)
-        .single() as any);
-      if (data && mountedRef.current) {
-        // Check for redirect trigger
-        if (data.lead_atendido_id) {
-          setSession((prev: any) => ({ ...prev, ...data }));
-        } else if (["cancelado", "finalizado_sem_atendimento", "expirado", "atendida"].includes(data.status)) {
-          setSession((prev: any) => ({ ...prev, ...data }));
+      const result = await fetchSessionViaEdge();
+      if (result && mountedRef.current) {
+        if (result.lead_atendido_id) {
+          setSession((prev: any) => ({ ...prev, ...result }));
+        } else if (["cancelado", "finalizado_sem_atendimento", "expirado", "atendida"].includes(result.status)) {
+          setSession((prev: any) => ({ ...prev, ...result }));
         }
       }
     }, 2000);
@@ -139,7 +127,7 @@ export default function AtendimentoAguardando() {
     return () => {
       if (pollingRef.current) clearInterval(pollingRef.current);
     };
-  }, [sessionId, session?.status]);
+  }, [sessionId, session?.status, fetchSessionViaEdge]);
 
   // Cleanup on unmount
   useEffect(() => {
