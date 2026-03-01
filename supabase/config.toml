@@ -77,3 +77,6 @@ verify_jwt = false
 
  [functions.expire-dialer-sessions]
  schedule = "0 * * * *"
+
+ [functions.sync-twilio-numeros]
+ verify_jwt = false
