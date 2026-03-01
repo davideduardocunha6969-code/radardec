@@ -22,10 +22,66 @@ serve(async (req) => {
     const callSid = formData.get("CallSid") as string;
     const callStatus = formData.get("CallStatus") as string;
     const callDuration = parseInt(formData.get("CallDuration") as string || "0", 10);
+    const answeredBy = formData.get("AnsweredBy") as string | null;
 
-    console.log(`[power-dialer-status] CallSid=${callSid} Status=${callStatus} Duration=${callDuration}`);
+    console.log(`[power-dialer-status] CallSid=${callSid} Status=${callStatus} Duration=${callDuration} AnsweredBy=${answeredBy}`);
 
     if (!callSid) {
+      return new Response("OK", { headers: corsHeaders });
+    }
+
+    // Handle AMD callback - voicemail detected
+    if (answeredBy && ["machine_end_beep", "machine_end_other", "machine_end_silence", "machine_start"].includes(answeredBy)) {
+      console.log(`[power-dialer-status] AMD detected voicemail for ${callSid}: ${answeredBy}`);
+      
+      // Cancel the call
+      const ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID")!;
+      const AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN")!;
+      try {
+        const url = `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Calls/${callSid}.json`;
+        await fetch(url, {
+          method: "POST",
+          headers: {
+            Authorization: "Basic " + btoa(`${ACCOUNT_SID}:${AUTH_TOKEN}`),
+            "Content-Type": "application/x-www-form-urlencoded",
+          },
+          body: "Status=completed",
+        });
+      } catch (e) {
+        console.error("[power-dialer-status] Error cancelling voicemail call:", e);
+      }
+
+      // Update chamada status
+      const { data: chamadaAmd } = await supabase
+        .from("crm_chamadas")
+        .select("id, power_dialer_session_id, numero_discado")
+        .eq("twilio_call_sid", callSid)
+        .maybeSingle();
+
+      if (chamadaAmd) {
+        await supabase
+          .from("crm_chamadas")
+          .update({ status: "secretaria_eletronica", observacoes: `AMD: ${answeredBy}` })
+          .eq("id", chamadaAmd.id);
+
+        // Update resultado_por_numero
+        if (chamadaAmd.power_dialer_session_id) {
+          const { data: sessAmd } = await supabase
+            .from("power_dialer_sessions")
+            .select("resultado_por_numero")
+            .eq("id", chamadaAmd.power_dialer_session_id)
+            .single();
+          if (sessAmd) {
+            const resultados = (sessAmd.resultado_por_numero || {}) as Record<string, string>;
+            resultados[chamadaAmd.numero_discado] = "secretaria_eletronica";
+            await supabase
+              .from("power_dialer_sessions")
+              .update({ resultado_por_numero: resultados })
+              .eq("id", chamadaAmd.power_dialer_session_id);
+          }
+        }
+      }
+
       return new Response("OK", { headers: corsHeaders });
     }
 
