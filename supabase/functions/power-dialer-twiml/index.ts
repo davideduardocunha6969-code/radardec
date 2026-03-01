@@ -98,6 +98,25 @@ serve(async (req) => {
             })
             .eq("id", sessionId);
 
+          // Re-read to confirm THIS call won the race
+          const { data: confirmed } = await supabase
+            .from("power_dialer_sessions")
+            .select("lead_atendido_id")
+            .eq("id", sessionId)
+            .single();
+
+          if (confirmed?.lead_atendido_id !== chamada.lead_id) {
+            // Another call won the race — hang up this one
+            console.log(`[power-dialer-twiml] Race lost! Expected lead=${chamada.lead_id}, got=${confirmed?.lead_atendido_id}. Hanging up.`);
+            const hangupTwiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Hangup/>
+</Response>`;
+            return new Response(hangupTwiml, {
+              headers: { ...corsHeaders, "Content-Type": "text/xml" },
+            });
+          }
+
           // Cancel all OTHER calls in this batch
           const allSids = (session.call_sids || {}) as Record<string, string>;
           for (const [sid, chamadaId] of Object.entries(allSids)) {

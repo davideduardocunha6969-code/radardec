@@ -80,3 +80,6 @@ verify_jwt = false
 
  [functions.sync-twilio-numeros]
  verify_jwt = false
+
+ [functions.power-dialer-session-status]
+ verify_jwt = false
