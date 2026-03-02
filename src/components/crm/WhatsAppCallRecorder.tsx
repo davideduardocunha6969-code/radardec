@@ -50,6 +50,7 @@ const formatPhone = (numero: string): string => {
 
 export function WhatsAppCallRecorder({ leadId, leadNome, numero, papel, autoStart, onRecordingStateChange, onAudioMonitorUpdate, stopRef }: WhatsAppCallRecorderProps) {
   const autoStartedRef = useRef(false);
+  const isStartingRef = useRef(false);
   const [status, setStatus] = useState<RecordingStatus>("idle");
   const [duration, setDuration] = useState(0);
   const [hasSystemAudio, setHasSystemAudio] = useState(false);
