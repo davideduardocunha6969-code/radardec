@@ -1,37 +1,42 @@
 
-# Auto-iniciar gravação WhatsApp ao abrir janela de atendimento
+# Tres Paineis de Atendimento — Status
 
-## Problema
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-Ao clicar no botão verde "WhatsApp" no Kanban (SDR ou Closer), a janela de atendimento abre mas o gravador fica parado no estado "idle". O usuário precisa clicar novamente no botão de gravar dentro da janela, e depois mais uma vez para de fato iniciar. Deveria ser um único clique.
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-## Solução
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-Passar um parâmetro `autoStart=true` na URL do atendimento, e fazer o `WhatsAppCallRecorder` iniciar automaticamente quando esse parâmetro estiver presente.
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-## Arquivos a modificar
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-### 1. `src/pages/CrmFunilKanban.tsx`
-- Adicionar `&autoStart=true` nas URLs de abertura da janela de atendimento WhatsApp (tanto no bloco SDR ~linha 562 quanto no bloco Closer ~linha 643).
-
-### 2. `src/pages/Atendimento.tsx`
-- Ler o parâmetro `autoStart` dos searchParams.
-- Passar `autoStart={true}` como prop para o `WhatsAppCallRecorder`.
-
-### 3. `src/components/crm/WhatsAppCallRecorder.tsx`
-- Adicionar prop `autoStart?: boolean` na interface.
-- Adicionar um `useEffect` que chama `startWhatsAppCall()` automaticamente quando `autoStart` for true e o componente estiver montado (com status "idle").
-- Garantir que o efeito roda apenas uma vez (ref de controle).
-
-## Fluxo resultante
-
-1. Usuário clica no botão verde "WhatsApp" no Kanban
-2. Janela de atendimento abre com `autoStart=true` na URL
-3. Componente monta, detecta `autoStart`, dispara `startWhatsAppCall()` automaticamente
-4. Microfone é solicitado, gravação inicia, WhatsApp abre -- tudo em um único clique
-
-## Detalhes técnicos
-
-- O `startWhatsAppCall` já solicita permissão de microfone, inicia gravação e abre o WhatsApp ao final. Basta invocá-lo automaticamente.
-- Usar um `useRef(false)` para garantir que o auto-start só executa uma vez, mesmo com re-renders do React.
-- O `autoStart` só se aplica ao tipo "whatsapp" (o VoIP já tem fluxo próprio).
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções

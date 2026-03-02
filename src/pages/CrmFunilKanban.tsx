@@ -559,7 +559,7 @@ export default function CrmFunilKanban() {
                                   className="gap-1.5 bg-green-600 hover:bg-green-700 text-white h-8 px-2 text-xs"
                                   onClick={() => {
                                     window.open(
-                                      `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=whatsapp&funilId=${funilId}&papel=sdr`,
+                                      `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=whatsapp&funilId=${funilId}&papel=sdr&autoStart=true`,
                                       `atendimento_${detailLead.id}`,
                                       "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
                                     );
@@ -640,7 +640,7 @@ export default function CrmFunilKanban() {
                               className="gap-1.5 bg-green-600 hover:bg-green-700 text-white h-8 px-2 text-xs"
                               onClick={() => {
                                 window.open(
-                                  `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=whatsapp&funilId=${funilId}&papel=closer`,
+                                  `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=whatsapp&funilId=${funilId}&papel=closer&autoStart=true`,
                                   `atendimento_${detailLead.id}`,
                                   "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
                                 );

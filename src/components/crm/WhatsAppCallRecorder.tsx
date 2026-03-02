@@ -32,6 +32,7 @@ interface WhatsAppCallRecorderProps {
   leadNome: string;
   numero: string;
   papel?: string;
+  autoStart?: boolean;
   onRecordingStateChange?: (isRecording: boolean, streams: AudioStreamsInfo) => void;
   onAudioMonitorUpdate?: (info: { hasMicAudio: boolean; hasSystemAudio: boolean; micLevel: number; systemLevel: number; duration: number }) => void;
   stopRef?: React.MutableRefObject<(() => void) | null>;
@@ -47,7 +48,8 @@ const formatPhone = (numero: string): string => {
   return `55${digits}`;
 };
 
-export function WhatsAppCallRecorder({ leadId, leadNome, numero, papel, onRecordingStateChange, onAudioMonitorUpdate, stopRef }: WhatsAppCallRecorderProps) {
+export function WhatsAppCallRecorder({ leadId, leadNome, numero, papel, autoStart, onRecordingStateChange, onAudioMonitorUpdate, stopRef }: WhatsAppCallRecorderProps) {
+  const autoStartedRef = useRef(false);
   const [status, setStatus] = useState<RecordingStatus>("idle");
   const [duration, setDuration] = useState(0);
   const [hasSystemAudio, setHasSystemAudio] = useState(false);
@@ -157,6 +159,18 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, papel, onRecord
     window.addEventListener("pagehide", handlePageHide);
     return () => window.removeEventListener("pagehide", handlePageHide);
   }, [leadId]);
+
+  // Auto-start recording when autoStart prop is true
+  useEffect(() => {
+    if (autoStart && !autoStartedRef.current && status === "idle" && numero) {
+      autoStartedRef.current = true;
+      // Small delay to ensure component is fully mounted
+      const timer = setTimeout(() => {
+        startWhatsAppCall();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [autoStart, status, numero]);
 
 
   const handleRecordingComplete = useCallback(async (audioBlob: Blob, durationSecs: number) => {
