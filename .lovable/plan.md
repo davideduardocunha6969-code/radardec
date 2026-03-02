@@ -1,55 +1,42 @@
 
-# Fix: Janela de atendimento fica carregando / nao carrega dados
+# Tres Paineis de Atendimento — Status
 
-## Problema identificado
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-Na pagina `/atendimento` (popup), o fluxo de autenticacao tem um bug de race condition:
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-1. `onAuthStateChange` dispara com o evento `INITIAL_SESSION` e `session=null` (antes do token ser restaurado do localStorage)
-2. Isso seta `isAuthenticated=false` e `authChecked=true` imediatamente
-3. O componente renderiza, ve `!isAuthenticated` e faz `Navigate to="/login"`
-4. Quando `getSession()` resolve com a sessao valida, ja e tarde demais — o redirect ja aconteceu
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-Ou, em alguns casos, o redirect nao acontece visivelmente (por causa de timing), mas `isAuthenticated` fica `false` tempo suficiente para que o fetch de dados nunca execute, deixando a tela no spinner de "loading" eternamente.
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-## Solucao
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-Corrigir o `useEffect` de auth em `src/pages/Atendimento.tsx` para nao definir `authChecked=true` prematuramente quando a sessao e null no evento inicial.
-
-### Mudanca em `src/pages/Atendimento.tsx` (linhas 73-95)
-
-Logica atual (bugada):
-```text
-onAuthStateChange((_event, session) => {
-  setIsAuthenticated(!!session);   // <-- seta false no INITIAL_SESSION
-  setAuthChecked(true);            // <-- marca como checado com false!
-});
-```
-
-Logica corrigida:
-```text
-onAuthStateChange((event, session) => {
-  if (session) {
-    setIsAuthenticated(true);
-    setAuthChecked(true);
-  } else if (event === 'SIGNED_OUT') {
-    setIsAuthenticated(false);
-    setAuthChecked(true);
-  }
-  // Para INITIAL_SESSION com null, NAO marcar authChecked
-  // Deixar o getSession() ou o timeout de 3s resolver
-});
-```
-
-Isso garante que:
-- Se ha sessao: autenticacao confirmada imediatamente
-- Se o usuario fez logout explicitamente: redireciona ao login
-- Se e o evento inicial sem sessao: espera o `getSession()` resolver (que busca do localStorage) ou o timeout de 3s como fallback
-
-## Arquivo modificado
-
-1. `src/pages/Atendimento.tsx` — corrigir logica do `onAuthStateChange` (apenas 3 linhas alteradas)
-
-## Resultado esperado
-
-A janela de atendimento nao redireciona para login prematuramente e carrega os dados do lead normalmente.
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções
