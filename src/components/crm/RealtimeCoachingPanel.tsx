@@ -445,6 +445,10 @@ export function RealtimeCoachingPanel({
       .join("\n");
   }, []);
 
+  // Ref to always access the latest requestAnalysis, avoiding stale closures in useScribe callbacks
+  const requestAnalysisRef = useRef(requestAnalysis);
+  requestAnalysisRef.current = requestAnalysis;
+
   const addTranscript = useCallback((text: string, speaker: "sdr" | "lead") => {
     if (!text?.trim() || isHallucination(text)) return;
     const entry: LabeledTranscript = {
@@ -457,8 +461,8 @@ export function RealtimeCoachingPanel({
     setLabeledTranscripts([...labeledTranscriptsRef.current]);
     onTranscriptUpdate?.(labeledTranscriptsRef.current);
     setTimeout(() => transcriptEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
-    requestAnalysis(buildFullTranscript());
-  }, [isHallucination, requestAnalysis, buildFullTranscript]);
+    requestAnalysisRef.current(buildFullTranscript());
+  }, [isHallucination, buildFullTranscript, onTranscriptUpdate]);
 
   // --- Dual Scribe connections ---
   const sdrScribe = useScribe({
