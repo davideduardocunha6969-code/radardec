@@ -72,9 +72,14 @@ export default function Atendimento() {
 
   // Wait for auth session to be restored from localStorage
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setIsAuthenticated(!!session);
-      setAuthChecked(true);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        setIsAuthenticated(true);
+        setAuthChecked(true);
+      } else if (event === 'SIGNED_OUT') {
+        setIsAuthenticated(false);
+        setAuthChecked(true);
+      }
     });
 
     supabase.auth.getSession().then(({ data: { session } }) => {
