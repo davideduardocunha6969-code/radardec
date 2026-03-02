@@ -449,8 +449,10 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, papel, autoStar
       }, 1500);
 
       toast.success("WhatsApp aberto! Inicie a ligação e o áudio será gravado.");
+      isStartingRef.current = false;
     } catch (err: any) {
       console.error("Error starting WhatsApp recording:", err);
+      isStartingRef.current = false;
       cleanup();
       setStatus("error");
       if (err.name === "NotAllowedError") {
