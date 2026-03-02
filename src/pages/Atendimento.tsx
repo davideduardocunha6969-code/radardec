@@ -196,22 +196,6 @@ export default function Atendimento() {
     return <Navigate to="/login" replace />;
   }
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-background">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
-
-  if (!lead) {
-    return (
-      <div className="flex items-center justify-center h-screen bg-background">
-        <p className="text-muted-foreground">Lead não encontrado.</p>
-      </div>
-    );
-  }
-
   return (
     <div className="h-screen flex flex-col bg-background overflow-hidden">
       {/* Header */}
@@ -220,15 +204,23 @@ export default function Atendimento() {
           <div className="flex items-center gap-3">
             <img src={logoEscritorio} alt="Logo" className="h-7" />
             <div className="h-6 w-px bg-white/20" />
-            <div className="flex items-center gap-2">
-              <User className="h-4 w-4 text-white/70" />
-              <span className="font-semibold text-sm text-white">{lead.nome}</span>
-            </div>
-            {lead.endereco && (
-              <div className="flex items-center gap-1 text-xs text-white/60">
-                <MapPin className="h-3 w-3" />
-                {lead.endereco}
-              </div>
+            {lead ? (
+              <>
+                <div className="flex items-center gap-2">
+                  <User className="h-4 w-4 text-white/70" />
+                  <span className="font-semibold text-sm text-white">{lead.nome}</span>
+                </div>
+                {lead.endereco && (
+                  <div className="flex items-center gap-1 text-xs text-white/60">
+                    <MapPin className="h-3 w-3" />
+                    {lead.endereco}
+                  </div>
+                )}
+              </>
+            ) : loading ? (
+              <span className="text-xs text-white/60">Carregando...</span>
+            ) : (
+              <span className="text-xs text-white/60">Lead não encontrado</span>
             )}
             <Badge variant="outline" className="text-xs text-white/80 border-white/30">
               {papel === "closer" ? "Closer" : "SDR"}
@@ -249,8 +241,8 @@ export default function Atendimento() {
         </div>
       </header>
 
-      {/* Lead context bar */}
-      {(lead.resumo_caso || lead.dados_extras) && (
+      {/* Lead context bar — only shown when lead data is available */}
+      {lead && (lead.resumo_caso || lead.dados_extras) && (
         <div className="border-b bg-muted/30 px-4 py-2 shrink-0">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
             {Object.entries((lead.dados_extras as DadosExtrasMap) || {}).map(([key, raw]) => {
@@ -273,15 +265,15 @@ export default function Atendimento() {
         </div>
       )}
 
-      {/* Main content */}
+      {/* Main content — recorder and coaching panel NEVER unmount during loading */}
       <div className="flex-1 min-h-0 p-3 flex flex-col gap-2">
-        {/* Single stable recorder instance — never unmounts during recording */}
+        {/* Single stable recorder instance */}
         <div className="shrink-0 flex gap-2 items-start">
           <div className="w-fit shrink-0">
             {tipo === "whatsapp" ? (
               <WhatsAppCallRecorder
-                leadId={lead.id}
-                leadNome={lead.nome}
+                leadId={leadId}
+                leadNome={lead?.nome || ""}
                 numero={numero}
                 papel={papel}
                 autoStart={autoStart}
@@ -291,8 +283,8 @@ export default function Atendimento() {
               />
             ) : (
               <VoipDialer
-                leadId={lead.id}
-                leadNome={lead.nome}
+                leadId={leadId}
+                leadNome={lead?.nome || ""}
                 numero={numero}
                 papel={papel}
                 onRecordingStateChange={handleRecordingStateChange}
@@ -307,8 +299,8 @@ export default function Atendimento() {
           <CoachingErrorBoundary>
             <RealtimeCoachingPanel
               coach={coach}
-              leadNome={lead.nome}
-              leadContext={lead.resumo_caso || undefined}
+              leadNome={lead?.nome || ""}
+              leadContext={lead?.resumo_caso || undefined}
               isRecording={activeRecording}
               micStream={audioStreams.micStream}
               systemStream={audioStreams.systemStream}
