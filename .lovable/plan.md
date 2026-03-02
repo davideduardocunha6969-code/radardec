@@ -1,42 +1,45 @@
 
-# Tres Paineis de Atendimento — Status
 
-## Fase 1 — Infraestrutura ✅ CONCLUÍDA
+# Corrigir latência da transcrição — desacoplar Scribe do carregamento de coach
 
-- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
-- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
-- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
-- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
-- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
-- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
-- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
-- [x] Interface `RoboCoach` e mutations atualizados com novos campos
+## Problema
 
-## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
-- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
-- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
-- [x] `estimarImpactoCampo()` — para ordenação de lacunas
-- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
-- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
+Na linha 301 de `Atendimento.tsx`:
+```
+{coach ? <RealtimeCoachingPanel coach={coach} ... /> : <Card>Carregando...</Card>}
+```
 
-## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
-- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
-- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
-- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
-- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
-- [x] Botão Confirmar promove campo para manual
-- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
+O painel só monta quando `coach` é carregado (3 queries sequenciais: lead -> funil -> robos_coach). Enquanto isso, a conexão ElevenLabs Scribe NÃO inicia, causando latência de vários segundos.
 
-## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
-- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
-- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
-- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
-- [x] Debounce de 2s nas mudanças de dados
-- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
-- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
+A conexão Scribe (linhas 481-535 do `RealtimeCoachingPanel`) depende apenas de `isRecording` — não usa `coach`. Mas o componente inteiro não existe na árvore React até `coach` chegar.
 
-## Fase 5 — Integração Final ✅ CONCLUÍDA
-- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
-- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
-- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
-- [x] Config.toml atualizado com as duas novas funções
+## Solução
+
+Duas mudanças simples:
+
+### 1. `src/components/crm/RealtimeCoachingPanel.tsx`
+- Alterar a prop `coach` de `RoboCoach` para `RoboCoach | null` na interface
+- Na função `requestAnalysis`, adicionar `if (!coach) return;` no início (análise de coaching espera, transcrição não)
+- Nos trechos de UI que usam `coach.instrucoes`, `coach.nome`, etc., adicionar verificação de null
+
+### 2. `src/pages/Atendimento.tsx`
+- Remover o ternário `coach ? <Panel> : <Loading>` (linhas 301-318)
+- Sempre renderizar `<RealtimeCoachingPanel>` quando `activeRecording` é true, passando `coach` (que pode ser null inicialmente)
+
+```tsx
+{activeRecording && (
+  <CoachingErrorBoundary>
+    <RealtimeCoachingPanel
+      coach={coach}           // pode ser null nos primeiros segundos
+      leadNome={lead?.nome || ""}
+      ...
+    />
+  </CoachingErrorBoundary>
+)}
+```
+
+## Resultado esperado
+
+- Scribe conecta imediatamente quando a gravação inicia (~1s de latência como antes)
+- Cards de coaching aparecem assim que `coach` chega (alguns segundos depois)
+- Transcrição ao vivo funciona independentemente do carregamento de dados
