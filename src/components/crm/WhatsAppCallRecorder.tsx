@@ -163,7 +163,7 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, papel, autoStar
 
   // Auto-start recording when autoStart prop is true
   useEffect(() => {
-    if (autoStart && !autoStartedRef.current && status === "idle" && numero) {
+    if (autoStart && !autoStartedRef.current && status === "idle" && numero && !isStartingRef.current) {
       autoStartedRef.current = true;
       // Small delay to ensure component is fully mounted
       const timer = setTimeout(() => {
@@ -274,6 +274,12 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, papel, autoStar
       toast.error("Telefone não informado");
       return;
     }
+    // Idempotency guard: prevent multiple simultaneous starts
+    if (isStartingRef.current || status === "recording" || status === "paused" || status === "processing") {
+      console.log("[WhatsApp] Start blocked — already starting or active");
+      return;
+    }
+    isStartingRef.current = true;
     setError(null);
 
     // Force-release any lingering streams/context from previous attempts
@@ -294,7 +300,6 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, papel, autoStar
           micStream = await navigator.mediaDevices.getUserMedia({ audio: true });
         } catch (micErr2: any) {
           console.warn("[WhatsApp] Simple mic also failed, trying with sampleRate:", micErr2);
-          // Last resort: specify exact device constraints
           const devices = await navigator.mediaDevices.enumerateDevices();
           const audioInput = devices.find((d) => d.kind === "audioinput");
           if (!audioInput) throw new Error("Nenhum microfone encontrado no dispositivo");
@@ -305,27 +310,18 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, papel, autoStar
       }
       setHasMicAudio(true);
 
-      // 2. Request screen share + system audio
+      // 2. Request screen share + system audio — SINGLE attempt only
       let displayStream: MediaStream | null = null;
       let hasDisplayAudio = false;
       try {
         displayStream = await navigator.mediaDevices.getDisplayMedia({
           video: true,
-          audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+          audio: true,
         });
         hasDisplayAudio = displayStream.getAudioTracks().length > 0;
       } catch (displayErr: any) {
-        console.warn("[WhatsApp] getDisplayMedia with audio constraints failed, retrying simple:", displayErr);
-        try {
-          displayStream = await navigator.mediaDevices.getDisplayMedia({
-            video: true,
-            audio: true,
-          });
-          hasDisplayAudio = displayStream!.getAudioTracks().length > 0;
-        } catch (displayErr2: any) {
-          console.warn("[WhatsApp] getDisplayMedia failed entirely, mic-only mode:", displayErr2);
-          // Continue with mic-only recording
-        }
+        console.warn("[WhatsApp] getDisplayMedia denied/failed, mic-only mode:", displayErr);
+        // Continue with mic-only recording — no retry / no second prompt
       }
       setHasSystemAudio(hasDisplayAudio);
 
