@@ -160,6 +160,18 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, papel, autoStar
     return () => window.removeEventListener("pagehide", handlePageHide);
   }, [leadId]);
 
+  // Auto-start recording when autoStart prop is true
+  useEffect(() => {
+    if (autoStart && !autoStartedRef.current && status === "idle" && numero) {
+      autoStartedRef.current = true;
+      // Small delay to ensure component is fully mounted
+      const timer = setTimeout(() => {
+        startWhatsAppCall();
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [autoStart, status, numero]);
+
 
   const handleRecordingComplete = useCallback(async (audioBlob: Blob, durationSecs: number) => {
     setStatus("processing");
