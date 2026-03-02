@@ -40,7 +40,7 @@ export interface AudioMonitorInfo {
 }
 
 interface RealtimeCoachingPanelProps {
-  coach: RoboCoach;
+  coach: RoboCoach | null;
   leadNome: string;
   leadContext?: string;
   isRecording: boolean;
