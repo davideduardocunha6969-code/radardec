@@ -275,7 +275,35 @@ export default function Atendimento() {
 
       {/* Main content */}
       <div className="flex-1 min-h-0 p-3 flex flex-col gap-2">
-        {activeRecording && coach ? (
+        {/* Single stable recorder instance — never unmounts during recording */}
+        <div className="shrink-0 flex gap-2 items-start">
+          <div className="w-fit shrink-0">
+            {tipo === "whatsapp" ? (
+              <WhatsAppCallRecorder
+                leadId={lead.id}
+                leadNome={lead.nome}
+                numero={numero}
+                papel={papel}
+                autoStart={autoStart}
+                onRecordingStateChange={handleRecordingStateChange}
+                onAudioMonitorUpdate={handleAudioMonitorUpdate}
+                stopRef={stopCallRef}
+              />
+            ) : (
+              <VoipDialer
+                leadId={lead.id}
+                leadNome={lead.nome}
+                numero={numero}
+                papel={papel}
+                onRecordingStateChange={handleRecordingStateChange}
+                stopRef={stopCallRef}
+              />
+            )}
+          </div>
+        </div>
+
+        {/* Coaching panel renders below the recorder when active */}
+        {activeRecording && coach && (
           <CoachingErrorBoundary>
             <RealtimeCoachingPanel
               coach={coach}
@@ -287,56 +315,8 @@ export default function Atendimento() {
               audioMonitor={audioMonitor}
               script={script}
               onTranscriptUpdate={handleTranscriptUpdate}
-              callControls={
-                tipo === "whatsapp" ? (
-                  <WhatsAppCallRecorder
-                    leadId={lead.id}
-                    leadNome={lead.nome}
-                    numero={numero}
-                    papel={papel}
-                    onRecordingStateChange={handleRecordingStateChange}
-                    onAudioMonitorUpdate={handleAudioMonitorUpdate}
-                    stopRef={stopCallRef}
-                  />
-                ) : (
-                  <VoipDialer
-                    leadId={lead.id}
-                    leadNome={lead.nome}
-                    numero={numero}
-                    papel={papel}
-                    onRecordingStateChange={handleRecordingStateChange}
-                    stopRef={stopCallRef}
-                  />
-                )
-              }
             />
           </CoachingErrorBoundary>
-        ) : (
-          <div className="shrink-0 flex gap-2 items-start">
-            <div className="w-fit shrink-0">
-              {tipo === "whatsapp" ? (
-                <WhatsAppCallRecorder
-                  leadId={lead.id}
-                  leadNome={lead.nome}
-                  numero={numero}
-                  papel={papel}
-                  autoStart={autoStart}
-                  onRecordingStateChange={handleRecordingStateChange}
-                  onAudioMonitorUpdate={handleAudioMonitorUpdate}
-                  stopRef={stopCallRef}
-                />
-              ) : (
-                <VoipDialer
-                  leadId={lead.id}
-                  leadNome={lead.nome}
-                  numero={numero}
-                  papel={papel}
-                  onRecordingStateChange={handleRecordingStateChange}
-                  stopRef={stopCallRef}
-                />
-              )}
-            </div>
-          </div>
         )}
       </div>
 
