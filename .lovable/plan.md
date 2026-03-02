@@ -1,42 +1,75 @@
 
-# Tres Paineis de Atendimento — Status
+# Correção: prompt de tela duplicado e latência na transcrição
 
-## Fase 1 — Infraestrutura ✅ CONCLUÍDA
+## Diagnóstico
 
-- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
-- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
-- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
-- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
-- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
-- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
-- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
-- [x] Interface `RoboCoach` e mutations atualizados com novos campos
+### Problema 1: Compartilhamento de tela pedido 2 vezes
 
-## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
-- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
-- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
-- [x] `estimarImpactoCampo()` — para ordenação de lacunas
-- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
-- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
+A causa raiz está em `Atendimento.tsx`, no efeito de `fetchData` (linha 105):
 
-## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
-- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
-- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
-- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
-- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
-- [x] Botão Confirmar promove campo para manual
-- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
+```text
+1. Auth resolve -> isAuthenticated=true -> WhatsAppCallRecorder monta com autoStart
+2. autoStart dispara startWhatsAppCall() -> pede compartilhamento de tela (prompt 1)
+3. fetchData inicia -> setLoading(true) -> tela de loading renderiza -> WhatsAppCallRecorder DESMONTA
+4. Desmontagem reseta todos os refs (autoStartedRef, isStartingRef) e executa cleanup() que mata os streams
+5. fetchData termina -> setLoading(false) -> lead existe -> WhatsAppCallRecorder monta DE NOVO
+6. autoStart dispara novamente (ref resetou) -> pede compartilhamento de tela (prompt 2)
+```
 
-## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
-- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
-- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
-- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
-- [x] Debounce de 2s nas mudanças de dados
-- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
-- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
+O ciclo `loading=true -> loading=false` destrói e recria o componente, perdendo os refs de proteção contra chamada duplicada.
 
-## Fase 5 — Integração Final ✅ CONCLUÍDA
-- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
-- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
-- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
-- [x] Config.toml atualizado com as duas novas funções
+### Problema 2: Latência alta na transcrição
+
+O mesmo ciclo de montagem/desmontagem afeta o `RealtimeCoachingPanel`:
+- Na primeira montagem, ele conecta ao ElevenLabs Scribe (busca tokens, abre WebSocket)
+- Quando `loading=true`, o painel desmonta e desconecta
+- Quando remonta, precisa reconectar do zero (novo token, novo WebSocket)
+- Cada reconexão adiciona 2-4 segundos de latência antes de iniciar a transcrição
+- A reconstrução dos pipelines de audio (`pipeStreamToScribe`) tambem adiciona overhead
+
+Além disso, como os streams de audio foram destruidos pelo cleanup do gravador (no desmonte), os novos pipelines de audio podem estar operando com streams mortas ou recém-criadas, causando perda de dados e atrasos.
+
+## Solução
+
+### Arquivo 1: `src/pages/Atendimento.tsx`
+
+**Mudança principal:** Não renderizar o spinner de loading de forma que desmonte o gravador. Em vez de trocar toda a arvore de componentes entre "loading" e "conteudo", manter o gravador e o coaching panel sempre montados (quando o leadId existe), e mostrar loading apenas na area de dados do lead.
+
+Concretamente:
+- Remover o early return `if (loading) return <Spinner />` (linha 199-205)
+- Remover o early return `if (!lead) return <mensagem>` (linha 207-213)
+- Mover esses estados para dentro do layout principal, mostrando loading/erro apenas no conteudo do lead (header, context bar), sem afetar a area do gravador
+- O gravador e o coaching panel ficam montados desde que `authChecked && isAuthenticated && leadId` existam
+- Passar o `numero` da URL diretamente ao gravador (já disponivel via searchParams, não depende de `lead`)
+
+Isso elimina a desmontagem e garante que:
+- `autoStartedRef` persiste -> sem segundo prompt de compartilhamento
+- Streams de audio permanecem vivas
+- Conexões Scribe permanecem ativas
+- Transcrição começa sem delay de reconexão
+
+### Arquivo 2: `src/components/crm/WhatsAppCallRecorder.tsx`
+
+**Mudanca de seguranca adicional:** Mover a guarda de `autoStartedRef` para FORA do setTimeout, e adicionar uma segunda verificacao dentro do timeout para garantir que mesmo em cenarios de re-render rapido, `startWhatsAppCall` nao seja chamada duas vezes.
+
+```text
+useEffect(() => {
+  if (autoStart && !autoStartedRef.current && status === "idle" && numero && !isStartingRef.current) {
+    autoStartedRef.current = true;
+    const timer = setTimeout(() => {
+      // Double-check: component may have been restarted
+      if (!isStartingRef.current) {
+        startWhatsAppCall();
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }
+}, [autoStart, status, numero]);
+```
+
+## Resultado esperado
+
+- Compartilhamento de tela pedido apenas 1 vez
+- Transcrição inicia com latência baixa (~1s) como antes, pois a conexão Scribe não é interrompida
+- Streams de audio permanecem estaveis durante todo o atendimento
+- Gravador e coaching panel nao sofrem ciclos de desmontagem desnecessarios
