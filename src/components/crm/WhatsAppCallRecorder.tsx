@@ -38,7 +38,7 @@ interface WhatsAppCallRecorderProps {
   stopRef?: React.MutableRefObject<(() => void) | null>;
 }
 
-type RecordingStatus = "idle" | "recording" | "paused" | "processing" | "done" | "error";
+type RecordingStatus = "idle" | "starting" | "recording" | "paused" | "processing" | "done" | "error";
 
 const formatPhone = (numero: string): string => {
   // Strip non-digits
@@ -162,19 +162,28 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, papel, autoStar
   }, [leadId]);
 
   // Auto-start recording when autoStart prop is true
-  // Guard is set BEFORE the timeout to prevent re-entry on re-renders
+  // Uses sessionStorage to survive remounts within the same popup tab
   useEffect(() => {
-    if (autoStart && !autoStartedRef.current && status === "idle" && numero && !isStartingRef.current) {
-      autoStartedRef.current = true;
-      const timer = setTimeout(() => {
-        // Double-check: another path may have started in the meantime
-        if (!isStartingRef.current) {
-          startWhatsAppCall();
-        }
-      }, 500);
-      return () => clearTimeout(timer);
+    if (!autoStart || status !== "idle" || !numero || isStartingRef.current) return;
+
+    // Persistent lock: keyed by popup window name + lead + numero
+    const lockKey = `ws_autostart_${window.name || "default"}_${leadId}_${numero}`;
+    if (sessionStorage.getItem(lockKey)) {
+      console.log("[WhatsApp] Auto-start already executed this session, skipping");
+      return;
     }
-  }, [autoStart, status, numero]);
+
+    // Set lock immediately — survives remounts / re-renders
+    sessionStorage.setItem(lockKey, "1");
+    autoStartedRef.current = true;
+
+    const timer = setTimeout(() => {
+      if (!isStartingRef.current) {
+        startWhatsAppCall();
+      }
+    }, 500);
+    return () => clearTimeout(timer);
+  }, [autoStart, status, numero, leadId]);
 
 
   const handleRecordingComplete = useCallback(async (audioBlob: Blob, durationSecs: number) => {
@@ -278,11 +287,12 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, papel, autoStar
       return;
     }
     // Idempotency guard: prevent multiple simultaneous starts
-    if (isStartingRef.current || status === "recording" || status === "paused" || status === "processing") {
+    if (isStartingRef.current || status === "starting" || status === "recording" || status === "paused" || status === "processing") {
       console.log("[WhatsApp] Start blocked — already starting or active");
       return;
     }
     isStartingRef.current = true;
+    setStatus("starting");
     setError(null);
 
     // Force-release any lingering streams/context from previous attempts
@@ -557,6 +567,19 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, papel, autoStar
           </Button>
         </CardContent>
       </Card>
+    );
+  }
+
+  if (status === "starting") {
+    return (
+      <Button
+        size="sm"
+        className="gap-1.5 bg-green-600 hover:bg-green-700 text-white"
+        disabled
+      >
+        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+        Iniciando…
+      </Button>
     );
   }
 
