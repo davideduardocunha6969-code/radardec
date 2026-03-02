@@ -667,9 +667,9 @@ export function RealtimeCoachingPanel({
           leadPhrase: transcriptEntry.text,
           type,
           leadName: leadNome,
-          coachInstructions: type === "reca" ? coach.instrucoes_reca
-            : type === "raloca" ? coach.instrucoes_raloca
-            : coach.instrucoes_radoveca,
+          coachInstructions: type === "reca" ? coach?.instrucoes_reca
+            : type === "raloca" ? coach?.instrucoes_raloca
+            : coach?.instrucoes_radoveca,
         },
       });
 
