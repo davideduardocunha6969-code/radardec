@@ -554,17 +554,22 @@ export default function CrmFunilKanban() {
                               <Badge variant="outline" className="text-xs">{t.tipo}</Badge>
                               <div className="flex items-center gap-1 ml-auto">
                                 <WhatsAppAICallButton leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} papel="sdr" />
-                                <Button
+                                 <Button
                                   size="sm"
                                   className="gap-1.5 bg-green-600 hover:bg-green-700 text-white h-8 px-2 text-xs"
-                                  onClick={() => {
-                                    window.open(
-                                      `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=whatsapp&funilId=${funilId}&papel=sdr&autoStart=true`,
-                                      `atendimento_${detailLead.id}`,
-                                      "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
-                                    );
-                                  }}
-                                  disabled={!t.numero}
+                                   onClick={(e) => {
+                                     const btn = e.currentTarget;
+                                     if (btn.dataset.opening) return;
+                                     btn.dataset.opening = "1";
+                                     setTimeout(() => delete btn.dataset.opening, 2000);
+                                     const sid = crypto.randomUUID().slice(0, 8);
+                                     window.open(
+                                       `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=whatsapp&funilId=${funilId}&papel=sdr&autoStart=true&sid=${sid}`,
+                                       `atendimento_${detailLead.id}_${sid}`,
+                                       "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
+                                     );
+                                   }}
+                                   disabled={!t.numero}
                                 >
                                   <Phone className="h-3.5 w-3.5" />
                                   WhatsApp
@@ -638,14 +643,19 @@ export default function CrmFunilKanban() {
                             <Button
                               size="sm"
                               className="gap-1.5 bg-green-600 hover:bg-green-700 text-white h-8 px-2 text-xs"
-                              onClick={() => {
-                                window.open(
-                                  `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=whatsapp&funilId=${funilId}&papel=closer&autoStart=true`,
-                                  `atendimento_${detailLead.id}`,
-                                  "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
-                                );
-                              }}
-                              disabled={!t.numero}
+                              onClick={(e) => {
+                                 const btn = e.currentTarget;
+                                 if (btn.dataset.opening) return;
+                                 btn.dataset.opening = "1";
+                                 setTimeout(() => delete btn.dataset.opening, 2000);
+                                 const sid = crypto.randomUUID().slice(0, 8);
+                                 window.open(
+                                   `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=whatsapp&funilId=${funilId}&papel=closer&autoStart=true&sid=${sid}`,
+                                   `atendimento_${detailLead.id}_${sid}`,
+                                   "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
+                                 );
+                               }}
+                               disabled={!t.numero}
                             >
                               <Phone className="h-3.5 w-3.5" />
                               WhatsApp
