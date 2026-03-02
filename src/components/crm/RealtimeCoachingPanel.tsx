@@ -40,7 +40,7 @@ export interface AudioMonitorInfo {
 }
 
 interface RealtimeCoachingPanelProps {
-  coach: RoboCoach;
+  coach: RoboCoach | null;
   leadNome: string;
   leadContext?: string;
   isRecording: boolean;
@@ -76,7 +76,7 @@ export function RealtimeCoachingPanel({
   onTranscriptUpdate,
   callControls,
 }: RealtimeCoachingPanelProps) {
-  const isCloser = coach.tipo === "coaching_closer";
+  const isCloser = coach?.tipo === "coaching_closer";
   const { data: fallbackScript } = useActiveScriptSdr();
   const activeScript = scriptProp !== undefined ? scriptProp : fallbackScript;
 
@@ -157,6 +157,7 @@ export function RealtimeCoachingPanel({
 
   const requestAnalysis = useCallback(
     async (transcript: string) => {
+      if (!coach) return; // Wait for coach data before running analysis
       if (!transcript || transcript.trim().length < 10 || transcript === lastAnalyzedRef.current || isAnalyzingRef.current) return;
       
       const allEntries = labeledTranscriptsRef.current;
@@ -264,7 +265,7 @@ export function RealtimeCoachingPanel({
         isAnalyzingRef.current = false;
       }
     },
-    [coach.instrucoes, coach.instrucoes_detector, coach.instrucoes_radar, leadNome, leadContext, qualificationItems, apresentacaoItems, showRateItems, isCloser]
+    [coach, leadNome, leadContext, qualificationItems, apresentacaoItems, showRateItems, isCloser]
   );
 
   // Helper: process detector (script-checker) result — only coaching items (RECA, RALOCA, objections)
@@ -666,9 +667,9 @@ export function RealtimeCoachingPanel({
           leadPhrase: transcriptEntry.text,
           type,
           leadName: leadNome,
-          coachInstructions: type === "reca" ? coach.instrucoes_reca
-            : type === "raloca" ? coach.instrucoes_raloca
-            : coach.instrucoes_radoveca,
+          coachInstructions: type === "reca" ? coach?.instrucoes_reca
+            : type === "raloca" ? coach?.instrucoes_raloca
+            : coach?.instrucoes_radoveca,
         },
       });
 
@@ -717,7 +718,7 @@ export function RealtimeCoachingPanel({
     } finally {
       setGeneratingItemFor(null);
     }
-  }, [leadNome, coach.instrucoes_reca, coach.instrucoes_raloca, coach.instrucoes_radoveca, toast, isCloser]);
+  }, [leadNome, coach?.instrucoes_reca, coach?.instrucoes_raloca, coach?.instrucoes_radoveca, toast, isCloser]);
 
   if (!isRecording) return null;
 

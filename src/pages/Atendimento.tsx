@@ -298,7 +298,7 @@ export default function Atendimento() {
         {/* Coaching panel renders as soon as recording starts — Scribe connects independently of coach */}
         {activeRecording && (
           <CoachingErrorBoundary>
-            {coach ? <RealtimeCoachingPanel
+            <RealtimeCoachingPanel
               coach={coach}
               leadNome={lead?.nome || ""}
               leadContext={lead?.resumo_caso || undefined}
@@ -308,14 +308,7 @@ export default function Atendimento() {
               audioMonitor={audioMonitor}
               script={script}
               onTranscriptUpdate={handleTranscriptUpdate}
-            /> : (
-              <Card className="border-primary/20 p-3">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  <span>Carregando coaching… A transcrição será iniciada em instantes.</span>
-                </div>
-              </Card>
-            )}
+            />
           </CoachingErrorBoundary>
         )}
       </div>
