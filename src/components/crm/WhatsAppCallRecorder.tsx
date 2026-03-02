@@ -162,12 +162,15 @@ export function WhatsAppCallRecorder({ leadId, leadNome, numero, papel, autoStar
   }, [leadId]);
 
   // Auto-start recording when autoStart prop is true
+  // Guard is set BEFORE the timeout to prevent re-entry on re-renders
   useEffect(() => {
     if (autoStart && !autoStartedRef.current && status === "idle" && numero && !isStartingRef.current) {
       autoStartedRef.current = true;
-      // Small delay to ensure component is fully mounted
       const timer = setTimeout(() => {
-        startWhatsAppCall();
+        // Double-check: another path may have started in the meantime
+        if (!isStartingRef.current) {
+          startWhatsAppCall();
+        }
       }, 500);
       return () => clearTimeout(timer);
     }
