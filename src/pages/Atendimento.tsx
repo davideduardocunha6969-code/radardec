@@ -36,6 +36,7 @@ export default function Atendimento() {
   const tipo = searchParams.get("tipo") || "whatsapp";
   const funilId = searchParams.get("funilId") || "";
   const papel = searchParams.get("papel") || "sdr";
+  const autoStart = searchParams.get("autoStart") === "true";
 
   const [lead, setLead] = useState<LeadData | null>(null);
   const [coach, setCoach] = useState<RoboCoach | null>(null);
@@ -314,6 +315,7 @@ export default function Atendimento() {
                   leadNome={lead.nome}
                   numero={numero}
                   papel={papel}
+                  autoStart={autoStart}
                   onRecordingStateChange={handleRecordingStateChange}
                   onAudioMonitorUpdate={handleAudioMonitorUpdate}
                   stopRef={stopCallRef}
