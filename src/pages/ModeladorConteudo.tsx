@@ -1,4 +1,5 @@
 import { useState, useRef, useCallback, useEffect, useMemo } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Wand2, Loader2, ExternalLink, ArrowRight, Send, AlertCircle, Upload, X, FileVideo, LayoutGrid, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -65,6 +66,17 @@ export default function ModeladorConteudo() {
   const [extractingLink, setExtractingLink] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const [searchParams] = useSearchParams();
+
+  // Auto-fill link from query param
+  useEffect(() => {
+    const linkParam = searchParams.get("link");
+    if (linkParam) {
+      setLink(linkParam);
+      setIsDirectLink(true);
+      setStep("select-products");
+    }
+  }, []);
 
   // Get current selected origin format details
   const selectedOrigemFormat = useMemo(() => {
