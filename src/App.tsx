@@ -22,6 +22,7 @@ import MidiaSocial from "./pages/MidiaSocial";
 import ContentHub from "./pages/ContentHub";
 import ModeladorConteudo from "./pages/ModeladorConteudo";
 import ModeladorReplica from "./pages/ModeladorReplica";
+import RadarViralizacao from "./pages/RadarViralizacao";
 import AtividadesMarketing from "./pages/AtividadesMarketing";
 import AtendimentosClosers from "./pages/AtendimentosClosers";
 import CrmOutbound from "./pages/CrmOutbound";
@@ -77,6 +78,7 @@ const App = () => (
               <Route path="/midia-social" element={<ProtectedRoute pageKey="midia-social"><MidiaSocial /></ProtectedRoute>} />
               <Route path="/marketing/modelador" element={<ProtectedRoute pageKey="marketing-modelador"><ModeladorConteudo /></ProtectedRoute>} />
               <Route path="/marketing/atividades" element={<ProtectedRoute pageKey="marketing-atividades"><AtividadesMarketing /></ProtectedRoute>} />
+              <Route path="/marketing/radar-viralizacao" element={<ProtectedRoute pageKey="marketing-radar-viralizacao"><RadarViralizacao /></ProtectedRoute>} />
               <Route path="/agenda" element={<Agenda />} />
               <Route path="/meu-painel" element={<MeuPainel />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
