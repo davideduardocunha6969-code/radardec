@@ -217,6 +217,16 @@ export function useRadarViralizacao() {
     onError: (e) => toast.error("Erro: " + e.message),
   });
 
+  const fetchProfileHistory = async (profileId: string): Promise<ProfileHistory[]> => {
+    const { data, error } = await supabase
+      .from("profile_history")
+      .select("*")
+      .eq("profile_id", profileId)
+      .order("recorded_at", { ascending: true });
+    if (error) throw error;
+    return (data ?? []) as ProfileHistory[];
+  };
+
   return {
     profiles,
     topics,
@@ -233,5 +243,6 @@ export function useRadarViralizacao() {
     toggleTopic,
     runScan,
     markAsModeled,
+    fetchProfileHistory,
   };
 }
