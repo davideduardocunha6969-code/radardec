@@ -8,7 +8,7 @@ const corsHeaders = {
 
 // ── Actor IDs ──
 const ACTORS = {
-  instagram_profile: "apify/instagram-scraper",
+  instagram_profile: "apify/instagram-reel-scraper",
   tiktok_profile: "clockworks/tiktok-scraper",
   instagram_topic: "apify/instagram-hashtag-scraper",
   tiktok_topic: "clockworks/tiktok-scraper",
@@ -63,14 +63,14 @@ interface MappedPost {
 
 function mapInstagram(item: Record<string, unknown>): MappedPost {
   return {
-    views: (item.videoViewCount as number) || 0,
+    views: (item.videoPlayCount as number) || (item.videoViewCount as number) || 0,
     likes: (item.likesCount as number) || 0,
     comments: (item.commentsCount as number) || 0,
     thumbnail: (item.displayUrl as string) || null,
     post_url: (item.url as string) || "",
     caption: (item.caption as string) || null,
     username: (item.ownerUsername as string) || null,
-    followers_at_capture: null,
+    followers_at_capture: (item.ownerFollowersCount as number) || null,
   };
 }
 
@@ -132,20 +132,14 @@ async function scanProfiles(
       const isIg = profile.platform === "instagram";
       let profileFollowers = profile.followers_count;
 
-      // For Instagram, fetch profile details first to get followers count
+      // instagram-reel-scraper already returns ownerFollowersCount per post, no separate details call needed
       if (isIg) {
-        const profileItems = await runActor("apify/instagram-scraper", {
-          directUrls: [`https://www.instagram.com/${profile.username}/`],
-          resultsType: "details",
-          resultsLimit: 1,
-        }, token);
-        const igFollowers = (profileItems[0]?.followersCount as number) || profile.followers_count || null;
-        if (igFollowers) profileFollowers = igFollowers;
+        // skip separate profile details fetch — reel scraper includes followers
       }
 
       const actorId = isIg ? ACTORS.instagram_profile : ACTORS.tiktok_profile;
       const input = isIg
-        ? { directUrls: [`https://www.instagram.com/${profile.username}/`], resultsType: "posts", resultsLimit: 20 }
+        ? { username: profile.username, resultsLimit: 20 }
         : { profiles: [profile.username], resultsPerPage: 20, profileScrapeSections: ["videos"], profileSorting: "latest" };
 
       const items = await runActor(actorId, input, token);
