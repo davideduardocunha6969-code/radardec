@@ -89,7 +89,7 @@ function ProfileDetailSheet({
         <SheetHeader className="pb-4">
           <div className="flex items-center gap-3">
             {profile.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="w-14 h-14 rounded-full object-cover border-2 border-border" />
+              <img src={profile.avatar_url} alt="" className="w-14 h-14 rounded-full object-cover border-2 border-border" onError={(e) => { const el = e.target as HTMLImageElement; el.style.display = 'none'; el.parentElement!.innerHTML = '<div class="w-14 h-14 rounded-full bg-muted flex items-center justify-center border-2 border-border"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>'; }} />
             ) : (
               <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center border-2 border-border">
                 <User className="h-6 w-6 text-muted-foreground" />
@@ -246,7 +246,7 @@ function PerfisTab() {
                 {/* Header */}
                 <div className="flex items-center gap-3">
                   {p.avatar_url ? (
-                    <img src={p.avatar_url} alt="" className="w-11 h-11 rounded-full object-cover border border-border" />
+                    <img src={p.avatar_url} alt="" className="w-11 h-11 rounded-full object-cover border border-border" onError={(e) => { const el = e.target as HTMLImageElement; el.style.display = 'none'; el.parentElement!.innerHTML = '<div class="w-11 h-11 rounded-full bg-muted flex items-center justify-center border border-border"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>'; }} />
                   ) : (
                     <div className="w-11 h-11 rounded-full bg-muted flex items-center justify-center border border-border">
                       <User className="h-5 w-5 text-muted-foreground" />
@@ -455,6 +455,15 @@ function ViraisTab() {
                     alt=""
                     className="w-full h-full object-cover"
                     loading="lazy"
+                    crossOrigin="anonymous"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      const parent = (e.target as HTMLImageElement).parentElement;
+                      if (parent) {
+                        const url = item.post_url || '#';
+                        parent.innerHTML = `<div class="flex items-center justify-center h-full bg-muted"><a href="${url}" target="_blank" rel="noopener noreferrer" class="flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg><span class="text-xs">Ver no Instagram</span></a></div>`;
+                      }
+                    }}
                   />
                 ) : (
                   <div className="w-full h-full flex items-center justify-center">
