@@ -98,6 +98,7 @@ export function useRadarViralizacao() {
       const { data, error } = await supabase
         .from("viral_content")
         .select("*")
+        .eq("is_dismissed", false)
         .order("detected_at", { ascending: false });
       if (error) throw error;
       return data as ViralContent[];
@@ -227,6 +228,21 @@ export function useRadarViralizacao() {
     return (data ?? []) as ProfileHistory[];
   };
 
+  const dismissViral = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("viral_content")
+        .update({ is_dismissed: true, dismissed_at: new Date().toISOString() })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["viral_content"] });
+      toast.success("Viral desconsiderado");
+    },
+    onError: (e) => toast.error("Erro: " + e.message),
+  });
+
   return {
     profiles,
     topics,
@@ -243,6 +259,7 @@ export function useRadarViralizacao() {
     toggleTopic,
     runScan,
     markAsModeled,
+    dismissViral,
     fetchProfileHistory,
   };
 }
