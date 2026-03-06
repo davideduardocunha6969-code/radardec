@@ -8,10 +8,10 @@ const corsHeaders = {
 
 // ── Actor IDs ──
 const ACTORS = {
-  instagram_profile: "apify/instagram-reel-scraper",
-  tiktok_profile: "clockworks/tiktok-scraper",
-  instagram_topic: "apify/instagram-hashtag-scraper",
-  tiktok_topic: "clockworks/tiktok-scraper",
+  instagram_profile: "apify~instagram-reel-scraper",
+  tiktok_profile: "clockworks~tiktok-scraper",
+  instagram_topic: "apify~instagram-hashtag-scraper",
+  tiktok_topic: "clockworks~tiktok-scraper",
 };
 
 // ── Apify helpers ──
