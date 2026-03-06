@@ -105,16 +105,17 @@ async function extractSocialMedia(url: string): Promise<SocialMediaResponse | nu
 
 function parseInstagramResponse(data: any): SocialMediaResponse {
   const videoUrl = data.contents?.[0]?.videos?.[0]?.url || null;
-  const post = data.postInfo || {};
-
+  const extra = data.additionalData || {};
+  const captionEdges = extra.edge_media_to_caption?.edges || [];
+  const caption = captionEdges[0]?.node?.text || extra.accessibility_caption || null;
   return {
     video_url: videoUrl,
-    thumbnail_url: data.contents?.[0]?.thumbnail || data.contents?.[0]?.videos?.[0]?.thumbnail || post.thumbnail || null,
-    caption: post.caption || null,
-    like_count: post.likeCount,
-    comment_count: post.commentCount,
-    view_count: post.videoViewCount,
-    username: post.username,
+    thumbnail_url: extra.thumbnail_src || extra.display_url || null,
+    caption: caption,
+    like_count: extra.edge_media_preview_like?.count || null,
+    comment_count: extra.edge_media_to_comment?.count || null,
+    view_count: extra.video_view_count || null,
+    username: extra.username || null,
   };
 }
 
