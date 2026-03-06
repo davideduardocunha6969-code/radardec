@@ -169,37 +169,22 @@ export function ModelagemResultsView({ result, formatoSaida, formatoOrigem }: Mo
               description="Gemini 2.5 Flash • Análise de frames"
               status="completed"
             >
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <ContentBlock
-                  label="Cenário"
-                  content={result.analise_visual_detalhada.cenario}
-                  variant="subtle"
-                />
-                <ContentBlock
-                  label="Enquadramento"
-                  content={result.analise_visual_detalhada.enquadramento}
-                  variant="subtle"
-                />
-                <ContentBlock
-                  label="Transições"
-                  content={result.analise_visual_detalhada.transicoes}
-                  variant="subtle"
-                />
-                <ContentBlock
-                  label="Postura do Apresentador"
-                  content={result.analise_visual_detalhada.postura_apresentador}
-                  variant="subtle"
-                />
-                <ContentBlock
-                  label="Elementos Visuais"
-                  content={result.analise_visual_detalhada.elementos_visuais}
-                  variant="subtle"
-                />
-                <ContentBlock
-                  label="Ritmo de Edição"
-                  content={result.analise_visual_detalhada.ritmo_edicao}
-                  variant="subtle"
-                />
+              <div className="space-y-3">
+                {result.analise_visual_detalhada?.textos_na_tela && (
+                  <ContentBlock
+                    label="Textos visíveis no vídeo"
+                    content={result.analise_visual_detalhada.textos_na_tela}
+                    variant="highlight"
+                  />
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <ContentBlock label="Cenário" content={result.analise_visual_detalhada.cenario} variant="subtle" />
+                  <ContentBlock label="Enquadramento" content={result.analise_visual_detalhada.enquadramento} variant="subtle" />
+                  <ContentBlock label="Transições" content={result.analise_visual_detalhada.transicoes} variant="subtle" />
+                  <ContentBlock label="Postura do Apresentador" content={result.analise_visual_detalhada.postura_apresentador} variant="subtle" />
+                  <ContentBlock label="Elementos Visuais" content={result.analise_visual_detalhada.elementos_visuais} variant="subtle" />
+                  <ContentBlock label="Ritmo de Edição" content={result.analise_visual_detalhada.ritmo_edicao} variant="subtle" />
+                </div>
               </div>
             </ProcessStep>
           )}
