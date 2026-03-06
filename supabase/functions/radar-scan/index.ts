@@ -279,11 +279,20 @@ async function scanProfiles(
       const profileMeta = extractProfileMeta(items, isIg);
       let profileFollowers = profileMeta.followers_count || profile.followers_count;
 
-      // ── Fix avatar & followers from first Apify item (Instagram) ──
-      const firstItem = items[0] || {};
-      const avatarUrl = (firstItem.ownerProfilePicUrl as string) || (firstItem.profilePicUrl as string) || null;
-      const postFollowers = (firstItem.ownerFollowersCount as number) || null;
+      // ── Fix avatar & followers from first Apify item ──
+      const firstItem = items[0] as Record<string, unknown> || {};
+      const avatarUrl = (firstItem.ownerProfilePicUrl as string)
+        || (firstItem.profilePicUrl as string)
+        || (firstItem.authorProfilePicUrl as string)
+        || null;
+      const postFollowers = (firstItem.ownerFollowersCount as number)
+        || (firstItem.followersCount as number)
+        || null;
       if (postFollowers) profileFollowers = postFollowers;
+
+      console.log('[avatar debug] firstItem keys:', Object.keys(firstItem).join(','));
+      console.log('[avatar debug] avatarUrl:', avatarUrl);
+      console.log('[avatar debug] followers:', postFollowers);
 
       // ── Calculate posting frequency & engagement ──
       const freq = calcPostFrequency(mapped);
