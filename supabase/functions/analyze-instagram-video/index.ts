@@ -76,7 +76,10 @@ async function extractSocialMedia(url: string): Promise<SocialMediaResponse | nu
     }
 
     const data = await response.json();
-    console.log("Social media data received:", JSON.stringify(data).slice(0, 500));
+    if (data.error) {
+      console.error("API returned error:", data.error);
+      return null;
+    }
 
     if (platform === "tiktok") {
       return parseTikTokResponse(data);
@@ -89,37 +92,32 @@ async function extractSocialMedia(url: string): Promise<SocialMediaResponse | nu
 }
 
 function parseInstagramResponse(data: any): SocialMediaResponse {
-  let videoUrl = data.video_url || data.video_versions?.[0]?.url || data.media?.video_versions?.[0]?.url || null;
-  let thumbnailUrl = data.thumbnail_url || data.image_versions2?.candidates?.[0]?.url || data.media?.image_versions2?.candidates?.[0]?.url || null;
-  let caption = data.caption?.text || data.caption || data.media?.caption?.text || null;
+  const videoUrl = data.contents?.[0]?.videos?.[0]?.url || null;
+  const post = data.postInfo || {};
 
   return {
     video_url: videoUrl,
-    thumbnail_url: thumbnailUrl,
-    caption,
-    like_count: data.like_count || data.media?.like_count,
-    comment_count: data.comment_count || data.media?.comment_count,
-    view_count: data.view_count || data.play_count || data.media?.view_count || data.media?.play_count,
-    username: data.user?.username || data.owner?.username || data.media?.user?.username,
+    thumbnail_url: post.thumbnail || null,
+    caption: post.caption || null,
+    like_count: post.likeCount,
+    comment_count: post.commentCount,
+    view_count: post.videoViewCount,
+    username: post.username,
   };
 }
 
 function parseTikTokResponse(data: any): SocialMediaResponse {
-  // Adapt based on the API's actual response shape
-  const item = data.data || data.itemInfo?.itemStruct || data;
-
-  let videoUrl = item.video?.playAddr || item.video?.downloadAddr || item.video_url || item.play || null;
-  let thumbnailUrl = item.video?.cover || item.video?.originCover || item.thumbnail_url || item.cover || null;
-  let caption = item.desc || item.title || item.caption || null;
+  const videoUrl = data.contents?.[0]?.videos?.[0]?.url || null;
+  const item = data.itemInfo?.itemStruct || {};
 
   return {
     video_url: videoUrl,
-    thumbnail_url: thumbnailUrl,
-    caption,
-    like_count: item.stats?.diggCount || item.digg_count || item.likes,
-    comment_count: item.stats?.commentCount || item.comment_count || item.comments,
-    view_count: item.stats?.playCount || item.play_count || item.views,
-    username: item.author?.uniqueId || item.author?.nickname || item.username,
+    thumbnail_url: item.video?.cover || null,
+    caption: item.desc || null,
+    like_count: item.stats?.diggCount,
+    comment_count: item.stats?.commentCount,
+    view_count: item.stats?.playCount,
+    username: item.author?.uniqueId,
   };
 }
 
