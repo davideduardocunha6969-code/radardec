@@ -78,7 +78,7 @@ const App = () => (
               <Route path="/midia-social" element={<ProtectedRoute pageKey="midia-social"><MidiaSocial /></ProtectedRoute>} />
               <Route path="/marketing/modelador" element={<ProtectedRoute pageKey="marketing-modelador"><ModeladorConteudo /></ProtectedRoute>} />
               <Route path="/marketing/atividades" element={<ProtectedRoute pageKey="marketing-atividades"><AtividadesMarketing /></ProtectedRoute>} />
-              <Route path="/marketing/radar-viralizacao" element={<ProtectedRoute pageKey="marketing-radar-viralizacao"><RadarViralizacao /></ProtectedRoute>} />
+              <Route path="/marketing/radar" element={<ProtectedRoute pageKey="marketing-radar"><RadarViralizacao /></ProtectedRoute>} />
               <Route path="/agenda" element={<Agenda />} />
               <Route path="/meu-painel" element={<MeuPainel />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
