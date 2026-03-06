@@ -721,7 +721,7 @@ export default function ModeladorConteudo() {
                 id="link"
                 value={link}
                 onChange={(e) => setLink(e.target.value)}
-                placeholder="https://www.youtube.com/watch?v=... ou https://www.instagram.com/reel/..."
+                placeholder="https://www.youtube.com/watch?v=... ou https://www.instagram.com/reel/... ou https://www.tiktok.com/..."
               />
               <p className="text-xs text-muted-foreground">
                 O link será usado como referência quando a ideia for enviada ao Content Hub
@@ -732,9 +732,18 @@ export default function ModeladorConteudo() {
               <Button variant="outline" onClick={() => setStep("select-saida")}>
                 Voltar
               </Button>
-              <Button onClick={handleContinueToUpload} disabled={!link}>
-                Continuar
-                <ArrowRight className="h-4 w-4 ml-2" />
+              <Button onClick={handleContinueToUpload} disabled={!link || extractingLink}>
+                {extractingLink ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Extraindo vídeo automaticamente...
+                  </>
+                ) : (
+                  <>
+                    Continuar
+                    <ArrowRight className="h-4 w-4 ml-2" />
+                  </>
+                )}
               </Button>
             </div>
           </CardContent>
@@ -1022,7 +1031,7 @@ export default function ModeladorConteudo() {
             )}
 
             <div className="flex justify-between pt-4">
-              <Button variant="outline" onClick={() => setStep("upload-video")}>
+              <Button variant="outline" onClick={() => setStep(isDirectLink ? "input-link" : "upload-video")}>
                 Voltar
               </Button>
               <Button
