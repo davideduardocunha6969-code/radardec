@@ -149,19 +149,26 @@ async function scanProfiles(
         ? { username: [profile.username], resultsLimit: 20 }
         : { profiles: [profile.username], resultsPerPage: 20, profileScrapeSections: ["videos"], profileSorting: "latest" };
 
-      const items = await runActor(actorId, input, token);
+      let items: Record<string, unknown>[] = [];
+      let debugMeta: Record<string, unknown> = {};
+      try {
+        // Teste direto: fazer uma chamada simples ao Apify para ver se o token funciona
+        const testRes = await fetch(`https://api.apify.com/v2/users/me?token=${token}`);
+        const testBody = await testRes.json();
+        debugMeta.tokenTest = testBody;
+
+        items = await runActor(actorId, input, token);
+        debugMeta.itemsCount = items.length;
+      } catch (e: any) {
+        debugMeta.runError = e.message;
+      }
 
       if (debugMode) {
-        console.log(`[DEBUG] raw items count: ${items.length}`);
-        console.log(`[DEBUG] raw items sample: ${JSON.stringify(items.slice(0, 1))}`);
+        debugItems.push({ profile: profile.username, input, meta: debugMeta, sample: items.slice(0, 1) });
       }
 
       console.log(`[radar-scan] perfil ${profile.username}: ${items.length} posts retornados pelo Apify`);
       console.log(`[radar-scan] primeiro post sample:`, JSON.stringify(items[0] ?? {}).substring(0, 300));
-
-      if (debugMode) {
-        debugItems.push(...items.slice(0, 2));
-      }
 
       const mapper = isIg ? mapInstagram : mapTiktok;
       const mapped = items.map(mapper);
