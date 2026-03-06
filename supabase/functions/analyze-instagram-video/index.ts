@@ -109,7 +109,7 @@ function parseInstagramResponse(data: any): SocialMediaResponse {
 
   return {
     video_url: videoUrl,
-    thumbnail_url: post.thumbnail || null,
+    thumbnail_url: data.contents?.[0]?.thumbnail || data.contents?.[0]?.videos?.[0]?.thumbnail || post.thumbnail || null,
     caption: post.caption || null,
     like_count: post.likeCount,
     comment_count: post.commentCount,
