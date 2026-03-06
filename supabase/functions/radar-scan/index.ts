@@ -151,6 +151,11 @@ async function scanProfiles(
 
       const items = await runActor(actorId, input, token);
 
+      if (debugMode) {
+        console.log(`[DEBUG] raw items count: ${items.length}`);
+        console.log(`[DEBUG] raw items sample: ${JSON.stringify(items.slice(0, 1))}`);
+      }
+
       console.log(`[radar-scan] perfil ${profile.username}: ${items.length} posts retornados pelo Apify`);
       console.log(`[radar-scan] primeiro post sample:`, JSON.stringify(items[0] ?? {}).substring(0, 300));
 
