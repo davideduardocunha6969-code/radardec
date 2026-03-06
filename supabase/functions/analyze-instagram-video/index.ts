@@ -211,19 +211,20 @@ async function analyzeVideoVisually(
   transcription: string | undefined
 ): Promise<VisualAnalysisResult | null> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  if (!LOVABLE_API_KEY || !thumbnailUrl) return null;
+  if (!LOVABLE_API_KEY) return null;
   try {
     const hasTranscription = transcription && transcription.trim().length > 10;
     const userPrompt = `Analise DETALHADAMENTE esta thumbnail/frame de um vídeo de rede social.\n${caption ? `LEGENDA: ${caption}\n` : ""}${hasTranscription ? `TRANSCRIÇÃO DE ÁUDIO: ${transcription}\n` : "ATENÇÃO: Este vídeo não possui fala — é um vídeo com apenas textos na tela e música de fundo.\n"}\nResponda com um JSON exato neste formato:\n{\n  "textos_na_tela": "Liste TODOS os textos visíveis na imagem palavra por palavra",\n  "cenario": "Descreva o cenário/fundo exatamente como aparece",\n  "enquadramento": "Tipo de enquadramento",\n  "transicoes": "Tipo de transição inferida pelo estilo visual",\n  "postura_apresentador": "Descreva pessoa se houver, ou diga: Sem apresentador — vídeo de texto",\n  "elementos_visuais": "Descreva todos os elementos: cores, fontes, ícones, animações",\n  "ritmo_edicao": "Ritmo estimado baseado no estilo visual"\n}\nResponda APENAS o JSON.`;
+    const contentArray: any[] = [{ type: "text", text: userPrompt }];
+    if (thumbnailUrl) {
+      contentArray.push({ type: "image_url", image_url: { url: thumbnailUrl } });
+    }
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
       headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        messages: [{ role: "user", content: [
-          { type: "text", text: userPrompt },
-          { type: "image_url", image_url: { url: thumbnailUrl } }
-        ]}]
+        messages: [{ role: "user", content: contentArray }]
       })
     });
     if (!response.ok) return null;
@@ -270,9 +271,7 @@ IMPORTANTE: Responda APENAS com um objeto JSON válido, sem texto adicional. Use
   "formato_sugerido": "video | video_longo | carrossel | estatico"
 }
 
-IMPORTANTE: Inclua também estes campos adicionais com os dados brutos da análise:
-- transcricao_audio: A transcrição completa do áudio do vídeo (copie exatamente o que foi transcrito)
-- analise_visual_detalhada: Objeto com os detalhes visuais (cenario, transicoes, enquadramento, postura_apresentador, elementos_visuais, ritmo_edicao)`;
+NÃO inclua os campos "transcricao_audio" nem "analise_visual_detalhada" no JSON — esses dados são adicionados automaticamente pelo sistema.`;
 
     let contextInfo = `DADOS DO VÍDEO:
 - Autor: @${socialData.username || "desconhecido"}
