@@ -74,8 +74,8 @@ function mapInstagram(item: Record<string, unknown>): MappedPost {
     views: (item.videoPlayCount as number) || (item.videoViewCount as number) || 0,
     likes: (item.likesCount as number) || 0,
     comments: (item.commentsCount as number) || 0,
-    thumbnail: (item.displayUrl as string) || null,
-    post_url: (item.url as string) || "",
+    thumbnail: (item.displayUrl as string) || ((item.images as string[]) || [])[0] || null,
+    post_url: (item.url as string) || (item.inputUrl as string) || "",
     caption: (item.caption as string) || null,
     username: (item.ownerUsername as string) || null,
     followers_at_capture: (item.ownerFollowersCount as number) || null,
@@ -219,6 +219,26 @@ async function recalcRankPositions(supabase: ReturnType<typeof createClient>, us
   console.log(`[radar-scan] rank_position recalculado para ${allVirals.length} virais`);
 }
 
+// ── Fetch Instagram profile metadata ──
+
+async function fetchInstagramProfile(username: string, token: string) {
+  try {
+    const items = await runActor('apify~instagram-profile-scraper', {
+      usernames: [username]
+    }, token);
+    const p = items[0] as Record<string, unknown> || {};
+    return {
+      avatar_url: (p.profilePicUrl as string) || (p.profilePicUrlHD as string) || null,
+      followers_count: (p.followersCount as number) || null,
+      posts_count: (p.postsCount as number) || null,
+      display_name: (p.fullName as string) || null,
+    };
+  } catch(e) {
+    console.error('fetchInstagramProfile error:', e);
+    return null;
+  }
+}
+
 // ── Scan profiles ──
 
 async function scanProfiles(
@@ -275,34 +295,36 @@ async function scanProfiles(
       const mapper = isIg ? mapInstagram : mapTiktok;
       const mapped = items.map(mapper);
 
-      // ── Extract profile metadata ──
-      const profileMeta = extractProfileMeta(items, isIg);
-      let profileFollowers = profileMeta.followers_count || profile.followers_count;
+      // ── Profile metadata ──
+      let profileFollowers = profile.followers_count;
+      const updateData: Record<string, unknown> = { last_scanned_at: now };
 
-      // ── Fix avatar & followers from first Apify item ──
-      const firstItem = items[0] as Record<string, unknown> || {};
-      const avatarUrl = (firstItem.ownerProfilePicUrl as string)
-        || (firstItem.profilePicUrl as string)
-        || (firstItem.authorProfilePicUrl as string)
-        || null;
-      const postFollowers = (firstItem.ownerFollowersCount as number)
-        || (firstItem.followersCount as number)
-        || null;
-      if (postFollowers) profileFollowers = postFollowers;
-
-      console.log('[avatar debug] firstItem keys:', Object.keys(firstItem).join(','));
-      console.log('[avatar debug] avatarUrl:', avatarUrl);
-      console.log('[avatar debug] followers:', postFollowers);
+      // ── Fetch IG profile data via dedicated actor ──
+      if (isIg) {
+        const profileData = await fetchInstagramProfile(profile.username, token);
+        if (profileData) {
+          if (profileData.followers_count) profileFollowers = profileData.followers_count;
+          if (profileData.avatar_url) updateData.avatar_url = profileData.avatar_url;
+          if (profileData.followers_count) updateData.followers_count = profileData.followers_count;
+          if (profileData.display_name) updateData.display_name = profileData.display_name;
+          if (profileData.posts_count) updateData.posts_count = profileData.posts_count;
+          console.log(`[radar-scan] IG profile data for ${profile.username}:`, JSON.stringify(profileData));
+        }
+      } else {
+        // TikTok: extract from post items
+        const profileMeta = extractProfileMeta(items, false);
+        if (profileMeta.followers_count) {
+          profileFollowers = profileMeta.followers_count;
+          updateData.followers_count = profileMeta.followers_count;
+        }
+        if (profileMeta.avatar_url) updateData.avatar_url = profileMeta.avatar_url;
+        if (profileMeta.posts_count != null) updateData.posts_count = profileMeta.posts_count;
+      }
 
       // ── Calculate posting frequency & engagement ──
       const freq = calcPostFrequency(mapped);
       const engagementScore = calcEngagement7d(mapped, profileFollowers);
 
-      // ── Update profile with all metrics ──
-      const updateData: Record<string, unknown> = { last_scanned_at: now };
-      if (profileFollowers) updateData.followers_count = profileFollowers;
-      if (avatarUrl) updateData.avatar_url = avatarUrl;
-      if (profileMeta.posts_count != null) updateData.posts_count = profileMeta.posts_count;
       if (freq.avg_posts_per_day != null) updateData.avg_posts_per_day = freq.avg_posts_per_day;
       if (freq.avg_posts_per_week != null) updateData.avg_posts_per_week = freq.avg_posts_per_week;
       if (freq.avg_posts_per_month != null) updateData.avg_posts_per_month = freq.avg_posts_per_month;
