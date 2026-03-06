@@ -273,11 +273,10 @@ Deno.serve(async (req) => {
     const APIFY_TOKEN = Deno.env.get("APIFY_API_TOKEN");
     if (!APIFY_TOKEN) throw new Error("APIFY_API_TOKEN is not configured");
 
-    // Auth
-    const authHeader = req.headers.get("Authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
+    const { scan_type = "all", user_id } = await req.json();
+    if (!user_id) {
+      return new Response(JSON.stringify({ error: "user_id required" }), {
+        status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
@@ -286,21 +285,7 @@ Deno.serve(async (req) => {
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
-    const anonClient = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } },
-    );
-    const { data: { user }, error: authError } = await anonClient.auth.getUser();
-    if (authError || !user) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), {
-        status: 401,
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-      });
-    }
-    const userId = user.id;
-
-    const { scan_type = "all" } = await req.json();
+    const userId = user_id;
 
     let found = 0;
 
