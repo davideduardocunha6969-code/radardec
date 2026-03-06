@@ -86,3 +86,6 @@ verify_jwt = false
 
  [functions.analyze-instagram-video]
  verify_jwt = false
+
+ [functions.radar-scan]
+ verify_jwt = false
