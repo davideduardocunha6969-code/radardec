@@ -44,6 +44,11 @@ function detectPlatform(url: string): "instagram" | "tiktok" {
   return "instagram";
 }
 
+function extractInstagramShortcode(url: string): string | null {
+  const match = url.match(/\/(reel|p)\/([^\/\?]+)/);
+  return match ? match[2] : null;
+}
+
 async function extractSocialMedia(url: string): Promise<SocialMediaResponse | null> {
   const RAPIDAPI_KEY = Deno.env.get("RAPIDAPI_KEY");
 
@@ -56,10 +61,17 @@ async function extractSocialMedia(url: string): Promise<SocialMediaResponse | nu
     const platform = detectPlatform(url);
     console.log(`Extracting ${platform} media from:`, url);
 
-    const endpoint =
-      platform === "tiktok"
-        ? `https://social-media-video-downloader.p.rapidapi.com/tiktok/v3/post/details?url=${encodeURIComponent(url)}`
-        : `https://social-media-video-downloader.p.rapidapi.com/instagram/v2/post/details?url=${encodeURIComponent(url)}`;
+    let endpoint: string;
+    if (platform === "tiktok") {
+      endpoint = `https://social-media-video-downloader.p.rapidapi.com/tiktok/v3/post/details?url=${encodeURIComponent(url)}`;
+    } else {
+      const shortcode = extractInstagramShortcode(url);
+      if (!shortcode) {
+        console.error("Could not extract Instagram shortcode from URL:", url);
+        return null;
+      }
+      endpoint = `https://social-media-video-downloader.p.rapidapi.com/instagram/v3/media/post/details?shortcode=${shortcode}`;
+    }
 
     const response = await fetch(endpoint, {
       method: "GET",
@@ -97,7 +109,7 @@ function parseInstagramResponse(data: any): SocialMediaResponse {
 
   return {
     video_url: videoUrl,
-    thumbnail_url: post.thumbnail || null,
+    thumbnail_url: data.contents?.[0]?.thumbnail || data.contents?.[0]?.videos?.[0]?.thumbnail || post.thumbnail || null,
     caption: post.caption || null,
     like_count: post.likeCount,
     comment_count: post.commentCount,
