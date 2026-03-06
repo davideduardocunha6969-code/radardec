@@ -169,11 +169,13 @@ export function useRadarViralizacao() {
     setIsScanning(true);
     const toastId = toast.loading("Escaneando… isso pode levar alguns minutos");
     try {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Não autenticado");
       const { data, error } = await supabase.functions.invoke("radar-scan", {
-        body: { scan_type: scanType },
+        body: { scan_type: scanType, user_id: userData.user.id },
       });
       if (error) throw error;
-      toast.success(`Scan concluído! ${data?.found || 0} virais encontrados.`, { id: toastId });
+      toast.success(`Scan concluído! ${data?.found ?? 0} virais encontrados.`, { id: toastId });
       queryClient.invalidateQueries({ queryKey: ["viral_content"] });
       queryClient.invalidateQueries({ queryKey: ["monitored_profiles"] });
       queryClient.invalidateQueries({ queryKey: ["monitored_topics"] });
