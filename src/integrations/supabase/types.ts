@@ -1755,37 +1755,52 @@ export type Database = {
       monitored_profiles: {
         Row: {
           avatar_url: string | null
+          avg_posts_per_day: number | null
+          avg_posts_per_month: number | null
+          avg_posts_per_week: number | null
           created_at: string | null
           display_name: string | null
+          engagement_score_7d: number | null
           followers_count: number | null
           id: string
           is_active: boolean | null
           last_scanned_at: string | null
           platform: string
+          posts_count: number | null
           user_id: string
           username: string
         }
         Insert: {
           avatar_url?: string | null
+          avg_posts_per_day?: number | null
+          avg_posts_per_month?: number | null
+          avg_posts_per_week?: number | null
           created_at?: string | null
           display_name?: string | null
+          engagement_score_7d?: number | null
           followers_count?: number | null
           id?: string
           is_active?: boolean | null
           last_scanned_at?: string | null
           platform: string
+          posts_count?: number | null
           user_id: string
           username: string
         }
         Update: {
           avatar_url?: string | null
+          avg_posts_per_day?: number | null
+          avg_posts_per_month?: number | null
+          avg_posts_per_week?: number | null
           created_at?: string | null
           display_name?: string | null
+          engagement_score_7d?: number | null
           followers_count?: number | null
           id?: string
           is_active?: boolean | null
           last_scanned_at?: string | null
           platform?: string
+          posts_count?: number | null
           user_id?: string
           username?: string
         }
@@ -1910,6 +1925,50 @@ export type Database = {
           user_id?: string
         }
         Relationships: []
+      }
+      profile_history: {
+        Row: {
+          avg_likes_7d: number | null
+          avg_views_7d: number | null
+          engagement_score: number | null
+          followers_count: number | null
+          id: string
+          posts_count: number | null
+          profile_id: string | null
+          recorded_at: string | null
+          user_id: string
+        }
+        Insert: {
+          avg_likes_7d?: number | null
+          avg_views_7d?: number | null
+          engagement_score?: number | null
+          followers_count?: number | null
+          id?: string
+          posts_count?: number | null
+          profile_id?: string | null
+          recorded_at?: string | null
+          user_id: string
+        }
+        Update: {
+          avg_likes_7d?: number | null
+          avg_views_7d?: number | null
+          engagement_score?: number | null
+          followers_count?: number | null
+          id?: string
+          posts_count?: number | null
+          profile_id?: string | null
+          recorded_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_history_profile_id_fkey"
+            columns: ["profile_id"]
+            isOneToOne: false
+            referencedRelation: "monitored_profiles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
@@ -2494,13 +2553,16 @@ export type Database = {
           caption: string | null
           comment_count: number | null
           detected_at: string | null
+          dismissed_at: string | null
           followers_at_capture: number | null
           id: string
+          is_dismissed: boolean | null
           is_modeled: boolean | null
           like_count: number | null
           modeled_at: string | null
           platform: string
           post_url: string
+          rank_position: number | null
           scan_week: string | null
           source_id: string | null
           source_type: string
@@ -2514,13 +2576,16 @@ export type Database = {
           caption?: string | null
           comment_count?: number | null
           detected_at?: string | null
+          dismissed_at?: string | null
           followers_at_capture?: number | null
           id?: string
+          is_dismissed?: boolean | null
           is_modeled?: boolean | null
           like_count?: number | null
           modeled_at?: string | null
           platform: string
           post_url: string
+          rank_position?: number | null
           scan_week?: string | null
           source_id?: string | null
           source_type: string
@@ -2534,13 +2599,16 @@ export type Database = {
           caption?: string | null
           comment_count?: number | null
           detected_at?: string | null
+          dismissed_at?: string | null
           followers_at_capture?: number | null
           id?: string
+          is_dismissed?: boolean | null
           is_modeled?: boolean | null
           like_count?: number | null
           modeled_at?: string | null
           platform?: string
           post_url?: string
+          rank_position?: number | null
           scan_week?: string | null
           source_id?: string | null
           source_type?: string
