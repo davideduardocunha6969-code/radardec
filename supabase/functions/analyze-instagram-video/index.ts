@@ -105,18 +105,48 @@ async function extractSocialMedia(url: string): Promise<SocialMediaResponse | nu
 }
 
 function parseInstagramResponse(data: any): SocialMediaResponse {
-  const videoUrl = data.contents?.[0]?.videos?.[0]?.url || null;
+  const videoUrl = data.contents?.[0]?.videos?.[0]?.url
+    || data.contents?.[0]?.videos?.[1]?.url
+    || null;
+
+  // additionalData pode ser um objeto completo ou quase vazio dependendo do vídeo
   const extra = data.additionalData || {};
+
+  // Thumbnail: tentar múltiplos campos em ordem de prioridade
+  const thumbnailUrl = extra.thumbnail_src
+    || extra.display_url
+    || extra.image_versions2?.candidates?.[0]?.url
+    || extra.cover_media?.cropped_image_version?.url
+    || data.contents?.[0]?.thumbnail
+    || null;
+
+  // Caption: tentar múltiplos campos
   const captionEdges = extra.edge_media_to_caption?.edges || [];
-  const caption = captionEdges[0]?.node?.text || extra.accessibility_caption || null;
+  const caption = captionEdges[0]?.node?.text
+    || extra.accessibility_caption
+    || extra.title
+    || null;
+
+  // Username: tentar múltiplos campos
+  const username = extra.username
+    || extra.owner?.username
+    || data.contents?.[0]?.owner?.username
+    || null;
+
   return {
     video_url: videoUrl,
-    thumbnail_url: extra.thumbnail_src || extra.display_url || null,
-    caption: caption,
-    like_count: extra.edge_media_preview_like?.count || null,
-    comment_count: extra.edge_media_to_comment?.count || null,
-    view_count: extra.video_view_count || null,
-    username: extra.username || null,
+    thumbnail_url: thumbnailUrl,
+    caption,
+    like_count: extra.edge_media_preview_like?.count
+      || extra.like_count
+      || null,
+    comment_count: extra.edge_media_to_comment?.count
+      || extra.comment_count
+      || null,
+    view_count: extra.video_view_count
+      || extra.play_count
+      || null,
+    username,
   };
 }
 
