@@ -26,6 +26,7 @@ interface TranscriptionResult {
 }
 
 interface VisualAnalysisResult {
+  textos_na_tela?: string;
   cenario: string;
   transicoes: string;
   enquadramento: string;
@@ -201,17 +202,33 @@ async function transcribeVideo(videoUrl: string): Promise<TranscriptionResult | 
   }
 }
 
-// Fallback: use Gemini Vision to transcribe video directly from URL
-async function transcribeVideoWithGemini(videoUrl: string): Promise<TranscriptionResult | null> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+// Gemini Vision fallback removed — video_url type is not supported by Gemini API
 
-  if (!LOVABLE_API_KEY) {
-    console.error("LOVABLE_API_KEY não configurada");
-    return null;
-  }
+// Analyze video visually using Gemini Vision — reads on-screen texts
+async function analyzeVideoVisually(
+  thumbnailUrl: string | undefined,
+  caption: string | undefined,
+  transcription: string | undefined
+): Promise<VisualAnalysisResult | null> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+  if (!LOVABLE_API_KEY || !thumbnailUrl) return null;
 
   try {
-    console.log("Attempting Gemini Vision fallback transcription...");
+    const userPrompt = `Analise DETALHADAMENTE esta imagem de thumbnail/frame de um vídeo de rede social.
+${caption ? `LEGENDA: ${caption}\n` : ""}
+${transcription ? `TRANSCRIÇÃO DE ÁUDIO: ${transcription}\n` : "ATENÇÃO: Este vídeo não possui fala — pode ser um vídeo com apenas textos na tela e música de fundo.\n"}
+
+Responda com um JSON exato neste formato:
+{
+  "textos_na_tela": "Liste TODOS os textos visíveis na imagem, palavra por palavra",
+  "cenario": "Descreva o cenário/fundo exatamente como aparece",
+  "enquadramento": "Tipo de enquadramento (close, plano médio, plano geral, etc.)",
+  "transicoes": "Tipo de transição inferida pelo estilo visual",
+  "postura_apresentador": "Descreva pessoa se houver, ou 'Sem apresentador — vídeo de texto/motion'",
+  "elementos_visuais": "Descreva todos os elementos: cores, fontes, ícones, animações visíveis",
+  "ritmo_edicao": "Ritmo estimado baseado no estilo visual"
+}
+Responda APENAS o JSON.`;
 
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
@@ -221,102 +238,13 @@ async function transcribeVideoWithGemini(videoUrl: string): Promise<Transcriptio
       },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        messages: [
-          {
-            role: "system",
-            content: "Você é um transcritor profissional. Transcreva o áudio do vídeo fornecido na íntegra, em português. Retorne APENAS a transcrição, sem comentários adicionais.",
-          },
-          {
-            role: "user",
-            content: [
-              { type: "text", text: "Transcreva todo o áudio deste vídeo em português. Retorne apenas o texto transcrito." },
-              { type: "video_url", video_url: { url: videoUrl } },
-            ],
-          },
-        ],
-      }),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("Gemini Vision fallback error:", response.status, errorText);
-      return null;
-    }
-
-    const data = await response.json();
-    const content = data.choices?.[0]?.message?.content;
-
-    if (!content || content.trim().length < 10) {
-      console.error("Gemini Vision returned empty or too short transcription");
-      return null;
-    }
-
-    console.log("Gemini Vision transcription received, length:", content.length);
-    return { text: content.trim() };
-  } catch (error) {
-    console.error("Error in Gemini Vision fallback:", error);
-    return null;
-  }
-}
-
-// Analyze video visually using Gemini Vision
-async function analyzeVideoVisually(
-  thumbnailUrl: string | undefined,
-  caption: string | undefined,
-  transcription: string | undefined
-): Promise<VisualAnalysisResult | null> {
-  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-
-  if (!LOVABLE_API_KEY) {
-    console.error("LOVABLE_API_KEY não configurada");
-    return null;
-  }
-
-  try {
-    const systemPrompt = `Você é um especialista em produção de vídeos para redes sociais. Analise o conteúdo fornecido (thumbnail do vídeo, legenda e transcrição) e descreva os aspectos visuais e de produção.
-
-Responda APENAS com um objeto JSON válido no seguinte formato:
-
-{
-  "cenario": "Descrição do cenário/ambiente onde foi gravado (estúdio, escritório, ao ar livre, etc.)",
-  "transicoes": "Análise das transições utilizadas (cortes secos, zoom, fade, etc.)",
-  "enquadramento": "Tipo de enquadramento predominante (close, plano médio, plano geral, etc.)",
-  "postura_apresentador": "Postura do apresentador (em pé, sentado, andando, gesticulando, etc.)",
-  "elementos_visuais": "Elementos visuais adicionais (textos na tela, gráficos, emojis, legendas, etc.)",
-  "ritmo_edicao": "Ritmo geral da edição (rápido, lento, dinâmico, pausado, etc.)"
-}`;
-
-    const userPrompt = `Analise este conteúdo de vídeo:
-
-${caption ? `LEGENDA DO VÍDEO:\n${caption}\n\n` : ""}${transcription ? `TRANSCRIÇÃO DO ÁUDIO:\n${transcription}\n\n` : ""}Baseado no contexto acima e na thumbnail fornecida, descreva os aspectos visuais e de produção do vídeo. Se não houver thumbnail, infira com base na legenda e transcrição.
-
-Responda APENAS com o JSON, sem texto adicional.`;
-
-    const messages: Array<{ role: string; content: string | Array<{ type: string; text?: string; image_url?: { url: string } }> }> = [
-      { role: "system", content: systemPrompt },
-    ];
-
-    if (thumbnailUrl) {
-      messages.push({
-        role: "user",
-        content: [
-          { type: "text", text: userPrompt },
-          { type: "image_url", image_url: { url: thumbnailUrl } },
-        ],
-      });
-    } else {
-      messages.push({ role: "user", content: userPrompt });
-    }
-
-    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: thumbnailUrl ? "google/gemini-2.5-flash" : "google/gemini-3-flash-preview",
-        messages,
+        messages: [{
+          role: "user",
+          content: [
+            { type: "text", text: userPrompt },
+            { type: "image_url", image_url: { url: thumbnailUrl } },
+          ],
+        }],
       }),
     });
 
@@ -328,7 +256,6 @@ Responda APENAS com o JSON, sem texto adicional.`;
 
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
-
     if (!content) return null;
 
     const cleanContent = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
@@ -386,6 +313,10 @@ IMPORTANTE: Inclua também estes campos adicionais com os dados brutos da análi
 
     if (socialData.caption) {
       contextInfo += `LEGENDA ORIGINAL:\n${socialData.caption}\n\n`;
+    }
+
+    if (visualAnalysis?.textos_na_tela) {
+      contextInfo += `TEXTOS VISÍVEIS NO VÍDEO:\n${visualAnalysis.textos_na_tela}\n\n`;
     }
 
     if (transcription?.text) {
@@ -537,21 +468,9 @@ serve(async (req) => {
     let transcription = await transcribeVideo(socialData.video_url);
     console.log("Transcription complete:", transcription?.text?.slice(0, 200) || "No transcription");
 
-    // Step 2b: Fallback - try Gemini Vision if ElevenLabs transcription failed
+    // Transcription is optional — video may have no speech (text-only videos)
     if (!transcription) {
-      console.log("ElevenLabs transcription failed, trying Gemini Vision fallback...");
-      transcription = await transcribeVideoWithGemini(socialData.video_url);
-      console.log("Gemini fallback result:", transcription?.text?.slice(0, 200) || "Also failed");
-    }
-
-    // Step 2c: If both failed, return error instead of generic analysis
-    if (!transcription) {
-      return new Response(
-        JSON.stringify({
-          error: "Não foi possível transcrever o vídeo. O link pode ter expirado ou o vídeo está protegido.",
-        }),
-        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      console.log("Transcription failed or video has no speech — continuing with visual analysis only");
     }
 
     // Step 3: Analyze video visually
