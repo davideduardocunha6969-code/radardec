@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Radar, Plus, Trash2, Loader2, Eye, Heart, MessageCircle, ExternalLink, CheckCircle2, User, BarChart3, TrendingUp, Calendar } from "lucide-react";
+import { Radar, Plus, Trash2, Loader2, Eye, Heart, MessageCircle, ExternalLink, CheckCircle2, User, BarChart3, TrendingUp, Calendar, Video, X } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -378,16 +378,23 @@ function TemasTab() {
 // ── Virais Tab ──
 
 function ViraisTab() {
-  const { viralContent, loadingVirals, markAsModeled } = useRadarViralizacao();
+  const { viralContent, loadingVirals, markAsModeled, dismissViral } = useRadarViralizacao();
   const navigate = useNavigate();
   const [filterPlatform, setFilterPlatform] = useState<string>("all");
   const [onlyNotModeled, setOnlyNotModeled] = useState(false);
+  const [sortBy, setSortBy] = useState<string>("virality_rate");
 
-  const filtered = viralContent.filter((v) => {
-    if (filterPlatform !== "all" && v.platform !== filterPlatform) return false;
-    if (onlyNotModeled && v.is_modeled) return false;
-    return true;
-  });
+  const filtered = viralContent
+    .filter((v) => {
+      if (filterPlatform !== "all" && v.platform !== filterPlatform) return false;
+      if (onlyNotModeled && v.is_modeled) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sortBy === "virality_rate") return (b.virality_rate ?? 0) - (a.virality_rate ?? 0);
+      if (sortBy === "view_count") return (b.view_count ?? 0) - (a.view_count ?? 0);
+      return new Date(b.detected_at).getTime() - new Date(a.detected_at).getTime();
+    });
 
   const handleSendToModeler = async (item: ViralContent) => {
     await markAsModeled.mutateAsync(item.id);
@@ -409,6 +416,14 @@ function ViraisTab() {
     <div className="space-y-6">
       {/* Filters */}
       <div className="flex gap-4 items-center flex-wrap">
+        <Select value={sortBy} onValueChange={setSortBy}>
+          <SelectTrigger className="w-[200px]"><SelectValue placeholder="Ordenar por" /></SelectTrigger>
+          <SelectContent>
+            <SelectItem value="virality_rate">Taxa de Viralização</SelectItem>
+            <SelectItem value="view_count">Visualizações</SelectItem>
+            <SelectItem value="detected_at">Mais Recentes</SelectItem>
+          </SelectContent>
+        </Select>
         <Select value={filterPlatform} onValueChange={setFilterPlatform}>
           <SelectTrigger className="w-[160px]"><SelectValue placeholder="Plataforma" /></SelectTrigger>
           <SelectContent>
@@ -427,30 +442,38 @@ function ViraisTab() {
         <p className="text-center text-muted-foreground py-12">Nenhum viral detectado ainda.</p>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-          {filtered.map((item) => (
+          {filtered.map((item, index) => (
             <Card
               key={item.id}
               className={`overflow-hidden transition-all ${item.is_modeled ? "border-emerald-500/50" : ""}`}
             >
               {/* Thumbnail */}
-              {item.thumbnail_url && (
-                <div className="aspect-video bg-muted relative overflow-hidden">
+              <div className="aspect-video bg-muted relative overflow-hidden">
+                {item.thumbnail_url ? (
                   <img
                     src={item.thumbnail_url}
                     alt=""
                     className="w-full h-full object-cover"
                     loading="lazy"
                   />
-                  <div className="absolute top-2 left-2 flex gap-1">
-                    {platformBadge(item.platform)}
-                    {item.is_modeled && (
-                      <Badge className="bg-emerald-600/80 text-white border-emerald-500/50 text-xs">
-                        <CheckCircle2 className="h-3 w-3 mr-1" /> Modelado
-                      </Badge>
-                    )}
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center">
+                    <Video className="h-10 w-10 text-muted-foreground/40" />
                   </div>
+                )}
+                {/* Rank badge */}
+                <div className="absolute top-2 left-2 flex gap-1">
+                  <Badge className="bg-background/80 text-foreground border-border text-xs font-bold backdrop-blur-sm">
+                    #{index + 1}
+                  </Badge>
+                  {platformBadge(item.platform)}
+                  {item.is_modeled && (
+                    <Badge className="bg-emerald-600/80 text-white border-emerald-500/50 text-xs">
+                      <CheckCircle2 className="h-3 w-3 mr-1" /> Modelado
+                    </Badge>
+                  )}
                 </div>
-              )}
+              </div>
 
               <CardContent className="p-4 space-y-3">
                 {/* Username + virality */}
@@ -489,6 +512,15 @@ function ViraisTab() {
                       Enviar ao Modelador
                     </Button>
                   )}
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => dismissViral.mutate(item.id)}
+                    disabled={dismissViral.isPending}
+                    title="Desconsiderar"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                  </Button>
                   <Button size="sm" variant="outline" asChild>
                     <a href={item.post_url} target="_blank" rel="noopener noreferrer">
                       <ExternalLink className="h-3.5 w-3.5" />
@@ -503,7 +535,6 @@ function ViraisTab() {
     </div>
   );
 }
-
 // ── Main Page ──
 
 const RadarViralizacao = () => {
