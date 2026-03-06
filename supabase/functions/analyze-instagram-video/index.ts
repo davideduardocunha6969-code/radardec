@@ -145,7 +145,12 @@ async function transcribeVideo(videoUrl: string): Promise<TranscriptionResult | 
   try {
     console.log("Downloading video from:", videoUrl.slice(0, 100));
 
-    const videoResponse = await fetch(videoUrl);
+    const videoResponse = await fetch(videoUrl, {
+      headers: {
+        "Referer": "https://www.instagram.com/",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      },
+    });
     if (!videoResponse.ok) {
       console.error("Failed to download video:", videoResponse.status);
       return null;
@@ -153,6 +158,11 @@ async function transcribeVideo(videoUrl: string): Promise<TranscriptionResult | 
 
     const videoBlob = await videoResponse.blob();
     console.log("Video downloaded, size:", videoBlob.size, "bytes");
+
+    if (videoBlob.size < 1000) {
+      console.error("Video file too small, likely blocked:", videoBlob.size);
+      return null;
+    }
 
     const formData = new FormData();
     formData.append("file", videoBlob, "video.mp4");
@@ -186,6 +196,64 @@ async function transcribeVideo(videoUrl: string): Promise<TranscriptionResult | 
     };
   } catch (error) {
     console.error("Error transcribing video:", error);
+    return null;
+  }
+}
+
+// Fallback: use Gemini Vision to transcribe video directly from URL
+async function transcribeVideoWithGemini(videoUrl: string): Promise<TranscriptionResult | null> {
+  const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
+
+  if (!LOVABLE_API_KEY) {
+    console.error("LOVABLE_API_KEY não configurada");
+    return null;
+  }
+
+  try {
+    console.log("Attempting Gemini Vision fallback transcription...");
+
+    const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${LOVABLE_API_KEY}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        model: "google/gemini-2.5-flash",
+        messages: [
+          {
+            role: "system",
+            content: "Você é um transcritor profissional. Transcreva o áudio do vídeo fornecido na íntegra, em português. Retorne APENAS a transcrição, sem comentários adicionais.",
+          },
+          {
+            role: "user",
+            content: [
+              { type: "text", text: "Transcreva todo o áudio deste vídeo em português. Retorne apenas o texto transcrito." },
+              { type: "video_url", video_url: { url: videoUrl } },
+            ],
+          },
+        ],
+      }),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error("Gemini Vision fallback error:", response.status, errorText);
+      return null;
+    }
+
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content;
+
+    if (!content || content.trim().length < 10) {
+      console.error("Gemini Vision returned empty or too short transcription");
+      return null;
+    }
+
+    console.log("Gemini Vision transcription received, length:", content.length);
+    return { text: content.trim() };
+  } catch (error) {
+    console.error("Error in Gemini Vision fallback:", error);
     return null;
   }
 }
@@ -465,8 +533,25 @@ serve(async (req) => {
 
     // Step 2: Transcribe audio from video
     console.log("Starting transcription...");
-    const transcription = await transcribeVideo(socialData.video_url);
+    let transcription = await transcribeVideo(socialData.video_url);
     console.log("Transcription complete:", transcription?.text?.slice(0, 200) || "No transcription");
+
+    // Step 2b: Fallback - try Gemini Vision if ElevenLabs transcription failed
+    if (!transcription) {
+      console.log("ElevenLabs transcription failed, trying Gemini Vision fallback...");
+      transcription = await transcribeVideoWithGemini(socialData.video_url);
+      console.log("Gemini fallback result:", transcription?.text?.slice(0, 200) || "Also failed");
+    }
+
+    // Step 2c: If both failed, return error instead of generic analysis
+    if (!transcription) {
+      return new Response(
+        JSON.stringify({
+          error: "Não foi possível transcrever o vídeo. O link pode ter expirado ou o vídeo está protegido.",
+        }),
+        { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     // Step 3: Analyze video visually
     console.log("Starting visual analysis...");
