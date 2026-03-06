@@ -483,6 +483,8 @@ export default function ModeladorConteudo() {
     setProdutosSelecionados([]);
     setPendingIdeias([]);
     setCurrentIdeiaIndex(0);
+    setIsDirectLink(false);
+    setExtractingLink(false);
     resetModelagem();
   };
 
