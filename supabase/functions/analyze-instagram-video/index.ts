@@ -212,54 +212,25 @@ async function analyzeVideoVisually(
 ): Promise<VisualAnalysisResult | null> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
   if (!LOVABLE_API_KEY || !thumbnailUrl) return null;
-
   try {
-    const userPrompt = `Analise DETALHADAMENTE esta imagem de thumbnail/frame de um vídeo de rede social.
-${caption ? `LEGENDA: ${caption}\n` : ""}
-${transcription ? `TRANSCRIÇÃO DE ÁUDIO: ${transcription}\n` : "ATENÇÃO: Este vídeo não possui fala — pode ser um vídeo com apenas textos na tela e música de fundo.\n"}
-
-Responda com um JSON exato neste formato:
-{
-  "textos_na_tela": "Liste TODOS os textos visíveis na imagem, palavra por palavra",
-  "cenario": "Descreva o cenário/fundo exatamente como aparece",
-  "enquadramento": "Tipo de enquadramento (close, plano médio, plano geral, etc.)",
-  "transicoes": "Tipo de transição inferida pelo estilo visual",
-  "postura_apresentador": "Descreva pessoa se houver, ou 'Sem apresentador — vídeo de texto/motion'",
-  "elementos_visuais": "Descreva todos os elementos: cores, fontes, ícones, animações visíveis",
-  "ritmo_edicao": "Ritmo estimado baseado no estilo visual"
-}
-Responda APENAS o JSON.`;
-
+    const hasTranscription = transcription && transcription.trim().length > 10;
+    const userPrompt = `Analise DETALHADAMENTE esta thumbnail/frame de um vídeo de rede social.\n${caption ? `LEGENDA: ${caption}\n` : ""}${hasTranscription ? `TRANSCRIÇÃO DE ÁUDIO: ${transcription}\n` : "ATENÇÃO: Este vídeo não possui fala — é um vídeo com apenas textos na tela e música de fundo.\n"}\nResponda com um JSON exato neste formato:\n{\n  "textos_na_tela": "Liste TODOS os textos visíveis na imagem palavra por palavra",\n  "cenario": "Descreva o cenário/fundo exatamente como aparece",\n  "enquadramento": "Tipo de enquadramento",\n  "transicoes": "Tipo de transição inferida pelo estilo visual",\n  "postura_apresentador": "Descreva pessoa se houver, ou diga: Sem apresentador — vídeo de texto",\n  "elementos_visuais": "Descreva todos os elementos: cores, fontes, ícones, animações",\n  "ritmo_edicao": "Ritmo estimado baseado no estilo visual"\n}\nResponda APENAS o JSON.`;
     const response = await fetch("https://ai.gateway.lovable.dev/v1/chat/completions", {
       method: "POST",
-      headers: {
-        Authorization: `Bearer ${LOVABLE_API_KEY}`,
-        "Content-Type": "application/json",
-      },
+      headers: { Authorization: `Bearer ${LOVABLE_API_KEY}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         model: "google/gemini-2.5-flash",
-        messages: [{
-          role: "user",
-          content: [
-            { type: "text", text: userPrompt },
-            { type: "image_url", image_url: { url: thumbnailUrl } },
-          ],
-        }],
-      }),
+        messages: [{ role: "user", content: [
+          { type: "text", text: userPrompt },
+          { type: "image_url", image_url: { url: thumbnailUrl } }
+        ]}]
+      })
     });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error("AI Gateway error:", response.status, errorText);
-      return null;
-    }
-
+    if (!response.ok) return null;
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
     if (!content) return null;
-
-    const cleanContent = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
-    return JSON.parse(cleanContent);
+    return JSON.parse(content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim());
   } catch (error) {
     console.error("Error analyzing video visually:", error);
     return null;
@@ -315,8 +286,8 @@ IMPORTANTE: Inclua também estes campos adicionais com os dados brutos da análi
       contextInfo += `LEGENDA ORIGINAL:\n${socialData.caption}\n\n`;
     }
 
-    if (visualAnalysis?.textos_na_tela) {
-      contextInfo += `TEXTOS VISÍVEIS NO VÍDEO:\n${visualAnalysis.textos_na_tela}\n\n`;
+    if ((visualAnalysis as any)?.textos_na_tela) {
+      contextInfo += `TEXTOS VISÍVEIS NO VÍDEO (lidos da imagem):\n${(visualAnalysis as any).textos_na_tela}\n\n`;
     }
 
     if (transcription?.text) {
@@ -468,9 +439,10 @@ serve(async (req) => {
     let transcription = await transcribeVideo(socialData.video_url);
     console.log("Transcription complete:", transcription?.text?.slice(0, 200) || "No transcription");
 
-    // Transcription is optional — video may have no speech (text-only videos)
+    // Step 2c: transcription may be null for videos without speech (text-only videos)
+    // Continue anyway - visual analysis will handle these cases
     if (!transcription) {
-      console.log("Transcription failed or video has no speech — continuing with visual analysis only");
+      console.log("No transcription available - video may be text-only. Continuing with visual analysis.");
     }
 
     // Step 3: Analyze video visually
