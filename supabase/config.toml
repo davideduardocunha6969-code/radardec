@@ -83,3 +83,6 @@ verify_jwt = false
 
  [functions.power-dialer-session-status]
  verify_jwt = false
+
+ [functions.analyze-instagram-video]
+ verify_jwt = false
