@@ -1752,6 +1752,75 @@ export type Database = {
           },
         ]
       }
+      monitored_profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string | null
+          display_name: string | null
+          followers_count: number | null
+          id: string
+          is_active: boolean | null
+          last_scanned_at: string | null
+          platform: string
+          user_id: string
+          username: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          followers_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_scanned_at?: string | null
+          platform: string
+          user_id: string
+          username: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string | null
+          display_name?: string | null
+          followers_count?: number | null
+          id?: string
+          is_active?: boolean | null
+          last_scanned_at?: string | null
+          platform?: string
+          user_id?: string
+          username?: string
+        }
+        Relationships: []
+      }
+      monitored_topics: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          last_scanned_at: string | null
+          platform: string
+          topic: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_scanned_at?: string | null
+          platform: string
+          topic: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          last_scanned_at?: string | null
+          platform?: string
+          topic?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       notificacoes: {
         Row: {
           created_at: string
@@ -2417,6 +2486,69 @@ export type Database = {
           titulo?: string
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      viral_content: {
+        Row: {
+          caption: string | null
+          comment_count: number | null
+          detected_at: string | null
+          followers_at_capture: number | null
+          id: string
+          is_modeled: boolean | null
+          like_count: number | null
+          modeled_at: string | null
+          platform: string
+          post_url: string
+          scan_week: string | null
+          source_id: string | null
+          source_type: string
+          thumbnail_url: string | null
+          user_id: string
+          username: string | null
+          view_count: number | null
+          virality_rate: number | null
+        }
+        Insert: {
+          caption?: string | null
+          comment_count?: number | null
+          detected_at?: string | null
+          followers_at_capture?: number | null
+          id?: string
+          is_modeled?: boolean | null
+          like_count?: number | null
+          modeled_at?: string | null
+          platform: string
+          post_url: string
+          scan_week?: string | null
+          source_id?: string | null
+          source_type: string
+          thumbnail_url?: string | null
+          user_id: string
+          username?: string | null
+          view_count?: number | null
+          virality_rate?: number | null
+        }
+        Update: {
+          caption?: string | null
+          comment_count?: number | null
+          detected_at?: string | null
+          followers_at_capture?: number | null
+          id?: string
+          is_modeled?: boolean | null
+          like_count?: number | null
+          modeled_at?: string | null
+          platform?: string
+          post_url?: string
+          scan_week?: string | null
+          source_id?: string | null
+          source_type?: string
+          thumbnail_url?: string | null
+          user_id?: string
+          username?: string | null
+          view_count?: number | null
+          virality_rate?: number | null
         }
         Relationships: []
       }
