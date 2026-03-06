@@ -14,6 +14,23 @@ export interface MonitoredProfile {
   is_active: boolean;
   last_scanned_at: string | null;
   created_at: string;
+  posts_count: number | null;
+  avg_posts_per_day: number | null;
+  avg_posts_per_week: number | null;
+  avg_posts_per_month: number | null;
+  engagement_score_7d: number | null;
+}
+
+export interface ProfileHistory {
+  id: string;
+  profile_id: string;
+  user_id: string;
+  followers_count: number | null;
+  posts_count: number | null;
+  avg_views_7d: number | null;
+  avg_likes_7d: number | null;
+  engagement_score: number | null;
+  recorded_at: string;
 }
 
 export interface MonitoredTopic {
