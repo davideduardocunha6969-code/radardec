@@ -29,6 +29,8 @@ async function runActor(actorId: string, input: Record<string, unknown>, token: 
   const runId = startBody?.data?.id;
   if (!runId) throw new Error(`Apify run start failed: ${JSON.stringify(startBody)}`);
 
+  console.log(`[runActor] runId=${runId} actor=${actorId}`);
+
   // Polling – max 40 attempts × 3 s = 2 min
   let status = "RUNNING";
   let attempts = 0;
@@ -40,12 +42,17 @@ async function runActor(actorId: string, input: Record<string, unknown>, token: 
     attempts++;
   }
 
+  console.log(`[runActor] final status=${status} attempts=${attempts}`);
+
   if (status !== "SUCCEEDED") throw new Error(`Apify run ${runId} ended with status ${status}`);
 
   const itemsRes = await fetch(
     `https://api.apify.com/v2/actor-runs/${runId}/dataset/items?token=${token}&limit=50`,
   );
-  return (await itemsRes.json()) as Record<string, unknown>[];
+  const itemsJson = await itemsRes.json();
+  console.log(`[runActor] items count=${Array.isArray(itemsJson) ? itemsJson.length : 'not array'} type=${typeof itemsJson}`);
+  console.log(`[runActor] items raw=${JSON.stringify(itemsJson).substring(0, 500)}`);
+  return itemsJson as Record<string, unknown>[];
 }
 
 // ── Field mapping ──
@@ -143,6 +150,11 @@ async function scanProfiles(
         : { profiles: [profile.username], resultsPerPage: 20, profileScrapeSections: ["videos"], profileSorting: "latest" };
 
       const items = await runActor(actorId, input, token);
+
+      if (debugMode) {
+        console.log(`[DEBUG] raw items count: ${items.length}`);
+        console.log(`[DEBUG] raw items sample: ${JSON.stringify(items.slice(0, 1))}`);
+      }
 
       console.log(`[radar-scan] perfil ${profile.username}: ${items.length} posts retornados pelo Apify`);
       console.log(`[radar-scan] primeiro post sample:`, JSON.stringify(items[0] ?? {}).substring(0, 300));
