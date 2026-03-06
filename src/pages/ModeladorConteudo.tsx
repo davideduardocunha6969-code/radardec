@@ -164,11 +164,48 @@ export default function ModeladorConteudo() {
     setStep("input-link");
   };
 
-  const handleContinueToUpload = () => {
+  const isSocialMediaLink = (url: string): boolean => {
+    try {
+      const host = new URL(url).hostname.toLowerCase();
+      return host.includes("instagram.com") || host.includes("tiktok.com");
+    } catch {
+      return false;
+    }
+  };
+
+  const handleContinueToUpload = async () => {
     if (!link) {
       toast.error("Cole o link do conteúdo original");
       return;
     }
+
+    // Check if it's an Instagram or TikTok link
+    if (isSocialMediaLink(link)) {
+      setExtractingLink(true);
+      try {
+        const { data, error } = await supabase.functions.invoke("analyze-instagram-video", {
+          body: { link, action: "extract" },
+        });
+
+        if (error) throw error;
+
+        if (data?.success) {
+          setIsDirectLink(true);
+          toast.success("Vídeo detectado automaticamente! Upload não necessário.");
+          setStep("select-products");
+          return;
+        } else {
+          toast.warning(data?.error || "Não foi possível extrair o vídeo automaticamente. Faça upload manualmente.");
+        }
+      } catch (err) {
+        console.error("Erro ao extrair link:", err);
+        toast.warning("Não foi possível extrair o vídeo automaticamente. Faça upload manualmente.");
+      } finally {
+        setExtractingLink(false);
+      }
+    }
+
+    setIsDirectLink(false);
     setStep("upload-video");
   };
 
@@ -213,7 +250,7 @@ export default function ModeladorConteudo() {
   };
 
   const handleContinueToProducts = () => {
-    if (!videoFile) {
+    if (!videoFile && !isDirectLink) {
       toast.error("Faça upload do vídeo");
       return;
     }
@@ -221,8 +258,13 @@ export default function ModeladorConteudo() {
   };
 
   const handleAnalyze = async () => {
-    if (!formatoOrigem || !link || !videoFile || formatosSaidaSelecionados.length === 0 || produtosSelecionados.length === 0) {
+    if (!formatoOrigem || !link || formatosSaidaSelecionados.length === 0 || produtosSelecionados.length === 0) {
       toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    if (!isDirectLink && !videoFile) {
+      toast.error("Faça upload do vídeo");
       return;
     }
 
@@ -234,18 +276,53 @@ export default function ModeladorConteudo() {
 
     const ideias: PendingIdeia[] = [];
 
-    for (const produto of selectedProducts) {
-      // Cast to Formato[] for the API call - the backend will use the keys
-      const formatosParaAPI = formatosSaidaSelecionados as Formato[];
-      const response = await analyzeVideoUploadMultiFormato(videoFile, caption, [produto], formatosParaAPI, formatoOrigem);
-      
-      if (response && response.formatos) {
-        for (const formatoSaidaKey of formatosSaidaSelecionados) {
-          const result = response.formatos[formatoSaidaKey];
-          if (result) {
-            result.transcricao_audio = response.transcricao;
-            result.analise_visual_detalhada = response.analise_visual;
-            ideias.push({ produto, formatoSaida: formatoSaidaKey, formatoOrigem, result, link, isReplica: false });
+    if (isDirectLink) {
+      // Use edge function analyze-instagram-video for IG/TikTok links
+      const produtosTexto = selectedProducts.map(p => `${p.nome}: ${p.descricao || ""}`).join("\n");
+
+      for (const formatoSaidaKey of formatosSaidaSelecionados) {
+        for (const produto of selectedProducts) {
+          try {
+            const { data, error } = await supabase.functions.invoke("analyze-instagram-video", {
+              body: { link, tipo: formatoOrigem, produtos: `${produto.nome}: ${produto.descricao || ""}` },
+            });
+
+            if (error) throw error;
+            if (data && !data.error) {
+              const result: ModelagemResult = {
+                gancho_original: data.gancho_original || "",
+                analise_estrategia: data.analise_estrategia || "",
+                analise_performance: data.analise_performance || "",
+                legenda_original: data.legenda_original || "",
+                analise_filmagem: data.analise_filmagem || "",
+                titulo_sugerido: data.titulo_sugerido || "",
+                copy_completa: data.copy_completa || "",
+                orientacoes_filmagem: data.orientacoes_filmagem || "",
+                formato_sugerido: data.formato_sugerido || formatoSaidaKey,
+                transcricao_audio: data.transcricao_audio || null,
+                analise_visual_detalhada: data.analise_visual_detalhada || null,
+              };
+              ideias.push({ produto, formatoSaida: formatoSaidaKey, formatoOrigem, result, link, isReplica: false });
+            }
+          } catch (err) {
+            console.error("Erro na análise via link:", err);
+          }
+        }
+      }
+    } else {
+      // Original flow with video upload
+      for (const produto of selectedProducts) {
+        const formatosParaAPI = formatosSaidaSelecionados as Formato[];
+        const response = await analyzeVideoUploadMultiFormato(videoFile!, caption, [produto], formatosParaAPI, formatoOrigem);
+        
+        if (response && response.formatos) {
+          for (const formatoSaidaKey of formatosSaidaSelecionados) {
+            const result = response.formatos[formatoSaidaKey];
+            if (result) {
+              result.transcricao_audio = response.transcricao;
+              result.analise_visual_detalhada = response.analise_visual;
+              ideias.push({ produto, formatoSaida: formatoSaidaKey, formatoOrigem, result, link, isReplica: false });
+            }
           }
         }
       }
@@ -261,10 +338,14 @@ export default function ModeladorConteudo() {
     }
   };
 
-  // Função para modelar réplica otimizada (sem produto específico)
   const handleAnalyzeReplica = async () => {
-    if (!formatoOrigem || !link || !videoFile || formatosSaidaSelecionados.length === 0) {
+    if (!formatoOrigem || !link || formatosSaidaSelecionados.length === 0) {
       toast.error("Preencha todos os campos obrigatórios");
+      return;
+    }
+
+    if (!isDirectLink && !videoFile) {
+      toast.error("Faça upload do vídeo");
       return;
     }
 
@@ -289,30 +370,68 @@ export default function ModeladorConteudo() {
       console.error("Erro ao buscar prompt de réplica:", error);
     }
 
-    // Usar o produto fake para réplica
-    const formatosParaAPI = formatosSaidaSelecionados as Formato[];
-    const response = await analyzeVideoUploadMultiFormato(
-      videoFile, 
-      caption, 
-      [], // Sem produtos - usa prompt de réplica
-      formatosParaAPI, 
-      formatoOrigem
-    );
-    
-    if (response && response.formatos) {
+    if (isDirectLink) {
+      // Use edge function for IG/TikTok links
       for (const formatoSaidaKey of formatosSaidaSelecionados) {
-        const result = response.formatos[formatoSaidaKey];
-        if (result) {
-          result.transcricao_audio = response.transcricao;
-          result.analise_visual_detalhada = response.analise_visual;
-          ideias.push({ 
-            produto: REPLICA_PRODUTO, 
-            formatoSaida: formatoSaidaKey, 
-            formatoOrigem, 
-            result, 
-            link,
-            isReplica: true 
+        try {
+          const { data, error } = await supabase.functions.invoke("analyze-instagram-video", {
+            body: { link, tipo: formatoOrigem, produtos: replicaPrompt || "Réplica otimizada do conteúdo original, sem produto específico" },
           });
+
+          if (error) throw error;
+          if (data && !data.error) {
+            const result: ModelagemResult = {
+              gancho_original: data.gancho_original || "",
+              analise_estrategia: data.analise_estrategia || "",
+              analise_performance: data.analise_performance || "",
+              legenda_original: data.legenda_original || "",
+              analise_filmagem: data.analise_filmagem || "",
+              titulo_sugerido: data.titulo_sugerido || "",
+              copy_completa: data.copy_completa || "",
+              orientacoes_filmagem: data.orientacoes_filmagem || "",
+              formato_sugerido: data.formato_sugerido || formatoSaidaKey,
+              transcricao_audio: data.transcricao_audio || null,
+              analise_visual_detalhada: data.analise_visual_detalhada || null,
+            };
+            ideias.push({ 
+              produto: REPLICA_PRODUTO, 
+              formatoSaida: formatoSaidaKey, 
+              formatoOrigem, 
+              result, 
+              link,
+              isReplica: true 
+            });
+          }
+        } catch (err) {
+          console.error("Erro na análise réplica via link:", err);
+        }
+      }
+    } else {
+      // Original flow with video upload
+      const formatosParaAPI = formatosSaidaSelecionados as Formato[];
+      const response = await analyzeVideoUploadMultiFormato(
+        videoFile!, 
+        caption, 
+        [], 
+        formatosParaAPI, 
+        formatoOrigem
+      );
+      
+      if (response && response.formatos) {
+        for (const formatoSaidaKey of formatosSaidaSelecionados) {
+          const result = response.formatos[formatoSaidaKey];
+          if (result) {
+            result.transcricao_audio = response.transcricao;
+            result.analise_visual_detalhada = response.analise_visual;
+            ideias.push({ 
+              produto: REPLICA_PRODUTO, 
+              formatoSaida: formatoSaidaKey, 
+              formatoOrigem, 
+              result, 
+              link,
+              isReplica: true 
+            });
+          }
         }
       }
     }
