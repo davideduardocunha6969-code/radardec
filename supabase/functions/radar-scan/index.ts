@@ -109,6 +109,7 @@ async function scanProfiles(
   supabase: ReturnType<typeof createClient>,
   userId: string,
   token: string,
+  debugMode = false,
 ) {
   const { data: profiles } = await supabase
     .from("monitored_profiles")
@@ -116,9 +117,13 @@ async function scanProfiles(
     .eq("user_id", userId)
     .eq("is_active", true);
 
-  if (!profiles || profiles.length === 0) return 0;
+  console.log('[radar-scan] profiles encontrados:', profiles?.length ?? 0);
+  console.log('[radar-scan] user_id recebido:', userId);
+
+  if (!profiles || profiles.length === 0) return { found: 0, debugItems: [] };
 
   let totalFound = 0;
+  const debugItems: Record<string, unknown>[] = [];
   const now = new Date().toISOString();
   const weekNum = `${new Date().getFullYear()}-W${String(Math.ceil((new Date().getDate()) / 7)).padStart(2, "0")}`;
 
@@ -144,6 +149,14 @@ async function scanProfiles(
         : { profiles: [profile.username], resultsPerPage: 20, profileScrapeSections: ["videos"], profileSorting: "latest" };
 
       const items = await runActor(actorId, input, token);
+
+      console.log(`[radar-scan] perfil ${profile.username}: ${items.length} posts retornados pelo Apify`);
+      console.log(`[radar-scan] primeiro post sample:`, JSON.stringify(items[0] ?? {}).substring(0, 300));
+
+      if (debugMode) {
+        debugItems.push(...items.slice(0, 2));
+      }
+
       const mapper = isIg ? mapInstagram : mapTiktok;
       const mapped = items.map(mapper);
 
@@ -157,6 +170,9 @@ async function scanProfiles(
         if (!p.followers_at_capture && profileFollowers) p.followers_at_capture = profileFollowers;
         return isViral(p, !!profileFollowers);
       });
+
+      console.log(`[radar-scan] virais encontrados: ${virals.length} de ${mapped.length} posts`);
+      console.log(`[radar-scan] followers_at_capture: ${profileFollowers}, primeiro post views: ${mapped[0]?.views ?? 0}`);
 
       if (virals.length > 0) {
         const rows = virals.map((v) => ({
@@ -189,7 +205,7 @@ async function scanProfiles(
     }
   }
 
-  return totalFound;
+  return { found: totalFound, debugItems };
 }
 
 // ── Scan topics ──
@@ -273,13 +289,15 @@ Deno.serve(async (req) => {
     const APIFY_TOKEN = Deno.env.get("APIFY_API_TOKEN");
     if (!APIFY_TOKEN) throw new Error("APIFY_API_TOKEN is not configured");
 
-    const { scan_type = "all", user_id } = await req.json();
+    const { scan_type = "all", user_id, debug = false } = await req.json();
     if (!user_id) {
       return new Response(JSON.stringify({ error: "user_id required" }), {
         status: 400,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
+
+    console.log(`[radar-scan] START scan_type=${scan_type} user_id=${user_id} debug=${debug}`);
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
@@ -288,16 +306,26 @@ Deno.serve(async (req) => {
     const userId = user_id;
 
     let found = 0;
+    let allDebugItems: Record<string, unknown>[] = [];
 
     if (scan_type === "profiles" || scan_type === "all") {
-      found += await scanProfiles(supabase, userId, APIFY_TOKEN);
+      const result = await scanProfiles(supabase, userId, APIFY_TOKEN, debug);
+      found += result.found;
+      allDebugItems.push(...result.debugItems);
     }
 
     if (scan_type === "topics" || scan_type === "all") {
       found += await scanTopics(supabase, userId, APIFY_TOKEN);
     }
 
-    return new Response(JSON.stringify({ success: true, found }), {
+    console.log(`[radar-scan] DONE found=${found}`);
+
+    const responseBody: Record<string, unknown> = { success: true, found };
+    if (debug) {
+      responseBody.debugItems = allDebugItems;
+    }
+
+    return new Response(JSON.stringify(responseBody), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });
   } catch (error) {
