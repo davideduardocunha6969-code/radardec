@@ -1,44 +1,42 @@
 
+# Tres Paineis de Atendimento — Status
 
-# Suporte a TikTok na Edge Function `analyze-instagram-video`
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-## Resumo
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-Substituir a função `extractInstagramMedia` por uma nova função `extractSocialMedia` que:
-1. Detecta a rede (Instagram ou TikTok) pelo hostname do link
-2. Usa a API `social-media-video-downloader.p.rapidapi.com` com rotas específicas por rede
-3. Normaliza o retorno para a mesma interface `InstagramMediaResponse` existente
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-## Alterações — apenas em `supabase/functions/analyze-instagram-video/index.ts`
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-### 1. Função de detecção de rede
-```typescript
-function detectPlatform(url: string): "instagram" | "tiktok" {
-  const host = new URL(url).hostname;
-  if (host.includes("tiktok")) return "tiktok";
-  return "instagram";
-}
-```
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-### 2. Substituir `extractInstagramMedia` por `extractSocialMedia`
-
-- Usa `detectPlatform(url)` para escolher a rota:
-  - Instagram: `GET /instagram/v2/post/details?url={url}`
-  - TikTok: `GET /tiktok/v3/post/details?url={url}`
-- Header: `x-rapidapi-host: social-media-video-downloader.p.rapidapi.com`
-- Parseia a resposta de cada rede para extrair `video_url`, `thumbnail_url`, `caption`, `username`, `like_count`, `comment_count`, `view_count`
-
-### 3. Atualizar chamadas
-
-- Trocar `extractInstagramMedia(link)` → `extractSocialMedia(link)` nas duas ocorrências (action `extract` e fluxo principal)
-- Atualizar logs de `"Instagram"` para `"social media"` onde aplicável
-- Atualizar mensagem de erro de "Instagram" para "Instagram/TikTok"
-- Atualizar o prompt de `generateContentModeling` de "vídeo do Instagram" para "vídeo de rede social"
-
-### 4. Remover código morto
-
-- Remover `normalizeInstagramUrl` (não necessária com a nova API)
-- Remover `extractVideoFrames` (nunca usada)
-
-Nenhuma outra parte da função muda — transcrição, análise visual e geração de conteúdo permanecem iguais.
-
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções

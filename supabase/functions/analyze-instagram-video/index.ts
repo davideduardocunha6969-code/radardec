@@ -5,7 +5,7 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-interface InstagramMediaResponse {
+interface SocialMediaResponse {
   video_url?: string;
   thumbnail_url?: string;
   caption?: string;
@@ -34,38 +34,37 @@ interface VisualAnalysisResult {
   ritmo_edicao: string;
 }
 
-function normalizeInstagramUrl(raw: string): string {
-  // RapidAPI scrapers tend to be picky with tracking params.
-  // Keep protocol + host + pathname, remove query/hash.
+function detectPlatform(url: string): "instagram" | "tiktok" {
   try {
-    const u = new URL(raw);
-    const normalized = `${u.protocol}//${u.host}${u.pathname}`;
-    return normalized.endsWith("/") ? normalized : `${normalized}/`;
+    const host = new URL(url).hostname;
+    if (host.includes("tiktok")) return "tiktok";
   } catch {
-    // If URL parsing fails, best-effort: strip query/hash
-    return raw.split("?")[0].split("#")[0];
+    // fallback
   }
+  return "instagram";
 }
 
-// Extract Instagram media using RapidAPI
-async function extractInstagramMedia(url: string): Promise<InstagramMediaResponse | null> {
+async function extractSocialMedia(url: string): Promise<SocialMediaResponse | null> {
   const RAPIDAPI_KEY = Deno.env.get("RAPIDAPI_KEY");
-  
+
   if (!RAPIDAPI_KEY) {
     console.error("RAPIDAPI_KEY não configurada");
     return null;
   }
 
   try {
-    const normalizedUrl = normalizeInstagramUrl(url);
-    console.log("Extracting Instagram media from:", normalizedUrl);
-    
-    // Use the Instagram Scraper Stable API
-    const endpoint = `https://instagram-scraper-stable-api.p.rapidapi.com/get_content_by_url.php?url=${encodeURIComponent(normalizedUrl)}`;
+    const platform = detectPlatform(url);
+    console.log(`Extracting ${platform} media from:`, url);
+
+    const endpoint =
+      platform === "tiktok"
+        ? `https://social-media-video-downloader.p.rapidapi.com/tiktok/v3/post/details?url=${encodeURIComponent(url)}`
+        : `https://social-media-video-downloader.p.rapidapi.com/instagram/v2/post/details?url=${encodeURIComponent(url)}`;
+
     const response = await fetch(endpoint, {
       method: "GET",
       headers: {
-        "x-rapidapi-host": "instagram-scraper-stable-api.p.rapidapi.com",
+        "x-rapidapi-host": "social-media-video-downloader.p.rapidapi.com",
         "x-rapidapi-key": RAPIDAPI_KEY,
       },
     });
@@ -77,54 +76,57 @@ async function extractInstagramMedia(url: string): Promise<InstagramMediaRespons
     }
 
     const data = await response.json();
-    console.log("Instagram data received:", JSON.stringify(data).slice(0, 500));
-    
-    // Extract video URL from the response
-    // The API returns different structures depending on the content type
-    let videoUrl = null;
-    let thumbnailUrl = null;
-    let caption = null;
-    
-    // Check for video_versions array (common format)
-    if (data.video_versions && data.video_versions.length > 0) {
-      videoUrl = data.video_versions[0].url;
-    } else if (data.video_url) {
-      videoUrl = data.video_url;
-    } else if (data.media?.video_versions?.[0]?.url) {
-      videoUrl = data.media.video_versions[0].url;
-    }
-    
-    // Get thumbnail
-    if (data.thumbnail_url) {
-      thumbnailUrl = data.thumbnail_url;
-    } else if (data.image_versions2?.candidates?.[0]?.url) {
-      thumbnailUrl = data.image_versions2.candidates[0].url;
-    } else if (data.media?.image_versions2?.candidates?.[0]?.url) {
-      thumbnailUrl = data.media.image_versions2.candidates[0].url;
-    }
-    
-    // Get caption
-    caption = data.caption?.text || data.caption || data.media?.caption?.text || null;
+    console.log("Social media data received:", JSON.stringify(data).slice(0, 500));
 
-    return {
-      video_url: videoUrl,
-      thumbnail_url: thumbnailUrl,
-      caption: caption,
-      like_count: data.like_count || data.media?.like_count,
-      comment_count: data.comment_count || data.media?.comment_count,
-      view_count: data.view_count || data.play_count || data.media?.view_count || data.media?.play_count,
-      username: data.user?.username || data.owner?.username || data.media?.user?.username,
-    };
+    if (platform === "tiktok") {
+      return parseTikTokResponse(data);
+    }
+    return parseInstagramResponse(data);
   } catch (error) {
-    console.error("Error extracting Instagram media:", error);
+    console.error("Error extracting social media:", error);
     return null;
   }
+}
+
+function parseInstagramResponse(data: any): SocialMediaResponse {
+  let videoUrl = data.video_url || data.video_versions?.[0]?.url || data.media?.video_versions?.[0]?.url || null;
+  let thumbnailUrl = data.thumbnail_url || data.image_versions2?.candidates?.[0]?.url || data.media?.image_versions2?.candidates?.[0]?.url || null;
+  let caption = data.caption?.text || data.caption || data.media?.caption?.text || null;
+
+  return {
+    video_url: videoUrl,
+    thumbnail_url: thumbnailUrl,
+    caption,
+    like_count: data.like_count || data.media?.like_count,
+    comment_count: data.comment_count || data.media?.comment_count,
+    view_count: data.view_count || data.play_count || data.media?.view_count || data.media?.play_count,
+    username: data.user?.username || data.owner?.username || data.media?.user?.username,
+  };
+}
+
+function parseTikTokResponse(data: any): SocialMediaResponse {
+  // Adapt based on the API's actual response shape
+  const item = data.data || data.itemInfo?.itemStruct || data;
+
+  let videoUrl = item.video?.playAddr || item.video?.downloadAddr || item.video_url || item.play || null;
+  let thumbnailUrl = item.video?.cover || item.video?.originCover || item.thumbnail_url || item.cover || null;
+  let caption = item.desc || item.title || item.caption || null;
+
+  return {
+    video_url: videoUrl,
+    thumbnail_url: thumbnailUrl,
+    caption,
+    like_count: item.stats?.diggCount || item.digg_count || item.likes,
+    comment_count: item.stats?.commentCount || item.comment_count || item.comments,
+    view_count: item.stats?.playCount || item.play_count || item.views,
+    username: item.author?.uniqueId || item.author?.nickname || item.username,
+  };
 }
 
 // Download video and convert to audio for transcription
 async function transcribeVideo(videoUrl: string): Promise<TranscriptionResult | null> {
   const ELEVENLABS_API_KEY = Deno.env.get("ELEVENLABS_API_KEY");
-  
+
   if (!ELEVENLABS_API_KEY) {
     console.error("ELEVENLABS_API_KEY não configurada");
     return null;
@@ -132,27 +134,25 @@ async function transcribeVideo(videoUrl: string): Promise<TranscriptionResult | 
 
   try {
     console.log("Downloading video from:", videoUrl.slice(0, 100));
-    
-    // Download the video file
+
     const videoResponse = await fetch(videoUrl);
     if (!videoResponse.ok) {
       console.error("Failed to download video:", videoResponse.status);
       return null;
     }
-    
+
     const videoBlob = await videoResponse.blob();
     console.log("Video downloaded, size:", videoBlob.size, "bytes");
-    
-    // Send to ElevenLabs for transcription
+
     const formData = new FormData();
     formData.append("file", videoBlob, "video.mp4");
     formData.append("model_id", "scribe_v2");
     formData.append("diarize", "true");
     formData.append("tag_audio_events", "true");
     formData.append("language_code", "por");
-    
+
     console.log("Sending to ElevenLabs for transcription...");
-    
+
     const response = await fetch("https://api.elevenlabs.io/v1/speech-to-text", {
       method: "POST",
       headers: {
@@ -169,7 +169,7 @@ async function transcribeVideo(videoUrl: string): Promise<TranscriptionResult | 
 
     const result = await response.json();
     console.log("Transcription received, length:", result.text?.length || 0);
-    
+
     return {
       text: result.text || "",
       words: result.words,
@@ -180,14 +180,6 @@ async function transcribeVideo(videoUrl: string): Promise<TranscriptionResult | 
   }
 }
 
-// Extract frames from video for visual analysis
-async function extractVideoFrames(videoUrl: string): Promise<string[]> {
-  // For now, we'll use the thumbnail as the primary frame
-  // In the future, we could use a service to extract multiple frames
-  // We return the video URL and let Gemini handle it with vision
-  return [videoUrl];
-}
-
 // Analyze video visually using Gemini Vision
 async function analyzeVideoVisually(
   thumbnailUrl: string | undefined,
@@ -195,7 +187,7 @@ async function analyzeVideoVisually(
   transcription: string | undefined
 ): Promise<VisualAnalysisResult | null> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  
+
   if (!LOVABLE_API_KEY) {
     console.error("LOVABLE_API_KEY não configurada");
     return null;
@@ -217,13 +209,7 @@ Responda APENAS com um objeto JSON válido no seguinte formato:
 
     const userPrompt = `Analise este conteúdo de vídeo:
 
-${caption ? `LEGENDA DO VÍDEO:
-${caption}
-
-` : ""}${transcription ? `TRANSCRIÇÃO DO ÁUDIO:
-${transcription}
-
-` : ""}Baseado no contexto acima e na thumbnail fornecida, descreva os aspectos visuais e de produção do vídeo. Se não houver thumbnail, infira com base na legenda e transcrição.
+${caption ? `LEGENDA DO VÍDEO:\n${caption}\n\n` : ""}${transcription ? `TRANSCRIÇÃO DO ÁUDIO:\n${transcription}\n\n` : ""}Baseado no contexto acima e na thumbnail fornecida, descreva os aspectos visuais e de produção do vídeo. Se não houver thumbnail, infira com base na legenda e transcrição.
 
 Responda APENAS com o JSON, sem texto adicional.`;
 
@@ -231,16 +217,12 @@ Responda APENAS com o JSON, sem texto adicional.`;
       { role: "system", content: systemPrompt },
     ];
 
-    // Add user message with optional image
     if (thumbnailUrl) {
       messages.push({
         role: "user",
         content: [
           { type: "text", text: userPrompt },
-          { 
-            type: "image_url", 
-            image_url: { url: thumbnailUrl } 
-          },
+          { type: "image_url", image_url: { url: thumbnailUrl } },
         ],
       });
     } else {
@@ -268,11 +250,8 @@ Responda APENAS com o JSON, sem texto adicional.`;
     const data = await response.json();
     const content = data.choices?.[0]?.message?.content;
 
-    if (!content) {
-      return null;
-    }
+    if (!content) return null;
 
-    // Parse JSON response
     const cleanContent = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     return JSON.parse(cleanContent);
   } catch (error) {
@@ -283,13 +262,13 @@ Responda APENAS com o JSON, sem texto adicional.`;
 
 // Generate final content modeling
 async function generateContentModeling(
-  instagramData: InstagramMediaResponse,
+  socialData: SocialMediaResponse,
   transcription: TranscriptionResult | null,
   visualAnalysis: VisualAnalysisResult | null,
   produtos: string
 ): Promise<object | null> {
   const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-  
+
   if (!LOVABLE_API_KEY) {
     console.error("LOVABLE_API_KEY não configurada");
     return null;
@@ -298,7 +277,7 @@ async function generateContentModeling(
   try {
     const systemPrompt = `Você é um especialista em marketing de conteúdo jurídico e análise de conteúdos virais. Sua tarefa é analisar conteúdos de concorrentes e influenciadores e adaptá-los para escritórios de advocacia.
 
-Você receberá informações detalhadas sobre um vídeo do Instagram (legenda, transcrição do áudio, análise visual) e deve gerar uma modelagem completa adaptada para os produtos jurídicos informados.
+Você receberá informações detalhadas sobre um vídeo de rede social (legenda, transcrição do áudio, análise visual) e deve gerar uma modelagem completa adaptada para os produtos jurídicos informados.
 
 IMPORTANTE: Responda APENAS com um objeto JSON válido, sem texto adicional. Use o seguinte formato:
 
@@ -318,26 +297,20 @@ IMPORTANTE: Inclua também estes campos adicionais com os dados brutos da análi
 - transcricao_audio: A transcrição completa do áudio do vídeo (copie exatamente o que foi transcrito)
 - analise_visual_detalhada: Objeto com os detalhes visuais (cenario, transicoes, enquadramento, postura_apresentador, elementos_visuais, ritmo_edicao)`;
 
-    let contextInfo = `DADOS DO VÍDEO INSTAGRAM:
-- Autor: @${instagramData.username || "desconhecido"}
-- Visualizações: ${instagramData.view_count?.toLocaleString() || "N/A"}
-- Curtidas: ${instagramData.like_count?.toLocaleString() || "N/A"}
-- Comentários: ${instagramData.comment_count?.toLocaleString() || "N/A"}
+    let contextInfo = `DADOS DO VÍDEO:
+- Autor: @${socialData.username || "desconhecido"}
+- Visualizações: ${socialData.view_count?.toLocaleString() || "N/A"}
+- Curtidas: ${socialData.like_count?.toLocaleString() || "N/A"}
+- Comentários: ${socialData.comment_count?.toLocaleString() || "N/A"}
 
 `;
 
-    if (instagramData.caption) {
-      contextInfo += `LEGENDA ORIGINAL:
-${instagramData.caption}
-
-`;
+    if (socialData.caption) {
+      contextInfo += `LEGENDA ORIGINAL:\n${socialData.caption}\n\n`;
     }
 
     if (transcription?.text) {
-      contextInfo += `TRANSCRIÇÃO DO ÁUDIO:
-${transcription.text}
-
-`;
+      contextInfo += `TRANSCRIÇÃO DO ÁUDIO:\n${transcription.text}\n\n`;
     }
 
     if (visualAnalysis) {
@@ -352,7 +325,7 @@ ${transcription.text}
 `;
     }
 
-    const userPrompt = `Analise o seguinte vídeo do Instagram e modele para os produtos jurídicos listados abaixo:
+    const userPrompt = `Analise o seguinte vídeo de rede social e modele para os produtos jurídicos listados abaixo:
 
 ${contextInfo}
 PRODUTOS JURÍDICOS PARA MODELAGEM:
@@ -400,7 +373,6 @@ Responda APENAS com o JSON, sem markdown ou texto adicional.`;
       throw new Error("Resposta vazia da IA");
     }
 
-    // Parse JSON response
     const cleanContent = content.replace(/```json\n?/g, "").replace(/```\n?/g, "").trim();
     return JSON.parse(cleanContent);
   } catch (error) {
@@ -418,17 +390,17 @@ serve(async (req) => {
     const body = await req.json();
     const { link, tipo, produtos, action } = body;
 
-    // Action: extract - Just extract Instagram data for preview
+    // Action: extract - Just extract social media data for preview
     if (action === "extract") {
-      console.log("Extracting Instagram data for preview...");
-      
-      const instagramData = await extractInstagramMedia(link);
-      
-      if (!instagramData) {
+      console.log("Extracting social media data for preview...");
+
+      const socialData = await extractSocialMedia(link);
+
+      if (!socialData) {
         return new Response(
-          JSON.stringify({ 
-            success: false, 
-            error: "Não foi possível extrair dados do Instagram. Verifique se o link é válido." 
+          JSON.stringify({
+            success: false,
+            error: "Não foi possível extrair dados do Instagram/TikTok. Verifique se o link é válido.",
           }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
@@ -438,17 +410,17 @@ serve(async (req) => {
         JSON.stringify({
           success: true,
           data: {
-            title: instagramData.caption?.slice(0, 100) || null,
-            description: instagramData.caption || null,
-            author: instagramData.username ? `@${instagramData.username}` : null,
-            markdown: instagramData.caption || null,
-            hasScreenshot: !!instagramData.thumbnail_url,
-            screenshot: instagramData.thumbnail_url || null,
-            video_url: instagramData.video_url || null,
+            title: socialData.caption?.slice(0, 100) || null,
+            description: socialData.caption || null,
+            author: socialData.username ? `@${socialData.username}` : null,
+            markdown: socialData.caption || null,
+            hasScreenshot: !!socialData.thumbnail_url,
+            screenshot: socialData.thumbnail_url || null,
+            video_url: socialData.video_url || null,
             metrics: {
-              views: instagramData.view_count,
-              likes: instagramData.like_count,
-              comments: instagramData.comment_count,
+              views: socialData.view_count,
+              likes: socialData.like_count,
+              comments: socialData.comment_count,
             },
           },
         }),
@@ -464,36 +436,33 @@ serve(async (req) => {
       );
     }
 
-    console.log("Starting full Instagram video analysis...");
+    console.log("Starting full social media video analysis...");
 
-    // Step 1: Extract Instagram data
-    const instagramData = await extractInstagramMedia(link);
-    
-    if (!instagramData || !instagramData.video_url) {
-      // Fall back to caption-only analysis
+    // Step 1: Extract social media data
+    const socialData = await extractSocialMedia(link);
+
+    if (!socialData || !socialData.video_url) {
       console.log("No video URL found, falling back to caption-only analysis");
-      
-      // Use the original analyze-content function logic
       return new Response(
-        JSON.stringify({ 
-          error: "Não foi possível extrair o vídeo. Use a opção de entrada manual." 
+        JSON.stringify({
+          error: "Não foi possível extrair o vídeo. Use a opção de entrada manual.",
         }),
         { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
 
-    console.log("Video URL found:", instagramData.video_url.slice(0, 100));
+    console.log("Video URL found:", socialData.video_url.slice(0, 100));
 
     // Step 2: Transcribe audio from video
     console.log("Starting transcription...");
-    const transcription = await transcribeVideo(instagramData.video_url);
+    const transcription = await transcribeVideo(socialData.video_url);
     console.log("Transcription complete:", transcription?.text?.slice(0, 200) || "No transcription");
 
     // Step 3: Analyze video visually
     console.log("Starting visual analysis...");
     const visualAnalysis = await analyzeVideoVisually(
-      instagramData.thumbnail_url,
-      instagramData.caption,
+      socialData.thumbnail_url,
+      socialData.caption,
       transcription?.text
     );
     console.log("Visual analysis complete:", visualAnalysis ? "Success" : "Failed");
@@ -501,13 +470,12 @@ serve(async (req) => {
     // Step 4: Generate final content modeling
     console.log("Generating content modeling...");
     const modelingResult = await generateContentModeling(
-      instagramData,
+      socialData,
       transcription,
       visualAnalysis,
       produtos
     );
 
-    // Merge with transcription and visual analysis data
     const result = {
       ...modelingResult,
       transcricao_audio: transcription?.text || null,
