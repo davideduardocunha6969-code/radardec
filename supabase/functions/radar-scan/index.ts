@@ -125,6 +125,19 @@ async function scanProfiles(
   for (const profile of profiles) {
     try {
       const isIg = profile.platform === "instagram";
+      let profileFollowers = profile.followers_count;
+
+      // For Instagram, fetch profile details first to get followers count
+      if (isIg) {
+        const profileItems = await runActor("apify/instagram-scraper", {
+          directUrls: [`https://www.instagram.com/${profile.username}/`],
+          resultsType: "details",
+          resultsLimit: 1,
+        }, token);
+        const igFollowers = (profileItems[0]?.followersCount as number) || profile.followers_count || null;
+        if (igFollowers) profileFollowers = igFollowers;
+      }
+
       const actorId = isIg ? ACTORS.instagram_profile : ACTORS.tiktok_profile;
       const input = isIg
         ? { directUrls: [`https://www.instagram.com/${profile.username}/`], resultsType: "posts", resultsLimit: 20 }
@@ -134,8 +147,7 @@ async function scanProfiles(
       const mapper = isIg ? mapInstagram : mapTiktok;
       const mapped = items.map(mapper);
 
-      // Try to grab followers from first result (TikTok provides it)
-      let profileFollowers = profile.followers_count;
+      // For TikTok, grab followers from first result
       if (!isIg && mapped.length > 0 && mapped[0].followers_at_capture) {
         profileFollowers = mapped[0].followers_at_capture;
       }
@@ -272,19 +284,21 @@ Deno.serve(async (req) => {
 
     const supabase = createClient(
       Deno.env.get("SUPABASE_URL")!,
+      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
+    );
+    const anonClient = createClient(
+      Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_ANON_KEY")!,
       { global: { headers: { Authorization: authHeader } } },
     );
-
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: authError } = await anonClient.auth.getUser();
+    if (authError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
-    const userId = claimsData.claims.sub as string;
+    const userId = user.id;
 
     const { scan_type = "all" } = await req.json();
 
