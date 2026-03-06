@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Radar, Plus, Trash2, Loader2, Eye, Heart, MessageCircle, ExternalLink, CheckCircle2, User, BarChart3, TrendingUp, Calendar, Video, X } from "lucide-react";
+import { Radar, Plus, Trash2, Loader2, Eye, Heart, MessageCircle, ExternalLink, CheckCircle2, User, BarChart3, TrendingUp, Calendar, Video, X, Play } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -89,12 +89,18 @@ function ProfileDetailSheet({
         <SheetHeader className="pb-4">
           <div className="flex items-center gap-3">
             {profile.avatar_url ? (
-              <img src={profile.avatar_url} alt="" className="w-14 h-14 rounded-full object-cover border-2 border-border" onError={(e) => { const el = e.target as HTMLImageElement; el.style.display = 'none'; el.parentElement!.innerHTML = '<div class="w-14 h-14 rounded-full bg-muted flex items-center justify-center border-2 border-border"><svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>'; }} />
-            ) : (
-              <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center border-2 border-border">
-                <User className="h-6 w-6 text-muted-foreground" />
-              </div>
-            )}
+              <img
+                src={profile.avatar_url}
+                alt={profile.username}
+                referrerPolicy="no-referrer"
+                crossOrigin="anonymous"
+                className="w-14 h-14 rounded-full object-cover border-2 border-gray-200"
+                onError={(e) => { (e.target as HTMLImageElement).style.display='none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
+              />
+            ) : null}
+            <div className={profile.avatar_url ? 'hidden' : ''}>
+              <User className="w-10 h-10 text-gray-400" />
+            </div>
             <div className="flex-1 min-w-0">
               <SheetTitle className="text-lg">@{profile.username}</SheetTitle>
               <div className="flex items-center gap-2 mt-1">
@@ -246,12 +252,18 @@ function PerfisTab() {
                 {/* Header */}
                 <div className="flex items-center gap-3">
                   {p.avatar_url ? (
-                    <img src={p.avatar_url} alt="" className="w-11 h-11 rounded-full object-cover border border-border" onError={(e) => { const el = e.target as HTMLImageElement; el.style.display = 'none'; el.parentElement!.innerHTML = '<div class="w-11 h-11 rounded-full bg-muted flex items-center justify-center border border-border"><svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-muted-foreground"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>'; }} />
-                  ) : (
-                    <div className="w-11 h-11 rounded-full bg-muted flex items-center justify-center border border-border">
-                      <User className="h-5 w-5 text-muted-foreground" />
-                    </div>
-                  )}
+                    <img
+                      src={p.avatar_url}
+                      alt={p.username}
+                      referrerPolicy="no-referrer"
+                      crossOrigin="anonymous"
+                      className="w-14 h-14 rounded-full object-cover border-2 border-gray-200"
+                      onError={(e) => { (e.target as HTMLImageElement).style.display='none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
+                    />
+                  ) : null}
+                  <div className={p.avatar_url ? 'hidden' : ''}>
+                    <User className="w-10 h-10 text-gray-400" />
+                  </div>
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-foreground truncate">@{p.username}</p>
                     <div className="flex items-center gap-2 mt-0.5">
@@ -448,27 +460,25 @@ function ViraisTab() {
               className={`overflow-hidden transition-all ${item.is_modeled ? "border-emerald-500/50" : ""}`}
             >
               {/* Thumbnail */}
-              <div className="aspect-video bg-muted relative overflow-hidden">
+              <div className="relative w-full aspect-video bg-gray-900 rounded-t-lg overflow-hidden">
                 {item.thumbnail_url ? (
                   <img
                     src={item.thumbnail_url}
-                    alt=""
-                    className="w-full h-full object-cover"
-                    loading="lazy"
-                    crossOrigin="anonymous"
+                    alt="thumbnail"
                     referrerPolicy="no-referrer"
+                    crossOrigin="anonymous"
+                    className="w-full h-full object-cover"
                     onError={(e) => {
-                      const parent = (e.target as HTMLImageElement).parentElement;
-                      if (parent) {
-                        const url = item.post_url || '#';
-                        parent.innerHTML = `<div class="flex items-center justify-center h-full bg-muted"><a href="${url}" target="_blank" rel="noopener noreferrer" class="flex flex-col items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><polygon points="10 8 16 12 10 16 10 8" fill="currentColor"/></svg><span class="text-xs">Ver no Instagram</span></a></div>`;
-                      }
+                      const t = e.target as HTMLImageElement;
+                      t.style.display = 'none';
+                      t.parentElement!.innerHTML += '<a href="' + item.post_url + '" target="_blank" class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gray-900 text-gray-400 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M6.271 5.055a.5.5 0 0 1 .52.038l3.5 2.5a.5.5 0 0 1 0 .814l-3.5 2.5A.5.5 0 0 1 6 10.5v-5a.5.5 0 0 1 .271-.445z"/></svg><span class="text-xs">Ver no Instagram</span></a>';
                     }}
                   />
                 ) : (
-                  <div className="w-full h-full flex items-center justify-center">
-                    <Video className="h-10 w-10 text-muted-foreground/40" />
-                  </div>
+                  <a href={item.post_url} target="_blank" className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-400 hover:text-white transition-colors">
+                    <Play className="w-10 h-10" />
+                    <span className="text-xs">Ver post</span>
+                  </a>
                 )}
                 {/* Rank badge */}
                 <div className="absolute top-2 left-2 flex gap-1">
