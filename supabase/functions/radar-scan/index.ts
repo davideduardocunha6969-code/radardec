@@ -139,7 +139,7 @@ async function scanProfiles(
 
       const actorId = isIg ? ACTORS.instagram_profile : ACTORS.tiktok_profile;
       const input = isIg
-        ? { username: profile.username, resultsLimit: 20 }
+        ? { username: [profile.username], resultsLimit: 20 }
         : { profiles: [profile.username], resultsPerPage: 20, profileScrapeSections: ["videos"], profileSorting: "latest" };
 
       const items = await runActor(actorId, input, token);
