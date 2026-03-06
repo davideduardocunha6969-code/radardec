@@ -4,6 +4,7 @@ import { TipoProduto } from "./useTiposProdutos";
 import { Formato } from "./useConteudosMidia";
 
 export interface AnaliseVisualDetalhada {
+  textos_na_tela?: string;
   cenario: string;
   transicoes: string;
   enquadramento: string;
