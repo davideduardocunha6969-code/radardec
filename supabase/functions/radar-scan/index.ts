@@ -277,18 +277,22 @@ async function scanProfiles(
 
       // ── Extract profile metadata ──
       const profileMeta = extractProfileMeta(items, isIg);
-      const profileFollowers = profileMeta.followers_count || profile.followers_count;
+      let profileFollowers = profileMeta.followers_count || profile.followers_count;
+
+      // ── Fix avatar & followers from first Apify item (Instagram) ──
+      const firstItem = items[0] || {};
+      const avatarUrl = (firstItem.ownerProfilePicUrl as string) || (firstItem.profilePicUrl as string) || null;
+      const postFollowers = (firstItem.ownerFollowersCount as number) || null;
+      if (postFollowers) profileFollowers = postFollowers;
 
       // ── Calculate posting frequency & engagement ──
       const freq = calcPostFrequency(mapped);
       const engagementScore = calcEngagement7d(mapped, profileFollowers);
 
       // ── Update profile with all metrics ──
-      const updateData: Record<string, unknown> = {
-        last_scanned_at: now,
-        followers_count: profileFollowers,
-      };
-      if (profileMeta.avatar_url) updateData.avatar_url = profileMeta.avatar_url;
+      const updateData: Record<string, unknown> = { last_scanned_at: now };
+      if (profileFollowers) updateData.followers_count = profileFollowers;
+      if (avatarUrl) updateData.avatar_url = avatarUrl;
       if (profileMeta.posts_count != null) updateData.posts_count = profileMeta.posts_count;
       if (freq.avg_posts_per_day != null) updateData.avg_posts_per_day = freq.avg_posts_per_day;
       if (freq.avg_posts_per_week != null) updateData.avg_posts_per_week = freq.avg_posts_per_week;
