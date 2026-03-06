@@ -61,6 +61,8 @@ export default function ModeladorConteudo() {
   const [currentIdeiaIndex, setCurrentIdeiaIndex] = useState(0);
   const [ideiaFormOpen, setIdeiaFormOpen] = useState(false);
   const [dragActive, setDragActive] = useState(false);
+  const [isDirectLink, setIsDirectLink] = useState(false);
+  const [extractingLink, setExtractingLink] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
 
