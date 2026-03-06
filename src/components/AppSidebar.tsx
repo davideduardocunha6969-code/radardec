@@ -1,4 +1,4 @@
-import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, CalendarDays, Megaphone, Lightbulb, Wand2, Package, ClipboardList, Phone, UserCog, Copy, Users, FileQuestion, Calendar, LayoutDashboard } from "lucide-react";
+import { Home, Radar, TrendingUp, Landmark, Scale, Briefcase, Settings, LogOut, ChevronDown, Bot, Mic, FileText, CalendarDays, Megaphone, Lightbulb, Wand2, Package, ClipboardList, Phone, UserCog, Copy, Users, FileQuestion, Calendar, LayoutDashboard, Flame } from "lucide-react";
 import { NavLink } from "@/components/NavLink";
 import { useLocation } from "react-router-dom";
 import logoEscritorio from "@/assets/logo-escritorio.webp";
@@ -67,6 +67,7 @@ const marketingItems = [
   { title: "Content Hub", url: "/content-hub", icon: Lightbulb, pageKey: "content-hub" },
   { title: "Calendário de Conteúdo", url: "/midia-social", icon: CalendarDays, pageKey: "midia-social" },
   { title: "Modelador de Conteúdo", url: "/marketing/modelador", icon: Wand2, pageKey: "marketing-modelador" },
+  { title: "Radar de Viralização", url: "/marketing/radar-viralizacao", icon: Flame, pageKey: "marketing-radar-viralizacao" },
 ];
 
 export function AppSidebar() {
