@@ -324,10 +324,15 @@ async function scanProfiles(
       let profileFollowers = profile.followers_count;
       const updateData: Record<string, unknown> = { last_scanned_at: now };
 
+      let profileMeta: { avatar_url: string | null; posts_count: number | null; followers_count: number | null } = {
+        avatar_url: null, posts_count: null, followers_count: null,
+      };
+
       // ── Fetch IG profile data via dedicated actor ──
       if (isIg) {
         const profileData = await fetchInstagramProfile(profile.username, token);
         if (profileData) {
+          profileMeta = { avatar_url: profileData.avatar_url, posts_count: profileData.posts_count, followers_count: profileData.followers_count };
           if (profileData.followers_count) profileFollowers = profileData.followers_count;
           if (profileData.avatar_url) updateData.avatar_url = profileData.avatar_url;
           if (profileData.followers_count) updateData.followers_count = profileData.followers_count;
@@ -337,7 +342,7 @@ async function scanProfiles(
         }
       } else {
         // TikTok: extract from post items
-        const profileMeta = extractProfileMeta(items, false);
+        profileMeta = extractProfileMeta(items, false);
         if (profileMeta.followers_count) {
           profileFollowers = profileMeta.followers_count;
           updateData.followers_count = profileMeta.followers_count;
