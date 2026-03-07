@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Radar, Plus, Trash2, Loader2, Eye, Heart, MessageCircle, ExternalLink, CheckCircle2, User, BarChart3, TrendingUp, Calendar, Video, X, Play, Camera, Music, Facebook, RefreshCw, Globe, Shield, Briefcase, Users, ImageIcon, Scale } from "lucide-react";
+import { Radar, Plus, Trash2, Loader2, Eye, Heart, MessageCircle, ExternalLink, CheckCircle2, User, BarChart3, TrendingUp, Calendar, Video, X, Play, Camera, Music, Facebook, RefreshCw, Globe, Shield, Briefcase, Users, ImageIcon, Scale, Bookmark, Share2 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -766,7 +766,7 @@ function InstagramAnalysisSheet({
   onUpdateLegalArea: (v: string) => void;
 }) {
   const [periodo, setPeriodo] = useState<PeriodType>('7d');
-  const topPosts = (p.top_posts as Array<{ url?: string; likesCount?: number; commentsCount?: number; videoViewCount?: number; displayUrl?: string; caption?: string }>) ?? [];
+  const topPosts = (p.top_posts as Array<{ id?: string; permalink?: string; url?: string; like_count?: number; likesCount?: number; comments_count?: number; commentsCount?: number; video_views?: number; videoViewCount?: number; saved?: number; shares_count?: number; engagement_post?: number; thumbnail_url?: string; displayUrl?: string; caption?: string; media_type?: string; timestamp?: string }>) ?? [];
 
   const latestHistory = history.length > 0 ? history[history.length - 1] : null;
 
@@ -849,13 +849,15 @@ function InstagramAnalysisSheet({
           <PeriodSelector value={periodo} onChange={setPeriodo} />
 
           {/* Metrics grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <MetricMiniCard label="Seguidores" value={formatNumber(p.followers_count)} icon={<Users className="w-4 h-4" />} />
-            <MetricMiniCard label="Seguindo" value={formatNumber(p.following_count)} icon={<User className="w-4 h-4" />} />
             <MetricMiniCard label="Posts" value={formatNumber(p.posts_count)} icon={<ImageIcon className="w-4 h-4" />} />
             <MetricMiniCard label={periodo === 'historico' ? "Engajamento médio" : "Engajamento"} value={metricsForPeriod.engagement} icon={<TrendingUp className="w-4 h-4" />} period={metricsForPeriod.period} />
             <MetricMiniCard label={periodo === 'historico' ? "Views médias hist." : "Views médias"} value={metricsForPeriod.views} icon={<Eye className="w-4 h-4" />} period={metricsForPeriod.period} />
             <MetricMiniCard label={periodo === 'historico' ? "Melhor engajamento" : "Likes médios"} value={metricsForPeriod.likes} icon={<Heart className="w-4 h-4" />} period={metricsForPeriod.period} />
+            <MetricMiniCard label="Comentários médios" value={p.avg_comments_recent != null ? formatNumber(Math.round(p.avg_comments_recent)) : "—"} icon={<MessageCircle className="w-4 h-4" />} />
+            <MetricMiniCard label="Saves médios" value={p.avg_saves_recent != null ? String(Math.round(p.avg_saves_recent)) : "—"} icon={<Bookmark className="w-4 h-4" />} />
+            <MetricMiniCard label="Shares médios" value={p.avg_shares_recent != null ? String(Math.round(p.avg_shares_recent)) : "—"} icon={<Share2 className="w-4 h-4" />} />
           </div>
 
           {periodo === 'historico' && (metricsForPeriod as any).firstScan && (
@@ -911,30 +913,47 @@ function InstagramAnalysisSheet({
             <div>
               <h4 className="text-sm font-semibold mb-2">Top Posts</h4>
               <div className="grid grid-cols-1 gap-3">
-                {topPosts.slice(0, 3).map((post, idx) => (
-                  <Card key={idx} className="overflow-hidden">
-                    <CardContent className="p-3 flex gap-3">
-                      {post.displayUrl ? (
-                        <img src={post.displayUrl} alt="post" className="w-20 h-20 rounded object-cover flex-shrink-0" referrerPolicy="no-referrer" crossOrigin="anonymous" />
-                      ) : (
-                        <div className="w-20 h-20 rounded bg-muted flex items-center justify-center flex-shrink-0"><ImageIcon className="w-6 h-6 text-muted-foreground" /></div>
-                      )}
-                      <div className="flex-1 min-w-0 space-y-1">
-                        {post.caption && <p className="text-xs line-clamp-2">{post.caption}</p>}
-                        <div className="flex gap-3 text-xs text-muted-foreground">
-                          <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{formatNumber(post.videoViewCount ?? 0)}</span>
-                          <span className="flex items-center gap-1"><Heart className="w-3 h-3" />{formatNumber(post.likesCount ?? 0)}</span>
-                          <span className="flex items-center gap-1"><MessageCircle className="w-3 h-3" />{formatNumber(post.commentsCount ?? 0)}</span>
-                        </div>
-                        {post.url && (
-                          <a href={post.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:underline flex items-center gap-1">
-                            <ExternalLink className="w-3 h-3" />Ver post
-                          </a>
+                {topPosts.slice(0, 5).map((post, idx) => {
+                  const imgSrc = post.thumbnail_url || post.displayUrl;
+                  const likes = post.like_count ?? post.likesCount ?? 0;
+                  const comments = post.comments_count ?? post.commentsCount ?? 0;
+                  const views = post.video_views ?? post.videoViewCount ?? 0;
+                  const saves = post.saved ?? 0;
+                  const shares = post.shares_count ?? 0;
+                  const engPost = post.engagement_post;
+                  const postUrl = post.permalink || post.url;
+                  const mediaLabel = post.media_type === "VIDEO" ? "Reel" : post.media_type === "CAROUSEL_ALBUM" ? "Carrossel" : "Post";
+                  return (
+                    <Card key={idx} className="overflow-hidden">
+                      <CardContent className="p-3 flex gap-3">
+                        {imgSrc ? (
+                          <img src={imgSrc} alt="post" className="w-20 h-20 rounded object-cover flex-shrink-0" referrerPolicy="no-referrer" crossOrigin="anonymous" />
+                        ) : (
+                          <div className="w-20 h-20 rounded bg-muted flex items-center justify-center flex-shrink-0"><ImageIcon className="w-6 h-6 text-muted-foreground" /></div>
                         )}
-                      </div>
-                    </CardContent>
-                  </Card>
-                ))}
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-center gap-2">
+                            <Badge variant="outline" className="text-[10px]">{mediaLabel}</Badge>
+                            {engPost != null && <Badge className="bg-primary/20 text-primary border-primary/30 text-[10px]">{engPost.toFixed(2)}%</Badge>}
+                          </div>
+                          {post.caption && <p className="text-xs line-clamp-2">{post.caption}</p>}
+                          <div className="flex flex-wrap gap-2 text-xs text-muted-foreground">
+                            {views > 0 && <span className="flex items-center gap-0.5"><Eye className="w-3 h-3" />{formatNumber(views)}</span>}
+                            <span className="flex items-center gap-0.5"><Heart className="w-3 h-3" />{formatNumber(likes)}</span>
+                            <span className="flex items-center gap-0.5"><MessageCircle className="w-3 h-3" />{formatNumber(comments)}</span>
+                            {saves > 0 && <span className="flex items-center gap-0.5"><Bookmark className="w-3 h-3" />{formatNumber(saves)}</span>}
+                            {shares > 0 && <span className="flex items-center gap-0.5"><Share2 className="w-3 h-3" />{formatNumber(shares)}</span>}
+                          </div>
+                          {postUrl && (
+                            <a href={postUrl} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-400 hover:underline flex items-center gap-1">
+                              <ExternalLink className="w-3 h-3" />Ver post
+                            </a>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
               </div>
             </div>
           )}
