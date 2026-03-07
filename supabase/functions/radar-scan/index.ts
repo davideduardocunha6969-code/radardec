@@ -156,7 +156,20 @@ function calcPostFrequency(mapped: MappedPost[]) {
   };
 }
 
-function calcEngagementByPeriod(posts: MappedPost[], followers: number | null, days: number | null) {
+// Calcula engajamento como média de (likes+comments)/followers por post
+// Retorna percentual (ex: 3.5 = 3.5%)
+function calcEngagementRate(posts: MappedPost[], followers: number | null): number | null {
+  if (!followers || followers === 0 || posts.length === 0) return null;
+
+  const totalLikes = posts.reduce((s, p) => s + p.likes, 0);
+  const totalComments = posts.reduce((s, p) => s + p.comments, 0);
+
+  // Fórmula padrão da indústria: (likes + comments) / (nPosts * followers) * 100
+  const rate = ((totalLikes + totalComments) / (posts.length * followers)) * 100;
+  return Math.round(rate * 100) / 100;
+}
+
+function calcAvgMetrics(posts: MappedPost[], followers: number | null, days: number | null) {
   if (!followers || followers === 0 || posts.length === 0) return null;
 
   let postsToCalc: MappedPost[];
@@ -182,10 +195,10 @@ function calcEngagementByPeriod(posts: MappedPost[], followers: number | null, d
   const totalComments = postsToCalc.reduce((s, p) => s + p.comments, 0);
   const totalViews = postsToCalc.reduce((s, p) => s + p.views, 0);
 
-  const engagementRate = Math.round(((totalLikes + totalComments) / (postsToCalc.length * followers)) * 100 * 100) / 100;
+  const engagementRate = ((totalLikes + totalComments) / (postsToCalc.length * followers)) * 100;
 
   return {
-    engagement_rate: engagementRate,
+    engagement_rate: Math.round(engagementRate * 100) / 100,
     avg_views: Math.round(totalViews / postsToCalc.length),
     avg_likes: Math.round(totalLikes / postsToCalc.length),
     posts_count: postsToCalc.length,
@@ -387,13 +400,14 @@ async function scanProfiles(
 
       // ── Calculate posting frequency & engagement ──
       const freq = calcPostFrequency(postsForMetrics);
-      const metrics7d = calcEngagementByPeriod(postsForMetrics, profileFollowers, 7);
-      const metrics30d = calcEngagementByPeriod(postsForMetrics, profileFollowers, 30);
+      const engagementScore = calcEngagementRate(postsForMetrics, profileFollowers);
+      const metrics7d = calcAvgMetrics(postsForMetrics, profileFollowers, 7);
+      const metrics30d = calcAvgMetrics(postsForMetrics, profileFollowers, 30);
 
       if (freq.avg_posts_per_day != null) updateData.avg_posts_per_day = freq.avg_posts_per_day;
       if (freq.avg_posts_per_week != null) updateData.avg_posts_per_week = freq.avg_posts_per_week;
       if (freq.avg_posts_per_month != null) updateData.avg_posts_per_month = freq.avg_posts_per_month;
-      if (metrics7d?.engagement_rate != null) updateData.engagement_score_7d = metrics7d.engagement_rate;
+      updateData.engagement_score_7d = engagementScore; // null também é válido
       if (metrics7d?.avg_views != null) updateData.avg_views_recent = metrics7d.avg_views;
       if (metrics7d?.avg_likes != null) updateData.avg_likes_recent = metrics7d.avg_likes;
 
@@ -407,7 +421,7 @@ async function scanProfiles(
         posts_count: profileMeta.posts_count,
         avg_views_7d: metrics7d?.avg_views ?? null,
         avg_likes_7d: metrics7d?.avg_likes ?? null,
-        engagement_score: metrics7d?.engagement_rate ?? null,
+        engagement_score: engagementScore,
         avg_engagement_7d: metrics7d?.engagement_rate ?? null,
         avg_engagement_30d: metrics30d?.engagement_rate ?? null,
         avg_views_30d: metrics30d?.avg_views ?? null,
