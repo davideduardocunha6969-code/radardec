@@ -38,6 +38,19 @@ function timeAgo(dateStr: string | null): string {
   return `${Math.floor(hours / 24)}d atrás`;
 }
 
+function AvatarImage({ src, alt, className = "w-14 h-14 rounded-full object-cover border-2 border-gray-200" }: { src: string | null; alt: string; className?: string }) {
+  const [hasError, setHasError] = useState(false);
+  useEffect(() => { setHasError(false); }, [src]);
+  if (!src || hasError) {
+    return (
+      <div className="w-14 h-14 rounded-full bg-gray-800 border-2 border-gray-600 flex items-center justify-center flex-shrink-0">
+        <User className="w-7 h-7 text-gray-400" />
+      </div>
+    );
+  }
+  return <img src={src} alt={alt} className={className} referrerPolicy="no-referrer" crossOrigin="anonymous" onError={() => setHasError(true)} />;
+}
+
 function engagementBadge(score: number | null) {
   if (score == null) return <Badge variant="secondary" className="text-xs">—</Badge>;
   if (score > 5) return <Badge className="bg-emerald-600/20 text-emerald-400 border-emerald-500/30 text-xs">{score.toFixed(1)}%</Badge>;
@@ -88,19 +101,7 @@ function ProfileDetailSheet({
       <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
         <SheetHeader className="pb-4">
           <div className="flex items-center gap-3">
-            {profile.avatar_url ? (
-              <img
-                src={profile.avatar_url}
-                alt={profile.username}
-                referrerPolicy="no-referrer"
-                crossOrigin="anonymous"
-                className="w-14 h-14 rounded-full object-cover border-2 border-gray-200"
-                onError={(e) => { (e.target as HTMLImageElement).style.display='none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
-              />
-            ) : null}
-            <div className={profile.avatar_url ? 'hidden' : ''}>
-              <User className="w-10 h-10 text-gray-400" />
-            </div>
+            <AvatarImage src={profile.avatar_url} alt={profile.username} />
             <div className="flex-1 min-w-0">
               <SheetTitle className="text-lg">@{profile.username}</SheetTitle>
               <div className="flex items-center gap-2 mt-1">
@@ -251,19 +252,7 @@ function PerfisTab() {
               <CardContent className="p-4 space-y-3">
                 {/* Header */}
                 <div className="flex items-center gap-3">
-                  {p.avatar_url ? (
-                    <img
-                      src={p.avatar_url}
-                      alt={p.username}
-                      referrerPolicy="no-referrer"
-                      crossOrigin="anonymous"
-                      className="w-14 h-14 rounded-full object-cover border-2 border-gray-200"
-                      onError={(e) => { (e.target as HTMLImageElement).style.display='none'; (e.target as HTMLImageElement).nextElementSibling?.classList.remove('hidden'); }}
-                    />
-                  ) : null}
-                  <div className={p.avatar_url ? 'hidden' : ''}>
-                    <User className="w-10 h-10 text-gray-400" />
-                  </div>
+                  <AvatarImage src={p.avatar_url} alt={p.username} />
                   <div className="flex-1 min-w-0">
                     <p className="font-semibold text-foreground truncate">@{p.username}</p>
                     <div className="flex items-center gap-2 mt-0.5">
