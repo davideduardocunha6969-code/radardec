@@ -647,7 +647,10 @@ function InstagramContasTab() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <span className="text-sm text-muted-foreground">{instagramProfiles.length} conta(s) monitorada(s)</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">{instagramProfiles.length} conta(s) monitorada(s)</span>
+          <NextAutoScanIndicator profiles={instagramProfiles} />
+        </div>
         <Button size="sm" disabled={isScanning || instagramProfiles.length === 0} onClick={() => scanAllByPlatform("instagram")}>
           {isScanning ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1.5" />}
           Escanear todas as contas Instagram

@@ -193,8 +193,8 @@ Deno.serve(async (req) => {
       .eq("id", profile_id);
     if (updateErr) console.error("Erro ao atualizar perfil:", updateErr.message);
 
-    // Insert profile_history
-    const { error: histErr } = await sb.from("profile_history").insert({
+    // Upsert profile_history (one record per day)
+    const historyData = {
       profile_id,
       user_id: profile.user_id,
       followers_count: followers,
@@ -204,8 +204,23 @@ Deno.serve(async (req) => {
       avg_views_7d: avgViews,
       avg_likes_7d: avgLikes,
       recorded_at: now,
-    });
-    if (histErr) console.error("Erro ao inserir histórico:", histErr.message);
+    };
+
+    const { data: existingHist } = await sb
+      .from("profile_history")
+      .select("id")
+      .eq("profile_id", profile_id)
+      .gte("recorded_at", new Date(new Date().toISOString().slice(0, 10)).toISOString())
+      .lt("recorded_at", new Date(new Date(new Date().toISOString().slice(0, 10)).getTime() + 86400000).toISOString())
+      .limit(1);
+
+    if (existingHist && existingHist.length > 0) {
+      const { error: histErr } = await sb.from("profile_history").update(historyData).eq("id", existingHist[0].id);
+      if (histErr) console.error("Erro ao atualizar histórico:", histErr.message);
+    } else {
+      const { error: histErr } = await sb.from("profile_history").insert(historyData);
+      if (histErr) console.error("Erro ao inserir histórico:", histErr.message);
+    }
 
     return new Response(
       JSON.stringify({
