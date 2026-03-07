@@ -712,19 +712,6 @@ function InstagramContasTab() {
         ))}
       </div>
 
-      {/* Analysis Sheet */}
-      {selectedProfile && (
-        <InstagramAnalysisSheet
-          profile={selectedProfile}
-          open={sheetOpen}
-          onOpenChange={setSheetOpen}
-          history={history}
-          loadingHistory={loadingHistory}
-          isScanning={isScanning}
-          onScan={() => scanProfile(selectedProfile.id)}
-          onUpdateLegalArea={(v) => updateLegalArea.mutate({ id: selectedProfile.id, legal_area: v === "none" ? null : v })}
-        />
-      )}
     </div>
   );
 }
