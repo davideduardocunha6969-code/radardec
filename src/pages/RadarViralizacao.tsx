@@ -244,7 +244,7 @@ function PerfisTab() {
 
       {/* Scan button */}
       <div className="flex justify-end">
-        <Button onClick={() => runScan("profiles")} disabled={isScanning || profiles.length === 0}>
+        <Button onClick={() => runScan("profiles")} disabled={isScanning || monitoredProfiles.length === 0}>
           {isScanning ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Radar className="h-4 w-4 mr-2" />}
           Escanear Perfis Agora
         </Button>
@@ -253,7 +253,7 @@ function PerfisTab() {
       {/* Grid */}
       {loadingProfiles ? (
         <div className="flex justify-center py-12"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
-      ) : profiles.length === 0 ? (
+      ) : monitoredProfiles.length === 0 ? (
         <p className="text-center text-muted-foreground py-12">Nenhum perfil monitorado ainda.</p>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4">
