@@ -1769,15 +1769,18 @@ export type Database = {
           engagement_rate: number | null
           engagement_score_7d: number | null
           external_url: string | null
+          facebook_page_id: string | null
           followers_count: number | null
           following_count: number | null
           id: string
+          instagram_business_id: string | null
           is_active: boolean | null
           is_business: boolean | null
           is_own_account: boolean | null
           is_verified: boolean | null
           last_scanned_at: string | null
           legal_area: string | null
+          meta_page_access_token: string | null
           platform: string
           posts_count: number | null
           top_posts: Json | null
@@ -1800,15 +1803,18 @@ export type Database = {
           engagement_rate?: number | null
           engagement_score_7d?: number | null
           external_url?: string | null
+          facebook_page_id?: string | null
           followers_count?: number | null
           following_count?: number | null
           id?: string
+          instagram_business_id?: string | null
           is_active?: boolean | null
           is_business?: boolean | null
           is_own_account?: boolean | null
           is_verified?: boolean | null
           last_scanned_at?: string | null
           legal_area?: string | null
+          meta_page_access_token?: string | null
           platform: string
           posts_count?: number | null
           top_posts?: Json | null
@@ -1831,15 +1837,18 @@ export type Database = {
           engagement_rate?: number | null
           engagement_score_7d?: number | null
           external_url?: string | null
+          facebook_page_id?: string | null
           followers_count?: number | null
           following_count?: number | null
           id?: string
+          instagram_business_id?: string | null
           is_active?: boolean | null
           is_business?: boolean | null
           is_own_account?: boolean | null
           is_verified?: boolean | null
           last_scanned_at?: string | null
           legal_area?: string | null
+          meta_page_access_token?: string | null
           platform?: string
           posts_count?: number | null
           top_posts?: Json | null
