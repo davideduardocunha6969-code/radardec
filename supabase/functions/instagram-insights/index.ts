@@ -27,12 +27,14 @@ interface MediaPost {
 }
 
 function getTokenForArea(legalArea: string | null): string | null {
+  // Normalize: lowercase, remove accents
+  const normalized = (legalArea ?? "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
   const map: Record<string, string> = {
-    Previdenciário: "META_PAGE_TOKEN_PREVIDENCIARIO",
-    Trabalhista: "META_PAGE_TOKEN_TRABALHISTA",
-    Bancário: "META_PAGE_TOKEN_BANCARIO",
+    previdenciario: "META_PAGE_TOKEN_PREVIDENCIARIO",
+    trabalhista: "META_PAGE_TOKEN_TRABALHISTA",
+    bancario: "META_PAGE_TOKEN_BANCARIO",
   };
-  const key = map[legalArea ?? ""];
+  const key = map[normalized];
   return key ? Deno.env.get(key) ?? null : null;
 }
 
@@ -62,53 +64,112 @@ Deno.serve(async (req) => {
     return new Response(null, { headers: corsHeaders });
   }
 
+  let step = "init";
   try {
-    const { profile_id } = await req.json();
-    if (!profile_id) throw new Error("profile_id é obrigatório");
+    step = "parse_body";
+    const body = await req.json();
+    const profile_id = body?.profile_id;
+    console.log(`[instagram-insights] step=parse_body, profile_id=${profile_id}`);
+    if (!profile_id) {
+      return new Response(
+        JSON.stringify({ success: false, error: "profile_id é obrigatório", step }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
+    step = "init_supabase";
     const supabaseUrl = Deno.env.get("SUPABASE_URL")!;
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const sb = createClient(supabaseUrl, serviceRoleKey);
 
+    step = "fetch_profile";
+    console.log(`[instagram-insights] step=fetch_profile, id=${profile_id}`);
     const { data: profile, error: profileErr } = await sb
       .from("monitored_profiles")
       .select("id, instagram_business_id, legal_area, user_id")
       .eq("id", profile_id)
       .single();
 
-    if (profileErr || !profile) throw new Error("Perfil não encontrado: " + (profileErr?.message ?? ""));
-    if (!profile.instagram_business_id) throw new Error("instagram_business_id não configurado para este perfil");
+    if (profileErr || !profile) {
+      const msg = "Perfil não encontrado: " + (profileErr?.message ?? "null");
+      console.error(`[instagram-insights] step=${step}, error=${msg}`);
+      return new Response(
+        JSON.stringify({ success: false, error: msg, step }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+
+    console.log(`[instagram-insights] profile found: ig_id=${profile.instagram_business_id}, legal_area=${profile.legal_area}`);
+
+    if (!profile.instagram_business_id) {
+      return new Response(
+        JSON.stringify({ success: false, error: "instagram_business_id não configurado para este perfil", step: "check_ig_id" }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
 
     const igId = profile.instagram_business_id;
-    const token = getTokenForArea(profile.legal_area);
-    if (!token) throw new Error(`Token Meta não encontrado para legal_area '${profile.legal_area}'`);
 
-    // Fetch profile data and posts in parallel
+    step = "resolve_token";
+    const token = getTokenForArea(profile.legal_area);
+    if (!token) {
+      const msg = `Token Meta não encontrado para legal_area '${profile.legal_area}' (normalized). Verifique os secrets META_PAGE_TOKEN_*.`;
+      console.error(`[instagram-insights] step=${step}, error=${msg}`);
+      return new Response(
+        JSON.stringify({ success: false, error: msg, step }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    console.log(`[instagram-insights] step=resolve_token, token found (length=${token.length})`);
+
+    step = "fetch_meta_api";
+    const profileUrl = `${GRAPH_API}/${igId}?fields=followers_count,media_count,biography,website,name,profile_picture_url&access_token=${token}`;
+    const mediaUrl = `${GRAPH_API}/${igId}/media?fields=id,like_count,comments_count,reach,impressions,saved,shares_count,video_views,plays,media_product_type,timestamp,media_type,thumbnail_url,permalink,caption&limit=30&access_token=${token}`;
+    console.log(`[instagram-insights] step=fetch_meta_api, igId=${igId}`);
+
     const [profileRes, mediaRes] = await Promise.all([
-      fetch(`${GRAPH_API}/${igId}?fields=followers_count,media_count,biography,website,name,profile_picture_url&access_token=${token}`),
-      fetch(`${GRAPH_API}/${igId}/media?fields=id,like_count,comments_count,reach,impressions,saved,shares_count,video_views,plays,media_product_type,timestamp,media_type,thumbnail_url,permalink,caption&limit=30&access_token=${token}`),
+      fetch(profileUrl),
+      fetch(mediaUrl),
     ]);
 
+    step = "parse_meta_profile";
     const profileData = await profileRes.json();
-    if (profileData.error) throw new Error("Meta API (perfil): " + (profileData.error.message ?? JSON.stringify(profileData.error)));
+    if (profileData.error) {
+      const msg = "Meta API (perfil): " + (profileData.error.message ?? JSON.stringify(profileData.error));
+      console.error(`[instagram-insights] step=${step}, error=${msg}`);
+      return new Response(
+        JSON.stringify({ success: false, error: msg, step }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
+    console.log(`[instagram-insights] step=parse_meta_profile, followers=${profileData.followers_count}`);
 
+    step = "parse_meta_media";
     const mediaData = await mediaRes.json();
+    if (mediaData.error) {
+      const msg = "Meta API (media): " + (mediaData.error.message ?? JSON.stringify(mediaData.error));
+      console.error(`[instagram-insights] step=${step}, error=${msg}`);
+      return new Response(
+        JSON.stringify({ success: false, error: msg, step }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      );
+    }
     const posts: MediaPost[] = mediaData.data ?? [];
+    console.log(`[instagram-insights] step=parse_meta_media, posts_count=${posts.length}`);
 
     const followers = safeNum(profileData.followers_count);
 
     // Calculate metrics
+    step = "calculate_metrics";
     const last7 = posts.slice(0, 7);
     const last10 = posts.slice(0, 10);
 
-    // Engagement rate from last 7 posts
     let engagementRate: number | null = null;
     if (last7.length > 0 && followers > 0) {
       const totalEng = last7.reduce((s, p) => s + postEngagementRaw(p), 0);
       engagementRate = Math.round(((totalEng) / (last7.length * followers)) * 100 * 100) / 100;
     }
 
-    // Averages from last 10
     const avgLikes = last10.length > 0
       ? Math.round(last10.reduce((s, p) => s + safeNum(p.like_count), 0) / last10.length)
       : null;
@@ -117,7 +178,6 @@ Deno.serve(async (req) => {
       ? Math.round(last10.reduce((s, p) => s + safeNum(p.comments_count), 0) / last10.length)
       : null;
 
-    // avg_views = video_views for reels/videos, fallback to impressions
     const viewsArr = last10.map((p) => {
       const vv = safeNum(p.video_views) || safeNum(p.plays);
       return vv > 0 ? vv : safeNum(p.impressions);
@@ -126,23 +186,19 @@ Deno.serve(async (req) => {
       ? Math.round(viewsArr.reduce((a, b) => a + b, 0) / viewsArr.length)
       : null;
 
-    // avg shares
     const avgShares = last10.length > 0
       ? Math.round(last10.reduce((s, p) => s + safeNum(p.shares_count), 0) / last10.length * 100) / 100
       : null;
 
-    // avg saves
     const avgSaves = last10.length > 0
       ? Math.round(last10.reduce((s, p) => s + safeNum(p.saved), 0) / last10.length * 100) / 100
       : null;
 
-    // best_post_engagement from all fetched posts (up to 30)
     let bestPostEngagement: number | null = null;
     if (posts.length > 0 && followers > 0) {
       bestPostEngagement = Math.max(...posts.map((p) => postEngagement(p, followers)));
     }
 
-    // total_posts_7d
     const totalPosts7d = posts.filter((p) => isWithinDays(p.timestamp, 7)).length;
 
     // Top 5 posts by engagement
@@ -166,7 +222,10 @@ Deno.serve(async (req) => {
         caption: p.caption?.slice(0, 100) ?? null,
       }));
 
+    console.log(`[instagram-insights] step=calculate_metrics, engagement=${engagementRate}, avgLikes=${avgLikes}, top_posts=${sortedPosts.length}`);
+
     // Update monitored_profiles
+    step = "update_profile";
     const now = new Date().toISOString();
     const updateData: Record<string, unknown> = {
       followers_count: followers,
@@ -191,9 +250,14 @@ Deno.serve(async (req) => {
       .from("monitored_profiles")
       .update(updateData)
       .eq("id", profile_id);
-    if (updateErr) console.error("Erro ao atualizar perfil:", updateErr.message);
+    if (updateErr) {
+      console.error(`[instagram-insights] step=${step}, error=${updateErr.message}`);
+    } else {
+      console.log(`[instagram-insights] step=update_profile, success`);
+    }
 
     // Upsert profile_history (one record per day)
+    step = "upsert_history";
     const historyData = {
       profile_id,
       user_id: profile.user_id,
@@ -206,21 +270,29 @@ Deno.serve(async (req) => {
       recorded_at: now,
     };
 
+    const todayStr = now.slice(0, 10);
+    const todayStart = new Date(todayStr).toISOString();
+    const tomorrowStart = new Date(new Date(todayStr).getTime() + 86400000).toISOString();
+
     const { data: existingHist } = await sb
       .from("profile_history")
       .select("id")
       .eq("profile_id", profile_id)
-      .gte("recorded_at", new Date(new Date().toISOString().slice(0, 10)).toISOString())
-      .lt("recorded_at", new Date(new Date(new Date().toISOString().slice(0, 10)).getTime() + 86400000).toISOString())
+      .gte("recorded_at", todayStart)
+      .lt("recorded_at", tomorrowStart)
       .limit(1);
 
     if (existingHist && existingHist.length > 0) {
       const { error: histErr } = await sb.from("profile_history").update(historyData).eq("id", existingHist[0].id);
-      if (histErr) console.error("Erro ao atualizar histórico:", histErr.message);
+      if (histErr) console.error(`[instagram-insights] step=${step}, update error=${histErr.message}`);
+      else console.log(`[instagram-insights] step=upsert_history, updated existing`);
     } else {
       const { error: histErr } = await sb.from("profile_history").insert(historyData);
-      if (histErr) console.error("Erro ao inserir histórico:", histErr.message);
+      if (histErr) console.error(`[instagram-insights] step=${step}, insert error=${histErr.message}`);
+      else console.log(`[instagram-insights] step=upsert_history, inserted new`);
     }
+
+    console.log(`[instagram-insights] DONE, followers=${followers}, posts=${posts.length}`);
 
     return new Response(
       JSON.stringify({
@@ -241,10 +313,10 @@ Deno.serve(async (req) => {
     );
   } catch (e) {
     const msg = e instanceof Error ? e.message : "Erro desconhecido";
-    console.error("instagram-insights error:", msg);
+    console.error(`[instagram-insights] EXCEPTION at step=${step}, error=${msg}`);
     return new Response(
-      JSON.stringify({ success: false, error: msg }),
-      { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+      JSON.stringify({ success: false, error: msg, step }),
+      { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
   }
 });
