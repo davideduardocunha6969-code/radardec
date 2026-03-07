@@ -1755,52 +1755,91 @@ export type Database = {
       monitored_profiles: {
         Row: {
           avatar_url: string | null
+          avg_comments_recent: number | null
+          avg_likes_recent: number | null
           avg_posts_per_day: number | null
           avg_posts_per_month: number | null
           avg_posts_per_week: number | null
+          avg_shares_recent: number | null
+          avg_views_recent: number | null
+          biography: string | null
           created_at: string | null
+          date_joined: string | null
           display_name: string | null
+          engagement_rate: number | null
           engagement_score_7d: number | null
+          external_url: string | null
           followers_count: number | null
+          following_count: number | null
           id: string
           is_active: boolean | null
+          is_business: boolean | null
+          is_own_account: boolean | null
+          is_verified: boolean | null
           last_scanned_at: string | null
           platform: string
           posts_count: number | null
+          top_posts: Json | null
           user_id: string
           username: string
         }
         Insert: {
           avatar_url?: string | null
+          avg_comments_recent?: number | null
+          avg_likes_recent?: number | null
           avg_posts_per_day?: number | null
           avg_posts_per_month?: number | null
           avg_posts_per_week?: number | null
+          avg_shares_recent?: number | null
+          avg_views_recent?: number | null
+          biography?: string | null
           created_at?: string | null
+          date_joined?: string | null
           display_name?: string | null
+          engagement_rate?: number | null
           engagement_score_7d?: number | null
+          external_url?: string | null
           followers_count?: number | null
+          following_count?: number | null
           id?: string
           is_active?: boolean | null
+          is_business?: boolean | null
+          is_own_account?: boolean | null
+          is_verified?: boolean | null
           last_scanned_at?: string | null
           platform: string
           posts_count?: number | null
+          top_posts?: Json | null
           user_id: string
           username: string
         }
         Update: {
           avatar_url?: string | null
+          avg_comments_recent?: number | null
+          avg_likes_recent?: number | null
           avg_posts_per_day?: number | null
           avg_posts_per_month?: number | null
           avg_posts_per_week?: number | null
+          avg_shares_recent?: number | null
+          avg_views_recent?: number | null
+          biography?: string | null
           created_at?: string | null
+          date_joined?: string | null
           display_name?: string | null
+          engagement_rate?: number | null
           engagement_score_7d?: number | null
+          external_url?: string | null
           followers_count?: number | null
+          following_count?: number | null
           id?: string
           is_active?: boolean | null
+          is_business?: boolean | null
+          is_own_account?: boolean | null
+          is_verified?: boolean | null
           last_scanned_at?: string | null
           platform?: string
           posts_count?: number | null
+          top_posts?: Json | null
           user_id?: string
           username?: string
         }
