@@ -48,10 +48,6 @@ function postEngagement(p: MediaPost, followers: number): number {
   return followers > 0 ? Math.round((total / followers) * 100 * 100) / 100 : 0;
 }
 
-function postEngagementRaw(p: MediaPost): number {
-  return safeNum(p.like_count) + safeNum(p.comments_count) + safeNum(p.saved) + safeNum(p.shares_count);
-}
-
 function isWithinDays(timestamp: string | undefined, days: number): boolean {
   if (!timestamp) return false;
   const postDate = new Date(timestamp);
@@ -62,6 +58,12 @@ function isWithinDays(timestamp: string | undefined, days: number): boolean {
 
 function safeFetchJson(url: string): Promise<any> {
   return fetch(url).then(r => r.json()).catch(() => ({ error: { message: "fetch failed" } }));
+}
+
+function calcAvgEngagement(posts: MediaPost[], followers: number): number | null {
+  if (posts.length === 0 || followers <= 0) return null;
+  const total = posts.reduce((s, p) => s + postEngagement(p, followers), 0);
+  return Math.round((total / posts.length) * 100) / 100;
 }
 
 Deno.serve(async (req) => {
@@ -126,7 +128,7 @@ Deno.serve(async (req) => {
     // ── Fetch all data from Meta Graph API ──
     step = "fetch_meta_api";
     const profileUrl = `${GRAPH_API}/${igId}?fields=id,name,username,biography,website,followers_count,follows_count,media_count,profile_picture_url,ig_id&access_token=${token}`;
-    const mediaUrl = `${GRAPH_API}/${igId}/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,shares_count,saved,reach,impressions,video_views,plays,total_interactions,media_product_type&limit=30&access_token=${token}`;
+    const mediaUrl = `${GRAPH_API}/${igId}/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,shares_count,saved,reach,impressions,video_views,plays,total_interactions,media_product_type&limit=50&access_token=${token}`;
 
     // Profile insights (last 30 days)
     const now = new Date();
@@ -160,7 +162,7 @@ Deno.serve(async (req) => {
     const followsCount = safeNum(profileRes.follows_count);
     console.log(`[instagram-insights] profile: followers=${followers}, follows=${followsCount}`);
 
-    // ── Parse media ──
+    // ── Parse media with pagination ──
     step = "parse_meta_media";
     if (mediaRes.error) {
       const msg = "Meta API (media): " + (mediaRes.error.message ?? JSON.stringify(mediaRes.error));
@@ -170,8 +172,24 @@ Deno.serve(async (req) => {
         { headers: { ...corsHeaders, "Content-Type": "application/json" } }
       );
     }
-    const posts: MediaPost[] = mediaRes.data ?? [];
-    console.log(`[instagram-insights] posts_count=${posts.length}`);
+
+    let allPosts: MediaPost[] = mediaRes.data ?? [];
+    let nextPage: string | null = mediaRes.paging?.next ?? null;
+    const cutoff30d = new Date(now.getTime() - 30 * 86400000);
+
+    // Paginate until we have all posts from last 30 days (cap at 200)
+    while (nextPage && allPosts.length < 200) {
+      const oldest = allPosts[allPosts.length - 1];
+      if (oldest?.timestamp && new Date(oldest.timestamp) < cutoff30d) break;
+
+      const pageRes = await safeFetchJson(nextPage);
+      if (pageRes.error || !Array.isArray(pageRes.data) || pageRes.data.length === 0) break;
+
+      allPosts = [...allPosts, ...pageRes.data];
+      nextPage = pageRes.paging?.next ?? null;
+    }
+
+    console.log(`[instagram-insights] total_posts_fetched=${allPosts.length}`);
 
     // ── Parse insights (graceful — may fail on dev accounts) ──
     step = "parse_insights";
@@ -218,25 +236,24 @@ Deno.serve(async (req) => {
 
     // ── Calculate metrics ──
     step = "calculate_metrics";
-    const last7 = posts.filter(p => isWithinDays(p.timestamp, 7));
-    const last10 = posts.slice(0, 10);
-    const last30 = posts.filter(p => isWithinDays(p.timestamp, 30));
+    const last7 = allPosts.filter(p => isWithinDays(p.timestamp, 7));
+    const last30 = allPosts.filter(p => isWithinDays(p.timestamp, 30));
 
-    let engagementRate: number | null = null;
-    if (last7.length > 0 && followers > 0) {
-      const engagements = last7.map(p => postEngagement(p, followers));
-      engagementRate = Math.round((engagements.reduce((a, b) => a + b, 0) / engagements.length) * 100) / 100;
-    }
+    // Three engagement rates
+    const engagementScore7d = calcAvgEngagement(last7, followers);
+    const engagementScore30d = calcAvgEngagement(last30, followers);
+    const engagementScoreAll = calcAvgEngagement(allPosts, followers);
 
-    const avgLikes = last10.length > 0
-      ? Math.round(last10.reduce((s, p) => s + safeNum(p.like_count), 0) / last10.length)
+    // Averages from last 30 days posts
+    const avgLikes = last30.length > 0
+      ? Math.round(last30.reduce((s, p) => s + safeNum(p.like_count), 0) / last30.length)
       : null;
 
-    const avgComments = last10.length > 0
-      ? Math.round(last10.reduce((s, p) => s + safeNum(p.comments_count), 0) / last10.length)
+    const avgComments = last30.length > 0
+      ? Math.round(last30.reduce((s, p) => s + safeNum(p.comments_count), 0) / last30.length)
       : null;
 
-    const viewsArr = last10.map(p => {
+    const viewsArr = last30.map(p => {
       const vv = safeNum(p.video_views) || safeNum(p.plays);
       return vv > 0 ? vv : safeNum(p.impressions);
     }).filter(v => v > 0);
@@ -244,24 +261,24 @@ Deno.serve(async (req) => {
       ? Math.round(viewsArr.reduce((a, b) => a + b, 0) / viewsArr.length)
       : null;
 
-    const avgShares = last10.length > 0
-      ? Math.round(last10.reduce((s, p) => s + safeNum(p.shares_count), 0) / last10.length * 100) / 100
+    const avgShares = last30.length > 0
+      ? Math.round(last30.reduce((s, p) => s + safeNum(p.shares_count), 0) / last30.length * 100) / 100
       : null;
 
-    const avgSaves = last10.length > 0
-      ? Math.round(last10.reduce((s, p) => s + safeNum(p.saved), 0) / last10.length * 100) / 100
+    const avgSaves = last30.length > 0
+      ? Math.round(last30.reduce((s, p) => s + safeNum(p.saved), 0) / last30.length * 100) / 100
       : null;
 
     let bestPostEngagement: number | null = null;
-    if (posts.length > 0 && followers > 0) {
-      bestPostEngagement = Math.max(...posts.map(p => postEngagement(p, followers)));
+    if (allPosts.length > 0 && followers > 0) {
+      bestPostEngagement = Math.max(...allPosts.map(p => postEngagement(p, followers)));
     }
 
     const totalPosts7d = last7.length;
     const totalPosts30d = last30.length;
 
-    // ── Build posts_data (all 30 posts with full detail) ──
-    const postsData = posts.map(p => ({
+    // ── Build posts_data (all fetched posts with full detail) ──
+    const postsData = allPosts.map(p => ({
       id: p.id,
       permalink: p.permalink,
       thumbnail_url: p.thumbnail_url,
@@ -286,7 +303,7 @@ Deno.serve(async (req) => {
       .sort((a, b) => (b.like_count + b.comments_count + b.saved + b.shares_count) - (a.like_count + a.comments_count + a.saved + a.shares_count))
       .slice(0, 5);
 
-    console.log(`[instagram-insights] metrics: engagement=${engagementRate}, avgLikes=${avgLikes}, top_posts=${sortedPosts.length}, posts30d=${totalPosts30d}`);
+    console.log(`[instagram-insights] metrics: eng7d=${engagementScore7d}, eng30d=${engagementScore30d}, engAll=${engagementScoreAll}, avgLikes=${avgLikes}, posts7d=${totalPosts7d}, posts30d=${totalPosts30d}, total_fetched=${allPosts.length}`);
 
     // ── Update monitored_profiles ──
     step = "update_profile";
@@ -299,7 +316,9 @@ Deno.serve(async (req) => {
       external_url: profileRes.website ?? null,
       display_name: profileRes.name ?? null,
       avatar_url: profileRes.profile_picture_url ?? null,
-      engagement_score_7d: engagementRate,
+      engagement_score_7d: engagementScore7d,
+      engagement_score_30d: engagementScore30d,
+      engagement_score_all: engagementScoreAll,
       avg_likes_recent: avgLikes,
       avg_comments_recent: avgComments,
       avg_views_recent: avgViews,
@@ -332,34 +351,39 @@ Deno.serve(async (req) => {
 
     // ── Upsert profile_history (one per day, São Paulo timezone) ──
     step = "upsert_history";
-    const historyData = {
+    const historyData: Record<string, unknown> = {
       profile_id,
       user_id: profile.user_id,
       followers_count: followers,
       posts_count: safeNum(profileRes.media_count),
-      engagement_score: engagementRate,
-      avg_engagement_7d: engagementRate,
-      avg_views_7d: avgViews,
-      avg_likes_7d: avgLikes,
+      engagement_score: engagementScore7d,
+      avg_engagement_7d: engagementScore7d,
+      avg_engagement_30d: engagementScore30d,
+      avg_views_7d: last7.length > 0
+        ? Math.round(last7.map(p => safeNum(p.video_views) || safeNum(p.plays) || safeNum(p.impressions)).filter(v => v > 0).reduce((a, b) => a + b, 0) / last7.length)
+        : avgViews,
+      avg_views_30d: avgViews,
+      avg_likes_7d: last7.length > 0
+        ? Math.round(last7.reduce((s, p) => s + safeNum(p.like_count), 0) / last7.length)
+        : avgLikes,
+      avg_likes_30d: avgLikes,
+      posts_count_7d: totalPosts7d,
+      posts_count_30d: totalPosts30d,
       recorded_at: nowIso,
     };
 
-    // Use RPC-style query to find existing record for today in São Paulo timezone
+    // Calculate today's window in São Paulo timezone (UTC-3)
+    const spNow = new Date(now.getTime() - 3 * 3600000);
+    const spDateStr = spNow.toISOString().slice(0, 10);
+    const todayStartUtc = new Date(spDateStr + "T03:00:00Z").toISOString();
+    const tomorrowStartUtc = new Date(new Date(spDateStr + "T03:00:00Z").getTime() + 86400000).toISOString();
+
     const { data: existingHist } = await sb
       .from("profile_history")
       .select("id")
       .eq("profile_id", profile_id)
-      .gte("recorded_at", (() => {
-        // Calculate today's start in São Paulo (UTC-3)
-        const spNow = new Date(now.getTime() - 3 * 3600000);
-        const spDateStr = spNow.toISOString().slice(0, 10);
-        return new Date(spDateStr + "T03:00:00Z").toISOString(); // midnight SP = 03:00 UTC
-      })())
-      .lt("recorded_at", (() => {
-        const spNow = new Date(now.getTime() - 3 * 3600000);
-        const spDateStr = spNow.toISOString().slice(0, 10);
-        return new Date(new Date(spDateStr + "T03:00:00Z").getTime() + 86400000).toISOString();
-      })())
+      .gte("recorded_at", todayStartUtc)
+      .lt("recorded_at", tomorrowStartUtc)
       .limit(1);
 
     if (existingHist && existingHist.length > 0) {
@@ -376,7 +400,9 @@ Deno.serve(async (req) => {
       JSON.stringify({
         success: true,
         followers,
-        engagement_rate: engagementRate,
+        engagement_score_7d: engagementScore7d,
+        engagement_score_30d: engagementScore30d,
+        engagement_score_all: engagementScoreAll,
         avg_likes: avgLikes,
         avg_comments: avgComments,
         avg_views: avgViews,
@@ -385,7 +411,7 @@ Deno.serve(async (req) => {
         best_post_engagement: bestPostEngagement,
         total_posts_7d: totalPosts7d,
         total_posts_30d: totalPosts30d,
-        posts_fetched: posts.length,
+        posts_fetched: allPosts.length,
         top_posts_count: sortedPosts.length,
         reach_30d: reach30d,
         impressions_30d: impressions30d,

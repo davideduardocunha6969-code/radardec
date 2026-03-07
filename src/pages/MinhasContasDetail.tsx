@@ -209,37 +209,55 @@ function MiniMetric({ label, value, icon }: { label: string; value: string; icon
 // ── SECTION 2: Engagement ──
 
 function EngagementSection({ profile: p }: { profile: OwnProfile }) {
-  const engRate = p.engagement_rate ?? p.engagement_score_7d;
+  const eng7d = p.engagement_score_7d;
+  const eng30d = (p as any).engagement_score_30d as number | null;
+  const engAll = (p as any).engagement_score_all as number | null;
   return (
     <div className="space-y-3">
       <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
         <TrendingUp className="w-5 h-5 text-primary" /> Engajamento
       </h3>
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
-        <Card className="col-span-2 sm:col-span-1">
+      {/* Engagement rates row */}
+      <div className="grid grid-cols-3 gap-3">
+        <Card>
           <CardContent className="p-4 text-center">
-            <p className="text-xs text-muted-foreground">Taxa (7 dias)</p>
-            <p className="text-2xl font-bold text-primary">{engRate != null ? `${engRate.toFixed(2)}%` : "—"}</p>
+            <p className="text-xs text-muted-foreground">Taxa 7 dias</p>
+            <p className="text-2xl font-bold text-primary">{eng7d != null ? `${eng7d.toFixed(2)}%` : "—"}</p>
           </CardContent>
         </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-muted-foreground">Taxa 30 dias</p>
+            <p className="text-2xl font-bold text-primary">{eng30d != null ? `${eng30d.toFixed(2)}%` : "—"}</p>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="p-4 text-center">
+            <p className="text-xs text-muted-foreground">Taxa Histórica</p>
+            <p className="text-2xl font-bold text-primary">{engAll != null ? `${engAll.toFixed(2)}%` : "—"}</p>
+          </CardContent>
+        </Card>
+      </div>
+      {/* Averages row */}
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
         <Card><CardContent className="p-4 text-center">
-          <p className="text-xs text-muted-foreground">Likes médios</p>
+          <p className="text-xs text-muted-foreground">Likes médios (30d)</p>
           <p className="text-lg font-bold">{p.avg_likes_recent != null ? formatNumber(Math.round(p.avg_likes_recent)) : "—"}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
-          <p className="text-xs text-muted-foreground">Comentários</p>
+          <p className="text-xs text-muted-foreground">Comentários (30d)</p>
           <p className="text-lg font-bold">{p.avg_comments_recent != null ? formatNumber(Math.round(p.avg_comments_recent)) : "—"}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
-          <p className="text-xs text-muted-foreground">Saves médios</p>
+          <p className="text-xs text-muted-foreground">Saves (30d)</p>
           <p className="text-lg font-bold">{p.avg_saves_recent != null ? String(Math.round(p.avg_saves_recent)) : "—"}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
-          <p className="text-xs text-muted-foreground">Shares médios</p>
+          <p className="text-xs text-muted-foreground">Shares (30d)</p>
           <p className="text-lg font-bold">{p.avg_shares_recent != null ? String(Math.round(p.avg_shares_recent)) : "—"}</p>
         </CardContent></Card>
         <Card><CardContent className="p-4 text-center">
-          <p className="text-xs text-muted-foreground">Views (Reels)</p>
+          <p className="text-xs text-muted-foreground">Views (30d)</p>
           <p className="text-lg font-bold">{p.avg_views_recent != null ? formatNumber(Math.round(p.avg_views_recent)) : "—"}</p>
         </CardContent></Card>
       </div>
