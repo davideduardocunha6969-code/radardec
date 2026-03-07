@@ -1760,8 +1760,10 @@ export type Database = {
           avg_posts_per_day: number | null
           avg_posts_per_month: number | null
           avg_posts_per_week: number | null
+          avg_saves_recent: number | null
           avg_shares_recent: number | null
           avg_views_recent: number | null
+          best_post_engagement: number | null
           biography: string | null
           created_at: string | null
           date_joined: string | null
@@ -1784,6 +1786,7 @@ export type Database = {
           platform: string
           posts_count: number | null
           top_posts: Json | null
+          total_posts_7d: number | null
           user_id: string
           username: string
         }
@@ -1794,8 +1797,10 @@ export type Database = {
           avg_posts_per_day?: number | null
           avg_posts_per_month?: number | null
           avg_posts_per_week?: number | null
+          avg_saves_recent?: number | null
           avg_shares_recent?: number | null
           avg_views_recent?: number | null
+          best_post_engagement?: number | null
           biography?: string | null
           created_at?: string | null
           date_joined?: string | null
@@ -1818,6 +1823,7 @@ export type Database = {
           platform: string
           posts_count?: number | null
           top_posts?: Json | null
+          total_posts_7d?: number | null
           user_id: string
           username: string
         }
@@ -1828,8 +1834,10 @@ export type Database = {
           avg_posts_per_day?: number | null
           avg_posts_per_month?: number | null
           avg_posts_per_week?: number | null
+          avg_saves_recent?: number | null
           avg_shares_recent?: number | null
           avg_views_recent?: number | null
+          best_post_engagement?: number | null
           biography?: string | null
           created_at?: string | null
           date_joined?: string | null
@@ -1852,6 +1860,7 @@ export type Database = {
           platform?: string
           posts_count?: number | null
           top_posts?: Json | null
+          total_posts_7d?: number | null
           user_id?: string
           username?: string
         }

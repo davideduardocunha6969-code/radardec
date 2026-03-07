@@ -16,8 +16,11 @@ interface MediaPost {
   impressions?: number;
   saved?: number;
   shares_count?: number;
+  video_views?: number;
+  plays?: number;
   timestamp?: string;
   media_type?: string;
+  media_product_type?: string;
   thumbnail_url?: string;
   permalink?: string;
   caption?: string;
@@ -37,8 +40,21 @@ function safeNum(v: unknown): number {
   return typeof v === "number" ? v : 0;
 }
 
-function postEngagement(p: MediaPost): number {
+function postEngagement(p: MediaPost, followers: number): number {
+  const total = safeNum(p.like_count) + safeNum(p.comments_count) + safeNum(p.saved) + safeNum(p.shares_count);
+  return followers > 0 ? Math.round((total / followers) * 100 * 100) / 100 : 0;
+}
+
+function postEngagementRaw(p: MediaPost): number {
   return safeNum(p.like_count) + safeNum(p.comments_count) + safeNum(p.saved) + safeNum(p.shares_count);
+}
+
+function isWithinDays(timestamp: string | undefined, days: number): boolean {
+  if (!timestamp) return false;
+  const postDate = new Date(timestamp);
+  const cutoff = new Date();
+  cutoff.setDate(cutoff.getDate() - days);
+  return postDate >= cutoff;
 }
 
 Deno.serve(async (req) => {
@@ -54,7 +70,6 @@ Deno.serve(async (req) => {
     const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
     const sb = createClient(supabaseUrl, serviceRoleKey);
 
-    // 1. Fetch profile from DB
     const { data: profile, error: profileErr } = await sb
       .from("monitored_profiles")
       .select("id, instagram_business_id, legal_area, user_id")
@@ -68,44 +83,28 @@ Deno.serve(async (req) => {
     const token = getTokenForArea(profile.legal_area);
     if (!token) throw new Error(`Token Meta não encontrado para legal_area '${profile.legal_area}'`);
 
-    // 2a. Profile data
-    const profileRes = await fetch(
-      `${GRAPH_API}/${igId}?fields=followers_count,media_count,biography,website,name,profile_picture_url&access_token=${token}`
-    );
+    // Fetch profile data and posts in parallel
+    const [profileRes, mediaRes] = await Promise.all([
+      fetch(`${GRAPH_API}/${igId}?fields=followers_count,media_count,biography,website,name,profile_picture_url&access_token=${token}`),
+      fetch(`${GRAPH_API}/${igId}/media?fields=id,like_count,comments_count,reach,impressions,saved,shares_count,video_views,plays,media_product_type,timestamp,media_type,thumbnail_url,permalink,caption&limit=30&access_token=${token}`),
+    ]);
+
     const profileData = await profileRes.json();
     if (profileData.error) throw new Error("Meta API (perfil): " + (profileData.error.message ?? JSON.stringify(profileData.error)));
 
-    const followers = safeNum(profileData.followers_count);
-
-    // 2b. Recent posts
-    const mediaRes = await fetch(
-      `${GRAPH_API}/${igId}/media?fields=id,like_count,comments_count,reach,impressions,saved,shares_count,timestamp,media_type,thumbnail_url,permalink,caption&limit=20&access_token=${token}`
-    );
     const mediaData = await mediaRes.json();
     const posts: MediaPost[] = mediaData.data ?? [];
 
-    // 2c. Profile insights (optional, may fail for dev accounts)
-    let weeklyInsights: Record<string, unknown> | null = null;
-    try {
-      const insightsRes = await fetch(
-        `${GRAPH_API}/${igId}/insights?metric=reach,impressions,follower_count&period=week&access_token=${token}`
-      );
-      const insightsData = await insightsRes.json();
-      if (!insightsData.error) {
-        weeklyInsights = insightsData;
-      }
-    } catch {
-      // Ignore insights errors gracefully
-    }
+    const followers = safeNum(profileData.followers_count);
 
-    // 3. Calculate metrics
+    // Calculate metrics
     const last7 = posts.slice(0, 7);
     const last10 = posts.slice(0, 10);
 
     // Engagement rate from last 7 posts
     let engagementRate: number | null = null;
     if (last7.length > 0 && followers > 0) {
-      const totalEng = last7.reduce((s, p) => s + postEngagement(p), 0);
+      const totalEng = last7.reduce((s, p) => s + postEngagementRaw(p), 0);
       engagementRate = Math.round(((totalEng) / (last7.length * followers)) * 100 * 100) / 100;
     }
 
@@ -118,33 +117,56 @@ Deno.serve(async (req) => {
       ? Math.round(last10.reduce((s, p) => s + safeNum(p.comments_count), 0) / last10.length)
       : null;
 
-    // avg_views = impressions if available, otherwise null
-    const impressionsArr = last10.map((p) => safeNum(p.impressions)).filter((v) => v > 0);
-    const avgViews = impressionsArr.length > 0
-      ? Math.round(impressionsArr.reduce((a, b) => a + b, 0) / impressionsArr.length)
+    // avg_views = video_views for reels/videos, fallback to impressions
+    const viewsArr = last10.map((p) => {
+      const vv = safeNum(p.video_views) || safeNum(p.plays);
+      return vv > 0 ? vv : safeNum(p.impressions);
+    }).filter((v) => v > 0);
+    const avgViews = viewsArr.length > 0
+      ? Math.round(viewsArr.reduce((a, b) => a + b, 0) / viewsArr.length)
       : null;
+
+    // avg shares
+    const avgShares = last10.length > 0
+      ? Math.round(last10.reduce((s, p) => s + safeNum(p.shares_count), 0) / last10.length * 100) / 100
+      : null;
+
+    // avg saves
+    const avgSaves = last10.length > 0
+      ? Math.round(last10.reduce((s, p) => s + safeNum(p.saved), 0) / last10.length * 100) / 100
+      : null;
+
+    // best_post_engagement from all fetched posts (up to 30)
+    let bestPostEngagement: number | null = null;
+    if (posts.length > 0 && followers > 0) {
+      bestPostEngagement = Math.max(...posts.map((p) => postEngagement(p, followers)));
+    }
+
+    // total_posts_7d
+    const totalPosts7d = posts.filter((p) => isWithinDays(p.timestamp, 7)).length;
 
     // Top 5 posts by engagement
     const sortedPosts = [...posts]
-      .sort((a, b) => postEngagement(b) - postEngagement(a))
+      .sort((a, b) => postEngagementRaw(b) - postEngagementRaw(a))
       .slice(0, 5)
       .map((p) => ({
         id: p.id,
         permalink: p.permalink,
         thumbnail_url: p.thumbnail_url,
-        caption: p.caption?.slice(0, 200),
+        media_type: p.media_type,
         like_count: safeNum(p.like_count),
         comments_count: safeNum(p.comments_count),
-        reach: safeNum(p.reach),
-        impressions: safeNum(p.impressions),
         saved: safeNum(p.saved),
         shares_count: safeNum(p.shares_count),
-        engagement: postEngagement(p),
+        video_views: safeNum(p.video_views) || safeNum(p.plays),
+        impressions: safeNum(p.impressions),
+        reach: safeNum(p.reach),
         timestamp: p.timestamp,
-        media_type: p.media_type,
+        engagement_post: postEngagement(p, followers),
+        caption: p.caption?.slice(0, 100) ?? null,
       }));
 
-    // 4. Update monitored_profiles
+    // Update monitored_profiles
     const now = new Date().toISOString();
     const updateData: Record<string, unknown> = {
       followers_count: followers,
@@ -157,6 +179,10 @@ Deno.serve(async (req) => {
       avg_likes_recent: avgLikes,
       avg_comments_recent: avgComments,
       avg_views_recent: avgViews,
+      avg_shares_recent: avgShares,
+      avg_saves_recent: avgSaves,
+      best_post_engagement: bestPostEngagement,
+      total_posts_7d: totalPosts7d,
       top_posts: sortedPosts,
       last_scanned_at: now,
     };
@@ -167,7 +193,7 @@ Deno.serve(async (req) => {
       .eq("id", profile_id);
     if (updateErr) console.error("Erro ao atualizar perfil:", updateErr.message);
 
-    // 5. Insert profile_history
+    // Insert profile_history
     const { error: histErr } = await sb.from("profile_history").insert({
       profile_id,
       user_id: profile.user_id,
@@ -189,9 +215,12 @@ Deno.serve(async (req) => {
         avg_likes: avgLikes,
         avg_comments: avgComments,
         avg_views: avgViews,
+        avg_shares: avgShares,
+        avg_saves: avgSaves,
+        best_post_engagement: bestPostEngagement,
+        total_posts_7d: totalPosts7d,
         posts_fetched: posts.length,
         top_posts_count: sortedPosts.length,
-        weekly_insights_available: !!weeklyInsights,
       }),
       { headers: { ...corsHeaders, "Content-Type": "application/json" } }
     );
