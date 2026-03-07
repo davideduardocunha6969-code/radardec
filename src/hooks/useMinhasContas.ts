@@ -12,6 +12,7 @@ export interface OwnProfile {
   display_name: string | null;
   followers_count: number | null;
   following_count: number | null;
+  follows_count: number | null;
   posts_count: number | null;
   avatar_url: string | null;
   biography: string | null;
@@ -26,6 +27,7 @@ export interface OwnProfile {
   engagement_score_7d: number | null;
   engagement_rate: number | null;
   top_posts: unknown[] | null;
+  posts_data: unknown[] | null;
   is_own_account: boolean;
   is_active: boolean | null;
   last_scanned_at: string | null;
@@ -35,6 +37,14 @@ export interface OwnProfile {
   avg_saves_recent: number | null;
   best_post_engagement: number | null;
   total_posts_7d: number | null;
+  total_posts_30d: number | null;
+  reach_30d: number | null;
+  impressions_30d: number | null;
+  profile_views_30d: number | null;
+  website_clicks_30d: number | null;
+  audience_gender_age: unknown | null;
+  audience_city: unknown | null;
+  audience_country: unknown | null;
 }
 
 export function useMinhasContas() {
