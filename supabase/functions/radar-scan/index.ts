@@ -67,6 +67,7 @@ interface MappedPost {
   username: string | null;
   followers_at_capture: number | null;
   timestamp: string | null;
+  is_pinned: boolean;
 }
 
 function mapInstagram(item: Record<string, unknown>): MappedPost {
@@ -80,6 +81,7 @@ function mapInstagram(item: Record<string, unknown>): MappedPost {
     username: (item.ownerUsername as string) || null,
     followers_at_capture: (item.ownerFollowersCount as number) || null,
     timestamp: (item.timestamp as string) || null,
+    is_pinned: (item.isPinned as boolean) || false,
   };
 }
 
@@ -96,6 +98,7 @@ function mapTiktok(item: Record<string, unknown>): MappedPost {
     username: (authorMeta.name as string) || null,
     followers_at_capture: (authorMeta.fans as number) || null,
     timestamp: (item.createTimeISO as string) || null,
+    is_pinned: (item.isPinned as boolean) || false,
   };
 }
 
@@ -325,6 +328,13 @@ async function scanProfiles(
       const mapper = isIg ? mapInstagram : mapTiktok;
       const mapped = items.map(mapper);
 
+      // Separar fixados dos não-fixados
+      const pinnedPosts = mapped.filter(p => p.is_pinned);
+      const regularPosts = mapped.filter(p => !p.is_pinned);
+      const postsForMetrics = regularPosts.length >= 3 ? regularPosts : mapped;
+      // Log para diagnóstico
+      console.log(`[radar-scan] ${profile.username}: ${pinnedPosts.length} fixados excluídos do cálculo de métricas`);
+
       // ── Profile metadata ──
       let profileFollowers = profile.followers_count;
       const updateData: Record<string, unknown> = { last_scanned_at: now };
@@ -357,8 +367,8 @@ async function scanProfiles(
       }
 
       // ── Calculate posting frequency & engagement ──
-      const freq = calcPostFrequency(mapped);
-      const engagementScore = calcEngagement7d(mapped, profileFollowers);
+      const freq = calcPostFrequency(postsForMetrics);
+      const engagementScore = calcEngagement7d(postsForMetrics, profileFollowers);
 
       if (freq.avg_posts_per_day != null) updateData.avg_posts_per_day = freq.avg_posts_per_day;
       if (freq.avg_posts_per_week != null) updateData.avg_posts_per_week = freq.avg_posts_per_week;
@@ -368,11 +378,11 @@ async function scanProfiles(
       await supabase.from("monitored_profiles").update(updateData).eq("id", profile.id);
 
       // ── Insert profile_history snapshot ──
-      const avgViews7d = mapped.length > 0
-        ? Math.round(mapped.reduce((s, p) => s + p.views, 0) / mapped.length * 100) / 100
+      const avgViews7d = postsForMetrics.length > 0
+        ? Math.round(postsForMetrics.reduce((s, p) => s + p.views, 0) / postsForMetrics.length * 100) / 100
         : null;
-      const avgLikes7d = mapped.length > 0
-        ? Math.round(mapped.reduce((s, p) => s + p.likes, 0) / mapped.length * 100) / 100
+      const avgLikes7d = postsForMetrics.length > 0
+        ? Math.round(postsForMetrics.reduce((s, p) => s + p.likes, 0) / postsForMetrics.length * 100) / 100
         : null;
 
       await supabase.from("profile_history").insert({
