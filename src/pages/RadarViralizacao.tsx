@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Radar, Plus, Trash2, Loader2, Eye, Heart, MessageCircle, ExternalLink, CheckCircle2, User, BarChart3, TrendingUp, Calendar, Video, X, Play, Camera, Music, Facebook, RefreshCw, Globe, Shield, Briefcase, Users, ImageIcon, Scale, Bookmark, Share2 } from "lucide-react";
+import { Radar, Plus, Trash2, Loader2, Eye, Heart, MessageCircle, ExternalLink, CheckCircle2, User, BarChart3, TrendingUp, Calendar, Video, X, Play, Camera, Music, Facebook, RefreshCw, Globe, Shield, Briefcase, Users, ImageIcon, Scale, Bookmark, Share2, Clock } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -647,7 +647,10 @@ function InstagramContasTab() {
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between flex-wrap gap-2">
-        <span className="text-sm text-muted-foreground">{instagramProfiles.length} conta(s) monitorada(s)</span>
+        <div className="flex items-center gap-3">
+          <span className="text-sm text-muted-foreground">{instagramProfiles.length} conta(s) monitorada(s)</span>
+          <NextAutoScanIndicator profiles={instagramProfiles} />
+        </div>
         <Button size="sm" disabled={isScanning || instagramProfiles.length === 0} onClick={() => scanAllByPlatform("instagram")}>
           {isScanning ? <Loader2 className="w-4 h-4 mr-1.5 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-1.5" />}
           Escanear todas as contas Instagram
@@ -960,6 +963,40 @@ function InstagramAnalysisSheet({
         </div>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function NextAutoScanIndicator({ profiles }: { profiles: OwnProfile[] }) {
+  const lastScan = useMemo(() => {
+    const dates = profiles
+      .map((p) => p.last_scanned_at)
+      .filter(Boolean)
+      .map((d) => new Date(d!).getTime());
+    return dates.length > 0 ? Math.max(...dates) : null;
+  }, [profiles]);
+
+  if (!lastScan) return null;
+
+  const nextScan = lastScan + 6 * 60 * 60 * 1000;
+  const now = Date.now();
+  const diffMs = nextScan - now;
+
+  if (diffMs <= 0) {
+    return (
+      <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+        <Clock className="w-3 h-3" />Scan automático em breve
+      </span>
+    );
+  }
+
+  const hours = Math.floor(diffMs / 3600000);
+  const minutes = Math.floor((diffMs % 3600000) / 60000);
+  const label = hours > 0 ? `${hours}h${minutes > 0 ? `${minutes}min` : ""}` : `${minutes}min`;
+
+  return (
+    <span className="flex items-center gap-1 text-[10px] text-muted-foreground">
+      <Clock className="w-3 h-3" />Próximo scan: {label}
+    </span>
   );
 }
 

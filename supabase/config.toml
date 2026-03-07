@@ -92,3 +92,6 @@ verify_jwt = false
 
  [functions.instagram-insights]
  verify_jwt = false
+
+ [functions.instagram-insights-all]
+ verify_jwt = false
