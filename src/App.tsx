@@ -80,6 +80,7 @@ const App = () => (
               <Route path="/marketing/modelador" element={<ProtectedRoute pageKey="marketing-modelador"><ModeladorConteudo /></ProtectedRoute>} />
               <Route path="/marketing/atividades" element={<ProtectedRoute pageKey="marketing-atividades"><AtividadesMarketing /></ProtectedRoute>} />
               <Route path="/marketing/radar" element={<ProtectedRoute pageKey="marketing-radar"><RadarViralizacao /></ProtectedRoute>} />
+              <Route path="/minhas-contas/:id" element={<ProtectedRoute pageKey="marketing-radar"><MinhasContasDetail /></ProtectedRoute>} />
               <Route path="/agenda" element={<Agenda />} />
               <Route path="/meu-painel" element={<MeuPainel />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
