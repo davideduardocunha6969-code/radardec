@@ -45,6 +45,12 @@ export interface ProfileHistory {
   avg_likes_7d: number | null;
   engagement_score: number | null;
   recorded_at: string;
+  avg_engagement_7d: number | null;
+  avg_engagement_30d: number | null;
+  avg_views_30d: number | null;
+  avg_likes_30d: number | null;
+  posts_count_7d: number | null;
+  posts_count_30d: number | null;
 }
 
 export interface MonitoredTopic {
