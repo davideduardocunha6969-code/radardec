@@ -1970,34 +1970,52 @@ export type Database = {
       }
       profile_history: {
         Row: {
+          avg_engagement_30d: number | null
+          avg_engagement_7d: number | null
+          avg_likes_30d: number | null
           avg_likes_7d: number | null
+          avg_views_30d: number | null
           avg_views_7d: number | null
           engagement_score: number | null
           followers_count: number | null
           id: string
           posts_count: number | null
+          posts_count_30d: number | null
+          posts_count_7d: number | null
           profile_id: string | null
           recorded_at: string | null
           user_id: string
         }
         Insert: {
+          avg_engagement_30d?: number | null
+          avg_engagement_7d?: number | null
+          avg_likes_30d?: number | null
           avg_likes_7d?: number | null
+          avg_views_30d?: number | null
           avg_views_7d?: number | null
           engagement_score?: number | null
           followers_count?: number | null
           id?: string
           posts_count?: number | null
+          posts_count_30d?: number | null
+          posts_count_7d?: number | null
           profile_id?: string | null
           recorded_at?: string | null
           user_id: string
         }
         Update: {
+          avg_engagement_30d?: number | null
+          avg_engagement_7d?: number | null
+          avg_likes_30d?: number | null
           avg_likes_7d?: number | null
+          avg_views_30d?: number | null
           avg_views_7d?: number | null
           engagement_score?: number | null
           followers_count?: number | null
           id?: string
           posts_count?: number | null
+          posts_count_30d?: number | null
+          posts_count_7d?: number | null
           profile_id?: string | null
           recorded_at?: string | null
           user_id?: string
