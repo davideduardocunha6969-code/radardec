@@ -31,6 +31,7 @@ export interface OwnProfile {
   last_scanned_at: string | null;
   created_at: string | null;
   legal_area: string | null;
+  instagram_business_id: string | null;
 }
 
 export function useMinhasContas() {
@@ -66,7 +67,19 @@ export function useMinhasContas() {
     if (!userData.user) throw new Error("Não autenticado");
     const toastId = toast.loading("Escaneando perfil…");
     try {
-      const { data, error } = await supabase.functions.invoke("profile-deep-scan", {
+      // Use Meta Graph API (instagram-insights) for profiles with instagram_business_id
+      const profile = ownProfiles.find((p) => p.id === profileId);
+      if (profile?.instagram_business_id) {
+        const { data, error } = await supabase.functions.invoke("instagram-insights", {
+          body: { profile_id: profileId },
+        });
+        if (error) throw error;
+        toast.success("Scan concluído!", { id: toastId });
+        queryClient.invalidateQueries({ queryKey: ["monitored_profiles"] });
+        return data;
+      }
+      // Fallback: radar-scan via Apify
+      const { data, error } = await supabase.functions.invoke("radar-scan", {
         body: { user_id: userData.user.id, profile_id: profileId },
       });
       if (error) throw error;
