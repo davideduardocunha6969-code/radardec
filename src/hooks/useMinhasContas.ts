@@ -23,6 +23,7 @@ export interface OwnProfile {
   avg_views_recent: number | null;
   avg_comments_recent: number | null;
   avg_shares_recent: number | null;
+  engagement_score_7d: number | null;
   engagement_rate: number | null;
   top_posts: unknown[] | null;
   is_own_account: boolean;
