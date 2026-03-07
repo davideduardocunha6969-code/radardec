@@ -113,6 +113,21 @@ export function useMinhasContas() {
     onError: (e) => toast.error("Erro: " + e.message),
   });
 
+  const updateLegalArea = useMutation({
+    mutationFn: async ({ id, legal_area }: { id: string; legal_area: string | null }) => {
+      const { error } = await supabase
+        .from("monitored_profiles")
+        .update({ legal_area } as never)
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["monitored_profiles"] });
+      toast.success("Ramo do direito atualizado");
+    },
+    onError: (e) => toast.error("Erro: " + e.message),
+  });
+
   const fetchHistory = async (profileId: string): Promise<ProfileHistory[]> => {
     const { data, error } = await supabase
       .from("profile_history")
@@ -133,6 +148,7 @@ export function useMinhasContas() {
     scanProfile,
     scanAllByPlatform,
     markAsOwn,
+    updateLegalArea,
     fetchHistory,
   };
 }
