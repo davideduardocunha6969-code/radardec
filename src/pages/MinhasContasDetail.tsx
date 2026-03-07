@@ -254,17 +254,6 @@ function AudienceSection({ profile: p }: { profile: OwnProfile }) {
   const city = (p as any).audience_city;
   const country = (p as any).audience_country;
 
-  if (!genderAge && !city && !country) {
-    return (
-      <div className="space-y-3">
-        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-          <Users className="w-5 h-5 text-primary" /> Audiência
-        </h3>
-        <p className="text-sm text-muted-foreground">Dados de audiência não disponíveis (requer conta profissional com permissões completas).</p>
-      </div>
-    );
-  }
-
   // Parse gender/age for pie chart
   const genderData = useMemo(() => {
     if (!genderAge || typeof genderAge !== "object") return [];
@@ -294,6 +283,17 @@ function AudienceSection({ profile: p }: { profile: OwnProfile }) {
       .slice(0, 5)
       .map(([name, value]) => ({ name, value: value as number }));
   }, [country]);
+
+  if (!genderAge && !city && !country) {
+    return (
+      <div className="space-y-3">
+        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+          <Users className="w-5 h-5 text-primary" /> Audiência
+        </h3>
+        <p className="text-sm text-muted-foreground">Dados de audiência não disponíveis (requer conta profissional com permissões completas).</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-3">
