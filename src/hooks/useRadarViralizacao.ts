@@ -256,8 +256,33 @@ export function useRadarViralizacao() {
     onError: (e) => toast.error("Erro: " + e.message),
   });
 
+  const monitoredProfiles = profiles.filter((p) => !p.is_own_account);
+  const ownAccounts = profiles.filter((p) => p.is_own_account);
+
+  const addOwnAccount = useMutation({
+    mutationFn: async (input: { username: string; platform: "instagram" | "tiktok" | "facebook" }) => {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("Não autenticado");
+      const { error } = await supabase.from("monitored_profiles").insert({
+        user_id: userData.user.id,
+        username: input.username.replace("@", ""),
+        platform: input.platform,
+        is_own_account: true,
+        is_active: true,
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["monitored_profiles"] });
+      toast.success("Conta própria adicionada!");
+    },
+    onError: (e) => toast.error("Erro ao adicionar conta: " + e.message),
+  });
+
   return {
     profiles,
+    monitoredProfiles,
+    ownAccounts,
     topics,
     viralContent,
     isScanning,
@@ -265,6 +290,7 @@ export function useRadarViralizacao() {
     loadingTopics,
     loadingVirals,
     addProfile,
+    addOwnAccount,
     removeProfile,
     toggleProfile,
     addTopic,
