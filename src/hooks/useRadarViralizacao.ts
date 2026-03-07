@@ -7,7 +7,7 @@ export interface MonitoredProfile {
   id: string;
   user_id: string;
   username: string;
-  platform: "instagram" | "tiktok";
+  platform: "instagram" | "tiktok" | "facebook";
   display_name: string | null;
   followers_count: number | null;
   avatar_url: string | null;
@@ -19,6 +19,19 @@ export interface MonitoredProfile {
   avg_posts_per_week: number | null;
   avg_posts_per_month: number | null;
   engagement_score_7d: number | null;
+  is_own_account: boolean;
+  following_count: number | null;
+  biography: string | null;
+  is_business: boolean | null;
+  is_verified: boolean | null;
+  external_url: string | null;
+  date_joined: string | null;
+  avg_likes_recent: number | null;
+  avg_views_recent: number | null;
+  avg_comments_recent: number | null;
+  avg_shares_recent: number | null;
+  engagement_rate: number | null;
+  top_posts: any[] | null;
 }
 
 export interface ProfileHistory {
