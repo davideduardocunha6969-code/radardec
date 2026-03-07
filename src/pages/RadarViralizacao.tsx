@@ -907,11 +907,17 @@ function MetricMiniCard({ label, value, icon }: { label: string; value: string; 
 }
 
 function TiktokContasTab() {
-  const { tiktokProfiles, loadingProfiles, isScanning, scanProfile, scanAllByPlatform, fetchHistory } = useMinhasContas();
+  const { tiktokProfiles, loadingProfiles, isScanning, scanProfile, scanAllByPlatform, fetchHistory, updateLegalArea } = useMinhasContas();
   const [selectedProfile, setSelectedProfile] = useState<OwnProfile | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [history, setHistory] = useState<ProfileHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [legalAreaFilter, setLegalAreaFilter] = useState<string | null>(null);
+
+  const filteredProfiles = useMemo(() => {
+    if (!legalAreaFilter) return tiktokProfiles;
+    return tiktokProfiles.filter((p) => p.legal_area === legalAreaFilter);
+  }, [tiktokProfiles, legalAreaFilter]);
 
   const openAnalysis = useCallback(async (profile: OwnProfile) => {
     setSelectedProfile(profile);
@@ -940,8 +946,10 @@ function TiktokContasTab() {
         </div>
       )}
 
+      <LegalAreaPillFilter accounts={tiktokProfiles} selected={legalAreaFilter} onSelect={setLegalAreaFilter} />
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {tiktokProfiles.map((p) => (
+        {filteredProfiles.map((p) => (
           <Card key={p.id} className="overflow-hidden">
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center gap-3">
@@ -952,6 +960,7 @@ function TiktokContasTab() {
                   <div className="flex gap-1.5 mt-1 flex-wrap">
                     <Badge className="bg-purple-600/20 text-purple-400 border-purple-500/30 text-[10px] px-1.5">TikTok</Badge>
                     {p.is_verified && <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px] px-1.5">Verificado</Badge>}
+                    {legalAreaBadge(p.legal_area)}
                   </div>
                 </div>
               </div>
@@ -989,7 +998,7 @@ function TiktokContasTab() {
       </div>
 
       {selectedProfile && (
-        <TiktokAnalysisSheet profile={selectedProfile} open={sheetOpen} onOpenChange={setSheetOpen} history={history} loadingHistory={loadingHistory} isScanning={isScanning} onScan={() => scanProfile(selectedProfile.id)} />
+        <TiktokAnalysisSheet profile={selectedProfile} open={sheetOpen} onOpenChange={setSheetOpen} history={history} loadingHistory={loadingHistory} isScanning={isScanning} onScan={() => scanProfile(selectedProfile.id)} onUpdateLegalArea={(v) => updateLegalArea.mutate({ id: selectedProfile.id, legal_area: v === "none" ? null : v })} />
       )}
     </div>
   );
