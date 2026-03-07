@@ -662,9 +662,12 @@ function InstagramContasTab() {
         </div>
       )}
 
+      {/* Legal area pill filter */}
+      <LegalAreaPillFilter accounts={instagramProfiles} selected={legalAreaFilter} onSelect={setLegalAreaFilter} />
+
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {instagramProfiles.map((p) => (
+        {filteredProfiles.map((p) => (
           <Card key={p.id} className="overflow-hidden">
             <CardContent className="p-4 space-y-3">
               {/* Identity */}
@@ -676,6 +679,7 @@ function InstagramContasTab() {
                   <div className="flex gap-1.5 mt-1 flex-wrap">
                     {p.is_verified && <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px] px-1.5">Verificado</Badge>}
                     {p.is_business && <Badge variant="secondary" className="text-[10px] px-1.5">Business</Badge>}
+                    {legalAreaBadge(p.legal_area)}
                   </div>
                 </div>
               </div>
@@ -729,6 +733,7 @@ function InstagramContasTab() {
           loadingHistory={loadingHistory}
           isScanning={isScanning}
           onScan={() => scanProfile(selectedProfile.id)}
+          onUpdateLegalArea={(v) => updateLegalArea.mutate({ id: selectedProfile.id, legal_area: v === "none" ? null : v })}
         />
       )}
     </div>
