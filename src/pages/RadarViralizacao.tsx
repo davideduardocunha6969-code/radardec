@@ -1100,9 +1100,28 @@ function TiktokContasTab() {
 }
 
 function TiktokAnalysisSheet({ profile: p, open, onOpenChange, history, loadingHistory, isScanning, onScan, onUpdateLegalArea }: { profile: OwnProfile; open: boolean; onOpenChange: (v: boolean) => void; history: ProfileHistory[]; loadingHistory: boolean; isScanning: boolean; onScan: () => void; onUpdateLegalArea: (v: string) => void }) {
-  const followersData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), value: h.followers_count ?? 0 }));
-  const engagementData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), value: h.engagement_score ?? 0 }));
+  const [periodo, setPeriodo] = useState<PeriodType>('7d');
   const topPosts = (p.top_posts as Array<{ url?: string; likesCount?: number; commentsCount?: number; videoViewCount?: number; displayUrl?: string; caption?: string }>) ?? [];
+  const latestHistory = history.length > 0 ? history[history.length - 1] : null;
+
+  const metricsForPeriod = useMemo(() => {
+    const pl = periodLabel(periodo);
+    if (periodo === '7d') {
+      return { engagement: p.engagement_rate != null ? `${p.engagement_rate.toFixed(2)}%` : "—", views: p.avg_views_recent != null ? formatNumber(Math.round(p.avg_views_recent)) : "—", shares: p.avg_shares_recent != null ? formatNumber(Math.round(p.avg_shares_recent)) : "—", period: pl };
+    }
+    if (periodo === '30d') {
+      return { engagement: latestHistory?.avg_engagement_30d != null ? `${latestHistory.avg_engagement_30d.toFixed(2)}%` : "—", views: latestHistory?.avg_views_30d != null ? formatNumber(Math.round(latestHistory.avg_views_30d)) : "—", shares: "—", period: pl };
+    }
+    if (history.length === 0) return { engagement: "—", views: "—", shares: "—", period: pl, firstScan: null };
+    const validEng = history.filter(h => h.engagement_score != null).map(h => h.engagement_score!);
+    const validViews = history.filter(h => h.avg_views_7d != null).map(h => h.avg_views_7d!);
+    const avgEng = validEng.length > 0 ? validEng.reduce((a, b) => a + b, 0) / validEng.length : null;
+    const avgV = validViews.length > 0 ? validViews.reduce((a, b) => a + b, 0) / validViews.length : null;
+    return { engagement: avgEng != null ? `${avgEng.toFixed(2)}%` : "—", views: avgV != null ? formatNumber(Math.round(avgV)) : "—", shares: "—", period: pl, firstScan: new Date(history[0].recorded_at).toLocaleDateString("pt-BR") };
+  }, [periodo, p, latestHistory, history]);
+
+  const followersData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }), value: h.followers_count ?? 0 }));
+  const engagementData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }), value: h.engagement_score ?? 0 }));
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -1127,16 +1146,21 @@ function TiktokAnalysisSheet({ profile: p, open, onOpenChange, history, loadingH
             </div>
           </div>
 
+          <PeriodSelector value={periodo} onChange={setPeriodo} />
+
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <MetricMiniCard label="Seguidores" value={formatNumber(p.followers_count)} icon={<Users className="w-4 h-4" />} />
             <MetricMiniCard label="Curtidas totais" value={formatNumber(p.following_count)} icon={<Heart className="w-4 h-4" />} />
             <MetricMiniCard label="Vídeos" value={formatNumber(p.posts_count)} icon={<Video className="w-4 h-4" />} />
-            <MetricMiniCard label="Engajamento" value={p.engagement_rate != null ? `${p.engagement_rate.toFixed(2)}%` : "—"} icon={<TrendingUp className="w-4 h-4" />} />
-            <MetricMiniCard label="Views médias" value={p.avg_views_recent != null ? formatNumber(Math.round(p.avg_views_recent)) : "—"} icon={<Eye className="w-4 h-4" />} />
-            <MetricMiniCard label="Compartilhamentos" value={p.avg_shares_recent != null ? formatNumber(Math.round(p.avg_shares_recent)) : "—"} icon={<ExternalLink className="w-4 h-4" />} />
+            <MetricMiniCard label={periodo === 'historico' ? "Engajamento médio" : "Engajamento"} value={metricsForPeriod.engagement} icon={<TrendingUp className="w-4 h-4" />} period={metricsForPeriod.period} />
+            <MetricMiniCard label={periodo === 'historico' ? "Views médias hist." : "Views médias"} value={metricsForPeriod.views} icon={<Eye className="w-4 h-4" />} period={metricsForPeriod.period} />
+            <MetricMiniCard label="Compartilhamentos" value={metricsForPeriod.shares} icon={<ExternalLink className="w-4 h-4" />} period={metricsForPeriod.period} />
           </div>
 
-          {/* Legal area */}
+          {periodo === 'historico' && (metricsForPeriod as any).firstScan && (
+            <p className="text-xs text-muted-foreground">Primeiro scan: {(metricsForPeriod as any).firstScan}</p>
+          )}
+
           <div className="flex items-center gap-3">
             <Scale className="w-4 h-4 text-muted-foreground" />
             <label className="text-sm text-muted-foreground">Ramo do Direito</label>
@@ -1146,22 +1170,23 @@ function TiktokAnalysisSheet({ profile: p, open, onOpenChange, history, loadingH
           {loadingHistory ? (
             <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
           ) : followersData.length > 1 ? (
-            <div>
-              <h4 className="text-sm font-semibold mb-2">Evolução de Seguidores</h4>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={followersData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /><XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" /><YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" /><Tooltip /><Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} /></LineChart>
-              </ResponsiveContainer>
-            </div>
+            <>
+              <div>
+                <h4 className="text-sm font-semibold mb-2">Evolução de Seguidores</h4>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={followersData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /><XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" /><YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" /><Tooltip content={<CustomChartTooltip />} /><Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} /></LineChart>
+                </ResponsiveContainer>
+              </div>
+              {periodo === 'historico' && engagementData.length > 1 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2">Evolução do Engajamento</h4>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart data={engagementData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /><XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" /><YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" /><Tooltip content={<CustomChartTooltip isEngagement />} /><Line type="monotone" dataKey="value" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} /></LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </>
           ) : <p className="text-xs text-muted-foreground text-center py-4">Dados históricos insuficientes.</p>}
-
-          {!loadingHistory && engagementData.length > 1 && (
-            <div>
-              <h4 className="text-sm font-semibold mb-2">Engajamento ao longo do tempo</h4>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={engagementData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /><XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" /><YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" /><Tooltip /><Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} /></BarChart>
-              </ResponsiveContainer>
-            </div>
-          )}
 
           {topPosts.length > 0 && (
             <div>
