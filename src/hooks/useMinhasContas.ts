@@ -23,6 +23,7 @@ export interface OwnProfile {
   avg_views_recent: number | null;
   avg_comments_recent: number | null;
   avg_shares_recent: number | null;
+  engagement_score_7d: number | null;
   engagement_rate: number | null;
   top_posts: unknown[] | null;
   is_own_account: boolean;
@@ -48,7 +49,11 @@ export function useMinhasContas() {
         .eq("is_own_account", true)
         .order("followers_count", { ascending: false });
       if (error) throw error;
-      return data as unknown as OwnProfile[];
+      const raw = data as Record<string, unknown>[];
+      return raw.map(p => ({
+        ...p,
+        engagement_rate: p.engagement_rate ?? p.engagement_score_7d ?? null,
+      })) as unknown as OwnProfile[];
     },
   });
 

@@ -694,7 +694,7 @@ function InstagramContasTab() {
               {/* Engagement */}
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Engajamento</span>
-                <EngagementBadgeInline rate={p.engagement_rate} />
+                <EngagementBadgeInline rate={p.engagement_rate ?? p.engagement_score_7d ?? null} />
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Views médias</span>
@@ -774,7 +774,7 @@ function InstagramAnalysisSheet({
     const pl = periodLabel(periodo);
     if (periodo === '7d') {
       return {
-        engagement: p.engagement_rate != null ? `${p.engagement_rate.toFixed(2)}%` : "—",
+         engagement: (p.engagement_rate ?? p.engagement_score_7d) != null ? `${(p.engagement_rate ?? p.engagement_score_7d)!.toFixed(2)}%` : "—",
         views: p.avg_views_recent != null ? formatNumber(Math.round(p.avg_views_recent)) : "—",
         likes: p.avg_likes_recent != null ? formatNumber(Math.round(p.avg_likes_recent)) : "—",
         period: pl,
@@ -1066,7 +1066,7 @@ function TiktokContasTab() {
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Engajamento</span>
-                <EngagementBadgeInline rate={p.engagement_rate} />
+                <EngagementBadgeInline rate={p.engagement_rate ?? p.engagement_score_7d ?? null} />
               </div>
               <div className="flex items-center justify-between text-xs">
                 <span className="text-muted-foreground">Views médias</span>
@@ -1107,7 +1107,7 @@ function TiktokAnalysisSheet({ profile: p, open, onOpenChange, history, loadingH
   const metricsForPeriod = useMemo(() => {
     const pl = periodLabel(periodo);
     if (periodo === '7d') {
-      return { engagement: p.engagement_rate != null ? `${p.engagement_rate.toFixed(2)}%` : "—", views: p.avg_views_recent != null ? formatNumber(Math.round(p.avg_views_recent)) : "—", shares: p.avg_shares_recent != null ? formatNumber(Math.round(p.avg_shares_recent)) : "—", period: pl };
+      return { engagement: (p.engagement_rate ?? p.engagement_score_7d) != null ? `${(p.engagement_rate ?? p.engagement_score_7d)!.toFixed(2)}%` : "—", views: p.avg_views_recent != null ? formatNumber(Math.round(p.avg_views_recent)) : "—", shares: p.avg_shares_recent != null ? formatNumber(Math.round(p.avg_shares_recent)) : "—", period: pl };
     }
     if (periodo === '30d') {
       return { engagement: latestHistory?.avg_engagement_30d != null ? `${latestHistory.avg_engagement_30d.toFixed(2)}%` : "—", views: latestHistory?.avg_views_30d != null ? formatNumber(Math.round(latestHistory.avg_views_30d)) : "—", shares: "—", period: pl };
