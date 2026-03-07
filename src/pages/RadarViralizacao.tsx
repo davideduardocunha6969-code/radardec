@@ -765,9 +765,53 @@ function InstagramAnalysisSheet({
   onScan: () => void;
   onUpdateLegalArea: (v: string) => void;
 }) {
-  const followersData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), value: h.followers_count ?? 0 }));
-  const engagementData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), value: h.engagement_score ?? 0 }));
+  const [periodo, setPeriodo] = useState<PeriodType>('7d');
   const topPosts = (p.top_posts as Array<{ url?: string; likesCount?: number; commentsCount?: number; videoViewCount?: number; displayUrl?: string; caption?: string }>) ?? [];
+
+  const latestHistory = history.length > 0 ? history[history.length - 1] : null;
+
+  const metricsForPeriod = useMemo(() => {
+    const pl = periodLabel(periodo);
+    if (periodo === '7d') {
+      return {
+        engagement: p.engagement_rate != null ? `${p.engagement_rate.toFixed(2)}%` : "—",
+        views: p.avg_views_recent != null ? formatNumber(Math.round(p.avg_views_recent)) : "—",
+        likes: p.avg_likes_recent != null ? formatNumber(Math.round(p.avg_likes_recent)) : "—",
+        period: pl,
+      };
+    }
+    if (periodo === '30d') {
+      return {
+        engagement: latestHistory?.avg_engagement_30d != null ? `${latestHistory.avg_engagement_30d.toFixed(2)}%` : "—",
+        views: latestHistory?.avg_views_30d != null ? formatNumber(Math.round(latestHistory.avg_views_30d)) : "—",
+        likes: latestHistory?.avg_likes_30d != null ? formatNumber(Math.round(latestHistory.avg_likes_30d)) : "—",
+        period: pl,
+      };
+    }
+    // historico
+    if (history.length === 0) return { engagement: "—", views: "—", likes: "—", period: pl };
+    const validEngagements = history.filter(h => h.engagement_score != null).map(h => h.engagement_score!);
+    const validViews = history.filter(h => h.avg_views_7d != null).map(h => h.avg_views_7d!);
+    const avgEng = validEngagements.length > 0 ? validEngagements.reduce((a, b) => a + b, 0) / validEngagements.length : null;
+    const avgViews = validViews.length > 0 ? validViews.reduce((a, b) => a + b, 0) / validViews.length : null;
+    const maxEng = validEngagements.length > 0 ? Math.max(...validEngagements) : null;
+    return {
+      engagement: avgEng != null ? `${avgEng.toFixed(2)}%` : "—",
+      views: avgViews != null ? formatNumber(Math.round(avgViews)) : "—",
+      likes: maxEng != null ? `${maxEng.toFixed(2)}%` : "—",
+      period: pl,
+      firstScan: history.length > 0 ? new Date(history[0].recorded_at).toLocaleDateString("pt-BR") : null,
+    };
+  }, [periodo, p, latestHistory, history]);
+
+  const followersData = history.map((h) => ({
+    date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }),
+    value: h.followers_count ?? 0,
+  }));
+  const engagementData = history.map((h) => ({
+    date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }),
+    value: h.engagement_score ?? 0,
+  }));
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -801,15 +845,22 @@ function InstagramAnalysisSheet({
             </div>
           </div>
 
+          {/* Period selector */}
+          <PeriodSelector value={periodo} onChange={setPeriodo} />
+
           {/* Metrics grid */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <MetricMiniCard label="Seguidores" value={formatNumber(p.followers_count)} icon={<Users className="w-4 h-4" />} />
             <MetricMiniCard label="Seguindo" value={formatNumber(p.following_count)} icon={<User className="w-4 h-4" />} />
             <MetricMiniCard label="Posts" value={formatNumber(p.posts_count)} icon={<ImageIcon className="w-4 h-4" />} />
-            <MetricMiniCard label="Engajamento" value={p.engagement_rate != null ? `${p.engagement_rate.toFixed(2)}%` : "—"} icon={<TrendingUp className="w-4 h-4" />} />
-            <MetricMiniCard label="Views médias" value={p.avg_views_recent != null ? formatNumber(Math.round(p.avg_views_recent)) : "—"} icon={<Eye className="w-4 h-4" />} />
-            <MetricMiniCard label="Likes médios" value={p.avg_likes_recent != null ? formatNumber(Math.round(p.avg_likes_recent)) : "—"} icon={<Heart className="w-4 h-4" />} />
+            <MetricMiniCard label={periodo === 'historico' ? "Engajamento médio" : "Engajamento"} value={metricsForPeriod.engagement} icon={<TrendingUp className="w-4 h-4" />} period={metricsForPeriod.period} />
+            <MetricMiniCard label={periodo === 'historico' ? "Views médias hist." : "Views médias"} value={metricsForPeriod.views} icon={<Eye className="w-4 h-4" />} period={metricsForPeriod.period} />
+            <MetricMiniCard label={periodo === 'historico' ? "Melhor engajamento" : "Likes médios"} value={metricsForPeriod.likes} icon={<Heart className="w-4 h-4" />} period={metricsForPeriod.period} />
           </div>
+
+          {periodo === 'historico' && (metricsForPeriod as any).firstScan && (
+            <p className="text-xs text-muted-foreground">Primeiro scan: {(metricsForPeriod as any).firstScan}</p>
+          )}
 
           {/* Legal area */}
           <div className="flex items-center gap-3">
@@ -818,40 +869,41 @@ function InstagramAnalysisSheet({
             <LegalAreaSelect value={p.legal_area || "none"} onChange={onUpdateLegalArea} className="flex-1" />
           </div>
 
-          {/* Followers chart */}
+          {/* Charts */}
           {loadingHistory ? (
             <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
           ) : followersData.length > 1 ? (
-            <div>
-              <h4 className="text-sm font-semibold mb-2">Evolução de Seguidores</h4>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={followersData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                  <Tooltip />
-                  <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
+            <>
+              <div>
+                <h4 className="text-sm font-semibold mb-2">Evolução de Seguidores</h4>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={followersData}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                    <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                    <Tooltip content={<CustomChartTooltip />} />
+                    <Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} />
+                  </LineChart>
+                </ResponsiveContainer>
+              </div>
+
+              {periodo === 'historico' && engagementData.length > 1 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2">Evolução do Engajamento</h4>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart data={engagementData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                      <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                      <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
+                      <Tooltip content={<CustomChartTooltip isEngagement />} />
+                      <Line type="monotone" dataKey="value" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} />
+                    </LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </>
           ) : (
             <p className="text-xs text-muted-foreground text-center py-4">Dados históricos insuficientes para gráfico de seguidores.</p>
-          )}
-
-          {/* Engagement chart */}
-          {!loadingHistory && engagementData.length > 1 && (
-            <div>
-              <h4 className="text-sm font-semibold mb-2">Engajamento ao longo do tempo</h4>
-              <ResponsiveContainer width="100%" height={200}>
-                <BarChart data={engagementData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                  <YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" />
-                  <Tooltip />
-                  <Bar dataKey="value" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
           )}
 
           {/* Top posts */}
