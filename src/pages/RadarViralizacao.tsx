@@ -1137,8 +1137,10 @@ function FacebookContasTab() {
         </div>
       )}
 
+      <LegalAreaPillFilter accounts={facebookProfiles} selected={legalAreaFilter} onSelect={setLegalAreaFilter} />
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {facebookProfiles.map((p) => (
+        {filteredProfiles.map((p) => (
           <Card key={p.id} className="overflow-hidden">
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center gap-3">
@@ -1149,6 +1151,7 @@ function FacebookContasTab() {
                   <div className="flex gap-1.5 mt-1 flex-wrap">
                     <Badge className="bg-blue-800/20 text-blue-300 border-blue-700/30 text-[10px] px-1.5">Facebook</Badge>
                     {p.is_business && <Badge variant="secondary" className="text-[10px] px-1.5">Business</Badge>}
+                    {legalAreaBadge(p.legal_area)}
                   </div>
                 </div>
               </div>
@@ -1174,13 +1177,13 @@ function FacebookContasTab() {
       </div>
 
       {selectedProfile && (
-        <FacebookAnalysisSheet profile={selectedProfile} open={sheetOpen} onOpenChange={setSheetOpen} history={history} loadingHistory={loadingHistory} isScanning={isScanning} onScan={() => scanProfile(selectedProfile.id)} />
+        <FacebookAnalysisSheet profile={selectedProfile} open={sheetOpen} onOpenChange={setSheetOpen} history={history} loadingHistory={loadingHistory} isScanning={isScanning} onScan={() => scanProfile(selectedProfile.id)} onUpdateLegalArea={(v) => updateLegalArea.mutate({ id: selectedProfile.id, legal_area: v === "none" ? null : v })} />
       )}
     </div>
   );
 }
 
-function FacebookAnalysisSheet({ profile: p, open, onOpenChange, history, loadingHistory, isScanning, onScan }: { profile: OwnProfile; open: boolean; onOpenChange: (v: boolean) => void; history: ProfileHistory[]; loadingHistory: boolean; isScanning: boolean; onScan: () => void }) {
+function FacebookAnalysisSheet({ profile: p, open, onOpenChange, history, loadingHistory, isScanning, onScan, onUpdateLegalArea }: { profile: OwnProfile; open: boolean; onOpenChange: (v: boolean) => void; history: ProfileHistory[]; loadingHistory: boolean; isScanning: boolean; onScan: () => void; onUpdateLegalArea: (v: string) => void }) {
   const followersData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), value: h.followers_count ?? 0 }));
 
   return (
