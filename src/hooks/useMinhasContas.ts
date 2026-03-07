@@ -29,6 +29,7 @@ export interface OwnProfile {
   is_active: boolean | null;
   last_scanned_at: string | null;
   created_at: string | null;
+  legal_area: string | null;
 }
 
 export function useMinhasContas() {

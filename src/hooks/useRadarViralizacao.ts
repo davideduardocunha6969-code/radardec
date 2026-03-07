@@ -32,6 +32,7 @@ export interface MonitoredProfile {
   avg_shares_recent: number | null;
   engagement_rate: number | null;
   top_posts: any[] | null;
+  legal_area: string | null;
 }
 
 export interface ProfileHistory {
@@ -260,7 +261,7 @@ export function useRadarViralizacao() {
   const ownAccounts = profiles.filter((p) => p.is_own_account);
 
   const addOwnAccount = useMutation({
-    mutationFn: async (input: { username: string; platform: "instagram" | "tiktok" | "facebook" }) => {
+    mutationFn: async (input: { username: string; platform: "instagram" | "tiktok" | "facebook"; legal_area?: string }) => {
       const { data: userData } = await supabase.auth.getUser();
       if (!userData.user) throw new Error("Não autenticado");
       const { error } = await supabase.from("monitored_profiles").insert({
@@ -269,6 +270,7 @@ export function useRadarViralizacao() {
         platform: input.platform,
         is_own_account: true,
         is_active: true,
+        ...(input.legal_area ? { legal_area: input.legal_area } : {}),
       });
       if (error) throw error;
     },
