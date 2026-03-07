@@ -51,6 +51,19 @@ function AvatarImage({ src, alt, className = "w-14 h-14 rounded-full object-cove
   return <img src={src} alt={alt} className={className} referrerPolicy="no-referrer" crossOrigin="anonymous" onError={() => setHasError(true)} />;
 }
 
+function ThumbnailImage({ src, postUrl, platform }: { src: string | null; postUrl: string; platform: string }) {
+  const [hasError, setHasError] = useState(false);
+  useEffect(() => { setHasError(false); }, [src]);
+  const fallback = (
+    <a href={postUrl} target="_blank" rel="noopener noreferrer" className="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gray-900 text-gray-400 hover:text-white transition-colors">
+      <Play className="w-10 h-10" />
+      <span className="text-xs">{platform === "instagram" ? "Ver no Instagram" : "Ver no TikTok"}</span>
+    </a>
+  );
+  if (!src || hasError) return fallback;
+  return <img src={src} alt="thumbnail" referrerPolicy="no-referrer" crossOrigin="anonymous" className="w-full h-full object-cover" onError={() => setHasError(true)} />;
+}
+
 function engagementBadge(score: number | null) {
   if (score == null) return <Badge variant="secondary" className="text-xs">—</Badge>;
   if (score > 5) return <Badge className="bg-emerald-600/20 text-emerald-400 border-emerald-500/30 text-xs">{score.toFixed(1)}%</Badge>;
@@ -450,25 +463,7 @@ function ViraisTab() {
             >
               {/* Thumbnail */}
               <div className="relative w-full aspect-video bg-gray-900 rounded-t-lg overflow-hidden">
-                {item.thumbnail_url ? (
-                  <img
-                    src={item.thumbnail_url}
-                    alt="thumbnail"
-                    referrerPolicy="no-referrer"
-                    crossOrigin="anonymous"
-                    className="w-full h-full object-cover"
-                    onError={(e) => {
-                      const t = e.target as HTMLImageElement;
-                      t.style.display = 'none';
-                      t.parentElement!.innerHTML += '<a href="' + item.post_url + '" target="_blank" class="absolute inset-0 flex flex-col items-center justify-center gap-2 bg-gray-900 text-gray-400 hover:text-white transition-colors"><svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" fill="currentColor" viewBox="0 0 16 16"><path d="M8 15A7 7 0 1 1 8 1a7 7 0 0 1 0 14zm0 1A8 8 0 1 0 8 0a8 8 0 0 0 0 16z"/><path d="M6.271 5.055a.5.5 0 0 1 .52.038l3.5 2.5a.5.5 0 0 1 0 .814l-3.5 2.5A.5.5 0 0 1 6 10.5v-5a.5.5 0 0 1 .271-.445z"/></svg><span class="text-xs">Ver no Instagram</span></a>';
-                    }}
-                  />
-                ) : (
-                  <a href={item.post_url} target="_blank" className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-gray-400 hover:text-white transition-colors">
-                    <Play className="w-10 h-10" />
-                    <span className="text-xs">Ver post</span>
-                  </a>
-                )}
+                <ThumbnailImage src={item.thumbnail_url} postUrl={item.post_url} platform={item.platform} />
                 {/* Rank badge */}
                 <div className="absolute top-2 left-2 flex gap-1">
                   <Badge className="bg-background/80 text-foreground border-border text-xs font-bold backdrop-blur-sm">
