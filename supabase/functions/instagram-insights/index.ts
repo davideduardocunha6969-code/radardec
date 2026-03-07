@@ -330,7 +330,7 @@ Deno.serve(async (req) => {
       console.log(`[instagram-insights] step=update_profile, success`);
     }
 
-    // ── Upsert profile_history (one per day) ──
+    // ── Upsert profile_history (one per day, São Paulo timezone) ──
     step = "upsert_history";
     const historyData = {
       profile_id,
@@ -344,24 +344,30 @@ Deno.serve(async (req) => {
       recorded_at: nowIso,
     };
 
-    const todayStr = nowIso.slice(0, 10);
-    const todayStart = new Date(todayStr).toISOString();
-    const tomorrowStart = new Date(new Date(todayStr).getTime() + 86400000).toISOString();
-
+    // Use RPC-style query to find existing record for today in São Paulo timezone
     const { data: existingHist } = await sb
       .from("profile_history")
       .select("id")
       .eq("profile_id", profile_id)
-      .gte("recorded_at", todayStart)
-      .lt("recorded_at", tomorrowStart)
+      .gte("recorded_at", (() => {
+        // Calculate today's start in São Paulo (UTC-3)
+        const spNow = new Date(now.getTime() - 3 * 3600000);
+        const spDateStr = spNow.toISOString().slice(0, 10);
+        return new Date(spDateStr + "T03:00:00Z").toISOString(); // midnight SP = 03:00 UTC
+      })())
+      .lt("recorded_at", (() => {
+        const spNow = new Date(now.getTime() - 3 * 3600000);
+        const spDateStr = spNow.toISOString().slice(0, 10);
+        return new Date(new Date(spDateStr + "T03:00:00Z").getTime() + 86400000).toISOString();
+      })())
       .limit(1);
 
     if (existingHist && existingHist.length > 0) {
       await sb.from("profile_history").update(historyData).eq("id", existingHist[0].id);
-      console.log(`[instagram-insights] history updated`);
+      console.log(`[instagram-insights] history updated (existing id=${existingHist[0].id})`);
     } else {
       await sb.from("profile_history").insert(historyData);
-      console.log(`[instagram-insights] history inserted`);
+      console.log(`[instagram-insights] history inserted (new day)`);
     }
 
     console.log(`[instagram-insights] DONE`);
