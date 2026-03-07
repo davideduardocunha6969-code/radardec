@@ -1,6 +1,6 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
-import { Radar, Plus, Trash2, Loader2, Eye, Heart, MessageCircle, ExternalLink, CheckCircle2, User, BarChart3, TrendingUp, Calendar, Video, X, Play, Camera, Music, Facebook, RefreshCw, Globe, Shield, Briefcase, Users, ImageIcon } from "lucide-react";
+import { Radar, Plus, Trash2, Loader2, Eye, Heart, MessageCircle, ExternalLink, CheckCircle2, User, BarChart3, TrendingUp, Calendar, Video, X, Play, Camera, Music, Facebook, RefreshCw, Globe, Shield, Briefcase, Users, ImageIcon, Scale } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -70,6 +70,79 @@ function engagementBadge(score: number | null) {
   if (score > 5) return <Badge className="bg-emerald-600/20 text-emerald-400 border-emerald-500/30 text-xs">{score.toFixed(1)}%</Badge>;
   if (score >= 1) return <Badge className="bg-yellow-600/20 text-yellow-400 border-yellow-500/30 text-xs">{score.toFixed(1)}%</Badge>;
   return <Badge variant="secondary" className="text-xs">{score.toFixed(1)}%</Badge>;
+}
+
+// ── Legal Area helpers ──
+
+const LEGAL_AREAS = [
+  { value: "previdenciario", label: "Previdenciário", color: "bg-emerald-600/20 text-emerald-400 border-emerald-500/30" },
+  { value: "trabalhista", label: "Trabalhista", color: "bg-orange-600/20 text-orange-400 border-orange-500/30" },
+  { value: "bancario", label: "Bancário", color: "bg-blue-600/20 text-blue-400 border-blue-500/30" },
+  { value: "outro", label: "Outro", color: "bg-zinc-600/20 text-zinc-400 border-zinc-500/30" },
+] as const;
+
+function legalAreaLabel(value: string | null): string {
+  return LEGAL_AREAS.find((a) => a.value === value)?.label ?? value ?? "";
+}
+
+function legalAreaBadge(value: string | null) {
+  if (!value) return null;
+  const area = LEGAL_AREAS.find((a) => a.value === value);
+  if (!area) return <Badge variant="secondary" className="text-[10px] px-1.5">{value}</Badge>;
+  return <Badge className={`${area.color} text-[10px] px-1.5`}>{area.label}</Badge>;
+}
+
+function LegalAreaPillFilter({
+  accounts,
+  selected,
+  onSelect,
+}: {
+  accounts: Array<{ legal_area: string | null }>;
+  selected: string | null;
+  onSelect: (v: string | null) => void;
+}) {
+  const available = useMemo(() => {
+    const set = new Set(accounts.map((a) => a.legal_area).filter(Boolean) as string[]);
+    return LEGAL_AREAS.filter((a) => set.has(a.value));
+  }, [accounts]);
+
+  if (available.length <= 1) return null;
+
+  return (
+    <div className="flex gap-2 flex-wrap">
+      <button
+        onClick={() => onSelect(null)}
+        className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${selected === null ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-border hover:bg-accent"}`}
+      >
+        Todos
+      </button>
+      {available.map((a) => (
+        <button
+          key={a.value}
+          onClick={() => onSelect(selected === a.value ? null : a.value)}
+          className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${selected === a.value ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-border hover:bg-accent"}`}
+        >
+          {a.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function LegalAreaSelect({ value, onChange, className = "w-[180px]" }: { value: string; onChange: (v: string) => void; className?: string }) {
+  return (
+    <div className={className}>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger><SelectValue placeholder="Ramo do Direito" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">Nenhum</SelectItem>
+          {LEGAL_AREAS.map((a) => (
+            <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
 }
 
 // ── Profile Detail Sheet ──
@@ -543,11 +616,17 @@ function ViraisTab() {
 // ── Sub-tab placeholders ──
 
 function InstagramContasTab() {
-  const { instagramProfiles, loadingProfiles, isScanning, scanProfile, scanAllByPlatform, fetchHistory } = useMinhasContas();
+  const { instagramProfiles, loadingProfiles, isScanning, scanProfile, scanAllByPlatform, fetchHistory, updateLegalArea } = useMinhasContas();
   const [selectedProfile, setSelectedProfile] = useState<OwnProfile | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [history, setHistory] = useState<ProfileHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [legalAreaFilter, setLegalAreaFilter] = useState<string | null>(null);
+
+  const filteredProfiles = useMemo(() => {
+    if (!legalAreaFilter) return instagramProfiles;
+    return instagramProfiles.filter((p) => p.legal_area === legalAreaFilter);
+  }, [instagramProfiles, legalAreaFilter]);
 
   const openAnalysis = useCallback(async (profile: OwnProfile) => {
     setSelectedProfile(profile);
@@ -583,9 +662,12 @@ function InstagramContasTab() {
         </div>
       )}
 
+      {/* Legal area pill filter */}
+      <LegalAreaPillFilter accounts={instagramProfiles} selected={legalAreaFilter} onSelect={setLegalAreaFilter} />
+
       {/* Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {instagramProfiles.map((p) => (
+        {filteredProfiles.map((p) => (
           <Card key={p.id} className="overflow-hidden">
             <CardContent className="p-4 space-y-3">
               {/* Identity */}
@@ -597,6 +679,7 @@ function InstagramContasTab() {
                   <div className="flex gap-1.5 mt-1 flex-wrap">
                     {p.is_verified && <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px] px-1.5">Verificado</Badge>}
                     {p.is_business && <Badge variant="secondary" className="text-[10px] px-1.5">Business</Badge>}
+                    {legalAreaBadge(p.legal_area)}
                   </div>
                 </div>
               </div>
@@ -650,6 +733,7 @@ function InstagramContasTab() {
           loadingHistory={loadingHistory}
           isScanning={isScanning}
           onScan={() => scanProfile(selectedProfile.id)}
+          onUpdateLegalArea={(v) => updateLegalArea.mutate({ id: selectedProfile.id, legal_area: v === "none" ? null : v })}
         />
       )}
     </div>
@@ -670,6 +754,7 @@ function InstagramAnalysisSheet({
   loadingHistory,
   isScanning,
   onScan,
+  onUpdateLegalArea,
 }: {
   profile: OwnProfile;
   open: boolean;
@@ -678,6 +763,7 @@ function InstagramAnalysisSheet({
   loadingHistory: boolean;
   isScanning: boolean;
   onScan: () => void;
+  onUpdateLegalArea: (v: string) => void;
 }) {
   const followersData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), value: h.followers_count ?? 0 }));
   const engagementData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), value: h.engagement_score ?? 0 }));
@@ -723,6 +809,13 @@ function InstagramAnalysisSheet({
             <MetricMiniCard label="Engajamento" value={p.engagement_rate != null ? `${p.engagement_rate.toFixed(2)}%` : "—"} icon={<TrendingUp className="w-4 h-4" />} />
             <MetricMiniCard label="Views médias" value={p.avg_views_recent != null ? formatNumber(Math.round(p.avg_views_recent)) : "—"} icon={<Eye className="w-4 h-4" />} />
             <MetricMiniCard label="Likes médios" value={p.avg_likes_recent != null ? formatNumber(Math.round(p.avg_likes_recent)) : "—"} icon={<Heart className="w-4 h-4" />} />
+          </div>
+
+          {/* Legal area */}
+          <div className="flex items-center gap-3">
+            <Scale className="w-4 h-4 text-muted-foreground" />
+            <label className="text-sm text-muted-foreground">Ramo do Direito</label>
+            <LegalAreaSelect value={p.legal_area || "none"} onChange={onUpdateLegalArea} className="flex-1" />
           </div>
 
           {/* Followers chart */}
@@ -814,11 +907,17 @@ function MetricMiniCard({ label, value, icon }: { label: string; value: string; 
 }
 
 function TiktokContasTab() {
-  const { tiktokProfiles, loadingProfiles, isScanning, scanProfile, scanAllByPlatform, fetchHistory } = useMinhasContas();
+  const { tiktokProfiles, loadingProfiles, isScanning, scanProfile, scanAllByPlatform, fetchHistory, updateLegalArea } = useMinhasContas();
   const [selectedProfile, setSelectedProfile] = useState<OwnProfile | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [history, setHistory] = useState<ProfileHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [legalAreaFilter, setLegalAreaFilter] = useState<string | null>(null);
+
+  const filteredProfiles = useMemo(() => {
+    if (!legalAreaFilter) return tiktokProfiles;
+    return tiktokProfiles.filter((p) => p.legal_area === legalAreaFilter);
+  }, [tiktokProfiles, legalAreaFilter]);
 
   const openAnalysis = useCallback(async (profile: OwnProfile) => {
     setSelectedProfile(profile);
@@ -847,8 +946,10 @@ function TiktokContasTab() {
         </div>
       )}
 
+      <LegalAreaPillFilter accounts={tiktokProfiles} selected={legalAreaFilter} onSelect={setLegalAreaFilter} />
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {tiktokProfiles.map((p) => (
+        {filteredProfiles.map((p) => (
           <Card key={p.id} className="overflow-hidden">
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center gap-3">
@@ -859,6 +960,7 @@ function TiktokContasTab() {
                   <div className="flex gap-1.5 mt-1 flex-wrap">
                     <Badge className="bg-purple-600/20 text-purple-400 border-purple-500/30 text-[10px] px-1.5">TikTok</Badge>
                     {p.is_verified && <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-[10px] px-1.5">Verificado</Badge>}
+                    {legalAreaBadge(p.legal_area)}
                   </div>
                 </div>
               </div>
@@ -896,13 +998,13 @@ function TiktokContasTab() {
       </div>
 
       {selectedProfile && (
-        <TiktokAnalysisSheet profile={selectedProfile} open={sheetOpen} onOpenChange={setSheetOpen} history={history} loadingHistory={loadingHistory} isScanning={isScanning} onScan={() => scanProfile(selectedProfile.id)} />
+        <TiktokAnalysisSheet profile={selectedProfile} open={sheetOpen} onOpenChange={setSheetOpen} history={history} loadingHistory={loadingHistory} isScanning={isScanning} onScan={() => scanProfile(selectedProfile.id)} onUpdateLegalArea={(v) => updateLegalArea.mutate({ id: selectedProfile.id, legal_area: v === "none" ? null : v })} />
       )}
     </div>
   );
 }
 
-function TiktokAnalysisSheet({ profile: p, open, onOpenChange, history, loadingHistory, isScanning, onScan }: { profile: OwnProfile; open: boolean; onOpenChange: (v: boolean) => void; history: ProfileHistory[]; loadingHistory: boolean; isScanning: boolean; onScan: () => void }) {
+function TiktokAnalysisSheet({ profile: p, open, onOpenChange, history, loadingHistory, isScanning, onScan, onUpdateLegalArea }: { profile: OwnProfile; open: boolean; onOpenChange: (v: boolean) => void; history: ProfileHistory[]; loadingHistory: boolean; isScanning: boolean; onScan: () => void; onUpdateLegalArea: (v: string) => void }) {
   const followersData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), value: h.followers_count ?? 0 }));
   const engagementData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), value: h.engagement_score ?? 0 }));
   const topPosts = (p.top_posts as Array<{ url?: string; likesCount?: number; commentsCount?: number; videoViewCount?: number; displayUrl?: string; caption?: string }>) ?? [];
@@ -937,6 +1039,13 @@ function TiktokAnalysisSheet({ profile: p, open, onOpenChange, history, loadingH
             <MetricMiniCard label="Engajamento" value={p.engagement_rate != null ? `${p.engagement_rate.toFixed(2)}%` : "—"} icon={<TrendingUp className="w-4 h-4" />} />
             <MetricMiniCard label="Views médias" value={p.avg_views_recent != null ? formatNumber(Math.round(p.avg_views_recent)) : "—"} icon={<Eye className="w-4 h-4" />} />
             <MetricMiniCard label="Compartilhamentos" value={p.avg_shares_recent != null ? formatNumber(Math.round(p.avg_shares_recent)) : "—"} icon={<ExternalLink className="w-4 h-4" />} />
+          </div>
+
+          {/* Legal area */}
+          <div className="flex items-center gap-3">
+            <Scale className="w-4 h-4 text-muted-foreground" />
+            <label className="text-sm text-muted-foreground">Ramo do Direito</label>
+            <LegalAreaSelect value={p.legal_area || "none"} onChange={onUpdateLegalArea} className="flex-1" />
           </div>
 
           {loadingHistory ? (
@@ -989,11 +1098,17 @@ function TiktokAnalysisSheet({ profile: p, open, onOpenChange, history, loadingH
 }
 
 function FacebookContasTab() {
-  const { facebookProfiles, loadingProfiles, isScanning, scanProfile, scanAllByPlatform, fetchHistory } = useMinhasContas();
+  const { facebookProfiles, loadingProfiles, isScanning, scanProfile, scanAllByPlatform, fetchHistory, updateLegalArea } = useMinhasContas();
   const [selectedProfile, setSelectedProfile] = useState<OwnProfile | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [history, setHistory] = useState<ProfileHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [legalAreaFilter, setLegalAreaFilter] = useState<string | null>(null);
+
+  const filteredProfiles = useMemo(() => {
+    if (!legalAreaFilter) return facebookProfiles;
+    return facebookProfiles.filter((p) => p.legal_area === legalAreaFilter);
+  }, [facebookProfiles, legalAreaFilter]);
 
   const openAnalysis = useCallback(async (profile: OwnProfile) => {
     setSelectedProfile(profile);
@@ -1022,8 +1137,10 @@ function FacebookContasTab() {
         </div>
       )}
 
+      <LegalAreaPillFilter accounts={facebookProfiles} selected={legalAreaFilter} onSelect={setLegalAreaFilter} />
+
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {facebookProfiles.map((p) => (
+        {filteredProfiles.map((p) => (
           <Card key={p.id} className="overflow-hidden">
             <CardContent className="p-4 space-y-3">
               <div className="flex items-center gap-3">
@@ -1034,6 +1151,7 @@ function FacebookContasTab() {
                   <div className="flex gap-1.5 mt-1 flex-wrap">
                     <Badge className="bg-blue-800/20 text-blue-300 border-blue-700/30 text-[10px] px-1.5">Facebook</Badge>
                     {p.is_business && <Badge variant="secondary" className="text-[10px] px-1.5">Business</Badge>}
+                    {legalAreaBadge(p.legal_area)}
                   </div>
                 </div>
               </div>
@@ -1059,13 +1177,13 @@ function FacebookContasTab() {
       </div>
 
       {selectedProfile && (
-        <FacebookAnalysisSheet profile={selectedProfile} open={sheetOpen} onOpenChange={setSheetOpen} history={history} loadingHistory={loadingHistory} isScanning={isScanning} onScan={() => scanProfile(selectedProfile.id)} />
+        <FacebookAnalysisSheet profile={selectedProfile} open={sheetOpen} onOpenChange={setSheetOpen} history={history} loadingHistory={loadingHistory} isScanning={isScanning} onScan={() => scanProfile(selectedProfile.id)} onUpdateLegalArea={(v) => updateLegalArea.mutate({ id: selectedProfile.id, legal_area: v === "none" ? null : v })} />
       )}
     </div>
   );
 }
 
-function FacebookAnalysisSheet({ profile: p, open, onOpenChange, history, loadingHistory, isScanning, onScan }: { profile: OwnProfile; open: boolean; onOpenChange: (v: boolean) => void; history: ProfileHistory[]; loadingHistory: boolean; isScanning: boolean; onScan: () => void }) {
+function FacebookAnalysisSheet({ profile: p, open, onOpenChange, history, loadingHistory, isScanning, onScan, onUpdateLegalArea }: { profile: OwnProfile; open: boolean; onOpenChange: (v: boolean) => void; history: ProfileHistory[]; loadingHistory: boolean; isScanning: boolean; onScan: () => void; onUpdateLegalArea: (v: string) => void }) {
   const followersData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), value: h.followers_count ?? 0 }));
 
   return (
@@ -1096,6 +1214,13 @@ function FacebookAnalysisSheet({ profile: p, open, onOpenChange, history, loadin
             <MetricMiniCard label="Business" value={p.is_business ? "Sim" : "Não"} icon={<Briefcase className="w-4 h-4" />} />
           </div>
 
+          {/* Legal area */}
+          <div className="flex items-center gap-3">
+            <Scale className="w-4 h-4 text-muted-foreground" />
+            <label className="text-sm text-muted-foreground">Ramo do Direito</label>
+            <LegalAreaSelect value={p.legal_area || "none"} onChange={onUpdateLegalArea} className="flex-1" />
+          </div>
+
           {loadingHistory ? (
             <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
           ) : followersData.length > 1 ? (
@@ -1119,17 +1244,20 @@ function MinhasContasTab() {
   const [activeTab, setActiveTab] = useState<"instagram" | "tiktok" | "facebook">("instagram");
   const [username, setUsername] = useState("");
   const [platform, setPlatform] = useState<"instagram" | "tiktok" | "facebook">("instagram");
+  const [legalArea, setLegalArea] = useState<string>("none");
 
   // Sync select with active tab
   useEffect(() => { setPlatform(activeTab); }, [activeTab]);
 
   const handleAdd = () => {
     if (!username.trim()) return;
-    addOwnAccount.mutate({ username: username.trim(), platform });
+    addOwnAccount.mutate({
+      username: username.trim(),
+      platform,
+      ...(legalArea !== "none" ? { legal_area: legalArea } : {}),
+    });
     setUsername("");
   };
-
-  const filtered = ownAccounts.filter((p) => p.platform === activeTab);
 
   return (
     <div className="space-y-4">
@@ -1151,6 +1279,10 @@ function MinhasContasTab() {
                   <SelectItem value="facebook">Facebook</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="w-[180px]">
+              <label className="text-sm font-medium text-muted-foreground mb-1 block">Ramo do Direito</label>
+              <LegalAreaSelect value={legalArea} onChange={setLegalArea} className="w-full" />
             </div>
             <Button onClick={handleAdd} disabled={!username.trim() || addOwnAccount.isPending}>
               <Plus className="w-4 h-4 mr-1" />Adicionar minha conta
