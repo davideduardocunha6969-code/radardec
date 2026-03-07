@@ -32,6 +32,9 @@ export interface OwnProfile {
   created_at: string | null;
   legal_area: string | null;
   instagram_business_id: string | null;
+  avg_saves_recent: number | null;
+  best_post_engagement: number | null;
+  total_posts_7d: number | null;
 }
 
 export function useMinhasContas() {
