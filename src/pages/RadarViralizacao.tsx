@@ -754,6 +754,7 @@ function InstagramAnalysisSheet({
   loadingHistory,
   isScanning,
   onScan,
+  onUpdateLegalArea,
 }: {
   profile: OwnProfile;
   open: boolean;
@@ -762,6 +763,7 @@ function InstagramAnalysisSheet({
   loadingHistory: boolean;
   isScanning: boolean;
   onScan: () => void;
+  onUpdateLegalArea: (v: string) => void;
 }) {
   const followersData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), value: h.followers_count ?? 0 }));
   const engagementData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), value: h.engagement_score ?? 0 }));
