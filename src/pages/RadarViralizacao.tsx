@@ -1004,7 +1004,7 @@ function TiktokContasTab() {
   );
 }
 
-function TiktokAnalysisSheet({ profile: p, open, onOpenChange, history, loadingHistory, isScanning, onScan }: { profile: OwnProfile; open: boolean; onOpenChange: (v: boolean) => void; history: ProfileHistory[]; loadingHistory: boolean; isScanning: boolean; onScan: () => void }) {
+function TiktokAnalysisSheet({ profile: p, open, onOpenChange, history, loadingHistory, isScanning, onScan, onUpdateLegalArea }: { profile: OwnProfile; open: boolean; onOpenChange: (v: boolean) => void; history: ProfileHistory[]; loadingHistory: boolean; isScanning: boolean; onScan: () => void; onUpdateLegalArea: (v: string) => void }) {
   const followersData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), value: h.followers_count ?? 0 }));
   const engagementData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), value: h.engagement_score ?? 0 }));
   const topPosts = (p.top_posts as Array<{ url?: string; likesCount?: number; commentsCount?: number; videoViewCount?: number; displayUrl?: string; caption?: string }>) ?? [];
