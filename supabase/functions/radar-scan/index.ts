@@ -154,15 +154,20 @@ function calcPostFrequency(mapped: MappedPost[]) {
 }
 
 function calcEngagement7d(mapped: MappedPost[], followers: number | null) {
-  if (!followers || followers === 0) return null;
+  if (!followers || followers === 0 || mapped.length === 0) return null;
   const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const recent = mapped.filter((p) => {
-    if (!p.timestamp) return true; // if no timestamp, include (assume recent)
-    return new Date(p.timestamp).getTime() >= sevenDaysAgo;
-  });
-  if (recent.length === 0) return null;
-  const totalEngagement = recent.reduce((sum, p) => sum + p.likes + p.comments, 0);
-  return Math.round((totalEngagement / recent.length / followers) * 100 * 100) / 100;
+  const withTimestamp = mapped.filter((p) => !!p.timestamp);
+  const withoutTimestamp = mapped.filter((p) => !p.timestamp);
+  let postsToCalc: MappedPost[];
+  if (withTimestamp.length === 0) {
+    postsToCalc = mapped;
+  } else {
+    const recent7d = withTimestamp.filter((p) => new Date(p.timestamp!).getTime() >= sevenDaysAgo);
+    postsToCalc = [...(recent7d.length > 0 ? recent7d : withTimestamp), ...withoutTimestamp];
+  }
+  if (postsToCalc.length === 0) return null;
+  const totalEngagement = postsToCalc.reduce((sum, p) => sum + p.likes + p.comments, 0);
+  return Math.round((totalEngagement / postsToCalc.length / followers) * 100 * 100) / 100;
 }
 
 // ── URL normalization ──
