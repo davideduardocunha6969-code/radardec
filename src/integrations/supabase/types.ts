@@ -1777,6 +1777,7 @@ export type Database = {
           is_own_account: boolean | null
           is_verified: boolean | null
           last_scanned_at: string | null
+          legal_area: string | null
           platform: string
           posts_count: number | null
           top_posts: Json | null
@@ -1807,6 +1808,7 @@ export type Database = {
           is_own_account?: boolean | null
           is_verified?: boolean | null
           last_scanned_at?: string | null
+          legal_area?: string | null
           platform: string
           posts_count?: number | null
           top_posts?: Json | null
@@ -1837,6 +1839,7 @@ export type Database = {
           is_own_account?: boolean | null
           is_verified?: boolean | null
           last_scanned_at?: string | null
+          legal_area?: string | null
           platform?: string
           posts_count?: number | null
           top_posts?: Json | null

@@ -1,0 +1,1 @@
+ALTER TABLE monitored_profiles ADD COLUMN IF NOT EXISTS legal_area TEXT;
