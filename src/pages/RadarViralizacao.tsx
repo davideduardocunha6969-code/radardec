@@ -1098,11 +1098,17 @@ function TiktokAnalysisSheet({ profile: p, open, onOpenChange, history, loadingH
 }
 
 function FacebookContasTab() {
-  const { facebookProfiles, loadingProfiles, isScanning, scanProfile, scanAllByPlatform, fetchHistory } = useMinhasContas();
+  const { facebookProfiles, loadingProfiles, isScanning, scanProfile, scanAllByPlatform, fetchHistory, updateLegalArea } = useMinhasContas();
   const [selectedProfile, setSelectedProfile] = useState<OwnProfile | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [history, setHistory] = useState<ProfileHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [legalAreaFilter, setLegalAreaFilter] = useState<string | null>(null);
+
+  const filteredProfiles = useMemo(() => {
+    if (!legalAreaFilter) return facebookProfiles;
+    return facebookProfiles.filter((p) => p.legal_area === legalAreaFilter);
+  }, [facebookProfiles, legalAreaFilter]);
 
   const openAnalysis = useCallback(async (profile: OwnProfile) => {
     setSelectedProfile(profile);
