@@ -72,6 +72,79 @@ function engagementBadge(score: number | null) {
   return <Badge variant="secondary" className="text-xs">{score.toFixed(1)}%</Badge>;
 }
 
+// ── Legal Area helpers ──
+
+const LEGAL_AREAS = [
+  { value: "previdenciario", label: "Previdenciário", color: "bg-emerald-600/20 text-emerald-400 border-emerald-500/30" },
+  { value: "trabalhista", label: "Trabalhista", color: "bg-orange-600/20 text-orange-400 border-orange-500/30" },
+  { value: "bancario", label: "Bancário", color: "bg-blue-600/20 text-blue-400 border-blue-500/30" },
+  { value: "outro", label: "Outro", color: "bg-zinc-600/20 text-zinc-400 border-zinc-500/30" },
+] as const;
+
+function legalAreaLabel(value: string | null): string {
+  return LEGAL_AREAS.find((a) => a.value === value)?.label ?? value ?? "";
+}
+
+function legalAreaBadge(value: string | null) {
+  if (!value) return null;
+  const area = LEGAL_AREAS.find((a) => a.value === value);
+  if (!area) return <Badge variant="secondary" className="text-[10px] px-1.5">{value}</Badge>;
+  return <Badge className={`${area.color} text-[10px] px-1.5`}>{area.label}</Badge>;
+}
+
+function LegalAreaPillFilter({
+  accounts,
+  selected,
+  onSelect,
+}: {
+  accounts: Array<{ legal_area: string | null }>;
+  selected: string | null;
+  onSelect: (v: string | null) => void;
+}) {
+  const available = useMemo(() => {
+    const set = new Set(accounts.map((a) => a.legal_area).filter(Boolean) as string[]);
+    return LEGAL_AREAS.filter((a) => set.has(a.value));
+  }, [accounts]);
+
+  if (available.length <= 1) return null;
+
+  return (
+    <div className="flex gap-2 flex-wrap">
+      <button
+        onClick={() => onSelect(null)}
+        className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${selected === null ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-border hover:bg-accent"}`}
+      >
+        Todos
+      </button>
+      {available.map((a) => (
+        <button
+          key={a.value}
+          onClick={() => onSelect(selected === a.value ? null : a.value)}
+          className={`px-3 py-1 rounded-full text-xs font-medium border transition-colors ${selected === a.value ? "bg-primary text-primary-foreground border-primary" : "bg-muted text-muted-foreground border-border hover:bg-accent"}`}
+        >
+          {a.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function LegalAreaSelect({ value, onChange, className = "w-[180px]" }: { value: string; onChange: (v: string) => void; className?: string }) {
+  return (
+    <div className={className}>
+      <Select value={value} onValueChange={onChange}>
+        <SelectTrigger><SelectValue placeholder="Ramo do Direito" /></SelectTrigger>
+        <SelectContent>
+          <SelectItem value="none">Nenhum</SelectItem>
+          {LEGAL_AREAS.map((a) => (
+            <SelectItem key={a.value} value={a.value}>{a.label}</SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
 // ── Profile Detail Sheet ──
 
 function ProfileDetailSheet({
