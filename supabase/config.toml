@@ -89,3 +89,6 @@ verify_jwt = false
 
  [functions.radar-scan]
  verify_jwt = false
+
+ [functions.instagram-insights]
+ verify_jwt = false
