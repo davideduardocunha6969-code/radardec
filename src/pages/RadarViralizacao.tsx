@@ -1304,7 +1304,9 @@ function FacebookContasTab() {
 }
 
 function FacebookAnalysisSheet({ profile: p, open, onOpenChange, history, loadingHistory, isScanning, onScan, onUpdateLegalArea }: { profile: OwnProfile; open: boolean; onOpenChange: (v: boolean) => void; history: ProfileHistory[]; loadingHistory: boolean; isScanning: boolean; onScan: () => void; onUpdateLegalArea: (v: string) => void }) {
-  const followersData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" }), value: h.followers_count ?? 0 }));
+  const [periodo, setPeriodo] = useState<PeriodType>('7d');
+  const followersData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }), value: h.followers_count ?? 0 }));
+  const engagementData = history.map((h) => ({ date: new Date(h.recorded_at).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit", year: "numeric" }), value: h.engagement_score ?? 0 }));
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -1326,15 +1328,16 @@ function FacebookAnalysisSheet({ profile: p, open, onOpenChange, history, loadin
             </div>
           </div>
 
+          <PeriodSelector value={periodo} onChange={setPeriodo} />
+
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-            <MetricMiniCard label="Seguidores" value={formatNumber(p.followers_count)} icon={<Users className="w-4 h-4" />} />
+            <MetricMiniCard label="Seguidores" value={formatNumber(p.followers_count)} icon={<Users className="w-4 h-4" />} period={periodLabel(periodo)} />
             <MetricMiniCard label="Data de criação" value={p.date_joined || "—"} icon={<Calendar className="w-4 h-4" />} />
             <MetricMiniCard label="Curtidas na página" value={p.avg_likes_recent != null ? formatNumber(Math.round(p.avg_likes_recent)) : "—"} icon={<Heart className="w-4 h-4" />} />
-            <MetricMiniCard label="Engajamento" value="—" icon={<TrendingUp className="w-4 h-4" />} />
+            <MetricMiniCard label="Engajamento" value="—" icon={<TrendingUp className="w-4 h-4" />} period={periodLabel(periodo)} />
             <MetricMiniCard label="Business" value={p.is_business ? "Sim" : "Não"} icon={<Briefcase className="w-4 h-4" />} />
           </div>
 
-          {/* Legal area */}
           <div className="flex items-center gap-3">
             <Scale className="w-4 h-4 text-muted-foreground" />
             <label className="text-sm text-muted-foreground">Ramo do Direito</label>
@@ -1344,12 +1347,22 @@ function FacebookAnalysisSheet({ profile: p, open, onOpenChange, history, loadin
           {loadingHistory ? (
             <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
           ) : followersData.length > 1 ? (
-            <div>
-              <h4 className="text-sm font-semibold mb-2">Evolução de Seguidores</h4>
-              <ResponsiveContainer width="100%" height={200}>
-                <LineChart data={followersData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /><XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" /><YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" /><Tooltip /><Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} /></LineChart>
-              </ResponsiveContainer>
-            </div>
+            <>
+              <div>
+                <h4 className="text-sm font-semibold mb-2">Evolução de Seguidores</h4>
+                <ResponsiveContainer width="100%" height={200}>
+                  <LineChart data={followersData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /><XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" /><YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" /><Tooltip content={<CustomChartTooltip />} /><Line type="monotone" dataKey="value" stroke="hsl(var(--primary))" strokeWidth={2} dot={false} /></LineChart>
+                </ResponsiveContainer>
+              </div>
+              {periodo === 'historico' && engagementData.length > 1 && (
+                <div>
+                  <h4 className="text-sm font-semibold mb-2">Evolução do Engajamento</h4>
+                  <ResponsiveContainer width="100%" height={200}>
+                    <LineChart data={engagementData}><CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" /><XAxis dataKey="date" tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" /><YAxis tick={{ fontSize: 10 }} stroke="hsl(var(--muted-foreground))" /><Tooltip content={<CustomChartTooltip isEngagement />} /><Line type="monotone" dataKey="value" stroke="hsl(var(--chart-2))" strokeWidth={2} dot={false} /></LineChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </>
           ) : <p className="text-xs text-muted-foreground text-center py-4">Dados históricos insuficientes.</p>}
         </div>
       </SheetContent>
