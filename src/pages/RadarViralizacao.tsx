@@ -892,17 +892,60 @@ function InstagramAnalysisSheet({
   );
 }
 
-function MetricMiniCard({ label, value, icon }: { label: string; value: string; icon: React.ReactNode }) {
+function MetricMiniCard({ label, value, icon, period }: { label: string; value: string; icon: React.ReactNode; period?: string }) {
   return (
     <Card>
       <CardContent className="p-3 flex items-center gap-2">
         <div className="text-muted-foreground">{icon}</div>
         <div>
+          {period && <p className="text-[9px] text-muted-foreground/60">{period}</p>}
           <p className="text-xs text-muted-foreground">{label}</p>
           <p className="text-sm font-bold">{value}</p>
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+type PeriodType = '7d' | '30d' | 'historico';
+
+function PeriodSelector({ value, onChange }: { value: PeriodType; onChange: (v: PeriodType) => void }) {
+  const options: { value: PeriodType; label: string }[] = [
+    { value: '7d', label: '7 dias' },
+    { value: '30d', label: '30 dias' },
+    { value: 'historico', label: 'Histórico' },
+  ];
+  return (
+    <div className="flex gap-2">
+      {options.map((o) => (
+        <button
+          key={o.value}
+          onClick={() => onChange(o.value)}
+          className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${value === o.value ? "bg-primary text-primary-foreground border-primary" : "bg-transparent text-muted-foreground border-border hover:bg-accent"}`}
+        >
+          {o.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function periodLabel(p: PeriodType): string {
+  if (p === '7d') return 'últimos 7 dias';
+  if (p === '30d') return 'últimos 30 dias';
+  return 'desde o início';
+}
+
+function CustomChartTooltip({ active, payload, label, isEngagement }: any) {
+  if (!active || !payload?.length) return null;
+  const val = payload[0]?.value;
+  return (
+    <div className="bg-popover border border-border rounded-lg p-2 shadow-lg text-xs">
+      <p className="text-muted-foreground">{label}</p>
+      <p className="font-bold text-foreground">
+        {isEngagement ? `${Number(val).toFixed(2)}%` : formatNumber(val)}
+      </p>
+    </div>
   );
 }
 
