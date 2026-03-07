@@ -196,7 +196,7 @@ function ProfileDetailSheet({
 // ── Perfis Tab ──
 
 function PerfisTab() {
-  const { profiles, loadingProfiles, isScanning, addProfile, removeProfile, toggleProfile, runScan, fetchProfileHistory } = useRadarViralizacao();
+  const { monitoredProfiles, loadingProfiles, isScanning, addProfile, removeProfile, toggleProfile, runScan, fetchProfileHistory } = useRadarViralizacao();
   const [username, setUsername] = useState("");
   const [platform, setPlatform] = useState<"instagram" | "tiktok">("instagram");
   const [selectedProfile, setSelectedProfile] = useState<MonitoredProfile | null>(null);
@@ -208,7 +208,7 @@ function PerfisTab() {
     setUsername("");
   };
 
-  const sorted = [...profiles].sort((a, b) => (b.engagement_score_7d ?? 0) - (a.engagement_score_7d ?? 0));
+  const sorted = [...monitoredProfiles].sort((a, b) => (b.engagement_score_7d ?? 0) - (a.engagement_score_7d ?? 0));
 
   return (
     <div className="space-y-6">
@@ -1115,23 +1115,69 @@ function FacebookAnalysisSheet({ profile: p, open, onOpenChange, history, loadin
 // ── Minhas Contas Tab ──
 
 function MinhasContasTab() {
+  const { ownAccounts, addOwnAccount, removeProfile, loadingProfiles } = useRadarViralizacao();
+  const [activeTab, setActiveTab] = useState<"instagram" | "tiktok" | "facebook">("instagram");
+  const [username, setUsername] = useState("");
+  const [platform, setPlatform] = useState<"instagram" | "tiktok" | "facebook">("instagram");
+
+  // Sync select with active tab
+  useEffect(() => { setPlatform(activeTab); }, [activeTab]);
+
+  const handleAdd = () => {
+    if (!username.trim()) return;
+    addOwnAccount.mutate({ username: username.trim(), platform });
+    setUsername("");
+  };
+
+  const filtered = ownAccounts.filter((p) => p.platform === activeTab);
+
   return (
-    <Tabs defaultValue="instagram" className="flex-1 flex flex-col min-h-0">
-      <TabsList className="w-fit">
-        <TabsTrigger value="instagram" className="gap-1.5"><Camera className="w-4 h-4 text-purple-500" />Instagram</TabsTrigger>
-        <TabsTrigger value="tiktok" className="gap-1.5"><Music className="w-4 h-4 text-foreground" />TikTok</TabsTrigger>
-        <TabsTrigger value="facebook" className="gap-1.5"><Facebook className="w-4 h-4 text-blue-500" />Facebook</TabsTrigger>
-      </TabsList>
-      <TabsContent value="instagram" className="flex-1 overflow-auto mt-4">
-        <InstagramContasTab />
-      </TabsContent>
-      <TabsContent value="tiktok" className="flex-1 overflow-auto mt-4">
-        <TiktokContasTab />
-      </TabsContent>
-      <TabsContent value="facebook" className="flex-1 overflow-auto mt-4">
-        <FacebookContasTab />
-      </TabsContent>
-    </Tabs>
+    <div className="space-y-4">
+      {/* Add form */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="flex gap-3 items-end flex-wrap">
+            <div className="flex-1 min-w-[200px]">
+              <label className="text-sm font-medium text-muted-foreground mb-1 block">Username</label>
+              <Input placeholder="@suaconta" value={username} onChange={(e) => setUsername(e.target.value)} onKeyDown={(e) => e.key === "Enter" && handleAdd()} />
+            </div>
+            <div className="w-[160px]">
+              <label className="text-sm font-medium text-muted-foreground mb-1 block">Plataforma</label>
+              <Select value={platform} onValueChange={(v) => { setPlatform(v as typeof platform); setActiveTab(v as typeof activeTab); }}>
+                <SelectTrigger><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="instagram">Instagram</SelectItem>
+                  <SelectItem value="tiktok">TikTok</SelectItem>
+                  <SelectItem value="facebook">Facebook</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <Button onClick={handleAdd} disabled={!username.trim() || addOwnAccount.isPending}>
+              <Plus className="w-4 h-4 mr-1" />Adicionar minha conta
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Subtabs */}
+      <Tabs value={activeTab} onValueChange={(v) => setActiveTab(v as typeof activeTab)} className="flex-1 flex flex-col min-h-0">
+        <TabsList className="w-fit">
+          <TabsTrigger value="instagram" className="gap-1.5"><Camera className="w-4 h-4 text-purple-500" />Instagram</TabsTrigger>
+          <TabsTrigger value="tiktok" className="gap-1.5"><Music className="w-4 h-4 text-foreground" />TikTok</TabsTrigger>
+          <TabsTrigger value="facebook" className="gap-1.5"><Facebook className="w-4 h-4 text-blue-500" />Facebook</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="instagram" className="flex-1 overflow-auto mt-4">
+          <InstagramContasTab />
+        </TabsContent>
+        <TabsContent value="tiktok" className="flex-1 overflow-auto mt-4">
+          <TiktokContasTab />
+        </TabsContent>
+        <TabsContent value="facebook" className="flex-1 overflow-auto mt-4">
+          <FacebookContasTab />
+        </TabsContent>
+      </Tabs>
+    </div>
   );
 }
 
