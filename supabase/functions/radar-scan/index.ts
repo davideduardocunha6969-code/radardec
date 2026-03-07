@@ -165,6 +165,17 @@ function calcEngagement7d(mapped: MappedPost[], followers: number | null) {
   return Math.round((totalEngagement / recent.length / followers) * 100 * 100) / 100;
 }
 
+// ── URL normalization ──
+
+function normalizeUrl(url: string): string {
+  try {
+    const u = new URL(url);
+    return (u.origin + u.pathname).replace(/\/$/, "");
+  } catch {
+    return url.replace(/\/$/, "");
+  }
+}
+
 // ── Upsert viral content ──
 
 async function upsertVirals(
@@ -173,10 +184,13 @@ async function upsertVirals(
 ) {
   let inserted = 0;
   for (const row of rows) {
+    const normalizedUrl = normalizeUrl(row.post_url as string);
+    const rowNormalized = { ...row, post_url: normalizedUrl };
+
     const { data: existing } = await supabase
       .from("viral_content")
       .select("id")
-      .eq("post_url", row.post_url)
+      .eq("post_url", normalizedUrl)
       .eq("user_id", row.user_id)
       .maybeSingle();
 
@@ -191,7 +205,7 @@ async function upsertVirals(
         })
         .eq("id", existing.id);
     } else {
-      await supabase.from("viral_content").insert(row);
+      await supabase.from("viral_content").insert(rowNormalized);
       inserted++;
     }
   }
@@ -239,6 +253,17 @@ async function fetchInstagramProfile(username: string, token: string) {
   }
 }
 
+// ── ISO week helper ──
+
+function getISOWeek(date: Date): string {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  const weekNo = Math.ceil(((d.getTime() - yearStart.getTime()) / 86400000 + 1) / 7);
+  return `${d.getUTCFullYear()}-W${String(weekNo).padStart(2, "0")}`;
+}
+
 // ── Scan profiles ──
 
 async function scanProfiles(
@@ -261,7 +286,7 @@ async function scanProfiles(
   let totalFound = 0;
   const debugItems: Record<string, unknown>[] = [];
   const now = new Date().toISOString();
-  const weekNum = `${new Date().getFullYear()}-W${String(Math.ceil((new Date().getDate()) / 7)).padStart(2, "0")}`;
+  const weekNum = getISOWeek(new Date());
 
   for (const profile of profiles) {
     try {
@@ -404,7 +429,7 @@ async function scanTopics(
 
   let totalFound = 0;
   const now = new Date().toISOString();
-  const weekNum = `${new Date().getFullYear()}-W${String(Math.ceil((new Date().getDate()) / 7)).padStart(2, "0")}`;
+  const weekNum = getISOWeek(new Date());
 
   for (const topic of topics) {
     const platforms: string[] =
