@@ -1772,7 +1772,9 @@ export type Database = {
           date_joined: string | null
           display_name: string | null
           engagement_rate: number | null
+          engagement_score_30d: number | null
           engagement_score_7d: number | null
+          engagement_score_all: number | null
           external_url: string | null
           facebook_page_id: string | null
           followers_count: number | null
@@ -1819,7 +1821,9 @@ export type Database = {
           date_joined?: string | null
           display_name?: string | null
           engagement_rate?: number | null
+          engagement_score_30d?: number | null
           engagement_score_7d?: number | null
+          engagement_score_all?: number | null
           external_url?: string | null
           facebook_page_id?: string | null
           followers_count?: number | null
@@ -1866,7 +1870,9 @@ export type Database = {
           date_joined?: string | null
           display_name?: string | null
           engagement_rate?: number | null
+          engagement_score_30d?: number | null
           engagement_score_7d?: number | null
+          engagement_score_all?: number | null
           external_url?: string | null
           facebook_page_id?: string | null
           followers_count?: number | null

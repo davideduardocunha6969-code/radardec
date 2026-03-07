@@ -36,6 +36,8 @@ export interface OwnProfile {
   instagram_business_id: string | null;
   avg_saves_recent: number | null;
   best_post_engagement: number | null;
+  engagement_score_30d: number | null;
+  engagement_score_all: number | null;
   total_posts_7d: number | null;
   total_posts_30d: number | null;
   reach_30d: number | null;

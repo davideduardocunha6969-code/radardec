@@ -1,46 +1,42 @@
 
+# Tres Paineis de Atendimento — Status
 
-## Plan: Fix Engagement Rate Calculation (7d, 30d, Historical) + Fetch All Posts
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-### Problems
-1. **Engagement is only calculated for 7 days** — no 30d or historical (all-time from fetched posts) engagement stored
-2. **Only 30 posts fetched** — no pagination, so accounts posting frequently miss posts in the 30-day window
-3. **Averages use `last10` slice** instead of actual 7d/30d post groups
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-### Changes
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-#### 1. Database Migration
-Add new columns to `monitored_profiles`:
-- `engagement_score_30d NUMERIC` — engagement rate from posts in last 30 days
-- `engagement_score_all NUMERIC` — engagement rate from all fetched posts (historical baseline)
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-#### 2. Edge Function (`instagram-insights`)
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-**Pagination**: After initial fetch of 30 posts, follow `mediaRes.paging?.next` until oldest post is >30 days old or cap of 100 posts reached.
-
-**Three engagement rates** (each = average of per-post engagement where `engagement_post = (likes+comments+saves+shares)/followers*100`):
-- `engagement_score_7d` = average of posts from last 7 days
-- `engagement_score_30d` = average of posts from last 30 days  
-- `engagement_score_all` = average of ALL fetched posts
-
-**Averages recalculated per window**:
-- `avg_likes_recent`, `avg_comments_recent`, `avg_views_recent`, `avg_shares_recent`, `avg_saves_recent` → from **last 30 days** posts (not last 10)
-
-**History upsert** — also store `avg_engagement_30d`, `avg_views_30d`, `avg_likes_30d`, `posts_count_7d`, `posts_count_30d`.
-
-#### 3. Frontend (`MinhasContasDetail.tsx`)
-
-Update `EngagementSection` to show three cards:
-- "Taxa 7d" → `engagement_score_7d`
-- "Taxa 30d" → `engagement_score_30d`  
-- "Taxa Histórica" → `engagement_score_all`
-
-#### 4. Hook (`useMinhasContas.ts`)
-Add `engagement_score_30d` and `engagement_score_all` to the `OwnProfile` type.
-
-### Files Modified
-- **Migration**: new SQL adding 2 columns
-- **Edge Function**: `supabase/functions/instagram-insights/index.ts` — pagination + 3 engagement calcs
-- **Frontend**: `src/pages/MinhasContasDetail.tsx` — display 3 rates
-- **Hook**: `src/hooks/useMinhasContas.ts` — type update
-
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções
