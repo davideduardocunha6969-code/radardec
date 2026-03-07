@@ -538,6 +538,44 @@ function ViraisTab() {
     </div>
   );
 }
+
+// ── Sub-tab placeholders ──
+
+function InstagramContasTab() {
+  return <div className="flex items-center justify-center h-40 text-muted-foreground">Em construção</div>;
+}
+
+function TiktokContasTab() {
+  return <div className="flex items-center justify-center h-40 text-muted-foreground">Em construção</div>;
+}
+
+function FacebookContasTab() {
+  return <div className="flex items-center justify-center h-40 text-muted-foreground">Em construção</div>;
+}
+
+// ── Minhas Contas Tab ──
+
+function MinhasContasTab() {
+  return (
+    <Tabs defaultValue="instagram" className="flex-1 flex flex-col min-h-0">
+      <TabsList className="w-fit">
+        <TabsTrigger value="instagram" className="gap-1.5"><Camera className="w-4 h-4 text-purple-500" />Instagram</TabsTrigger>
+        <TabsTrigger value="tiktok" className="gap-1.5"><Music className="w-4 h-4 text-foreground" />TikTok</TabsTrigger>
+        <TabsTrigger value="facebook" className="gap-1.5"><Facebook className="w-4 h-4 text-blue-500" />Facebook</TabsTrigger>
+      </TabsList>
+      <TabsContent value="instagram" className="flex-1 overflow-auto mt-4">
+        <InstagramContasTab />
+      </TabsContent>
+      <TabsContent value="tiktok" className="flex-1 overflow-auto mt-4">
+        <TiktokContasTab />
+      </TabsContent>
+      <TabsContent value="facebook" className="flex-1 overflow-auto mt-4">
+        <FacebookContasTab />
+      </TabsContent>
+    </Tabs>
+  );
+}
+
 // ── Main Page ──
 
 const RadarViralizacao = () => {
