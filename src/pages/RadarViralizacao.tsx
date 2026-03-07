@@ -1192,17 +1192,20 @@ function MinhasContasTab() {
   const [activeTab, setActiveTab] = useState<"instagram" | "tiktok" | "facebook">("instagram");
   const [username, setUsername] = useState("");
   const [platform, setPlatform] = useState<"instagram" | "tiktok" | "facebook">("instagram");
+  const [legalArea, setLegalArea] = useState<string>("none");
 
   // Sync select with active tab
   useEffect(() => { setPlatform(activeTab); }, [activeTab]);
 
   const handleAdd = () => {
     if (!username.trim()) return;
-    addOwnAccount.mutate({ username: username.trim(), platform });
+    addOwnAccount.mutate({
+      username: username.trim(),
+      platform,
+      ...(legalArea !== "none" ? { legal_area: legalArea } : {}),
+    });
     setUsername("");
   };
-
-  const filtered = ownAccounts.filter((p) => p.platform === activeTab);
 
   return (
     <div className="space-y-4">
@@ -1224,6 +1227,10 @@ function MinhasContasTab() {
                   <SelectItem value="facebook">Facebook</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="w-[180px]">
+              <label className="text-sm font-medium text-muted-foreground mb-1 block">Ramo do Direito</label>
+              <LegalAreaSelect value={legalArea} onChange={setLegalArea} className="w-full" />
             </div>
             <Button onClick={handleAdd} disabled={!username.trim() || addOwnAccount.isPending}>
               <Plus className="w-4 h-4 mr-1" />Adicionar minha conta
