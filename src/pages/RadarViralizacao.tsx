@@ -1041,6 +1041,13 @@ function TiktokAnalysisSheet({ profile: p, open, onOpenChange, history, loadingH
             <MetricMiniCard label="Compartilhamentos" value={p.avg_shares_recent != null ? formatNumber(Math.round(p.avg_shares_recent)) : "—"} icon={<ExternalLink className="w-4 h-4" />} />
           </div>
 
+          {/* Legal area */}
+          <div className="flex items-center gap-3">
+            <Scale className="w-4 h-4 text-muted-foreground" />
+            <label className="text-sm text-muted-foreground">Ramo do Direito</label>
+            <LegalAreaSelect value={p.legal_area || "none"} onChange={onUpdateLegalArea} className="flex-1" />
+          </div>
+
           {loadingHistory ? (
             <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
           ) : followersData.length > 1 ? (
