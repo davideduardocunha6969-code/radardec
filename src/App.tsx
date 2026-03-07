@@ -38,7 +38,8 @@ import RadarOutbound from "./pages/RadarOutbound";
  import Pipeline from "./pages/recrutamento/Pipeline";
  import Relatorios from "./pages/recrutamento/Relatorios";
  import SugestoesContratacao from "./pages/recrutamento/SugestoesContratacao";
- import NotFound from "./pages/NotFound";
+import NotFound from "./pages/NotFound";
+import Privacy from "./pages/Privacy";
  import Agenda from "./pages/Agenda";
  import MeuPainel from "./pages/MeuPainel";
  import Atendimento from "./pages/Atendimento";
@@ -96,6 +97,7 @@ const App = () => (
                 <Route path="sugestoes" element={<SugestoesContratacao />} />
                </Route>
             </Route>
+            <Route path="/privacy" element={<Privacy />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </AuthProvider>
