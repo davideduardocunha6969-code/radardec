@@ -616,11 +616,17 @@ function ViraisTab() {
 // ── Sub-tab placeholders ──
 
 function InstagramContasTab() {
-  const { instagramProfiles, loadingProfiles, isScanning, scanProfile, scanAllByPlatform, fetchHistory } = useMinhasContas();
+  const { instagramProfiles, loadingProfiles, isScanning, scanProfile, scanAllByPlatform, fetchHistory, updateLegalArea } = useMinhasContas();
   const [selectedProfile, setSelectedProfile] = useState<OwnProfile | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
   const [history, setHistory] = useState<ProfileHistory[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [legalAreaFilter, setLegalAreaFilter] = useState<string | null>(null);
+
+  const filteredProfiles = useMemo(() => {
+    if (!legalAreaFilter) return instagramProfiles;
+    return instagramProfiles.filter((p) => p.legal_area === legalAreaFilter);
+  }, [instagramProfiles, legalAreaFilter]);
 
   const openAnalysis = useCallback(async (profile: OwnProfile) => {
     setSelectedProfile(profile);
