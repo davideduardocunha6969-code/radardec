@@ -156,21 +156,40 @@ function calcPostFrequency(mapped: MappedPost[]) {
   };
 }
 
-function calcEngagement7d(mapped: MappedPost[], followers: number | null) {
-  if (!followers || followers === 0 || mapped.length === 0) return null;
-  const sevenDaysAgo = Date.now() - 7 * 24 * 60 * 60 * 1000;
-  const withTimestamp = mapped.filter((p) => !!p.timestamp);
-  const withoutTimestamp = mapped.filter((p) => !p.timestamp);
+function calcEngagementByPeriod(posts: MappedPost[], followers: number | null, days: number | null) {
+  if (!followers || followers === 0 || posts.length === 0) return null;
+
   let postsToCalc: MappedPost[];
-  if (withTimestamp.length === 0) {
-    postsToCalc = mapped;
+
+  if (days === null) {
+    postsToCalc = posts;
   } else {
-    const recent7d = withTimestamp.filter((p) => new Date(p.timestamp!).getTime() >= sevenDaysAgo);
-    postsToCalc = [...(recent7d.length > 0 ? recent7d : withTimestamp), ...withoutTimestamp];
+    const cutoff = Date.now() - days * 24 * 60 * 60 * 1000;
+    const withTimestamp = posts.filter(p => !!p.timestamp);
+    const withoutTimestamp = posts.filter(p => !p.timestamp);
+
+    if (withTimestamp.length === 0) {
+      postsToCalc = posts;
+    } else {
+      const inPeriod = withTimestamp.filter(p => new Date(p.timestamp!).getTime() >= cutoff);
+      postsToCalc = [...(inPeriod.length > 0 ? inPeriod : withTimestamp.slice(-3)), ...withoutTimestamp];
+    }
   }
+
   if (postsToCalc.length === 0) return null;
-  const totalEngagement = postsToCalc.reduce((sum, p) => sum + p.likes + p.comments, 0);
-  return Math.round((totalEngagement / postsToCalc.length / followers) * 100 * 100) / 100;
+
+  const totalLikes = postsToCalc.reduce((s, p) => s + p.likes, 0);
+  const totalComments = postsToCalc.reduce((s, p) => s + p.comments, 0);
+  const totalViews = postsToCalc.reduce((s, p) => s + p.views, 0);
+
+  const engagementRate = Math.round(((totalLikes + totalComments) / (postsToCalc.length * followers)) * 100 * 100) / 100;
+
+  return {
+    engagement_rate: engagementRate,
+    avg_views: Math.round(totalViews / postsToCalc.length),
+    avg_likes: Math.round(totalLikes / postsToCalc.length),
+    posts_count: postsToCalc.length,
+  };
 }
 
 // ── URL normalization ──
@@ -368,31 +387,33 @@ async function scanProfiles(
 
       // ── Calculate posting frequency & engagement ──
       const freq = calcPostFrequency(postsForMetrics);
-      const engagementScore = calcEngagement7d(postsForMetrics, profileFollowers);
+      const metrics7d = calcEngagementByPeriod(postsForMetrics, profileFollowers, 7);
+      const metrics30d = calcEngagementByPeriod(postsForMetrics, profileFollowers, 30);
 
       if (freq.avg_posts_per_day != null) updateData.avg_posts_per_day = freq.avg_posts_per_day;
       if (freq.avg_posts_per_week != null) updateData.avg_posts_per_week = freq.avg_posts_per_week;
       if (freq.avg_posts_per_month != null) updateData.avg_posts_per_month = freq.avg_posts_per_month;
-      if (engagementScore != null) updateData.engagement_score_7d = engagementScore;
+      if (metrics7d?.engagement_rate != null) updateData.engagement_score_7d = metrics7d.engagement_rate;
+      if (metrics7d?.avg_views != null) updateData.avg_views_recent = metrics7d.avg_views;
+      if (metrics7d?.avg_likes != null) updateData.avg_likes_recent = metrics7d.avg_likes;
 
       await supabase.from("monitored_profiles").update(updateData).eq("id", profile.id);
 
       // ── Insert profile_history snapshot ──
-      const avgViews7d = postsForMetrics.length > 0
-        ? Math.round(postsForMetrics.reduce((s, p) => s + p.views, 0) / postsForMetrics.length * 100) / 100
-        : null;
-      const avgLikes7d = postsForMetrics.length > 0
-        ? Math.round(postsForMetrics.reduce((s, p) => s + p.likes, 0) / postsForMetrics.length * 100) / 100
-        : null;
-
       await supabase.from("profile_history").insert({
         profile_id: profile.id,
         user_id: userId,
         followers_count: profileFollowers,
         posts_count: profileMeta.posts_count,
-        avg_views_7d: avgViews7d,
-        avg_likes_7d: avgLikes7d,
-        engagement_score: engagementScore,
+        avg_views_7d: metrics7d?.avg_views ?? null,
+        avg_likes_7d: metrics7d?.avg_likes ?? null,
+        engagement_score: metrics7d?.engagement_rate ?? null,
+        avg_engagement_7d: metrics7d?.engagement_rate ?? null,
+        avg_engagement_30d: metrics30d?.engagement_rate ?? null,
+        avg_views_30d: metrics30d?.avg_views ?? null,
+        avg_likes_30d: metrics30d?.avg_likes ?? null,
+        posts_count_7d: metrics7d?.posts_count ?? null,
+        posts_count_30d: metrics30d?.posts_count ?? null,
       });
 
       // ── Detect & upsert virals ──
