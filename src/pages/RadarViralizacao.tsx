@@ -616,28 +616,14 @@ function ViraisTab() {
 // ── Sub-tab placeholders ──
 
 function InstagramContasTab() {
+  const navigate = useNavigate();
   const { instagramProfiles, loadingProfiles, isScanning, scanProfile, scanAllByPlatform, fetchHistory, updateLegalArea } = useMinhasContas();
-  const [selectedProfile, setSelectedProfile] = useState<OwnProfile | null>(null);
-  const [sheetOpen, setSheetOpen] = useState(false);
-  const [history, setHistory] = useState<ProfileHistory[]>([]);
-  const [loadingHistory, setLoadingHistory] = useState(false);
   const [legalAreaFilter, setLegalAreaFilter] = useState<string | null>(null);
 
   const filteredProfiles = useMemo(() => {
     if (!legalAreaFilter) return instagramProfiles;
     return instagramProfiles.filter((p) => p.legal_area === legalAreaFilter);
   }, [instagramProfiles, legalAreaFilter]);
-
-  const openAnalysis = useCallback(async (profile: OwnProfile) => {
-    setSelectedProfile(profile);
-    setSheetOpen(true);
-    setLoadingHistory(true);
-    try {
-      const h = await fetchHistory(profile.id);
-      setHistory(h);
-    } catch { setHistory([]); }
-    finally { setLoadingHistory(false); }
-  }, [fetchHistory]);
 
   if (loadingProfiles) {
     return <div className="flex items-center justify-center h-40"><Loader2 className="w-6 h-6 animate-spin text-muted-foreground" /></div>;
@@ -713,7 +699,7 @@ function InstagramContasTab() {
 
               {/* Actions */}
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" className="flex-1" onClick={() => openAnalysis(p)}>
+                <Button variant="outline" size="sm" className="flex-1" onClick={() => navigate(`/minhas-contas/${p.id}`)}>
                   <BarChart3 className="w-3.5 h-3.5 mr-1" />Analisar
                 </Button>
                 <Button size="sm" className="flex-1" disabled={isScanning} onClick={() => scanProfile(p.id)}>
