@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { Radar, Plus, Trash2, Loader2, Eye, Heart, MessageCircle, ExternalLink, CheckCircle2, User, BarChart3, TrendingUp, Calendar, Video, X, Play } from "lucide-react";
+import { Radar, Plus, Trash2, Loader2, Eye, Heart, MessageCircle, ExternalLink, CheckCircle2, User, BarChart3, TrendingUp, Calendar, Video, X, Play, Camera, Music, Facebook } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -553,6 +553,7 @@ const RadarViralizacao = () => {
           <TabsTrigger value="perfis">Perfis</TabsTrigger>
           <TabsTrigger value="temas">Temas</TabsTrigger>
           <TabsTrigger value="virais">Virais Detectados</TabsTrigger>
+          <TabsTrigger value="minhas-contas" className="gap-1.5"><User className="w-4 h-4" />Minhas Contas</TabsTrigger>
         </TabsList>
 
         <TabsContent value="perfis" className="flex-1 overflow-auto mt-4">
@@ -563,6 +564,9 @@ const RadarViralizacao = () => {
         </TabsContent>
         <TabsContent value="virais" className="flex-1 overflow-auto mt-4">
           <ViraisTab />
+        </TabsContent>
+        <TabsContent value="minhas-contas" className="flex-1 overflow-auto mt-4">
+          <MinhasContasTab />
         </TabsContent>
       </Tabs>
     </div>
