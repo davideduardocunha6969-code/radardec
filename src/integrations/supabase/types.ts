@@ -1754,6 +1754,9 @@ export type Database = {
       }
       monitored_profiles: {
         Row: {
+          audience_city: Json | null
+          audience_country: Json | null
+          audience_gender_age: Json | null
           avatar_url: string | null
           avg_comments_recent: number | null
           avg_likes_recent: number | null
@@ -1774,7 +1777,9 @@ export type Database = {
           facebook_page_id: string | null
           followers_count: number | null
           following_count: number | null
+          follows_count: number | null
           id: string
+          impressions_30d: number | null
           instagram_business_id: string | null
           is_active: boolean | null
           is_business: boolean | null
@@ -1785,12 +1790,20 @@ export type Database = {
           meta_page_access_token: string | null
           platform: string
           posts_count: number | null
+          posts_data: Json | null
+          profile_views_30d: number | null
+          reach_30d: number | null
           top_posts: Json | null
+          total_posts_30d: number | null
           total_posts_7d: number | null
           user_id: string
           username: string
+          website_clicks_30d: number | null
         }
         Insert: {
+          audience_city?: Json | null
+          audience_country?: Json | null
+          audience_gender_age?: Json | null
           avatar_url?: string | null
           avg_comments_recent?: number | null
           avg_likes_recent?: number | null
@@ -1811,7 +1824,9 @@ export type Database = {
           facebook_page_id?: string | null
           followers_count?: number | null
           following_count?: number | null
+          follows_count?: number | null
           id?: string
+          impressions_30d?: number | null
           instagram_business_id?: string | null
           is_active?: boolean | null
           is_business?: boolean | null
@@ -1822,12 +1837,20 @@ export type Database = {
           meta_page_access_token?: string | null
           platform: string
           posts_count?: number | null
+          posts_data?: Json | null
+          profile_views_30d?: number | null
+          reach_30d?: number | null
           top_posts?: Json | null
+          total_posts_30d?: number | null
           total_posts_7d?: number | null
           user_id: string
           username: string
+          website_clicks_30d?: number | null
         }
         Update: {
+          audience_city?: Json | null
+          audience_country?: Json | null
+          audience_gender_age?: Json | null
           avatar_url?: string | null
           avg_comments_recent?: number | null
           avg_likes_recent?: number | null
@@ -1848,7 +1871,9 @@ export type Database = {
           facebook_page_id?: string | null
           followers_count?: number | null
           following_count?: number | null
+          follows_count?: number | null
           id?: string
+          impressions_30d?: number | null
           instagram_business_id?: string | null
           is_active?: boolean | null
           is_business?: boolean | null
@@ -1859,10 +1884,15 @@ export type Database = {
           meta_page_access_token?: string | null
           platform?: string
           posts_count?: number | null
+          posts_data?: Json | null
+          profile_views_30d?: number | null
+          reach_30d?: number | null
           top_posts?: Json | null
+          total_posts_30d?: number | null
           total_posts_7d?: number | null
           user_id?: string
           username?: string
+          website_clicks_30d?: number | null
         }
         Relationships: []
       }
