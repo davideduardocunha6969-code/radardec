@@ -456,7 +456,7 @@ function EvolutionSection({ history, loading }: { history: ProfileHistory[]; loa
   );
 }
 
-// ── SECTION 5: Posts Grid ──
+// ── SECTION 5: Posts Compact List ──
 
 function PostsGridSection({ posts, followers }: { posts: PostData[]; followers: number }) {
   const [typeFilter, setTypeFilter] = useState<string>("all");
@@ -466,14 +466,12 @@ function PostsGridSection({ posts, followers }: { posts: PostData[]; followers: 
   const filtered = useMemo(() => {
     let list = [...posts];
 
-    // Period
     if (periodFilter === "7d") {
       const cutoff = new Date();
       cutoff.setDate(cutoff.getDate() - 7);
       list = list.filter(p => p.timestamp && new Date(p.timestamp) >= cutoff);
     }
 
-    // Type
     if (typeFilter !== "all") {
       list = list.filter(p => {
         if (typeFilter === "VIDEO") return p.media_type === "VIDEO";
@@ -483,7 +481,6 @@ function PostsGridSection({ posts, followers }: { posts: PostData[]; followers: 
       });
     }
 
-    // Sort
     list.sort((a, b) => {
       switch (sortBy) {
         case "likes": return b.like_count - a.like_count;
@@ -499,6 +496,23 @@ function PostsGridSection({ posts, followers }: { posts: PostData[]; followers: 
   }, [posts, typeFilter, sortBy, periodFilter]);
 
   if (posts.length === 0) return null;
+
+  const typeBadgeColor = (type?: string) => {
+    if (type === "VIDEO") return "bg-red-500/15 text-red-400 border-red-500/30";
+    if (type === "CAROUSEL_ALBUM") return "bg-blue-500/15 text-blue-400 border-blue-500/30";
+    return "bg-green-500/15 text-green-400 border-green-500/30";
+  };
+
+  const formatDate = (ts?: string) => {
+    if (!ts) return "—";
+    const d = new Date(ts);
+    return d.toLocaleDateString("pt-BR", { day: "2-digit", month: "short" }).replace(".", "");
+  };
+
+  const truncate = (s?: string | null, max = 60) => {
+    if (!s) return "";
+    return s.length > max ? s.slice(0, max) + "…" : s;
+  };
 
   return (
     <div className="space-y-3">
@@ -526,73 +540,77 @@ function PostsGridSection({ posts, followers }: { posts: PostData[]; followers: 
           <Select value={sortBy} onValueChange={setSortBy}>
             <SelectTrigger className="w-[140px] h-8 text-xs"><ArrowUpDown className="w-3 h-3 mr-1" /><SelectValue /></SelectTrigger>
             <SelectContent>
-              <SelectItem value="date">Data</SelectItem>
-              <SelectItem value="likes">Likes</SelectItem>
-              <SelectItem value="engagement">Engajamento</SelectItem>
-              <SelectItem value="views">Views</SelectItem>
-              <SelectItem value="saves">Saves</SelectItem>
-              <SelectItem value="shares">Shares</SelectItem>
+              <SelectItem value="date">Data ↓</SelectItem>
+              <SelectItem value="likes">Likes ↓</SelectItem>
+              <SelectItem value="engagement">Engajamento ↓</SelectItem>
+              <SelectItem value="views">Views ↓</SelectItem>
+              <SelectItem value="saves">Saves ↓</SelectItem>
+              <SelectItem value="shares">Shares ↓</SelectItem>
             </SelectContent>
           </Select>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3">
-        {filtered.map((post) => (
-          <PostCard key={post.id} post={post} />
-        ))}
-      </div>
+      <Card>
+        <div className="overflow-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="border-b border-border text-muted-foreground">
+                <th className="text-left p-2 font-medium w-[52px]"></th>
+                <th className="text-left p-2 font-medium w-[70px]">Tipo</th>
+                <th className="text-left p-2 font-medium">Legenda</th>
+                <th className="text-left p-2 font-medium w-[60px]">Data</th>
+                <th className="text-right p-2 font-medium w-[55px]">❤️</th>
+                <th className="text-right p-2 font-medium w-[55px]">💬</th>
+                <th className="text-right p-2 font-medium w-[55px]">👁️</th>
+                <th className="text-right p-2 font-medium w-[55px]">🔖</th>
+                <th className="text-right p-2 font-medium w-[55px]">🔄</th>
+                <th className="text-right p-2 font-medium w-[65px]">Eng %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((post) => {
+                const imgSrc = post.media_type === "VIDEO" ? post.thumbnail_url : (post.media_url || post.thumbnail_url);
+                return (
+                  <tr key={post.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
+                    <td className="p-1.5">
+                      <a href={post.permalink ?? "#"} target="_blank" rel="noopener noreferrer" className="block">
+                        {imgSrc ? (
+                          <img src={imgSrc} alt="" className="w-[48px] h-[48px] rounded object-cover bg-muted" referrerPolicy="no-referrer" crossOrigin="anonymous" />
+                        ) : (
+                          <div className="w-[48px] h-[48px] rounded bg-muted flex items-center justify-center">
+                            <ImageIcon className="w-4 h-4 text-muted-foreground" />
+                          </div>
+                        )}
+                      </a>
+                    </td>
+                    <td className="p-2">
+                      <Badge variant="outline" className={`text-[10px] px-1.5 py-0 ${typeBadgeColor(post.media_type)}`}>
+                        {mediaLabel(post.media_type).toUpperCase()}
+                      </Badge>
+                    </td>
+                    <td className="p-2 text-muted-foreground max-w-[200px] truncate" title={post.caption ?? ""}>
+                      {truncate(post.caption)}
+                    </td>
+                    <td className="p-2 text-muted-foreground whitespace-nowrap">{formatDate(post.timestamp)}</td>
+                    <td className="p-2 text-right font-medium text-foreground">{formatNumber(post.like_count)}</td>
+                    <td className="p-2 text-right font-medium text-foreground">{formatNumber(post.comments_count)}</td>
+                    <td className="p-2 text-right font-medium text-foreground">{post.video_views > 0 ? formatNumber(post.video_views) : "—"}</td>
+                    <td className="p-2 text-right font-medium text-foreground">{formatNumber(post.saved)}</td>
+                    <td className="p-2 text-right font-medium text-foreground">{formatNumber(post.shares_count)}</td>
+                    <td className="p-2 text-right font-semibold text-primary">{post.engagement_post.toFixed(2)}%</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </Card>
 
       {filtered.length === 0 && (
         <p className="text-sm text-muted-foreground text-center py-8">Nenhum post encontrado para os filtros selecionados.</p>
       )}
     </div>
-  );
-}
-
-function PostCard({ post }: { post: PostData }) {
-  const imgSrc = post.thumbnail_url || post.media_url;
-  return (
-    <Card className="overflow-hidden">
-      {/* Thumbnail */}
-      <div className="aspect-square relative bg-muted">
-        {imgSrc ? (
-          <img src={imgSrc} alt="" className="w-full h-full object-cover" referrerPolicy="no-referrer" crossOrigin="anonymous" />
-        ) : (
-          <div className="w-full h-full flex items-center justify-center">
-            <ImageIcon className="w-8 h-8 text-muted-foreground" />
-          </div>
-        )}
-        <div className="absolute top-2 left-2">
-          <Badge variant="secondary" className="text-[10px] bg-background/80 backdrop-blur-sm">{mediaLabel(post.media_type)}</Badge>
-        </div>
-        <div className="absolute top-2 right-2">
-          <Badge className="bg-primary/80 text-primary-foreground text-[10px] backdrop-blur-sm">{post.engagement_post.toFixed(2)}%</Badge>
-        </div>
-      </div>
-
-      <CardContent className="p-3 space-y-2">
-        {post.caption && <p className="text-xs line-clamp-2 text-muted-foreground">{post.caption}</p>}
-        <div className="grid grid-cols-3 gap-1 text-[10px] text-muted-foreground">
-          <span className="flex items-center gap-0.5"><Heart className="w-3 h-3" />{formatNumber(post.like_count)}</span>
-          <span className="flex items-center gap-0.5"><MessageCircle className="w-3 h-3" />{formatNumber(post.comments_count)}</span>
-          {post.video_views > 0 && <span className="flex items-center gap-0.5"><Eye className="w-3 h-3" />{formatNumber(post.video_views)}</span>}
-          <span className="flex items-center gap-0.5"><Bookmark className="w-3 h-3" />{formatNumber(post.saved)}</span>
-          <span className="flex items-center gap-0.5"><Share2 className="w-3 h-3" />{formatNumber(post.shares_count)}</span>
-          {post.timestamp && (
-            <span className="flex items-center gap-0.5">
-              <Calendar className="w-3 h-3" />
-              {new Date(post.timestamp).toLocaleDateString("pt-BR", { day: "2-digit", month: "2-digit" })}
-            </span>
-          )}
-        </div>
-        {post.permalink && (
-          <a href={post.permalink} target="_blank" rel="noopener noreferrer" className="text-[10px] text-primary hover:underline flex items-center gap-1">
-            <ExternalLink className="w-3 h-3" />Ver post
-          </a>
-        )}
-      </CardContent>
-    </Card>
   );
 }
 
