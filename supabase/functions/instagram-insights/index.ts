@@ -127,18 +127,17 @@ Deno.serve(async (req) => {
 
     // ── Fetch all data from Meta Graph API ──
     step = "fetch_meta_api";
-    const profileUrl = `${GRAPH_API}/${igId}?fields=id,name,username,biography,website,followers_count,follows_count,media_count,profile_picture_url,ig_id&access_token=${token}`;
-    const mediaUrl = `${GRAPH_API}/${igId}/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,shares_count,saved,reach,impressions,video_views,plays,total_interactions,media_product_type&limit=50&access_token=${token}`;
-
-    // Profile insights (last 30 days)
     const now = new Date();
     const since30d = new Date(now.getTime() - 30 * 86400000);
     const sinceTs = Math.floor(since30d.getTime() / 1000);
     const untilTs = Math.floor(now.getTime() / 1000);
+
+    const profileUrl = `${GRAPH_API}/${igId}?fields=id,name,username,biography,website,followers_count,follows_count,media_count,profile_picture_url,ig_id&access_token=${token}`;
+    const mediaUrl = `${GRAPH_API}/${igId}/media?fields=id,caption,media_type,media_url,thumbnail_url,permalink,timestamp,like_count,comments_count,shares_count,saved,reach,impressions,video_views,plays,total_interactions,media_product_type&limit=100&since=${sinceTs}&access_token=${token}`;
     const insightsUrl = `${GRAPH_API}/${igId}/insights?metric=reach,impressions,profile_views,website_clicks,email_contacts,follower_count&period=day&since=${sinceTs}&until=${untilTs}&access_token=${token}`;
     const audienceUrl = `${GRAPH_API}/${igId}/insights?metric=audience_gender_age,audience_city,audience_country&period=lifetime&access_token=${token}`;
 
-    console.log(`[instagram-insights] step=fetch_meta_api, igId=${igId}`);
+    console.log(`[instagram-insights] step=fetch_meta_api, igId=${igId}, since=${sinceTs}`);
 
     const [profileRes, mediaRes, insightsRes, audienceRes] = await Promise.all([
       safeFetchJson(profileUrl),
@@ -162,7 +161,7 @@ Deno.serve(async (req) => {
     const followsCount = safeNum(profileRes.follows_count);
     console.log(`[instagram-insights] profile: followers=${followers}, follows=${followsCount}`);
 
-    // ── Parse media with pagination ──
+    // ── Parse media with pagination (max 3 pages) ──
     step = "parse_meta_media";
     if (mediaRes.error) {
       const msg = "Meta API (media): " + (mediaRes.error.message ?? JSON.stringify(mediaRes.error));
@@ -175,23 +174,28 @@ Deno.serve(async (req) => {
 
     let allPosts: MediaPost[] = mediaRes.data ?? [];
     let nextPage: string | null = mediaRes.paging?.next ?? null;
-    const cutoff30d = new Date(now.getTime() - 30 * 86400000);
+    let pagesLoaded = 1;
+    const maxPages = 3;
 
-    // Paginate until we have all posts from last 30 days (cap at 200)
-    while (nextPage && allPosts.length < 200) {
-      const oldest = allPosts[allPosts.length - 1];
-      if (oldest?.timestamp && new Date(oldest.timestamp) < cutoff30d) break;
-
+    while (nextPage && pagesLoaded < maxPages) {
+      console.log(`[instagram-insights] fetching page ${pagesLoaded + 1}...`);
       const pageRes = await safeFetchJson(nextPage);
       if (pageRes.error || !Array.isArray(pageRes.data) || pageRes.data.length === 0) break;
-
       allPosts = [...allPosts, ...pageRes.data];
       nextPage = pageRes.paging?.next ?? null;
+      pagesLoaded++;
     }
 
-    console.log(`[instagram-insights] total_posts_fetched=${allPosts.length}`);
+    // Filter to only posts within last 30 days
+    const cutoff30d = since30d;
+    allPosts = allPosts.filter(p => {
+      if (!p.timestamp) return false;
+      return new Date(p.timestamp) >= cutoff30d;
+    });
 
-    // ── Parse insights (graceful — may fail on dev accounts) ──
+    console.log(`[instagram-insights] total_posts_30d=${allPosts.length}, pages_loaded=${pagesLoaded}`);
+
+    // ── Parse insights (graceful) ──
     step = "parse_insights";
     let profileViews30d: number | null = null;
     let websiteClicks30d: number | null = null;
@@ -209,9 +213,6 @@ Deno.serve(async (req) => {
           case "website_clicks": websiteClicks30d = total; break;
         }
       }
-      console.log(`[instagram-insights] insights: reach=${reach30d}, impressions=${impressions30d}, profile_views=${profileViews30d}, clicks=${websiteClicks30d}`);
-    } else {
-      console.log(`[instagram-insights] insights unavailable (dev account?): ${insightsRes.error?.message ?? "no data"}`);
     }
 
     // ── Parse audience (graceful) ──
@@ -229,17 +230,13 @@ Deno.serve(async (req) => {
           case "audience_country": audienceCountry = val; break;
         }
       }
-      console.log(`[instagram-insights] audience data loaded`);
-    } else {
-      console.log(`[instagram-insights] audience unavailable: ${audienceRes.error?.message ?? "no data"}`);
     }
 
     // ── Calculate metrics ──
     step = "calculate_metrics";
     const last7 = allPosts.filter(p => isWithinDays(p.timestamp, 7));
-    const last30 = allPosts.filter(p => isWithinDays(p.timestamp, 30));
+    const last30 = allPosts; // already filtered to 30 days
 
-    // Three engagement rates
     const engagementScore7d = calcAvgEngagement(last7, followers);
     const engagementScore30d = calcAvgEngagement(last30, followers);
     const engagementScoreAll = calcAvgEngagement(allPosts, followers);
@@ -277,7 +274,7 @@ Deno.serve(async (req) => {
     const totalPosts7d = last7.length;
     const totalPosts30d = last30.length;
 
-    // ── Build posts_data (all fetched posts with full detail) ──
+    // ── Build posts_data ──
     const postsData = allPosts.map(p => ({
       id: p.id,
       permalink: p.permalink,
@@ -303,7 +300,7 @@ Deno.serve(async (req) => {
       .sort((a, b) => (b.like_count + b.comments_count + b.saved + b.shares_count) - (a.like_count + a.comments_count + a.saved + a.shares_count))
       .slice(0, 5);
 
-    console.log(`[instagram-insights] metrics: eng7d=${engagementScore7d}, eng30d=${engagementScore30d}, engAll=${engagementScoreAll}, avgLikes=${avgLikes}, posts7d=${totalPosts7d}, posts30d=${totalPosts30d}, total_fetched=${allPosts.length}`);
+    console.log(`[instagram-insights] metrics: eng7d=${engagementScore7d}, eng30d=${engagementScore30d}, engAll=${engagementScoreAll}, avgLikes=${avgLikes}, posts7d=${totalPosts7d}, posts30d=${totalPosts30d}`);
 
     // ── Update monitored_profiles ──
     step = "update_profile";
@@ -349,7 +346,7 @@ Deno.serve(async (req) => {
       console.log(`[instagram-insights] step=update_profile, success`);
     }
 
-    // ── Upsert profile_history (one per day, São Paulo timezone) ──
+    // ── Upsert profile_history ──
     step = "upsert_history";
     const historyData: Record<string, unknown> = {
       profile_id,
@@ -372,7 +369,6 @@ Deno.serve(async (req) => {
       recorded_at: nowIso,
     };
 
-    // Calculate today's window in São Paulo timezone (UTC-3)
     const spNow = new Date(now.getTime() - 3 * 3600000);
     const spDateStr = spNow.toISOString().slice(0, 10);
     const todayStartUtc = new Date(spDateStr + "T03:00:00Z").toISOString();
@@ -388,10 +384,8 @@ Deno.serve(async (req) => {
 
     if (existingHist && existingHist.length > 0) {
       await sb.from("profile_history").update(historyData).eq("id", existingHist[0].id);
-      console.log(`[instagram-insights] history updated (existing id=${existingHist[0].id})`);
     } else {
       await sb.from("profile_history").insert(historyData);
-      console.log(`[instagram-insights] history inserted (new day)`);
     }
 
     console.log(`[instagram-insights] DONE`);
