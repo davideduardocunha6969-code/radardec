@@ -42,9 +42,24 @@ Deno.serve(async (req) => {
     if (action === "render") {
       const { apiKey, hookUrl, corpoUrl, ctaUrl, variacaoId } = body;
 
+      console.log("=== CREATOMATE RENDER REQUEST ===");
+      console.log("hookUrl:", hookUrl);
+      console.log("corpoUrl:", corpoUrl);
+      console.log("ctaUrl:", ctaUrl);
+      console.log("variacaoId:", variacaoId);
+
       if (!apiKey) {
         return new Response(
           JSON.stringify({ error: "API Key do Creatomate não configurada" }),
+          { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+        );
+      }
+
+      // Validate URLs
+      if (!hookUrl || !corpoUrl || !ctaUrl) {
+        console.error("Missing URLs - hook:", !!hookUrl, "corpo:", !!corpoUrl, "cta:", !!ctaUrl);
+        return new Response(
+          JSON.stringify({ error: "URLs dos vídeos são obrigatórias", hookUrl, corpoUrl, ctaUrl }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }

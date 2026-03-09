@@ -335,16 +335,20 @@ function NovoProjetoTab({ onGenerate, isGenerating, progressInfo }: {
 }
 
 // ─── Galeria Tab ────────────────────────────────────────────────
-function GaleriaTab({ variations, projects, selectedProject, onProjectChange, onPollStatus }: {
+function GaleriaTab({ variations, projects, selectedProject, onProjectChange, onPollStatus, onDeleteVariation, onDeleteAllErrors }: {
   variations: DbVariation[];
   projects: DbProject[];
   selectedProject: string;
   onProjectChange: (v: string) => void;
   onPollStatus: () => void;
+  onDeleteVariation: (id: string) => Promise<void>;
+  onDeleteAllErrors: () => Promise<void>;
 }) {
   const [filterStatus, setFilterStatus] = useState<string>("todos");
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [selectedVariation, setSelectedVariation] = useState<DbVariation | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingErrors, setDeletingErrors] = useState(false);
 
   const filtered = variations.filter((v) => {
     const matchStatus = filterStatus === "todos" || v.status === filterStatus;
@@ -353,10 +357,23 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
   });
 
   const renderingCount = variations.filter((v) => v.status === "Renderizando").length;
+  const errorCount = variations.filter((v) => v.status === "Erro").length;
 
   const handlePublishClick = (variation: DbVariation) => {
     setSelectedVariation(variation);
     setPublishModalOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    await onDeleteVariation(id);
+    setDeletingId(null);
+  };
+
+  const handleDeleteAllErrors = async () => {
+    setDeletingErrors(true);
+    await onDeleteAllErrors();
+    setDeletingErrors(false);
   };
 
   return (
@@ -391,6 +408,29 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
           </SelectContent>
         </Select>
         <span className="text-sm text-muted-foreground">{filtered.length} vídeo(s)</span>
+
+        {errorCount > 0 && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="destructive" className="ml-auto h-8 text-xs gap-1.5" disabled={deletingErrors}>
+                {deletingErrors ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                Excluir com erro ({errorCount})
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir todas as variações com erro?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Essa ação irá excluir {errorCount} variação(ões) com status "Erro". Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteAllErrors}>Excluir</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       {filtered.length === 0 ? (
@@ -403,7 +443,32 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((v) => (
-            <Card key={v.id} className="overflow-hidden">
+            <Card key={v.id} className="overflow-hidden relative group">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 z-10 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                    disabled={deletingId === v.id}
+                  >
+                    {deletingId === v.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Tem certeza que deseja excluir esta variação?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      A variação "{v.nome}" será excluída permanentemente. Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => handleDelete(v.id)}>Excluir</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
               <div className="aspect-[9/16] bg-muted flex items-center justify-center">
                 {v.video_url ? (
                   <video src={v.video_url} className="w-full h-full object-cover" controls />
