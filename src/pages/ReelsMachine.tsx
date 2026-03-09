@@ -445,7 +445,7 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           {filtered.map((v) => (
             <Card key={v.id} className="overflow-hidden relative group">
               <AlertDialog>
@@ -453,10 +453,10 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
                   <Button
                     variant="destructive"
                     size="icon"
-                    className="absolute top-2 right-2 z-10 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-1 right-1 z-10 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                     disabled={deletingId === v.id}
                   >
-                    {deletingId === v.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    {deletingId === v.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
@@ -473,31 +473,31 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
                 </AlertDialogContent>
               </AlertDialog>
 
-              <div className="aspect-[9/16] bg-muted flex items-center justify-center">
+              <div className="h-[180px] bg-muted flex items-center justify-center">
                 {v.video_url ? (
                   <video src={v.video_url} className="w-full h-full object-cover" controls />
                 ) : v.status === "Renderizando" ? (
-                  <Loader2 className="h-10 w-10 text-chart-4 animate-spin" />
+                  <Loader2 className="h-8 w-8 text-chart-4 animate-spin" />
                 ) : v.status === "Erro" ? (
-                  <AlertCircle className="h-10 w-10 text-destructive/40" />
+                  <AlertCircle className="h-8 w-8 text-destructive/40" />
                 ) : (
-                  <Video className="h-10 w-10 text-muted-foreground/40" />
+                  <Video className="h-8 w-8 text-muted-foreground/40" />
                 )}
               </div>
-              <CardContent className="p-3 space-y-2">
-                <p className="text-sm font-medium truncate">{v.nome}</p>
-                <p className="text-xs text-muted-foreground">{v.projeto_nome}</p>
-                {v.erro && <p className="text-xs text-destructive truncate" title={v.erro}>{v.erro}</p>}
+              <CardContent className="p-2 space-y-1">
+                <p className="text-xs font-medium truncate">{v.nome}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{v.projeto_nome}</p>
+                {v.erro && <p className="text-[10px] text-destructive truncate" title={v.erro}>{v.erro}</p>}
                 <div className="flex items-center justify-between">
-                  <Badge className={statusColor[v.status]} variant="secondary">{v.status}</Badge>
+                  <Badge className={`${statusColor[v.status]} text-[10px] px-1.5 py-0`} variant="secondary">{v.status}</Badge>
                   {v.status === "Pronto" && v.video_url && (
-                    <div className="flex items-center gap-1.5">
-                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1" asChild>
+                    <div className="flex items-center gap-1">
+                      <Button size="sm" variant="outline" className="h-6 text-[10px] gap-0.5 px-1.5" asChild>
                         <a href={v.video_url} download={`${v.nome}.mp4`}>
-                          <Download className="h-3.5 w-3.5" />
+                          <Download className="h-3 w-3" />
                         </a>
                       </Button>
-                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handlePublishClick(v)}>
+                      <Button size="sm" variant="outline" className="h-6 text-[10px] px-1.5" onClick={() => handlePublishClick(v)}>
                         Publicar
                       </Button>
                     </div>
