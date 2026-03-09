@@ -25,11 +25,11 @@ serve(async (req) => {
 
       const payload = {
         template_id: "433aa2ca-f109-4256-be02-e21efe6f855b",
-        modifications: {
-          hook: hookUrl,
-          corpo: corpoUrl,
-          cta: ctaUrl,
-        },
+        modifications: [
+          { name: "hook", source: hookUrl },
+          { name: "corpo", source: corpoUrl },
+          { name: "cta", source: ctaUrl },
+        ],
       };
 
       console.log("Enviando ao Creatomate:", JSON.stringify(payload));
