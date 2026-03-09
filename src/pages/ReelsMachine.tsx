@@ -11,7 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useDropzone } from "react-dropzone";
-import { Video, Upload, Play, CheckCircle, Loader2, Plus, Trash2, Save, Settings, LayoutDashboard, FolderPlus, Grid3X3, Link, FolderOpen, X, AlertCircle, Send } from "lucide-react";
+import { Video, Upload, Play, CheckCircle, Loader2, Plus, Trash2, Save, Settings, LayoutDashboard, FolderPlus, Grid3X3, Link, FolderOpen, X, AlertCircle, Send, Download } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -491,9 +491,16 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
                 <div className="flex items-center justify-between">
                   <Badge className={statusColor[v.status]} variant="secondary">{v.status}</Badge>
                   {v.status === "Pronto" && v.video_url && (
-                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handlePublishClick(v)}>
-                      Publicar
-                    </Button>
+                    <div className="flex items-center gap-1.5">
+                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1" asChild>
+                        <a href={v.video_url} download={`${v.nome}.mp4`}>
+                          <Download className="h-3.5 w-3.5" />
+                        </a>
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handlePublishClick(v)}>
+                        Publicar
+                      </Button>
+                    </div>
                   )}
                 </div>
               </CardContent>
