@@ -556,22 +556,39 @@ function PublishModal({ open, onOpenChange, variation }: {
               </div>
             ) : (
               filteredPages.map((page) => (
-                <div 
-                  key={page.userId} 
-                  className="flex items-center gap-3 p-3 hover:bg-muted/30 cursor-pointer"
-                  onClick={() => togglePage(page.userId)}
-                >
-                  <Checkbox 
-                    checked={selectedPages.has(page.userId)} 
-                    onCheckedChange={() => togglePage(page.userId)}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{page.nome}</p>
-                    <p className="text-xs text-muted-foreground">ID: {page.userId}</p>
+                <div key={page.userId} className="flex flex-col p-3 hover:bg-muted/30">
+                  <div 
+                    className="flex items-center gap-3 cursor-pointer"
+                    onClick={() => togglePage(page.userId)}
+                  >
+                    <Checkbox 
+                      checked={selectedPages.has(page.userId)} 
+                      onCheckedChange={() => togglePage(page.userId)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{page.nome}</p>
+                      <p className="text-xs text-muted-foreground">ID: {page.userId}</p>
+                    </div>
+                    <Badge className={areaColor[page.areaDireito]} variant="secondary">
+                      {page.areaDireito}
+                    </Badge>
                   </div>
-                  <Badge className={areaColor[page.areaDireito]} variant="secondary">
-                    {page.areaDireito}
-                  </Badge>
+                  
+                  {page.facebookPageId && selectedPages.has(page.userId) && (
+                    <div className="mt-3 ml-7 flex items-center space-x-2">
+                      <Checkbox 
+                        id={`fb-${page.userId}`}
+                        checked={!!facebookOptions.get(page.userId)}
+                        onCheckedChange={(checked) => toggleFacebook(page.userId, checked === true)}
+                      />
+                      <Label 
+                        htmlFor={`fb-${page.userId}`}
+                        className="text-xs text-muted-foreground font-normal cursor-pointer"
+                      >
+                        Publicar também no Facebook
+                      </Label>
+                    </div>
+                  )}
                 </div>
               ))
             )}
