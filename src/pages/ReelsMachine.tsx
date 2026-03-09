@@ -247,7 +247,7 @@ function DashboardTab({ projects, variations }: { projects: DbProject[]; variati
 
 // ─── Novo Projeto Tab ───────────────────────────────────────────
 function NovoProjetoTab({ onGenerate, isGenerating, progressInfo }: {
-  onGenerate: (nome: string, hooks: VideoItem[], corpo: VideoItem[], ctas: VideoItem[]) => void;
+  onGenerate: (nome: string, hooks: VideoItem[], corpo: VideoItem[], ctas: VideoItem[]) => Promise<void>;
   isGenerating: boolean;
   progressInfo: { current: number; total: number; step: string };
 }) {
