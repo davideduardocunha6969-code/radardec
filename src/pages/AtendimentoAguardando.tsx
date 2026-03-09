@@ -3,7 +3,8 @@ import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Loader2, Phone, PhoneOff, AlertCircle, Mic, MicOff } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Loader2, Phone, PhoneOff, AlertCircle, Mic, MicOff, Clock, PhoneCall, PhoneMissed, X } from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Device } from "@twilio/voice-sdk";
@@ -14,9 +15,34 @@ interface LeadInfo {
   leadNome: string;
   numero: string;
   status: string;
+  callerId?: string;
+  dddMatch?: boolean;
+}
+
+interface EnrichedLead extends LeadInfo {
+  currentStatus: string;
 }
 
 const BROADCAST_CHANNEL_NAME = "power-dialer-audio";
+
+const STATUS_CONFIG: Record<string, { icon: React.ReactNode; color: string; label: string }> = {
+  iniciando: { icon: <Clock className="h-4 w-4 text-muted-foreground" />, color: "text-muted-foreground", label: "Iniciando" },
+  chamando: { icon: <Phone className="h-4 w-4 text-yellow-500 animate-pulse" />, color: "text-yellow-500", label: "Chamando..." },
+  em_andamento: { icon: <Phone className="h-4 w-4 text-blue-500" />, color: "text-blue-500", label: "Discando" },
+  em_chamada: { icon: <PhoneCall className="h-4 w-4 text-green-500" />, color: "text-green-500", label: "Atendeu! ✓" },
+  nao_atendida: { icon: <PhoneMissed className="h-4 w-4 text-orange-500" />, color: "text-orange-500", label: "Não atendeu" },
+  ocupado: { icon: <PhoneOff className="h-4 w-4 text-orange-500" />, color: "text-orange-500", label: "Ocupado" },
+  cancelada: { icon: <X className="h-4 w-4 text-muted-foreground" />, color: "text-muted-foreground", label: "Cancelada" },
+  falhou: { icon: <AlertCircle className="h-4 w-4 text-destructive" />, color: "text-destructive", label: "Falhou" },
+  finalizada: { icon: <PhoneCall className="h-4 w-4 text-green-500" />, color: "text-green-500", label: "Finalizada" },
+};
+
+function formatPhoneDisplay(numero: string) {
+  const clean = numero.replace(/\D/g, "").replace(/^55/, "");
+  if (clean.length === 11) return `(${clean.slice(0, 2)}) ${clean.slice(2, 7)}-${clean.slice(7)}`;
+  if (clean.length === 10) return `(${clean.slice(0, 2)}) ${clean.slice(2, 6)}-${clean.slice(6)}`;
+  return numero;
+}
 
 export default function AtendimentoAguardando() {
   const [params] = useSearchParams();
@@ -28,6 +54,7 @@ export default function AtendimentoAguardando() {
   const [fetchError, setFetchError] = useState(false);
   const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const mountedRef = useRef(true);
+  const advancingRef = useRef(false);
 
   // Audio bridge state
   const deviceRef = useRef<Device | null>(null);
@@ -207,9 +234,7 @@ export default function AtendimentoAguardando() {
       if (!mountedRef.current) return;
       const result = await fetchSessionViaEdge();
       if (result && mountedRef.current) {
-        if (result.lead_atendido_id || ["cancelado", "finalizado_sem_atendimento", "expirado", "atendida"].includes(result.status)) {
-          setSession((prev: any) => ({ ...prev, ...result }));
-        }
+        setSession(result);
       }
     }, 2000);
     return () => { if (pollingRef.current) clearInterval(pollingRef.current); };
@@ -220,6 +245,44 @@ export default function AtendimentoAguardando() {
     mountedRef.current = true;
     return () => { mountedRef.current = false; };
   }, []);
+
+  // Derived data
+  const leadsInfo = (session?.leads_info || []) as LeadInfo[];
+  const queue = (session?.numeros_fila || []) as any[];
+  const totalLeads = queue.length;
+  const loteAtual = session?.lote_atual || 0;
+  const batchSize = leadsInfo.length > 0 ? leadsInfo.length : 1;
+  const loteMax = Math.ceil(totalLeads / batchSize);
+  const progressPercent = loteMax > 0 ? ((loteAtual + 1) / loteMax) * 100 : 0;
+
+  // Enrich leads with real-time status from resultado_por_numero
+  const resultados = (session?.resultado_por_numero || {}) as Record<string, string>;
+  const enrichedLeads: EnrichedLead[] = leadsInfo.map(li => ({
+    ...li,
+    currentStatus: resultados[li.numero] || li.status,
+  }));
+
+  // AUTO-ADVANCE: when all leads in batch have terminal status and no winner
+  useEffect(() => {
+    if (!session || !session.id || session.status !== "ativo" || session.lead_atendido_id) return;
+    if (enrichedLeads.length === 0 || advancingRef.current) return;
+
+    const terminalStatuses = ["nao_atendida", "ocupado", "cancelada", "falhou", "finalizada"];
+    const allDone = enrichedLeads.every(li => terminalStatuses.includes(li.currentStatus));
+
+    if (allDone) {
+      advancingRef.current = true;
+      console.log("[Aguardando] Batch done, advancing to next-batch");
+      supabase.functions.invoke("power-dialer", {
+        body: { action: "next-batch", sessionId: session.id },
+      }).then(() => {
+        advancingRef.current = false;
+      }).catch(e => {
+        console.error("[Aguardando] next-batch error:", e);
+        advancingRef.current = false;
+      });
+    }
+  }, [session?.resultado_por_numero, session?.status, session?.lead_atendido_id, enrichedLeads]);
 
   const handleCancel = async () => {
     if (!sessionId) return;
@@ -256,13 +319,6 @@ export default function AtendimentoAguardando() {
     const s = secs % 60;
     return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
   };
-
-  const leadsInfo = (session?.leads_info || []) as LeadInfo[];
-  const queue = (session?.numeros_fila || []) as any[];
-  const totalLeads = queue.length;
-  const loteAtual = session?.lote_atual || 0;
-  const loteMax = Math.ceil(totalLeads / 5);
-  const progressPercent = loteMax > 0 ? ((loteAtual + 1) / loteMax) * 100 : 0;
 
   const isFinished = session?.status === "finalizado_sem_atendimento" || session?.status === "cancelado" || session?.status === "expirado";
 
@@ -349,7 +405,7 @@ export default function AtendimentoAguardando() {
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-background">
-      <Card className="w-[480px]">
+      <Card className="w-[520px]">
         <CardContent className="py-8 space-y-6">
           {isFinished ? (
             <div className="flex flex-col items-center gap-4">
@@ -378,13 +434,36 @@ export default function AtendimentoAguardando() {
               <Progress value={progressPercent} className="h-2" />
 
               <div className="space-y-2">
-                <p className="text-xs font-medium text-muted-foreground uppercase">Lote atual</p>
-                {leadsInfo.map((li, i) => (
-                  <div key={i} className="flex items-center justify-between text-sm py-1 px-2 rounded bg-muted/50">
-                    <span className="font-medium">{li.leadNome}</span>
-                    <span className="text-xs text-muted-foreground">{li.numero}</span>
-                  </div>
-                ))}
+                <p className="text-xs font-medium text-muted-foreground uppercase">Lote atual — {enrichedLeads.length} chamadas simultâneas</p>
+                {enrichedLeads.map((li, i) => {
+                  const cfg = STATUS_CONFIG[li.currentStatus] || STATUS_CONFIG.em_andamento;
+                  return (
+                    <div key={i} className="flex items-center gap-3 text-sm py-2 px-3 rounded-lg bg-muted/50 border border-border/50">
+                      <div className="flex-shrink-0">{cfg.icon}</div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-semibold truncate">{li.leadNome}</p>
+                        <p className="text-xs text-muted-foreground">{formatPhoneDisplay(li.numero)}</p>
+                        {li.callerId && (
+                          <div className="flex items-center gap-1.5 mt-0.5">
+                            <span className="text-xs text-muted-foreground">→ {formatPhoneDisplay(li.callerId)}</span>
+                            {li.dddMatch ? (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-green-500/10 text-green-600 border-green-500/30">
+                                DDD ✓
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-4 bg-yellow-500/10 text-yellow-600 border-yellow-500/30">
+                                DDD próx.
+                              </Badge>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <span className={`text-xs font-medium whitespace-nowrap ${cfg.color}`}>
+                        {cfg.label}
+                      </span>
+                    </div>
+                  );
+                })}
               </div>
 
               <Button

@@ -7,8 +7,6 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
-const BATCH_SIZE = 5;
-
 async function twilioCall(
   accountSid: string,
   authToken: string,
@@ -186,6 +184,16 @@ serve(async (req) => {
         dddMap.set(tn.ddd, tn.numero);
       }
 
+      // Dynamic batch size = number of Twilio lines available
+      const DYNAMIC_BATCH_SIZE = Math.max(1, twilioNums?.length || 1);
+
+      // Sort queue: leads with matching DDD first
+      queue.sort((a, b) => {
+        const aMatch = dddMap.has(a.ddd) ? 0 : 1;
+        const bMatch = dddMap.has(b.ddd) ? 0 : 1;
+        return aMatch - bMatch;
+      });
+
       // Create session
       const { data: session, error: sessErr } = await supabase
         .from("power_dialer_sessions")
@@ -203,10 +211,10 @@ serve(async (req) => {
       if (sessErr) throw sessErr;
 
       // Dial first batch
-      const batch = queue.slice(0, BATCH_SIZE);
+      const batch = queue.slice(0, DYNAMIC_BATCH_SIZE);
       const clientIdentity = `user_${userId}`;
       const callSids: Record<string, string> = {};
-      const leadsInfo: Array<{ leadId: string; leadNome: string; numero: string; status: string }> = [];
+      const leadsInfo: Array<{ leadId: string; leadNome: string; numero: string; status: string; callerId: string; dddMatch: boolean }> = [];
 
       for (const item of batch) {
         const callerId = dddMap.get(item.ddd) || TWILIO_PHONE;
@@ -240,7 +248,7 @@ serve(async (req) => {
           if (chamada) {
             callSids[result.sid] = chamada.id;
           }
-          leadsInfo.push({ leadId: item.leadId, leadNome: item.leadNome, numero: item.numero, status: "em_andamento" });
+          leadsInfo.push({ leadId: item.leadId, leadNome: item.leadNome, numero: item.numero, status: "em_andamento", callerId, dddMatch: dddMap.has(item.ddd) });
         } else {
           // Record failed attempt
           await supabase
@@ -260,7 +268,7 @@ serve(async (req) => {
               observacoes: result.error,
             });
 
-          leadsInfo.push({ leadId: item.leadId, leadNome: item.leadNome, numero: item.numero, status: "falhou" });
+          leadsInfo.push({ leadId: item.leadId, leadNome: item.leadNome, numero: item.numero, status: "falhou", callerId, dddMatch: dddMap.has(item.ddd) });
         }
       }
 
@@ -312,10 +320,23 @@ serve(async (req) => {
           .in("status", ["em_andamento", "iniciando"]);
       }
 
+      // Fetch local presence numbers for dynamic batch size
+      const { data: twilioNums } = await supabase
+        .from("twilio_numeros")
+        .select("numero, ddd")
+        .eq("ativo", true);
+
+      const dddMap = new Map<string, string>();
+      for (const tn of twilioNums || []) {
+        dddMap.set(tn.ddd, tn.numero);
+      }
+
+      const DYNAMIC_BATCH_SIZE = Math.max(1, twilioNums?.length || 1);
+
       const queue = session.numeros_fila as Array<{ leadId: string; leadNome: string; numero: string; tipo: string; ddd: string }>;
       const nextLote = session.lote_atual + 1;
-      const start = nextLote * BATCH_SIZE;
-      const batch = queue.slice(start, start + BATCH_SIZE);
+      const start = nextLote * DYNAMIC_BATCH_SIZE;
+      const batch = queue.slice(start, start + DYNAMIC_BATCH_SIZE);
 
       if (!batch.length) {
         await supabase
@@ -329,20 +350,9 @@ serve(async (req) => {
         );
       }
 
-      // Fetch local presence numbers
-      const { data: twilioNums } = await supabase
-        .from("twilio_numeros")
-        .select("numero, ddd")
-        .eq("ativo", true);
-
-      const dddMap = new Map<string, string>();
-      for (const tn of twilioNums || []) {
-        dddMap.set(tn.ddd, tn.numero);
-      }
-
       const clientIdentity = `user_${userId}`;
       const callSids: Record<string, string> = {};
-      const leadsInfo: Array<{ leadId: string; leadNome: string; numero: string; status: string }> = [];
+      const leadsInfo: Array<{ leadId: string; leadNome: string; numero: string; status: string; callerId: string; dddMatch: boolean }> = [];
 
       // Small cooldown
       await new Promise((r) => setTimeout(r, 2000));
@@ -376,7 +386,7 @@ serve(async (req) => {
             .single();
 
           if (chamada) callSids[result.sid] = chamada.id;
-          leadsInfo.push({ leadId: item.leadId, leadNome: item.leadNome, numero: item.numero, status: "em_andamento" });
+          leadsInfo.push({ leadId: item.leadId, leadNome: item.leadNome, numero: item.numero, status: "em_andamento", callerId, dddMatch: dddMap.has(item.ddd) });
         } else {
           await supabase
             .from("crm_chamadas")
@@ -394,7 +404,7 @@ serve(async (req) => {
               ddd_caller: callerDdd,
               observacoes: result.error,
             });
-          leadsInfo.push({ leadId: item.leadId, leadNome: item.leadNome, numero: item.numero, status: "falhou" });
+          leadsInfo.push({ leadId: item.leadId, leadNome: item.leadNome, numero: item.numero, status: "falhou", callerId, dddMatch: dddMap.has(item.ddd) });
         }
       }
 

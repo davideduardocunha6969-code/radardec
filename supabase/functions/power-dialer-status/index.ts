@@ -71,6 +71,14 @@ serve(async (req) => {
     const updateData: Record<string, unknown> = {};
 
     switch (callStatus) {
+      case "initiated":
+        newStatus = "iniciando";
+        break;
+
+      case "ringing":
+        newStatus = "chamando";
+        break;
+
       case "in-progress": {
         // Call connected — fallback winner logic (TwiML should have done this already)
         newStatus = "em_chamada";
@@ -148,7 +156,7 @@ serve(async (req) => {
 
       default:
         console.log("[power-dialer-status] Unknown status:", callStatus);
-        return new Response("OK", { headers: corsHeaders });
+        break;
     }
 
     // Update chamada status

@@ -1,48 +1,42 @@
 
+# Tres Paineis de Atendimento — Status
 
-## Power Dialer — 4 Changes Implementation Plan
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-The Claude analysis is **correct on all points**. Here's the implementation:
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-### 1. `power-dialer-status/index.ts` — Add `initiated`/`ringing` cases
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-- Add `case "initiated": newStatus = "iniciando"; break;` and `case "ringing": newStatus = "chamando"; break;` before `case "in-progress"` (line 73)
-- Change the `default` block (line 149-151) from `return new Response("OK")` to just `break` so the RPC update still runs
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-### 2. `power-dialer/index.ts` — Dynamic batch size + DDD priority
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-- Remove `const BATCH_SIZE = 5` (line 10)
-- In `start` action: after building `dddMap` (already at line 184-187), calculate `DYNAMIC_BATCH_SIZE = Math.max(1, twilioNums?.length || 1)`. Sort queue by DDD match. Use `DYNAMIC_BATCH_SIZE` in `queue.slice(0, DYNAMIC_BATCH_SIZE)` (line 206)
-- In `next-batch` action: fetch `twilio_numeros` is already at line 333-341, calculate `DYNAMIC_BATCH_SIZE` there too. Use it in `queue.slice(start, start + DYNAMIC_BATCH_SIZE)` (line 317-318)
-- In both actions, add `callerId` and `dddMatch` to `leadsInfo.push(...)` calls
-
-**Important note on `next-batch` batch size calculation:** The `start` offset must use the ORIGINAL batch size from when that session was created (stored as `leadsInfo.length` from the session), NOT the current dynamic size, since the queue was sliced with the original batch size. Actually, looking more carefully — the `lote_atual` increments by 1 each time, and `start = nextLote * BATCH_SIZE`. If batch sizes vary between batches, this offset calculation breaks. **Fix:** Store the batch size used in the session record, or always use the same dynamic calculation (which works as long as `twilio_numeros` count doesn't change mid-session). Since the count is unlikely to change mid-session, using `DYNAMIC_BATCH_SIZE` consistently is fine.
-
-### 3. `AtendimentoAguardando.tsx` — Rich UI + auto-advance
-
-- Expand `LeadInfo` interface with `callerId?: string; dddMatch?: boolean`
-- Calculate `loteMax` dynamically from `leadsInfo.length`
-- Create `enrichedLeads` by merging `resultado_por_numero` into each lead's status
-- Add `useEffect` watching `session?.resultado_por_numero` that checks if all leads have terminal statuses and auto-invokes `next-batch`
-- Replace simple lead list with rich cards showing: name, number, caller ID, DDD match badge, animated status icon
-- Import additional icons: `Clock, PhoneCall, PhoneMissed, X`
-
-### 4. No new migration — RPC already exists
-
-### Status icon mapping for UI
-| Status | Icon | Color | Label |
-|--------|------|-------|-------|
-| iniciando | Clock | gray | Iniciando |
-| chamando | Phone + pulse | yellow | Chamando... |
-| em_andamento | Phone | blue | Discando |
-| em_chamada | PhoneCall | green | Atendeu! ✓ |
-| nao_atendida | PhoneMissed | orange | Não atendeu |
-| ocupado | PhoneOff | orange | Ocupado |
-| cancelada | X | gray | Cancelada |
-| falhou | AlertCircle | red | Falhou |
-
-### Files to modify
-- `supabase/functions/power-dialer-status/index.ts`
-- `supabase/functions/power-dialer/index.ts`
-- `src/pages/AtendimentoAguardando.tsx`
-
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções
