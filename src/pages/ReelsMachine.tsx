@@ -445,7 +445,7 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
           {filtered.map((v) => (
             <Card key={v.id} className="overflow-hidden relative group">
               <AlertDialog>
