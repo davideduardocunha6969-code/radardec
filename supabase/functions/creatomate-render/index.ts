@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
 
       const statusData = await statusRes.json();
       const status = statusData.status;
-      const videoUrl = statusData.url;
+      const videoUrl = statusData.output?.[0]?.url || statusData.url;
 
       // Update DB based on status
       if (variacaoId) {
