@@ -24,11 +24,13 @@ serve(async (req) => {
       }
 
       const payload = {
-        template_id: "433aa2ca-f109-4256-be02-e21efe6f855b",
-        modifications: [
-          { name: "hook", source: hookUrl },
-          { name: "corpo", source: corpoUrl },
-          { name: "cta", source: ctaUrl },
+        output_format: "mp4",
+        width: 1080,
+        height: 1920,
+        elements: [
+          { type: "video", track: 1, time: "auto", duration: "auto", source: hookUrl },
+          { type: "video", track: 1, time: "auto", duration: "auto", source: corpoUrl },
+          { type: "video", track: 1, time: "auto", duration: "auto", source: ctaUrl },
         ],
       };
 
