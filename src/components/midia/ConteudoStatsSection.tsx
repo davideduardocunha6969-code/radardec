@@ -263,9 +263,26 @@ export function ConteudoStatsSection({
         {/* Weekly Goal Chart */}
         <Card className="mt-4 bg-card/50 backdrop-blur-sm border-border/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              📈 Evolução Semanal de Conteúdos Postados (Meta: {WEEKLY_GOAL}/semana)
-            </CardTitle>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <CardTitle className="text-sm font-medium">
+                📈 Evolução Semanal de Conteúdos Postados (Meta: {WEEKLY_GOAL}/semana)
+              </CardTitle>
+              <Select
+                value={chartSetorFilter}
+                onValueChange={(v) => setChartSetorFilter(v as Setor | "all")}
+              >
+                <SelectTrigger className="w-[180px] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SETOR_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent>
             {weeklyData.length > 0 ? (
