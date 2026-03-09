@@ -847,7 +847,7 @@ export default function ReelsMachine() {
         if (data?.status === "succeeded" && data?.url) {
           await supabase.from("reels_variacoes").update({ status: "Pronto", video_url: data.url }).eq("id", v.id);
         } else if (data?.status === "failed") {
-          await supabase.from("reels_variacoes").update({ status: "Erro", erro: "Falha na renderização" }).eq("id", v.id);
+          await supabase.from("reels_variacoes").update({ status: "Erro", erro: data.error_message || "Falha na renderização" }).eq("id", v.id);
         }
       } catch (e) {
         console.error("Poll exception:", e);
