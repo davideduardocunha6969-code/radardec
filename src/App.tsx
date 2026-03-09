@@ -23,6 +23,7 @@ import ContentHub from "./pages/ContentHub";
 import ModeladorConteudo from "./pages/ModeladorConteudo";
 import ModeladorReplica from "./pages/ModeladorReplica";
 import RadarViralizacao from "./pages/RadarViralizacao";
+import ReelsMachine from "./pages/ReelsMachine";
 import MinhasContasDetail from "./pages/MinhasContasDetail";
 import AtividadesMarketing from "./pages/AtividadesMarketing";
 import AtendimentosClosers from "./pages/AtendimentosClosers";
@@ -81,6 +82,7 @@ const App = () => (
               <Route path="/marketing/modelador" element={<ProtectedRoute pageKey="marketing-modelador"><ModeladorConteudo /></ProtectedRoute>} />
               <Route path="/marketing/atividades" element={<ProtectedRoute pageKey="marketing-atividades"><AtividadesMarketing /></ProtectedRoute>} />
               <Route path="/marketing/radar" element={<ProtectedRoute pageKey="marketing-radar"><RadarViralizacao /></ProtectedRoute>} />
+              <Route path="/marketing/reels-machine" element={<ProtectedRoute pageKey="marketing-reels-machine"><ReelsMachine /></ProtectedRoute>} />
               <Route path="/minhas-contas/:id" element={<ProtectedRoute pageKey="marketing-radar"><MinhasContasDetail /></ProtectedRoute>} />
               <Route path="/agenda" element={<Agenda />} />
               <Route path="/meu-painel" element={<MeuPainel />} />
