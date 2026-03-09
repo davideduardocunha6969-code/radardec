@@ -28,9 +28,9 @@ serve(async (req) => {
         width: 1080,
         height: 1920,
         elements: [
-          { type: "video", track: 1, time: "auto", duration: "auto", source: hookUrl },
-          { type: "video", track: 1, time: "auto", duration: "auto", source: corpoUrl },
-          { type: "video", track: 1, time: "auto", duration: "auto", source: ctaUrl },
+          { type: "video", track: 1, time: "auto", duration: null, source: hookUrl },
+          { type: "video", track: 1, time: "auto", duration: null, source: corpoUrl },
+          { type: "video", track: 1, time: "auto", duration: null, source: ctaUrl },
         ],
       };
 
