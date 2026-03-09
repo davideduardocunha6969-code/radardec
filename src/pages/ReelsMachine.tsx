@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "
 import { Checkbox } from "@/components/ui/checkbox";
 import { useDropzone } from "react-dropzone";
 import { Video, Upload, Play, CheckCircle, Loader2, Plus, Trash2, Save, Settings, LayoutDashboard, FolderPlus, Grid3X3, Link, FolderOpen, X, AlertCircle, Send } from "lucide-react";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -334,16 +335,20 @@ function NovoProjetoTab({ onGenerate, isGenerating, progressInfo }: {
 }
 
 // ─── Galeria Tab ────────────────────────────────────────────────
-function GaleriaTab({ variations, projects, selectedProject, onProjectChange, onPollStatus }: {
+function GaleriaTab({ variations, projects, selectedProject, onProjectChange, onPollStatus, onDeleteVariation, onDeleteAllErrors }: {
   variations: DbVariation[];
   projects: DbProject[];
   selectedProject: string;
   onProjectChange: (v: string) => void;
   onPollStatus: () => void;
+  onDeleteVariation: (id: string) => Promise<void>;
+  onDeleteAllErrors: () => Promise<void>;
 }) {
   const [filterStatus, setFilterStatus] = useState<string>("todos");
   const [publishModalOpen, setPublishModalOpen] = useState(false);
   const [selectedVariation, setSelectedVariation] = useState<DbVariation | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+  const [deletingErrors, setDeletingErrors] = useState(false);
 
   const filtered = variations.filter((v) => {
     const matchStatus = filterStatus === "todos" || v.status === filterStatus;
@@ -352,10 +357,23 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
   });
 
   const renderingCount = variations.filter((v) => v.status === "Renderizando").length;
+  const errorCount = variations.filter((v) => v.status === "Erro").length;
 
   const handlePublishClick = (variation: DbVariation) => {
     setSelectedVariation(variation);
     setPublishModalOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    setDeletingId(id);
+    await onDeleteVariation(id);
+    setDeletingId(null);
+  };
+
+  const handleDeleteAllErrors = async () => {
+    setDeletingErrors(true);
+    await onDeleteAllErrors();
+    setDeletingErrors(false);
   };
 
   return (
@@ -390,6 +408,29 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
           </SelectContent>
         </Select>
         <span className="text-sm text-muted-foreground">{filtered.length} vídeo(s)</span>
+
+        {errorCount > 0 && (
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button size="sm" variant="destructive" className="ml-auto h-8 text-xs gap-1.5" disabled={deletingErrors}>
+                {deletingErrors ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                Excluir com erro ({errorCount})
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Excluir todas as variações com erro?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  Essa ação irá excluir {errorCount} variação(ões) com status "Erro". Esta ação não pode ser desfeita.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                <AlertDialogAction onClick={handleDeleteAllErrors}>Excluir</AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        )}
       </div>
 
       {filtered.length === 0 ? (
@@ -402,7 +443,32 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {filtered.map((v) => (
-            <Card key={v.id} className="overflow-hidden">
+            <Card key={v.id} className="overflow-hidden relative group">
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button
+                    variant="destructive"
+                    size="icon"
+                    className="absolute top-2 right-2 z-10 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                    disabled={deletingId === v.id}
+                  >
+                    {deletingId === v.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Tem certeza que deseja excluir esta variação?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      A variação "{v.nome}" será excluída permanentemente. Esta ação não pode ser desfeita.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancelar</AlertDialogCancel>
+                    <AlertDialogAction onClick={() => handleDelete(v.id)}>Excluir</AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+
               <div className="aspect-[9/16] bg-muted flex items-center justify-center">
                 {v.video_url ? (
                   <video src={v.video_url} className="w-full h-full object-cover" controls />
@@ -776,6 +842,28 @@ export default function ReelsMachine() {
     await loadData();
   };
 
+  const handleDeleteVariation = async (id: string) => {
+    const { error } = await supabase.from("reels_variacoes").delete().eq("id", id);
+    if (error) {
+      toast.error("Erro ao excluir variação: " + error.message);
+    } else {
+      toast.success("Variação excluída.");
+      await loadData();
+    }
+  };
+
+  const handleDeleteAllErrors = async () => {
+    const errorIds = variations.filter((v) => v.status === "Erro").map((v) => v.id);
+    if (errorIds.length === 0) return;
+    const { error } = await supabase.from("reels_variacoes").delete().in("id", errorIds);
+    if (error) {
+      toast.error("Erro ao excluir variações: " + error.message);
+    } else {
+      toast.success(`${errorIds.length} variação(ões) com erro excluída(s).`);
+      await loadData();
+    }
+  };
+
   const handleGenerate = async (nome: string, hooks: VideoItem[], corpo: VideoItem[], ctas: VideoItem[]) => {
     const config = loadConfig();
     if (!config.apiKey) {
@@ -928,7 +1016,7 @@ export default function ReelsMachine() {
 
         <TabsContent value="dashboard"><DashboardTab projects={projects} variations={variations} /></TabsContent>
         <TabsContent value="novo"><NovoProjetoTab onGenerate={handleGenerate} isGenerating={isGenerating} progressInfo={progressInfo} /></TabsContent>
-        <TabsContent value="galeria"><GaleriaTab variations={variations} projects={projects} selectedProject={selectedProject} onProjectChange={setSelectedProject} onPollStatus={pollRenderStatus} /></TabsContent>
+        <TabsContent value="galeria"><GaleriaTab variations={variations} projects={projects} selectedProject={selectedProject} onProjectChange={setSelectedProject} onPollStatus={pollRenderStatus} onDeleteVariation={handleDeleteVariation} onDeleteAllErrors={handleDeleteAllErrors} /></TabsContent>
         <TabsContent value="config"><ConfiguracoesTab /></TabsContent>
       </Tabs>
     </div>
