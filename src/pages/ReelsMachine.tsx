@@ -265,8 +265,12 @@ function NovoProjetoTab({ onGenerate, isGenerating, progressInfo }: {
   const totalVariations = hooks.length * (corpo.length > 0 ? 1 : 0) * ctas.length;
   const canGenerate = hooks.length > 0 && corpo.length > 0 && ctas.length > 0 && !isGenerating;
 
-  const handleGenerate = () => {
-    onGenerate(nome || "Sem nome", hooks, corpo, ctas);
+  const handleGenerate = async () => {
+    const capturedNome = nome || "Sem nome";
+    const capturedHooks = [...hooks];
+    const capturedCorpo = [...corpo];
+    const capturedCtas = [...ctas];
+    await onGenerate(capturedNome, capturedHooks, capturedCorpo, capturedCtas);
     setNome("");
     setHooks([]);
     setCorpo([]);
