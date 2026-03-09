@@ -51,6 +51,7 @@ export function VoipDialer({ leadId, leadNome, numero, papel, onCallStatusChange
   const deviceRef = useRef<any>(null);
   const callRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const micStreamRef = useRef<MediaStream | null>(null);
 
   const createChamada = useCreateChamada();
   const updateChamada = useUpdateChamada();
