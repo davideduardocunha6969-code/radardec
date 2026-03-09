@@ -116,6 +116,7 @@ export function ConteudoStatsSection({
   onOpenChange,
 }: ConteudoStatsSectionProps) {
   const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
+  const [chartSetorFilter, setChartSetorFilter] = useState<Setor | "all">("all");
 
   const filteredConteudos = useMemo(() => {
     if (statusFilter === "all") return conteudos;
