@@ -189,10 +189,12 @@ export function ConteudoStatsSection({
     return { byFormato, bySetor, byStatus };
   }, [filteredConteudos]);
 
-  // Calculate weekly data for previdenciario sector with status "postado"
+  // Calculate weekly data filtered by sector with status "postado"
   const weeklyData = useMemo(() => {
-    const previdenciarioPostados = conteudos.filter(
-      (c) => c.setor === "previdenciario" && c.status === "postado"
+    const postados = conteudos.filter(
+      (c) =>
+        c.status === "postado" &&
+        (chartSetorFilter === "all" || c.setor === chartSetorFilter)
     );
 
     const weekCounts: Record<number, number> = {};
