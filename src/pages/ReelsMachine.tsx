@@ -449,6 +449,7 @@ function PublishModal({ open, onOpenChange, variation }: {
 }) {
   const [filterArea, setFilterArea] = useState<string>("Todas");
   const [selectedPages, setSelectedPages] = useState<Set<string>>(new Set());
+  const [facebookOptions, setFacebookOptions] = useState<Map<string, boolean>>(new Map());
   const [pages, setPages] = useState<InstaPage[]>([]);
   const [isPublishing, setIsPublishing] = useState(false);
 
@@ -460,9 +461,9 @@ function PublishModal({ open, onOpenChange, variation }: {
     } else {
       // Mock data for demonstration
       setPages([
-        { nome: "Advogado Trabalhista SP", userId: "17841400001", token: "EAA...", areaDireito: "Trabalhista" },
+        { nome: "Advogado Trabalhista SP", userId: "17841400001", token: "EAA...", areaDireito: "Trabalhista", facebookPageId: "fb_123", facebookToken: "EAA..." },
         { nome: "Direito do Trabalho RJ", userId: "17841400002", token: "EAA...", areaDireito: "Trabalhista" },
-        { nome: "Prev. Social Brasil", userId: "17841400003", token: "EAA...", areaDireito: "Previdenciário" },
+        { nome: "Prev. Social Brasil", userId: "17841400003", token: "EAA...", areaDireito: "Previdenciário", facebookPageId: "fb_456", facebookToken: "EAA..." },
         { nome: "INSS e Aposentadoria", userId: "17841400004", token: "EAA...", areaDireito: "Previdenciário" },
         { nome: "Direito Bancário MG", userId: "17841400005", token: "EAA...", areaDireito: "Bancário" },
         { nome: "Advogados Associados", userId: "17841400006", token: "EAA...", areaDireito: "Outros" },
@@ -472,6 +473,7 @@ function PublishModal({ open, onOpenChange, variation }: {
 
   useEffect(() => {
     setSelectedPages(new Set());
+    setFacebookOptions(new Map());
     setFilterArea("Todas");
   }, [open]);
 
@@ -491,16 +493,26 @@ function PublishModal({ open, onOpenChange, variation }: {
     });
   };
 
+  const toggleFacebook = (pageId: string, checked: boolean) => {
+    setFacebookOptions(prev => {
+      const newMap = new Map(prev);
+      newMap.set(pageId, checked);
+      return newMap;
+    });
+  };
+
   const handlePublish = async () => {
     if (selectedPages.size === 0 || !variation) return;
     
     setIsPublishing(true);
     
+    const fbCount = Array.from(selectedPages).filter(id => facebookOptions.get(id)).length;
+    
     // Simulate publishing
     setTimeout(() => {
       setIsPublishing(false);
       onOpenChange(false);
-      toast.success(`Publicado em ${selectedPages.size} página(s) com sucesso!`);
+      toast.success(`Publicado em ${selectedPages.size} página(s) do Instagram e ${fbCount} página(s) do Facebook com sucesso!`);
     }, 1500);
   };
 
