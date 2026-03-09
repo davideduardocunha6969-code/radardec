@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      const creatomateRes = await fetch("https://api.creatomate.com/v1/renders", {
+      const creatomateRes = await fetch("https://api.creatomate.com/v2/renders", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      const statusRes = await fetch(`https://api.creatomate.com/v1/renders/${renderId}`, {
+      const statusRes = await fetch(`https://api.creatomate.com/v2/renders/${renderId}`, {
         headers: { Authorization: `Bearer ${apiKey}` },
       });
 
@@ -116,7 +116,7 @@ Deno.serve(async (req) => {
 
       const statusData = await statusRes.json();
       const status = statusData.status;
-      const videoUrl = statusData.url;
+      const videoUrl = statusData.output?.[0]?.url || statusData.url;
 
       // Update DB based on status
       if (variacaoId) {
