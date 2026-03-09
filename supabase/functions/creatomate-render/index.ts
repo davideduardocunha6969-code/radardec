@@ -102,7 +102,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      const statusRes = await fetch(`https://api.creatomate.com/v1/renders/${renderId}`, {
+      const statusRes = await fetch(`https://api.creatomate.com/v2/renders/${renderId}`, {
         headers: { Authorization: `Bearer ${apiKey}` },
       });
 
