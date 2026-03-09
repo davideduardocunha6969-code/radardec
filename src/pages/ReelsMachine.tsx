@@ -8,13 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useDropzone } from "react-dropzone";
-import { Video, Upload, Play, CheckCircle, Loader2, Plus, Trash2, Save, Settings, LayoutDashboard, FolderPlus, Grid3X3, Link, FolderOpen, X, AlertCircle } from "lucide-react";
+import { Video, Upload, Play, CheckCircle, Loader2, Plus, Trash2, Save, Settings, LayoutDashboard, FolderPlus, Grid3X3, Link, FolderOpen, X, AlertCircle, Send } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 // ─── Types ──────────────────────────────────────────────────────
 type VideoStatus = "Pendente" | "Renderizando" | "Pronto" | "Publicado" | "Erro";
+type AreaDireito = "Trabalhista" | "Previdenciário" | "Bancário" | "Outros";
 
 interface VideoItem {
   id: string;
@@ -49,6 +52,7 @@ interface InstaPage {
   nome: string;
   userId: string;
   token: string;
+  areaDireito: AreaDireito;
 }
 
 interface ReelsConfig {
@@ -57,6 +61,15 @@ interface ReelsConfig {
 }
 
 const LS_CONFIG_KEY = "reels-machine-config";
+
+const AREAS_DIREITO: AreaDireito[] = ["Trabalhista", "Previdenciário", "Bancário", "Outros"];
+
+const areaColor: Record<AreaDireito, string> = {
+  Trabalhista: "bg-chart-1/20 text-chart-1",
+  Previdenciário: "bg-chart-2/20 text-chart-2",
+  Bancário: "bg-chart-3/20 text-chart-3",
+  Outros: "bg-muted text-muted-foreground",
+};
 
 const statusColor: Record<VideoStatus, string> = {
   Pendente: "bg-muted text-muted-foreground",
@@ -327,6 +340,8 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
   onPollStatus: () => void;
 }) {
   const [filterStatus, setFilterStatus] = useState<string>("todos");
+  const [publishModalOpen, setPublishModalOpen] = useState(false);
+  const [selectedVariation, setSelectedVariation] = useState<DbVariation | null>(null);
 
   const filtered = variations.filter((v) => {
     const matchStatus = filterStatus === "todos" || v.status === filterStatus;
@@ -335,6 +350,11 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
   });
 
   const renderingCount = variations.filter((v) => v.status === "Renderizando").length;
+
+  const handlePublishClick = (variation: DbVariation) => {
+    setSelectedVariation(variation);
+    setPublishModalOpen(true);
+  };
 
   return (
     <div className="space-y-4">
@@ -399,7 +419,7 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
                 <div className="flex items-center justify-between">
                   <Badge className={statusColor[v.status]} variant="secondary">{v.status}</Badge>
                   {v.status === "Pronto" && v.video_url && (
-                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => toast.success(`Publicando ${v.nome}...`)}>
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handlePublishClick(v)}>
                       Publicar
                     </Button>
                   )}
@@ -409,7 +429,162 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
           ))}
         </div>
       )}
+
+      <PublishModal 
+        open={publishModalOpen} 
+        onOpenChange={setPublishModalOpen} 
+        variation={selectedVariation}
+      />
     </div>
+  );
+}
+
+// ─── Publish Modal ──────────────────────────────────────────────
+function PublishModal({ open, onOpenChange, variation }: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  variation: DbVariation | null;
+}) {
+  const [filterArea, setFilterArea] = useState<string>("Todas");
+  const [selectedPages, setSelectedPages] = useState<Set<string>>(new Set());
+  const [pages, setPages] = useState<InstaPage[]>([]);
+  const [isPublishing, setIsPublishing] = useState(false);
+
+  // Load pages from config and add mock data if empty
+  useEffect(() => {
+    const config = loadConfig();
+    if (config.pages.length > 0) {
+      setPages(config.pages);
+    } else {
+      // Mock data for demonstration
+      setPages([
+        { nome: "Advogado Trabalhista SP", userId: "17841400001", token: "EAA...", areaDireito: "Trabalhista" },
+        { nome: "Direito do Trabalho RJ", userId: "17841400002", token: "EAA...", areaDireito: "Trabalhista" },
+        { nome: "Prev. Social Brasil", userId: "17841400003", token: "EAA...", areaDireito: "Previdenciário" },
+        { nome: "INSS e Aposentadoria", userId: "17841400004", token: "EAA...", areaDireito: "Previdenciário" },
+        { nome: "Direito Bancário MG", userId: "17841400005", token: "EAA...", areaDireito: "Bancário" },
+        { nome: "Advogados Associados", userId: "17841400006", token: "EAA...", areaDireito: "Outros" },
+      ]);
+    }
+  }, [open]);
+
+  useEffect(() => {
+    setSelectedPages(new Set());
+    setFilterArea("Todas");
+  }, [open]);
+
+  const filteredPages = filterArea === "Todas" 
+    ? pages 
+    : pages.filter(p => p.areaDireito === filterArea);
+
+  const togglePage = (pageId: string) => {
+    setSelectedPages(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(pageId)) {
+        newSet.delete(pageId);
+      } else {
+        newSet.add(pageId);
+      }
+      return newSet;
+    });
+  };
+
+  const handlePublish = async () => {
+    if (selectedPages.size === 0 || !variation) return;
+    
+    setIsPublishing(true);
+    
+    // Simulate publishing
+    setTimeout(() => {
+      setIsPublishing(false);
+      onOpenChange(false);
+      toast.success(`Publicado em ${selectedPages.size} página(s) com sucesso!`);
+    }, 1500);
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="max-w-lg">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Send className="h-5 w-5" />
+            Selecionar páginas para publicar
+          </DialogTitle>
+        </DialogHeader>
+
+        {variation && (
+          <div className="bg-muted/50 rounded-lg p-3 mb-2">
+            <p className="text-sm font-medium">{variation.nome}</p>
+            <p className="text-xs text-muted-foreground">{variation.projeto_nome}</p>
+          </div>
+        )}
+
+        <div className="space-y-4">
+          <div className="space-y-2">
+            <Label className="text-sm">Filtrar por Área do Direito</Label>
+            <Select value={filterArea} onValueChange={setFilterArea}>
+              <SelectTrigger>
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="Todas">Todas as áreas</SelectItem>
+                {AREAS_DIREITO.map(area => (
+                  <SelectItem key={area} value={area}>{area}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="border rounded-lg divide-y max-h-64 overflow-y-auto">
+            {filteredPages.length === 0 ? (
+              <div className="p-4 text-center text-sm text-muted-foreground">
+                Nenhuma página encontrada para esta área.
+              </div>
+            ) : (
+              filteredPages.map((page) => (
+                <div 
+                  key={page.userId} 
+                  className="flex items-center gap-3 p-3 hover:bg-muted/30 cursor-pointer"
+                  onClick={() => togglePage(page.userId)}
+                >
+                  <Checkbox 
+                    checked={selectedPages.has(page.userId)} 
+                    onCheckedChange={() => togglePage(page.userId)}
+                  />
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-medium truncate">{page.nome}</p>
+                    <p className="text-xs text-muted-foreground">ID: {page.userId}</p>
+                  </div>
+                  <Badge className={areaColor[page.areaDireito]} variant="secondary">
+                    {page.areaDireito}
+                  </Badge>
+                </div>
+              ))
+            )}
+          </div>
+
+          <p className="text-xs text-muted-foreground text-center">
+            {selectedPages.size} página(s) selecionada(s)
+          </p>
+        </div>
+
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancelar
+          </Button>
+          <Button 
+            onClick={handlePublish} 
+            disabled={selectedPages.size === 0 || isPublishing}
+          >
+            {isPublishing ? (
+              <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Publicando...</>
+            ) : (
+              <>Publicar nas páginas selecionadas</>
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -424,7 +599,7 @@ function ConfiguracoesTab() {
     setPages(config.pages);
   }, []);
 
-  const addPage = () => setPages((prev) => [...prev, { nome: "", userId: "", token: "" }]);
+  const addPage = () => setPages((prev) => [...prev, { nome: "", userId: "", token: "", areaDireito: "Outros" }]);
   const removePage = (i: number) => setPages((prev) => prev.filter((_, idx) => idx !== i));
   const updatePage = (i: number, field: keyof InstaPage, value: string) =>
     setPages((prev) => prev.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)));
@@ -455,10 +630,32 @@ function ConfiguracoesTab() {
           {pages.map((p, i) => (
             <div key={i} className="border rounded-lg p-4 space-y-3 relative">
               <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removePage(i)}><Trash2 className="h-3.5 w-3.5" /></Button>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="space-y-1"><Label className="text-xs">Nome</Label><Input placeholder="Nome" value={p.nome} onChange={(e) => updatePage(i, "nome", e.target.value)} /></div>
-                <div className="space-y-1"><Label className="text-xs">Instagram User ID</Label><Input placeholder="17841400..." value={p.userId} onChange={(e) => updatePage(i, "userId", e.target.value)} /></div>
-                <div className="space-y-1"><Label className="text-xs">Access Token</Label><Input type="password" placeholder="EAA..." value={p.token} onChange={(e) => updatePage(i, "token", e.target.value)} /></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Nome</Label>
+                  <Input placeholder="Nome da página" value={p.nome} onChange={(e) => updatePage(i, "nome", e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Área do Direito</Label>
+                  <Select value={p.areaDireito} onValueChange={(v) => updatePage(i, "areaDireito", v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AREAS_DIREITO.map(area => (
+                        <SelectItem key={area} value={area}>{area}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Instagram User ID</Label>
+                  <Input placeholder="17841400..." value={p.userId} onChange={(e) => updatePage(i, "userId", e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Access Token</Label>
+                  <Input type="password" placeholder="EAA..." value={p.token} onChange={(e) => updatePage(i, "token", e.target.value)} />
+                </div>
               </div>
             </div>
           ))}
