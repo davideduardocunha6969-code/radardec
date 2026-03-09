@@ -630,7 +630,7 @@ function ConfiguracoesTab() {
     setPages(config.pages);
   }, []);
 
-  const addPage = () => setPages((prev) => [...prev, { nome: "", userId: "", token: "", areaDireito: "Outros" }]);
+  const addPage = () => setPages((prev) => [...prev, { nome: "", userId: "", token: "", areaDireito: "Outros", facebookPageId: "", facebookToken: "" }]);
   const removePage = (i: number) => setPages((prev) => prev.filter((_, idx) => idx !== i));
   const updatePage = (i: number, field: keyof InstaPage, value: string) =>
     setPages((prev) => prev.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)));
