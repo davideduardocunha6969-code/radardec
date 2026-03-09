@@ -1831,9 +1831,25 @@ const RadarComercial = () => {
           {/* Gráfico de Linha - Percentual de No-Show por Semana */}
           <Card>
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <TrendingUp className="h-5 w-5 text-destructive" />
-            <CardTitle className="text-lg">Percentual de No-Show por Semana</CardTitle>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <TrendingUp className="h-5 w-5 text-destructive" />
+              <CardTitle className="text-lg">Percentual de No-Show por Semana</CardTitle>
+            </div>
+            <Select
+              value={noShowSetorFilter ?? "all"}
+              onValueChange={(v) => setNoShowSetorFilter(v === "all" ? null : v)}
+            >
+              <SelectTrigger className="w-[180px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Setores</SelectItem>
+                {filterOptions.setores.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
         <CardContent>
