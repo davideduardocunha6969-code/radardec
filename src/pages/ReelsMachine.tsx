@@ -8,11 +8,18 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDropzone } from "react-dropzone";
-import { Video, Upload, Play, CheckCircle, Loader2, Plus, Trash2, Save, Settings, LayoutDashboard, FolderPlus, Grid3X3 } from "lucide-react";
+import { Video, Upload, Play, CheckCircle, Loader2, Plus, Trash2, Save, Settings, LayoutDashboard, FolderPlus, Grid3X3, Link, FolderOpen, X } from "lucide-react";
 import { toast } from "sonner";
 
 // ─── Types ──────────────────────────────────────────────────────
 type VideoStatus = "Pendente" | "Renderizando" | "Pronto" | "Publicado";
+
+interface VideoItem {
+  id: string;
+  name: string;
+  source: "local" | "drive";
+  driveUrl?: string;
+}
 
 interface Variation {
   id: string;
@@ -63,23 +70,96 @@ function saveConfig(config: ReelsConfig) {
   localStorage.setItem(LS_CONFIG_KEY, JSON.stringify(config));
 }
 
+// ─── Mock Drive detection ───────────────────────────────────────
+function mockDetectDriveFiles(url: string): { type: "file" | "folder"; files: string[] } {
+  if (url.includes("/folders/") || url.includes("folderview")) {
+    return {
+      type: "folder",
+      files: ["intro_energetico.mp4", "gancho_urgencia.mp4", "abertura_curiosidade.mp4"],
+    };
+  }
+  const match = url.match(/\/d\/([^/]+)/);
+  const name = match ? `drive_video_${match[1].slice(0, 6)}.mp4` : "video_importado.mp4";
+  return { type: "file", files: [name] };
+}
+
 // ─── Upload Zone Component ──────────────────────────────────────
-function UploadZone({ label, multiple, files, onDrop, onRemove }: {
+function UploadZone({ label, multiple, items, onAddLocal, onAddDrive, onRemove }: {
   label: string;
   multiple: boolean;
-  files: File[];
-  onDrop: (files: File[]) => void;
-  onRemove: (index: number) => void;
+  items: VideoItem[];
+  onAddLocal: (files: File[]) => void;
+  onAddDrive: (newItems: VideoItem[]) => void;
+  onRemove: (id: string) => void;
 }) {
+  const [showDriveInput, setShowDriveInput] = useState(false);
+  const [driveUrl, setDriveUrl] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
-    onDrop,
+    onDrop: onAddLocal,
     accept: { "video/mp4": [".mp4"] },
     multiple,
   });
 
+  const handleImportDrive = () => {
+    if (!driveUrl.trim()) return;
+    setLoading(true);
+    setTimeout(() => {
+      const result = mockDetectDriveFiles(driveUrl);
+      const newItems: VideoItem[] = result.files.map((n) => ({
+        id: crypto.randomUUID(),
+        name: n,
+        source: "drive" as const,
+        driveUrl,
+      }));
+      onAddDrive(multiple ? newItems : newItems.slice(0, 1));
+      toast.success(
+        result.type === "folder"
+          ? `${result.files.length} arquivo(s) detectados na pasta`
+          : `Arquivo importado: ${result.files[0]}`
+      );
+      setDriveUrl("");
+      setShowDriveInput(false);
+      setLoading(false);
+    }, 800);
+  };
+
   return (
     <div className="space-y-2">
-      <Label className="text-sm font-medium">{label}</Label>
+      <div className="flex items-center justify-between">
+        <Label className="text-sm font-medium">{label}</Label>
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          className="h-7 text-xs gap-1"
+          onClick={() => setShowDriveInput(!showDriveInput)}
+        >
+          <Link className="h-3.5 w-3.5" />
+          Importar do Google Drive
+        </Button>
+      </div>
+
+      {showDriveInput && (
+        <div className="flex gap-2 items-center border rounded-lg p-3 bg-muted/30">
+          <FolderOpen className="h-4 w-4 text-muted-foreground shrink-0" />
+          <Input
+            placeholder="Cole o link do Google Drive (arquivo ou pasta)"
+            value={driveUrl}
+            onChange={(e) => setDriveUrl(e.target.value)}
+            className="h-8 text-sm"
+            onKeyDown={(e) => e.key === "Enter" && handleImportDrive()}
+          />
+          <Button size="sm" className="h-8 shrink-0" onClick={handleImportDrive} disabled={!driveUrl.trim() || loading}>
+            {loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "Importar"}
+          </Button>
+          <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => { setShowDriveInput(false); setDriveUrl(""); }}>
+            <X className="h-3.5 w-3.5" />
+          </Button>
+        </div>
+      )}
+
       <div
         {...getRootProps()}
         className={`border-2 border-dashed rounded-lg p-6 text-center cursor-pointer transition-colors ${
@@ -92,12 +172,22 @@ function UploadZone({ label, multiple, files, onDrop, onRemove }: {
           {isDragActive ? "Solte aqui..." : `Arraste arquivos .mp4 ou clique para selecionar${multiple ? " (múltiplos)" : ""}`}
         </p>
       </div>
-      {files.length > 0 && (
+      {items.length > 0 && (
         <div className="space-y-1">
-          {files.map((f, i) => (
-            <div key={i} className="flex items-center justify-between text-sm bg-muted/50 rounded px-3 py-1.5">
-              <span className="truncate">{f.name}</span>
-              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => onRemove(i)}>
+          {items.map((item) => (
+            <div key={item.id} className="flex items-center justify-between text-sm bg-muted/50 rounded px-3 py-1.5">
+              <div className="flex items-center gap-2 truncate">
+                {item.source === "drive" ? (
+                  <FolderOpen className="h-3.5 w-3.5 text-chart-4 shrink-0" />
+                ) : (
+                  <Upload className="h-3.5 w-3.5 text-muted-foreground shrink-0" />
+                )}
+                <span className="truncate">{item.name}</span>
+                {item.source === "drive" && (
+                  <Badge variant="secondary" className="text-[10px] px-1.5 py-0 h-4 bg-chart-4/10 text-chart-4">Drive</Badge>
+                )}
+              </div>
+              <Button variant="ghost" size="icon" className="h-6 w-6 shrink-0" onClick={() => onRemove(item.id)}>
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             </div>
@@ -187,12 +277,15 @@ function DashboardTab({ projects, variations }: { projects: Project[]; variation
 // ─── Novo Projeto Tab ───────────────────────────────────────────
 function NovoProjetoTab({ onGenerate }: { onGenerate: (nome: string, hookCount: number, ctaCount: number) => void }) {
   const [nome, setNome] = useState("");
-  const [hooks, setHooks] = useState<File[]>([]);
-  const [corpo, setCorpo] = useState<File[]>([]);
-  const [ctas, setCtas] = useState<File[]>([]);
+  const [hooks, setHooks] = useState<VideoItem[]>([]);
+  const [corpo, setCorpo] = useState<VideoItem[]>([]);
+  const [ctas, setCtas] = useState<VideoItem[]>([]);
 
-  const removeFile = (setter: React.Dispatch<React.SetStateAction<File[]>>, index: number) => {
-    setter((prev) => prev.filter((_, i) => i !== index));
+  const filesToItems = (files: File[]): VideoItem[] =>
+    files.map((f) => ({ id: crypto.randomUUID(), name: f.name, source: "local" as const }));
+
+  const removeItem = (setter: React.Dispatch<React.SetStateAction<VideoItem[]>>, id: string) => {
+    setter((prev) => prev.filter((item) => item.id !== id));
   };
 
   const totalVariations = hooks.length * (corpo.length > 0 ? 1 : 0) * ctas.length;
@@ -211,7 +304,7 @@ function NovoProjetoTab({ onGenerate }: { onGenerate: (nome: string, hookCount: 
       <Card>
         <CardHeader>
           <CardTitle className="text-lg">Novo Projeto de Reels</CardTitle>
-          <CardDescription>Faça upload dos vídeos para gerar variações automaticamente.</CardDescription>
+          <CardDescription>Faça upload dos vídeos ou importe do Google Drive para gerar variações automaticamente.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="space-y-2">
@@ -222,25 +315,28 @@ function NovoProjetoTab({ onGenerate }: { onGenerate: (nome: string, hookCount: 
           <UploadZone
             label="Hooks (múltiplos .mp4)"
             multiple
-            files={hooks}
-            onDrop={(f) => setHooks((prev) => [...prev, ...f])}
-            onRemove={(i) => removeFile(setHooks, i)}
+            items={hooks}
+            onAddLocal={(f) => setHooks((prev) => [...prev, ...filesToItems(f)])}
+            onAddDrive={(items) => setHooks((prev) => [...prev, ...items])}
+            onRemove={(id) => removeItem(setHooks, id)}
           />
 
           <UploadZone
             label="Corpo (1 arquivo .mp4)"
             multiple={false}
-            files={corpo}
-            onDrop={(f) => setCorpo(f.slice(0, 1))}
+            items={corpo}
+            onAddLocal={(f) => setCorpo(filesToItems(f).slice(0, 1))}
+            onAddDrive={(items) => setCorpo(items.slice(0, 1))}
             onRemove={() => setCorpo([])}
           />
 
           <UploadZone
             label="CTAs (múltiplos .mp4)"
             multiple
-            files={ctas}
-            onDrop={(f) => setCtas((prev) => [...prev, ...f])}
-            onRemove={(i) => removeFile(setCtas, i)}
+            items={ctas}
+            onAddLocal={(f) => setCtas((prev) => [...prev, ...filesToItems(f)])}
+            onAddDrive={(items) => setCtas((prev) => [...prev, ...items])}
+            onRemove={(id) => removeItem(setCtas, id)}
           />
 
           <div className="rounded-lg bg-muted p-4 text-center">
@@ -260,9 +356,13 @@ function NovoProjetoTab({ onGenerate }: { onGenerate: (nome: string, hookCount: 
 }
 
 // ─── Galeria Tab ────────────────────────────────────────────────
-function GaleriaTab({ variations, projects, selectedProject, onProjectChange }: { variations: Variation[]; projects: Project[]; selectedProject: string; onProjectChange: (v: string) => void }) {
+function GaleriaTab({ variations, projects, selectedProject, onProjectChange }: {
+  variations: Variation[];
+  projects: Project[];
+  selectedProject: string;
+  onProjectChange: (v: string) => void;
+}) {
   const [filterStatus, setFilterStatus] = useState<string>("todos");
-
   const projectNames = [...new Set(variations.map((v) => v.projeto))];
 
   const filtered = variations.filter((v) => {
