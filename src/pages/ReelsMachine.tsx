@@ -419,6 +419,7 @@ export default function ReelsMachine() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [projects, setProjects] = useState<Project[]>([]);
   const [variations, setVariations] = useState<Variation[]>([]);
+  const [selectedProject, setSelectedProject] = useState<string>("todos");
 
   const handleGenerate = (nome: string, hookCount: number, ctaCount: number) => {
     const hoje = new Date().toISOString().slice(0, 10);
