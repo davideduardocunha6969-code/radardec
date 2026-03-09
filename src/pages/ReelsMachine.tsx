@@ -53,6 +53,8 @@ interface InstaPage {
   userId: string;
   token: string;
   areaDireito: AreaDireito;
+  facebookPageId?: string;
+  facebookToken?: string;
 }
 
 interface ReelsConfig {
@@ -447,6 +449,7 @@ function PublishModal({ open, onOpenChange, variation }: {
 }) {
   const [filterArea, setFilterArea] = useState<string>("Todas");
   const [selectedPages, setSelectedPages] = useState<Set<string>>(new Set());
+  const [facebookOptions, setFacebookOptions] = useState<Map<string, boolean>>(new Map());
   const [pages, setPages] = useState<InstaPage[]>([]);
   const [isPublishing, setIsPublishing] = useState(false);
 
@@ -458,9 +461,9 @@ function PublishModal({ open, onOpenChange, variation }: {
     } else {
       // Mock data for demonstration
       setPages([
-        { nome: "Advogado Trabalhista SP", userId: "17841400001", token: "EAA...", areaDireito: "Trabalhista" },
+        { nome: "Advogado Trabalhista SP", userId: "17841400001", token: "EAA...", areaDireito: "Trabalhista", facebookPageId: "fb_123", facebookToken: "EAA..." },
         { nome: "Direito do Trabalho RJ", userId: "17841400002", token: "EAA...", areaDireito: "Trabalhista" },
-        { nome: "Prev. Social Brasil", userId: "17841400003", token: "EAA...", areaDireito: "Previdenciário" },
+        { nome: "Prev. Social Brasil", userId: "17841400003", token: "EAA...", areaDireito: "Previdenciário", facebookPageId: "fb_456", facebookToken: "EAA..." },
         { nome: "INSS e Aposentadoria", userId: "17841400004", token: "EAA...", areaDireito: "Previdenciário" },
         { nome: "Direito Bancário MG", userId: "17841400005", token: "EAA...", areaDireito: "Bancário" },
         { nome: "Advogados Associados", userId: "17841400006", token: "EAA...", areaDireito: "Outros" },
@@ -470,6 +473,7 @@ function PublishModal({ open, onOpenChange, variation }: {
 
   useEffect(() => {
     setSelectedPages(new Set());
+    setFacebookOptions(new Map());
     setFilterArea("Todas");
   }, [open]);
 
@@ -489,16 +493,26 @@ function PublishModal({ open, onOpenChange, variation }: {
     });
   };
 
+  const toggleFacebook = (pageId: string, checked: boolean) => {
+    setFacebookOptions(prev => {
+      const newMap = new Map(prev);
+      newMap.set(pageId, checked);
+      return newMap;
+    });
+  };
+
   const handlePublish = async () => {
     if (selectedPages.size === 0 || !variation) return;
     
     setIsPublishing(true);
     
+    const fbCount = Array.from(selectedPages).filter(id => facebookOptions.get(id)).length;
+    
     // Simulate publishing
     setTimeout(() => {
       setIsPublishing(false);
       onOpenChange(false);
-      toast.success(`Publicado em ${selectedPages.size} página(s) com sucesso!`);
+      toast.success(`Publicado em ${selectedPages.size} página(s) do Instagram e ${fbCount} página(s) do Facebook com sucesso!`);
     }, 1500);
   };
 
@@ -542,22 +556,39 @@ function PublishModal({ open, onOpenChange, variation }: {
               </div>
             ) : (
               filteredPages.map((page) => (
-                <div 
-                  key={page.userId} 
-                  className="flex items-center gap-3 p-3 hover:bg-muted/30 cursor-pointer"
-                  onClick={() => togglePage(page.userId)}
-                >
-                  <Checkbox 
-                    checked={selectedPages.has(page.userId)} 
-                    onCheckedChange={() => togglePage(page.userId)}
-                  />
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-medium truncate">{page.nome}</p>
-                    <p className="text-xs text-muted-foreground">ID: {page.userId}</p>
+                <div key={page.userId} className="flex flex-col p-3 hover:bg-muted/30">
+                  <div 
+                    className="flex items-center gap-3 cursor-pointer"
+                    onClick={() => togglePage(page.userId)}
+                  >
+                    <Checkbox 
+                      checked={selectedPages.has(page.userId)} 
+                      onCheckedChange={() => togglePage(page.userId)}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-medium truncate">{page.nome}</p>
+                      <p className="text-xs text-muted-foreground">ID: {page.userId}</p>
+                    </div>
+                    <Badge className={areaColor[page.areaDireito]} variant="secondary">
+                      {page.areaDireito}
+                    </Badge>
                   </div>
-                  <Badge className={areaColor[page.areaDireito]} variant="secondary">
-                    {page.areaDireito}
-                  </Badge>
+                  
+                  {page.facebookPageId && selectedPages.has(page.userId) && (
+                    <div className="mt-3 ml-7 flex items-center space-x-2">
+                      <Checkbox 
+                        id={`fb-${page.userId}`}
+                        checked={!!facebookOptions.get(page.userId)}
+                        onCheckedChange={(checked) => toggleFacebook(page.userId, checked === true)}
+                      />
+                      <Label 
+                        htmlFor={`fb-${page.userId}`}
+                        className="text-xs text-muted-foreground font-normal cursor-pointer"
+                      >
+                        Publicar também no Facebook
+                      </Label>
+                    </div>
+                  )}
                 </div>
               ))
             )}
@@ -599,7 +630,7 @@ function ConfiguracoesTab() {
     setPages(config.pages);
   }, []);
 
-  const addPage = () => setPages((prev) => [...prev, { nome: "", userId: "", token: "", areaDireito: "Outros" }]);
+  const addPage = () => setPages((prev) => [...prev, { nome: "", userId: "", token: "", areaDireito: "Outros", facebookPageId: "", facebookToken: "" }]);
   const removePage = (i: number) => setPages((prev) => prev.filter((_, idx) => idx !== i));
   const updatePage = (i: number, field: keyof InstaPage, value: string) =>
     setPages((prev) => prev.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)));
@@ -653,8 +684,16 @@ function ConfiguracoesTab() {
                   <Input placeholder="17841400..." value={p.userId} onChange={(e) => updatePage(i, "userId", e.target.value)} />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Access Token</Label>
+                  <Label className="text-xs">Instagram Access Token</Label>
                   <Input type="password" placeholder="EAA..." value={p.token} onChange={(e) => updatePage(i, "token", e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Facebook Page ID (Opcional)</Label>
+                  <Input placeholder="ID da página do Facebook" value={p.facebookPageId || ""} onChange={(e) => updatePage(i, "facebookPageId", e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Facebook Access Token (Opcional)</Label>
+                  <Input type="password" placeholder="Token do Facebook" value={p.facebookToken || ""} onChange={(e) => updatePage(i, "facebookToken", e.target.value)} />
                 </div>
               </div>
             </div>
