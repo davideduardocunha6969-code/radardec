@@ -445,7 +445,7 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2">
           {filtered.map((v) => (
             <Card key={v.id} className="overflow-hidden relative group">
               <AlertDialog>
@@ -473,7 +473,7 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
                 </AlertDialogContent>
               </AlertDialog>
 
-              <div className="h-[180px] bg-muted flex items-center justify-center">
+              <div className="aspect-[9/16] bg-muted flex items-center justify-center w-full">
                 {v.video_url ? (
                   <video src={v.video_url} className="w-full h-full object-cover" controls />
                 ) : v.status === "Renderizando" ? (
