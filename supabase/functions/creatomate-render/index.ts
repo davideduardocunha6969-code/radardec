@@ -6,6 +6,28 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")!;
+const SUPABASE_ANON_KEY = Deno.env.get("SUPABASE_ANON_KEY")!;
+const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
+
+function extractReelsVideoPath(url: string): string | null {
+  try {
+    const parsed = new URL(url);
+    const marker = "/storage/v1/object/public/reels-videos/";
+    const idx = parsed.pathname.indexOf(marker);
+    if (idx === -1) return null;
+    const path = parsed.pathname.slice(idx + marker.length);
+    return decodeURIComponent(path);
+  } catch {
+    return null;
+  }
+}
+
+function toAbsoluteSignedUrl(signedUrl: string): string {
+  if (signedUrl.startsWith("http://") || signedUrl.startsWith("https://")) return signedUrl;
+  return `${SUPABASE_URL}${signedUrl}`;
+}
+
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -20,13 +42,16 @@ Deno.serve(async (req) => {
       });
     }
 
-    const supabase = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_ANON_KEY")!,
-      { global: { headers: { Authorization: authHeader } } }
-    );
+    const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
+      global: { headers: { Authorization: authHeader } },
+    });
 
-    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    const adminSupabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+    const {
+      data: { user },
+      error: userError,
+    } = await supabase.auth.getUser();
     if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
@@ -39,12 +64,15 @@ Deno.serve(async (req) => {
 
     // ─── Submit render job to Creatomate ───
     if (action === "render") {
-      const { apiKey, hookUrl, corpoUrl, ctaUrl, variacaoId } = body;
+      const { apiKey, variacaoId } = body;
+      let hook_url = body.hook_url ?? body.hookUrl;
+      let corpo_url = body.corpo_url ?? body.corpoUrl;
+      let cta_url = body.cta_url ?? body.ctaUrl;
 
       console.log("=== CREATOMATE RENDER REQUEST ===");
-      console.log("hookUrl:", hookUrl);
-      console.log("corpoUrl:", corpoUrl);
-      console.log("ctaUrl:", ctaUrl);
+      console.log("hook_url:", hook_url);
+      console.log("corpo_url:", corpo_url);
+      console.log("cta_url:", cta_url);
       console.log("variacaoId:", variacaoId);
 
       if (!apiKey) {
@@ -54,21 +82,88 @@ Deno.serve(async (req) => {
         );
       }
 
-      // Validate URLs
-      if (!hookUrl || !corpoUrl || !ctaUrl) {
-        console.error("Missing URLs - hook:", !!hookUrl, "corpo:", !!corpoUrl, "cta:", !!ctaUrl);
+      if (!hook_url || !corpo_url || !cta_url) {
+        console.error("Missing URLs - hook:", !!hook_url, "corpo:", !!corpo_url, "cta:", !!cta_url);
         return new Response(
-          JSON.stringify({ error: "URLs dos vídeos são obrigatórias", hookUrl, corpoUrl, ctaUrl }),
+          JSON.stringify({ error: "URLs dos vídeos são obrigatórias", hook_url, corpo_url, cta_url }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
+      }
+
+      // Ensure bucket exists and resolve URL strategy
+      let bucketIsPublic = true;
+      const { data: bucketData, error: bucketError } = await adminSupabase.storage.getBucket("reels-videos");
+
+      if (bucketError || !bucketData) {
+        console.warn("Bucket reels-videos não encontrado. Criando bucket público...");
+        const { error: createBucketError } = await adminSupabase.storage.createBucket("reels-videos", {
+          public: true,
+          fileSizeLimit: "500MB",
+        });
+        if (createBucketError) {
+          console.error("Erro ao criar bucket reels-videos:", createBucketError.message);
+          return new Response(
+            JSON.stringify({ error: `Erro ao criar bucket reels-videos: ${createBucketError.message}` }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+      } else {
+        bucketIsPublic = !!bucketData.public;
+      }
+
+      // If bucket is private, fallback to signed URLs (1h)
+      if (!bucketIsPublic) {
+        console.log("Bucket reels-videos é privado. Gerando signed URLs...");
+
+        const hookPath = extractReelsVideoPath(hook_url);
+        const corpoPath = extractReelsVideoPath(corpo_url);
+        const ctaPath = extractReelsVideoPath(cta_url);
+
+        if (!hookPath || !corpoPath || !ctaPath) {
+          return new Response(
+            JSON.stringify({ error: "Não foi possível extrair path dos vídeos para assinar URLs." }),
+            { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        const [hookSigned, corpoSigned, ctaSigned] = await Promise.all([
+          adminSupabase.storage.from("reels-videos").createSignedUrl(hookPath, 3600),
+          adminSupabase.storage.from("reels-videos").createSignedUrl(corpoPath, 3600),
+          adminSupabase.storage.from("reels-videos").createSignedUrl(ctaPath, 3600),
+        ]);
+
+        if (hookSigned.error || corpoSigned.error || ctaSigned.error) {
+          return new Response(
+            JSON.stringify({
+              error: "Erro ao gerar signed URLs para o Creatomate",
+              details: {
+                hook: hookSigned.error?.message,
+                corpo: corpoSigned.error?.message,
+                cta: ctaSigned.error?.message,
+              },
+            }),
+            { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } }
+          );
+        }
+
+        hook_url = toAbsoluteSignedUrl(hookSigned.data.signedUrl);
+        corpo_url = toAbsoluteSignedUrl(corpoSigned.data.signedUrl);
+        cta_url = toAbsoluteSignedUrl(ctaSigned.data.signedUrl);
+
+        console.log("Signed hook_url:", hook_url);
+        console.log("Signed corpo_url:", corpo_url);
+        console.log("Signed cta_url:", cta_url);
       }
 
       const requestBody = {
         template_id: "433aa2ca-f109-4256-be02-e21efe6f855b",
         modifications: {
-          "hook.source": hookUrl,
-          "corpo.source": corpoUrl,
-          "cta.source": ctaUrl,
+          hook: hook_url,
+          corpo: corpo_url,
+          cta: cta_url,
+          "hook.source": hook_url,
+          "corpo.source": corpo_url,
+          "cta.source": cta_url,
         },
       };
 
@@ -99,7 +194,6 @@ Deno.serve(async (req) => {
 
       console.log("Render ID:", renderId);
 
-      // Update variation with render_id
       if (variacaoId && renderId) {
         await supabase
           .from("reels_variacoes")
@@ -107,10 +201,9 @@ Deno.serve(async (req) => {
           .eq("id", variacaoId);
       }
 
-      return new Response(
-        JSON.stringify({ success: true, renderId, renderData }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ success: true, renderId, renderData }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     // ─── Check render status ───
@@ -142,13 +235,9 @@ Deno.serve(async (req) => {
 
       console.log("Status check - renderId:", renderId, "status:", status, "videoUrl:", videoUrl);
 
-      // Update DB based on status
       if (variacaoId) {
         if (status === "succeeded") {
-          await supabase
-            .from("reels_variacoes")
-            .update({ status: "Pronto", video_url: videoUrl })
-            .eq("id", variacaoId);
+          await supabase.from("reels_variacoes").update({ status: "Pronto", video_url: videoUrl }).eq("id", variacaoId);
         } else if (status === "failed") {
           await supabase
             .from("reels_variacoes")
@@ -157,10 +246,9 @@ Deno.serve(async (req) => {
         }
       }
 
-      return new Response(
-        JSON.stringify({ status, videoUrl, renderData: statusData }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" } }
-      );
+      return new Response(JSON.stringify({ status, videoUrl, renderData: statusData }), {
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
     }
 
     return new Response(JSON.stringify({ error: "Ação inválida" }), {
@@ -169,7 +257,7 @@ Deno.serve(async (req) => {
     });
   } catch (err) {
     console.error("Edge function error:", err);
-    return new Response(JSON.stringify({ error: err.message }), {
+    return new Response(JSON.stringify({ error: (err as Error).message }), {
       status: 500,
       headers: { ...corsHeaders, "Content-Type": "application/json" },
     });

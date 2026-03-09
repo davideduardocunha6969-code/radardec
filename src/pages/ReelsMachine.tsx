@@ -782,6 +782,7 @@ async function uploadVideoToStorage(file: File, userId: string, projectId: strin
   const { error } = await supabase.storage.from("reels-videos").upload(path, file, { upsert: true });
   if (error) throw new Error(`Erro no upload de ${file.name}: ${error.message}`);
   const { data } = supabase.storage.from("reels-videos").getPublicUrl(path);
+  console.log("[ReelsMachine] getPublicUrl:", { category, index, path, publicUrl: data.publicUrl });
   return data.publicUrl;
 }
 
@@ -972,16 +973,20 @@ export default function ReelsMachine() {
 
       const renderPromises = (allVarData as any[]).map(async (varRow: any, idx: number) => {
         const entry = variationEntries[idx];
+        const payload = {
+          action: "render",
+          apiKey: config.apiKey,
+          hook_url: hookUrls[entry.h],
+          corpo_url: corpoUrl,
+          cta_url: ctaUrls[entry.c],
+          variacaoId: varRow.id,
+        };
+
+        console.log("[ReelsMachine] invoking creatomate-render with body:", payload);
+
         try {
-          const { data, error } = await supabase.functions.invoke("creatomate-render", {
-            body: {
-              action: "render",
-              apiKey: config.apiKey,
-              hookUrl: hookUrls[entry.h],
-              corpoUrl,
-              ctaUrl: ctaUrls[entry.c],
-              variacaoId: varRow.id,
-            },
+          const { error } = await supabase.functions.invoke("creatomate-render", {
+            body: payload,
           });
           if (error) {
             console.error("Render error:", error);
