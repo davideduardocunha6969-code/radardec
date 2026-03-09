@@ -1,42 +1,29 @@
 
-# Tres Paineis de Atendimento — Status
 
-## Fase 1 — Infraestrutura ✅ CONCLUÍDA
+## Fix: Inflated Updated Values in Estimativa de Valores
 
-- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
-- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
-- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
-- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
-- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
-- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
-- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
-- [x] Interface `RoboCoach` e mutations atualizados com novos campos
+### Root Cause
+`correcao.ts` → `atualizarValor()` applies IPCA-E correction **plus** 1% monthly simple interest (juros moratórios). Juros moratórios only begin from the date a lawsuit is filed (`ajuizamento`). Since this is a **pre-litigation estimate** (no lawsuit filed yet), juros should **not** be included. This alone accounts for ~60-70% additional inflation on already-corrected values, explaining why updated values appear ~2.5x the nominal instead of ~1.3x.
 
-## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
-- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
-- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
-- [x] `estimarImpactoCampo()` — para ordenação de lacunas
-- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
-- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
+### Fix
+In `src/utils/trabalhista/correcao.ts`, change `atualizarValor` to apply **only** IPCA-E correction (no juros moratórios):
 
-## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
-- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
-- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
-- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
-- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
-- [x] Botão Confirmar promove campo para manual
-- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
+```typescript
+export function atualizarValor(
+  valor: number,
+  dataBase: Date,
+  dataCalculo: Date = new Date()
+): number {
+  return corrigirIPCAE(valor, dataBase, dataCalculo);
+}
+```
 
-## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
-- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
-- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
-- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
-- [x] Debounce de 2s nas mudanças de dados
-- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
-- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
+Keep `aplicarJurosMoratorios` as a standalone export for future use in liquidation mode (when a filing date is known), but don't call it from `atualizarValor`.
 
-## Fase 5 — Integração Final ✅ CONCLUÍDA
-- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
-- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
-- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
-- [x] Config.toml atualizado com as duas novas funções
+### Expected Result
+- Nominal R$ 271,771 → Updated ~R$ 360,000 (IPCA-E only, ~1.3x) instead of R$ 664,735 (2.45x)
+- Horas Extras R$ 186,850 → ~R$ 248,000 instead of R$ 470,109
+
+### Files to modify
+- `src/utils/trabalhista/correcao.ts` — remove juros from `atualizarValor`
+
