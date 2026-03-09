@@ -199,7 +199,7 @@ export function ConteudoStatsSection({
 
     const weekCounts: Record<number, number> = {};
     
-    previdenciarioPostados.forEach((c) => {
+    postados.forEach((c) => {
       const week = c.semana_publicacao;
       if (week && week >= 1 && week <= 53) {
         weekCounts[week] = (weekCounts[week] || 0) + 1;
