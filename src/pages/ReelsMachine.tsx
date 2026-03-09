@@ -491,9 +491,16 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
                 <div className="flex items-center justify-between">
                   <Badge className={statusColor[v.status]} variant="secondary">{v.status}</Badge>
                   {v.status === "Pronto" && v.video_url && (
-                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handlePublishClick(v)}>
-                      Publicar
-                    </Button>
+                    <div className="flex items-center gap-1.5">
+                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1" asChild>
+                        <a href={v.video_url} download={`${v.nome}.mp4`}>
+                          <Download className="h-3.5 w-3.5" />
+                        </a>
+                      </Button>
+                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handlePublishClick(v)}>
+                        Publicar
+                      </Button>
+                    </div>
                   )}
                 </div>
               </CardContent>
