@@ -2108,6 +2108,98 @@ export type Database = {
         }
         Relationships: []
       }
+      reels_projetos: {
+        Row: {
+          created_at: string
+          ctas_count: number
+          hooks_count: number
+          id: string
+          nome: string
+          status: string
+          updated_at: string
+          user_id: string
+          variacoes_count: number
+        }
+        Insert: {
+          created_at?: string
+          ctas_count?: number
+          hooks_count?: number
+          id?: string
+          nome: string
+          status?: string
+          updated_at?: string
+          user_id: string
+          variacoes_count?: number
+        }
+        Update: {
+          created_at?: string
+          ctas_count?: number
+          hooks_count?: number
+          id?: string
+          nome?: string
+          status?: string
+          updated_at?: string
+          user_id?: string
+          variacoes_count?: number
+        }
+        Relationships: []
+      }
+      reels_variacoes: {
+        Row: {
+          corpo_url: string | null
+          created_at: string
+          cta_url: string | null
+          erro: string | null
+          hook_url: string | null
+          id: string
+          nome: string
+          projeto_id: string
+          render_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+          video_url: string | null
+        }
+        Insert: {
+          corpo_url?: string | null
+          created_at?: string
+          cta_url?: string | null
+          erro?: string | null
+          hook_url?: string | null
+          id?: string
+          nome: string
+          projeto_id: string
+          render_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+          video_url?: string | null
+        }
+        Update: {
+          corpo_url?: string | null
+          created_at?: string
+          cta_url?: string | null
+          erro?: string | null
+          hook_url?: string | null
+          id?: string
+          nome?: string
+          projeto_id?: string
+          render_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+          video_url?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "reels_variacoes_projeto_id_fkey"
+            columns: ["projeto_id"]
+            isOneToOne: false
+            referencedRelation: "reels_projetos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       robos_coach: {
         Row: {
           ativo: boolean
