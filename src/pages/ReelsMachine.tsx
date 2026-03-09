@@ -453,7 +453,7 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
                   <Button
                     variant="destructive"
                     size="icon"
-                    className="absolute top-2 right-2 z-10 h-7 w-7 opacity-0 group-hover:opacity-100 transition-opacity"
+                    className="absolute top-1 right-1 z-10 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                     disabled={deletingId === v.id}
                   >
                     {deletingId === v.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
