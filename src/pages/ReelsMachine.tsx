@@ -842,7 +842,28 @@ export default function ReelsMachine() {
     await loadData();
   };
 
-  const handleGenerate = async (nome: string, hooks: VideoItem[], corpo: VideoItem[], ctas: VideoItem[]) => {
+  const handleDeleteVariation = async (id: string) => {
+    const { error } = await supabase.from("reels_variacoes").delete().eq("id", id);
+    if (error) {
+      toast.error("Erro ao excluir variação: " + error.message);
+    } else {
+      toast.success("Variação excluída.");
+      await loadData();
+    }
+  };
+
+  const handleDeleteAllErrors = async () => {
+    const errorIds = variations.filter((v) => v.status === "Erro").map((v) => v.id);
+    if (errorIds.length === 0) return;
+    const { error } = await supabase.from("reels_variacoes").delete().in("id", errorIds);
+    if (error) {
+      toast.error("Erro ao excluir variações: " + error.message);
+    } else {
+      toast.success(`${errorIds.length} variação(ões) com erro excluída(s).`);
+      await loadData();
+    }
+  };
+
     const config = loadConfig();
     if (!config.apiKey) {
       toast.error("Configure a API Key do Creatomate nas Configurações antes de gerar variações.");
