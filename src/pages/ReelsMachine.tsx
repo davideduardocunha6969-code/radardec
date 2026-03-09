@@ -260,9 +260,8 @@ function NovoProjetoTab({ onGenerate }: { onGenerate: (nome: string, hookCount: 
 }
 
 // ─── Galeria Tab ────────────────────────────────────────────────
-function GaleriaTab({ variations, projects }: { variations: Variation[]; projects: Project[] }) {
+function GaleriaTab({ variations, projects, selectedProject, onProjectChange }: { variations: Variation[]; projects: Project[]; selectedProject: string; onProjectChange: (v: string) => void }) {
   const [filterStatus, setFilterStatus] = useState<string>("todos");
-  const [filterProject, setFilterProject] = useState<string>("todos");
 
   const projectNames = [...new Set(variations.map((v) => v.projeto))];
 
