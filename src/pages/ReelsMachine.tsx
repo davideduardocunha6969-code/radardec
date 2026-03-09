@@ -993,12 +993,14 @@ export default function ReelsMachine() {
         console.log("[ReelsMachine] invoking creatomate-render with body:", payload);
 
         try {
-          const { error } = await supabase.functions.invoke("creatomate-render", {
+          const { data, error } = await supabase.functions.invoke("creatomate-render", {
             body: payload,
           });
           if (error) {
             console.error("Render error:", error);
             await supabase.from("reels_variacoes").update({ status: "Erro", erro: error.message }).eq("id", varRow.id);
+          } else if (data?.renderId) {
+            await supabase.from("reels_variacoes").update({ render_id: data.renderId, status: "Renderizando" }).eq("id", varRow.id);
           }
         } catch (e: any) {
           console.error("Render exception:", e);
