@@ -456,7 +456,7 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
                     className="absolute top-1 right-1 z-10 h-6 w-6 opacity-0 group-hover:opacity-100 transition-opacity"
                     disabled={deletingId === v.id}
                   >
-                    {deletingId === v.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Trash2 className="h-3.5 w-3.5" />}
+                    {deletingId === v.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
                   </Button>
                 </AlertDialogTrigger>
                 <AlertDialogContent>
