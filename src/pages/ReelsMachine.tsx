@@ -684,8 +684,16 @@ function ConfiguracoesTab() {
                   <Input placeholder="17841400..." value={p.userId} onChange={(e) => updatePage(i, "userId", e.target.value)} />
                 </div>
                 <div className="space-y-1">
-                  <Label className="text-xs">Access Token</Label>
+                  <Label className="text-xs">Instagram Access Token</Label>
                   <Input type="password" placeholder="EAA..." value={p.token} onChange={(e) => updatePage(i, "token", e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Facebook Page ID (Opcional)</Label>
+                  <Input placeholder="ID da página do Facebook" value={p.facebookPageId || ""} onChange={(e) => updatePage(i, "facebookPageId", e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Facebook Access Token (Opcional)</Label>
+                  <Input type="password" placeholder="Token do Facebook" value={p.facebookToken || ""} onChange={(e) => updatePage(i, "facebookToken", e.target.value)} />
                 </div>
               </div>
             </div>
