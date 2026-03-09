@@ -227,7 +227,7 @@ export function ConteudoStatsSection({
           <CardHeader className="py-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-medium">
-                📊 Estatísticas de Conteúdo - Previdenciário
+                📊 Estatísticas de Conteúdo
               </CardTitle>
               <ChevronDown
                 className={`h-5 w-5 transition-transform ${
