@@ -473,7 +473,7 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
                 </AlertDialogContent>
               </AlertDialog>
 
-              <div className="h-[180px] bg-muted flex items-center justify-center">
+              <div className="aspect-[9/16] bg-muted flex items-center justify-center w-full">
                 {v.video_url ? (
                   <video src={v.video_url} className="w-full h-full object-cover" controls />
                 ) : v.status === "Renderizando" ? (
