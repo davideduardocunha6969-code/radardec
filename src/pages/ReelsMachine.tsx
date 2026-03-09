@@ -976,10 +976,10 @@ export default function ReelsMachine() {
         const payload = {
           action: "render",
           apiKey: config.apiKey,
-          hook_url: hookUrls[entry.h],
-          corpo_url: corpoUrl,
-          cta_url: ctaUrls[entry.c],
-          variacaoId: varRow.id,
+          hookUrl: hookUrls[entry.h],
+          corpoUrl: corpoUrl,
+          ctaUrl: ctaUrls[entry.c],
+          variationId: varRow.id,
         };
 
         console.log("[ReelsMachine] invoking creatomate-render with body:", payload);
