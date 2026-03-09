@@ -484,20 +484,20 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
                   <Video className="h-8 w-8 text-muted-foreground/40" />
                 )}
               </div>
-              <CardContent className="p-3 space-y-2">
-                <p className="text-sm font-medium truncate">{v.nome}</p>
-                <p className="text-xs text-muted-foreground">{v.projeto_nome}</p>
-                {v.erro && <p className="text-xs text-destructive truncate" title={v.erro}>{v.erro}</p>}
+              <CardContent className="p-2 space-y-1">
+                <p className="text-xs font-medium truncate">{v.nome}</p>
+                <p className="text-[10px] text-muted-foreground truncate">{v.projeto_nome}</p>
+                {v.erro && <p className="text-[10px] text-destructive truncate" title={v.erro}>{v.erro}</p>}
                 <div className="flex items-center justify-between">
-                  <Badge className={statusColor[v.status]} variant="secondary">{v.status}</Badge>
+                  <Badge className={`${statusColor[v.status]} text-[10px] px-1.5 py-0`} variant="secondary">{v.status}</Badge>
                   {v.status === "Pronto" && v.video_url && (
-                    <div className="flex items-center gap-1.5">
-                      <Button size="sm" variant="outline" className="h-7 text-xs gap-1" asChild>
+                    <div className="flex items-center gap-1">
+                      <Button size="sm" variant="outline" className="h-6 text-[10px] gap-0.5 px-1.5" asChild>
                         <a href={v.video_url} download={`${v.nome}.mp4`}>
-                          <Download className="h-3.5 w-3.5" />
+                          <Download className="h-3 w-3" />
                         </a>
                       </Button>
-                      <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handlePublishClick(v)}>
+                      <Button size="sm" variant="outline" className="h-6 text-[10px] px-1.5" onClick={() => handlePublishClick(v)}>
                         Publicar
                       </Button>
                     </div>
