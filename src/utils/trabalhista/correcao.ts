@@ -72,6 +72,7 @@ export function atualizarValor(
   dataBase: Date,
   dataCalculo: Date = new Date()
 ): number {
-  const corrigido = corrigirIPCAE(valor, dataBase, dataCalculo);
-  return aplicarJurosMoratorios(corrigido, dataBase, dataCalculo);
+  // Modo estimativa pré-litígio: apenas correção monetária (IPCA-E).
+  // Juros moratórios só incidem a partir do ajuizamento.
+  return corrigirIPCAE(valor, dataBase, dataCalculo);
 }
