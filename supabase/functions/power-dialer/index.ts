@@ -153,9 +153,12 @@ serve(async (req) => {
 
         // Use best phone
         const best = sorted[0];
-        const cleanNum = best.numero.replace(/\D/g, "");
-        const e164 = cleanNum.startsWith("+") ? cleanNum : `+55${cleanNum}`;
-        const ddd = cleanNum.length >= 10 ? cleanNum.slice(0, 2) : "";
+      const cleanNum = best.numero.replace(/\D/g, "");
+      const withoutCountry = cleanNum.startsWith("55") && cleanNum.length > 11
+        ? cleanNum.slice(2)
+        : cleanNum;
+      const e164 = `+55${withoutCountry}`;
+      const ddd = withoutCountry.length >= 10 ? withoutCountry.slice(0, 2) : "";
 
         queue.push({
           leadId: lead.id,
