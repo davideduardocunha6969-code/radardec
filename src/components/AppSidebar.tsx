@@ -68,6 +68,7 @@ const marketingItems = [
   { title: "Calendário de Conteúdo", url: "/midia-social", icon: CalendarDays, pageKey: "midia-social" },
   { title: "Modelador de Conteúdo", url: "/marketing/modelador", icon: Wand2, pageKey: "marketing-modelador" },
   { title: "Radar de Viralização", url: "/marketing/radar", icon: Radar, pageKey: "marketing-radar" },
+  { title: "Reels Machine", url: "/marketing/reels-machine", icon: Flame, pageKey: "marketing-reels-machine" },
 ];
 
 export function AppSidebar() {
