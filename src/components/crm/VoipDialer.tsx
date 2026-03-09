@@ -60,6 +60,10 @@ export function VoipDialer({ leadId, leadNome, numero, papel, onCallStatusChange
   useEffect(() => {
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
+      if (micStreamRef.current) {
+        micStreamRef.current.getTracks().forEach(t => t.stop());
+        micStreamRef.current = null;
+      }
       if (callRef.current) {
         try { callRef.current.disconnect(); } catch {}
       }
