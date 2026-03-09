@@ -49,7 +49,7 @@ Deno.serve(async (req) => {
         );
       }
 
-      const creatomateRes = await fetch("https://api.creatomate.com/v1/renders", {
+      const creatomateRes = await fetch("https://api.creatomate.com/v2/renders", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
