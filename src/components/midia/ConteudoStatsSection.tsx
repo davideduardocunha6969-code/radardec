@@ -38,6 +38,14 @@ import {
 
 const WEEKLY_GOAL = 21;
 
+const SETOR_OPTIONS: { value: Setor | "all"; label: string }[] = [
+  { value: "all", label: "Todos os Setores" },
+  ...Object.entries(SETOR_LABELS).map(([value, label]) => ({
+    value: value as Setor,
+    label,
+  })),
+];
+
 interface ConteudoStatsSectionProps {
   conteudos: ConteudoMidia[];
   isOpen: boolean;
@@ -108,6 +116,7 @@ export function ConteudoStatsSection({
   onOpenChange,
 }: ConteudoStatsSectionProps) {
   const [statusFilter, setStatusFilter] = useState<Status | "all">("all");
+  const [chartSetorFilter, setChartSetorFilter] = useState<Setor | "all">("all");
 
   const filteredConteudos = useMemo(() => {
     if (statusFilter === "all") return conteudos;
@@ -180,15 +189,17 @@ export function ConteudoStatsSection({
     return { byFormato, bySetor, byStatus };
   }, [filteredConteudos]);
 
-  // Calculate weekly data for previdenciario sector with status "postado"
+  // Calculate weekly data filtered by sector with status "postado"
   const weeklyData = useMemo(() => {
-    const previdenciarioPostados = conteudos.filter(
-      (c) => c.setor === "previdenciario" && c.status === "postado"
+    const postados = conteudos.filter(
+      (c) =>
+        c.status === "postado" &&
+        (chartSetorFilter === "all" || c.setor === chartSetorFilter)
     );
 
     const weekCounts: Record<number, number> = {};
     
-    previdenciarioPostados.forEach((c) => {
+    postados.forEach((c) => {
       const week = c.semana_publicacao;
       if (week && week >= 1 && week <= 53) {
         weekCounts[week] = (weekCounts[week] || 0) + 1;
@@ -207,7 +218,7 @@ export function ConteudoStatsSection({
     }
 
     return data.sort((a, b) => a.semana - b.semana);
-  }, [conteudos]);
+  }, [conteudos, chartSetorFilter]);
 
   return (
     <Collapsible open={isOpen} onOpenChange={onOpenChange}>
@@ -216,7 +227,7 @@ export function ConteudoStatsSection({
           <CardHeader className="py-3">
             <div className="flex items-center justify-between">
               <CardTitle className="text-base font-medium">
-                📊 Estatísticas de Conteúdo - Previdenciário
+                📊 Estatísticas de Conteúdo
               </CardTitle>
               <ChevronDown
                 className={`h-5 w-5 transition-transform ${
@@ -252,9 +263,26 @@ export function ConteudoStatsSection({
         {/* Weekly Goal Chart */}
         <Card className="mt-4 bg-card/50 backdrop-blur-sm border-border/50">
           <CardHeader className="pb-2">
-            <CardTitle className="text-sm font-medium">
-              📈 Evolução Semanal de Conteúdos Postados (Meta: {WEEKLY_GOAL}/semana)
-            </CardTitle>
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <CardTitle className="text-sm font-medium">
+                📈 Evolução Semanal de Conteúdos Postados (Meta: {WEEKLY_GOAL}/semana)
+              </CardTitle>
+              <Select
+                value={chartSetorFilter}
+                onValueChange={(v) => setChartSetorFilter(v as Setor | "all")}
+              >
+                <SelectTrigger className="w-[180px] h-8 text-xs">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {SETOR_OPTIONS.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value}>
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </CardHeader>
           <CardContent>
             {weeklyData.length > 0 ? (
