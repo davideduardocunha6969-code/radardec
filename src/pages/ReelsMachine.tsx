@@ -782,6 +782,7 @@ async function uploadVideoToStorage(file: File, userId: string, projectId: strin
   const { error } = await supabase.storage.from("reels-videos").upload(path, file, { upsert: true });
   if (error) throw new Error(`Erro no upload de ${file.name}: ${error.message}`);
   const { data } = supabase.storage.from("reels-videos").getPublicUrl(path);
+  console.log("[ReelsMachine] getPublicUrl:", { category, index, path, publicUrl: data.publicUrl });
   return data.publicUrl;
 }
 
