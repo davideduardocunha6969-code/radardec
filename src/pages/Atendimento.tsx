@@ -19,6 +19,8 @@ import type { LeadTelefone } from "@/hooks/useCrmOutbound";
 import type { ScriptSdr } from "@/hooks/useScriptsSdr";
 import logoEscritorio from "@/assets/logo-escritorio.webp";
 
+const BROADCAST_CHANNEL_NAME = "power-dialer-audio";
+
 interface LeadData {
   id: string;
   nome: string;
@@ -38,6 +40,7 @@ export default function Atendimento() {
   const funilId = searchParams.get("funilId") || "";
   const papel = searchParams.get("papel") || "sdr";
   const autoStart = searchParams.get("autoStart") === "true";
+  const powerDialerMode = searchParams.get("powerDialerMode") === "true";
 
   const [lead, setLead] = useState<LeadData | null>(null);
   const [coach, setCoach] = useState<RoboCoach | null>(null);
@@ -53,6 +56,9 @@ export default function Atendimento() {
   const [activePanel, setActivePanel] = useState<"extrator" | "lacunas" | "estimativa" | null>(null);
   const [transcriptChunks, setTranscriptChunks] = useState<LabeledTranscript[]>([]);
   const stopCallRef = useRef<(() => void) | null>(null);
+
+  // Power Dialer mode: call ended via BroadcastChannel
+  const [pdCallEnded, setPdCallEnded] = useState(false);
 
   // Single source of truth for lead dados — shared across all 3 panels
   const leadDadosSync = useLeadDadosSync(lead?.id ?? null);
@@ -70,6 +76,25 @@ export default function Atendimento() {
   const handleTranscriptUpdate = useCallback((transcripts: LabeledTranscript[]) => {
     setTranscriptChunks(transcripts);
   }, []);
+
+  // Power Dialer mode: listen to BroadcastChannel + auto-activate coaching
+  useEffect(() => {
+    if (!powerDialerMode) return;
+
+    // Auto-activate recording state (audio is in the aguardando window)
+    setActiveRecording(true);
+
+    const bc = new BroadcastChannel(BROADCAST_CHANNEL_NAME);
+    bc.onmessage = (event) => {
+      const msg = event.data;
+      if (msg.type === "call-ended") {
+        setPdCallEnded(true);
+        setActiveRecording(false);
+      }
+    };
+
+    return () => { bc.close(); };
+  }, [powerDialerMode]);
 
   // Wait for auth session to be restored from localStorage
   useEffect(() => {
@@ -125,7 +150,6 @@ export default function Atendimento() {
             .single();
 
           if (funilData) {
-            // Get coach based on papel
             const coachId = papel === "closer" ? funilData.robo_coach_closer_id : funilData.robo_coach_sdr_id;
             if (coachId) {
               const { data: coachData } = await supabase
@@ -136,7 +160,6 @@ export default function Atendimento() {
               if (coachData) setCoach(coachData as unknown as RoboCoach);
             }
 
-            // Get script based on papel
             const scriptId = papel === "closer" ? funilData.script_closer_id : funilData.script_sdr_id;
             if (scriptId) {
               const { data: scriptData } = await supabase
@@ -165,9 +188,9 @@ export default function Atendimento() {
     fetchData();
   }, [leadId, isAuthenticated, funilId, papel]);
 
-  // Auto-stop call on page close
+  // Auto-stop call on page close (non-power-dialer mode only)
   useEffect(() => {
-    if (!activeRecording) return;
+    if (!activeRecording || powerDialerMode) return;
     const handlePageHide = () => {
       if (stopCallRef.current) {
         stopCallRef.current();
@@ -175,7 +198,7 @@ export default function Atendimento() {
     };
     window.addEventListener("pagehide", handlePageHide);
     return () => window.removeEventListener("pagehide", handlePageHide);
-  }, [activeRecording]);
+  }, [activeRecording, powerDialerMode]);
 
   // Update window title
   useEffect(() => {
@@ -226,12 +249,22 @@ export default function Atendimento() {
             <Badge variant="outline" className="text-xs text-white/80 border-white/30">
               {papel === "closer" ? "Closer" : "SDR"}
             </Badge>
+            {powerDialerMode && (
+              <Badge className="bg-green-500/20 text-green-300 border-green-500/30 text-xs">
+                Power Dialer
+              </Badge>
+            )}
           </div>
           <div className="flex items-center gap-3">
             {activeRecording && (
               <Badge className="bg-red-500 text-white animate-pulse gap-1">
                 <span className="h-2 w-2 rounded-full bg-white" />
-                Gravando
+                {powerDialerMode ? "Em chamada (áudio na janela de aguardo)" : "Gravando"}
+              </Badge>
+            )}
+            {pdCallEnded && (
+              <Badge variant="outline" className="text-white/80 border-white/30">
+                Chamada encerrada
               </Badge>
             )}
             <div className="flex items-center gap-1 text-xs text-white/60">
@@ -242,7 +275,7 @@ export default function Atendimento() {
         </div>
       </header>
 
-      {/* Lead context bar — only shown when lead data is available */}
+      {/* Lead context bar */}
       {lead && (lead.resumo_caso || lead.dados_extras) && (
         <div className="border-b bg-muted/30 px-4 py-2 shrink-0">
           <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
@@ -266,36 +299,38 @@ export default function Atendimento() {
         </div>
       )}
 
-      {/* Main content — recorder and coaching panel NEVER unmount during loading */}
+      {/* Main content */}
       <div className="flex-1 min-h-0 p-3 flex flex-col gap-2">
-        {/* Single stable recorder instance */}
-        <div className="shrink-0 flex gap-2 items-start">
-          <div className="w-fit shrink-0">
-            {tipo === "whatsapp" ? (
-              <WhatsAppCallRecorder
-                leadId={leadId}
-                leadNome={lead?.nome || ""}
-                numero={numero}
-                papel={papel}
-                autoStart={autoStart}
-                onRecordingStateChange={handleRecordingStateChange}
-                onAudioMonitorUpdate={handleAudioMonitorUpdate}
-                stopRef={stopCallRef}
-              />
-            ) : (
-              <VoipDialer
-                leadId={leadId}
-                leadNome={lead?.nome || ""}
-                numero={numero}
-                papel={papel}
-                onRecordingStateChange={handleRecordingStateChange}
-                stopRef={stopCallRef}
-              />
-            )}
+        {/* Recorder — NOT rendered in powerDialerMode (audio is in aguardando window) */}
+        {!powerDialerMode && (
+          <div className="shrink-0 flex gap-2 items-start">
+            <div className="w-fit shrink-0">
+              {tipo === "whatsapp" ? (
+                <WhatsAppCallRecorder
+                  leadId={leadId}
+                  leadNome={lead?.nome || ""}
+                  numero={numero}
+                  papel={papel}
+                  autoStart={autoStart}
+                  onRecordingStateChange={handleRecordingStateChange}
+                  onAudioMonitorUpdate={handleAudioMonitorUpdate}
+                  stopRef={stopCallRef}
+                />
+              ) : (
+                <VoipDialer
+                  leadId={leadId}
+                  leadNome={lead?.nome || ""}
+                  numero={numero}
+                  papel={papel}
+                  onRecordingStateChange={handleRecordingStateChange}
+                  stopRef={stopCallRef}
+                />
+              )}
+            </div>
           </div>
-        </div>
+        )}
 
-        {/* Coaching panel renders as soon as recording starts — Scribe connects independently of coach */}
+        {/* Coaching panel renders when recording is active (including powerDialerMode) */}
         {activeRecording && (
           <CoachingErrorBoundary>
             <RealtimeCoachingPanel
