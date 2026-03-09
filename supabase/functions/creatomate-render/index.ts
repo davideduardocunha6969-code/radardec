@@ -161,13 +161,11 @@ Deno.serve(async (req) => {
           hook: hook_url,
           corpo: corpo_url,
           cta: cta_url,
-          "hook.source": hook_url,
-          "corpo.source": corpo_url,
-          "cta.source": cta_url,
         },
       };
 
-      console.log("Creatomate request body:", JSON.stringify(requestBody));
+      console.log("=== CREATOMATE FINAL REQUEST BODY ===");
+      console.log(JSON.stringify(requestBody, null, 2));
 
       const creatomateRes = await fetch("https://api.creatomate.com/v2/renders", {
         method: "POST",
