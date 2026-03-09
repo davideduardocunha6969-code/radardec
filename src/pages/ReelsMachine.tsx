@@ -8,13 +8,16 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useDropzone } from "react-dropzone";
-import { Video, Upload, Play, CheckCircle, Loader2, Plus, Trash2, Save, Settings, LayoutDashboard, FolderPlus, Grid3X3, Link, FolderOpen, X, AlertCircle } from "lucide-react";
+import { Video, Upload, Play, CheckCircle, Loader2, Plus, Trash2, Save, Settings, LayoutDashboard, FolderPlus, Grid3X3, Link, FolderOpen, X, AlertCircle, Send } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
 // ─── Types ──────────────────────────────────────────────────────
 type VideoStatus = "Pendente" | "Renderizando" | "Pronto" | "Publicado" | "Erro";
+type AreaDireito = "Trabalhista" | "Previdenciário" | "Bancário" | "Outros";
 
 interface VideoItem {
   id: string;
@@ -49,6 +52,7 @@ interface InstaPage {
   nome: string;
   userId: string;
   token: string;
+  areaDireito: AreaDireito;
 }
 
 interface ReelsConfig {
@@ -57,6 +61,15 @@ interface ReelsConfig {
 }
 
 const LS_CONFIG_KEY = "reels-machine-config";
+
+const AREAS_DIREITO: AreaDireito[] = ["Trabalhista", "Previdenciário", "Bancário", "Outros"];
+
+const areaColor: Record<AreaDireito, string> = {
+  Trabalhista: "bg-chart-1/20 text-chart-1",
+  Previdenciário: "bg-chart-2/20 text-chart-2",
+  Bancário: "bg-chart-3/20 text-chart-3",
+  Outros: "bg-muted text-muted-foreground",
+};
 
 const statusColor: Record<VideoStatus, string> = {
   Pendente: "bg-muted text-muted-foreground",
