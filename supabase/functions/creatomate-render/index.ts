@@ -56,14 +56,11 @@ Deno.serve(async (req) => {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          template_id: null,
-          output_format: "mp4",
+          template_id: "433aa2ca-f109-4256-be02-e21efe6f855b",
           modifications: {
-            clips: [
-              { url: hookUrl },
-              { url: corpoUrl },
-              { url: ctaUrl },
-            ],
+            "hook": hookUrl,
+            "corpo": corpoUrl,
+            "cta": ctaUrl,
           },
         }),
       });
