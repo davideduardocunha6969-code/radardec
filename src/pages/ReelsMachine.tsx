@@ -781,9 +781,10 @@ async function uploadVideoToStorage(file: File, userId: string, projectId: strin
   const path = `${userId}/${projectId}/${category}_${index}.${ext}`;
   const { error } = await supabase.storage.from("reels-videos").upload(path, file, { upsert: true });
   if (error) throw new Error(`Erro no upload de ${file.name}: ${error.message}`);
-  const { data } = supabase.storage.from("reels-videos").getPublicUrl(path);
-  console.log("[ReelsMachine] getPublicUrl:", { category, index, path, publicUrl: data.publicUrl });
-  return data.publicUrl;
+  const { data, error: signedError } = await supabase.storage.from("reels-videos").createSignedUrl(path, 3600);
+  if (signedError || !data?.signedUrl) throw new Error(`Erro ao gerar URL assinada: ${signedError?.message}`);
+  console.log("[ReelsMachine] signedUrl:", { category, index, path, signedUrl: data.signedUrl });
+  return data.signedUrl;
 }
 
 // ─── Main Page ──────────────────────────────────────────────────
@@ -846,7 +847,7 @@ export default function ReelsMachine() {
         if (data?.status === "succeeded" && data?.url) {
           await supabase.from("reels_variacoes").update({ status: "Pronto", video_url: data.url }).eq("id", v.id);
         } else if (data?.status === "failed") {
-          await supabase.from("reels_variacoes").update({ status: "Erro", erro: "Falha na renderização" }).eq("id", v.id);
+          await supabase.from("reels_variacoes").update({ status: "Erro", erro: data.error_message || "Falha na renderização" }).eq("id", v.id);
         }
       } catch (e) {
         console.error("Poll exception:", e);

@@ -66,7 +66,8 @@ serve(async (req) => {
 
       return new Response(JSON.stringify({
         status: data.status,
-        url: data.output?.[0]?.url || null,
+        url: data.url || null,
+        error_message: data.error_message || null,
       }), {
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
