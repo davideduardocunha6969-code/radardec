@@ -274,7 +274,7 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange }: 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
-        <Select value={filterProject} onValueChange={setFilterProject}>
+        <Select value={selectedProject} onValueChange={onProjectChange}>
           <SelectTrigger className="w-56">
             <SelectValue placeholder="Filtrar por projeto" />
           </SelectTrigger>
