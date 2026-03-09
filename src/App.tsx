@@ -23,6 +23,7 @@ import ContentHub from "./pages/ContentHub";
 import ModeladorConteudo from "./pages/ModeladorConteudo";
 import ModeladorReplica from "./pages/ModeladorReplica";
 import RadarViralizacao from "./pages/RadarViralizacao";
+import ReelsMachine from "./pages/ReelsMachine";
 import MinhasContasDetail from "./pages/MinhasContasDetail";
 import AtividadesMarketing from "./pages/AtividadesMarketing";
 import AtendimentosClosers from "./pages/AtendimentosClosers";
