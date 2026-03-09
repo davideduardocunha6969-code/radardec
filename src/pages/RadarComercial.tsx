@@ -1047,8 +1047,13 @@ const RadarComercial = () => {
       weekStats[i] = { total: 0, noShow: 0 };
     }
     
+    // Filtra por setor se selecionado
+    const sourceData = noShowSetorFilter
+      ? data.filter(r => r.setor === noShowSetorFilter)
+      : data;
+    
     // Contabiliza atendimentos e no-shows por semana
-    data.forEach(record => {
+    sourceData.forEach(record => {
       if (record.semana > 0 && record.semana <= 53) {
         weekStats[record.semana].total += 1;
         if (record.resultado?.toLowerCase().includes('no-show') || 
@@ -1072,7 +1077,7 @@ const RadarComercial = () => {
         total: stats.total,
       };
     });
-  }, [data]);
+  }, [data, noShowSetorFilter]);
 
   // Dados para o gráfico de tempo médio de atendimento por setor
   const tempoMedioSetorChartData = useMemo(() => {
