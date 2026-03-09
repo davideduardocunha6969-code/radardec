@@ -599,7 +599,7 @@ function ConfiguracoesTab() {
     setPages(config.pages);
   }, []);
 
-  const addPage = () => setPages((prev) => [...prev, { nome: "", userId: "", token: "" }]);
+  const addPage = () => setPages((prev) => [...prev, { nome: "", userId: "", token: "", areaDireito: "Outros" }]);
   const removePage = (i: number) => setPages((prev) => prev.filter((_, idx) => idx !== i));
   const updatePage = (i: number, field: keyof InstaPage, value: string) =>
     setPages((prev) => prev.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)));
@@ -630,10 +630,32 @@ function ConfiguracoesTab() {
           {pages.map((p, i) => (
             <div key={i} className="border rounded-lg p-4 space-y-3 relative">
               <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removePage(i)}><Trash2 className="h-3.5 w-3.5" /></Button>
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div className="space-y-1"><Label className="text-xs">Nome</Label><Input placeholder="Nome" value={p.nome} onChange={(e) => updatePage(i, "nome", e.target.value)} /></div>
-                <div className="space-y-1"><Label className="text-xs">Instagram User ID</Label><Input placeholder="17841400..." value={p.userId} onChange={(e) => updatePage(i, "userId", e.target.value)} /></div>
-                <div className="space-y-1"><Label className="text-xs">Access Token</Label><Input type="password" placeholder="EAA..." value={p.token} onChange={(e) => updatePage(i, "token", e.target.value)} /></div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Nome</Label>
+                  <Input placeholder="Nome da página" value={p.nome} onChange={(e) => updatePage(i, "nome", e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Área do Direito</Label>
+                  <Select value={p.areaDireito} onValueChange={(v) => updatePage(i, "areaDireito", v)}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {AREAS_DIREITO.map(area => (
+                        <SelectItem key={area} value={area}>{area}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Instagram User ID</Label>
+                  <Input placeholder="17841400..." value={p.userId} onChange={(e) => updatePage(i, "userId", e.target.value)} />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Access Token</Label>
+                  <Input type="password" placeholder="EAA..." value={p.token} onChange={(e) => updatePage(i, "token", e.target.value)} />
+                </div>
               </div>
             </div>
           ))}
