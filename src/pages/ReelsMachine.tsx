@@ -479,7 +479,7 @@ export default function ReelsMachine() {
 
         <TabsContent value="dashboard"><DashboardTab projects={projects} variations={variations} /></TabsContent>
         <TabsContent value="novo"><NovoProjetoTab onGenerate={handleGenerate} /></TabsContent>
-        <TabsContent value="galeria"><GaleriaTab variations={variations} projects={projects} /></TabsContent>
+        <TabsContent value="galeria"><GaleriaTab variations={variations} projects={projects} selectedProject={selectedProject} onProjectChange={setSelectedProject} /></TabsContent>
         <TabsContent value="config"><ConfiguracoesTab /></TabsContent>
       </Tabs>
     </div>
