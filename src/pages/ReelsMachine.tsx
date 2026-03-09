@@ -14,6 +14,13 @@ import { toast } from "sonner";
 // ─── Types ──────────────────────────────────────────────────────
 type VideoStatus = "Pendente" | "Renderizando" | "Pronto" | "Publicado";
 
+interface VideoItem {
+  id: string;
+  name: string;
+  source: "local" | "drive";
+  driveUrl?: string;
+}
+
 interface Variation {
   id: string;
   nome: string;
