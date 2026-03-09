@@ -260,20 +260,38 @@ function NovoProjetoTab({ onGenerate }: { onGenerate: (nome: string, hookCount: 
 }
 
 // ─── Galeria Tab ────────────────────────────────────────────────
-function GaleriaTab({ variations }: { variations: Variation[] }) {
-  const [filter, setFilter] = useState<string>("todos");
+function GaleriaTab({ variations, projects }: { variations: Variation[]; projects: Project[] }) {
+  const [filterStatus, setFilterStatus] = useState<string>("todos");
+  const [filterProject, setFilterProject] = useState<string>("todos");
 
-  const filtered = filter === "todos" ? variations : variations.filter((v) => v.status === filter);
+  const projectNames = [...new Set(variations.map((v) => v.projeto))];
+
+  const filtered = variations.filter((v) => {
+    const matchStatus = filterStatus === "todos" || v.status === filterStatus;
+    const matchProject = filterProject === "todos" || v.projeto === filterProject;
+    return matchStatus && matchProject;
+  });
 
   return (
     <div className="space-y-4">
-      <div className="flex items-center gap-3">
-        <Select value={filter} onValueChange={setFilter}>
+      <div className="flex items-center gap-3 flex-wrap">
+        <Select value={filterProject} onValueChange={setFilterProject}>
+          <SelectTrigger className="w-56">
+            <SelectValue placeholder="Filtrar por projeto" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="todos">Todos os projetos</SelectItem>
+            {projectNames.map((name) => (
+              <SelectItem key={name} value={name}>{name}</SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+        <Select value={filterStatus} onValueChange={setFilterStatus}>
           <SelectTrigger className="w-48">
             <SelectValue placeholder="Filtrar por status" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="todos">Todos</SelectItem>
+            <SelectItem value="todos">Todos os status</SelectItem>
             <SelectItem value="Pendente">Pendente</SelectItem>
             <SelectItem value="Renderizando">Renderizando</SelectItem>
             <SelectItem value="Pronto">Pronto</SelectItem>
@@ -460,7 +478,7 @@ export default function ReelsMachine() {
 
         <TabsContent value="dashboard"><DashboardTab projects={projects} variations={variations} /></TabsContent>
         <TabsContent value="novo"><NovoProjetoTab onGenerate={handleGenerate} /></TabsContent>
-        <TabsContent value="galeria"><GaleriaTab variations={variations} /></TabsContent>
+        <TabsContent value="galeria"><GaleriaTab variations={variations} projects={projects} /></TabsContent>
         <TabsContent value="config"><ConfiguracoesTab /></TabsContent>
       </Tabs>
     </div>
