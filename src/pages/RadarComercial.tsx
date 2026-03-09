@@ -82,6 +82,7 @@ const RadarComercial = () => {
   const [adminRankingWeek, setAdminRankingWeek] = useState<number | null>(null);
   const [testemunhasWeekFilter, setTestemunhasWeekFilter] = useState<number | null>(null);
   const [atendimentosWeekFilter, setAtendimentosWeekFilter] = useState<number | null>(null);
+  const [noShowSetorFilter, setNoShowSetorFilter] = useState<string | null>(null);
 
   // Handlers para abrir/fechar seções (comportamento accordion)
   const handleSectionToggle = (section: string) => {
@@ -1046,8 +1047,13 @@ const RadarComercial = () => {
       weekStats[i] = { total: 0, noShow: 0 };
     }
     
+    // Filtra por setor se selecionado
+    const sourceData = noShowSetorFilter
+      ? data.filter(r => r.setor === noShowSetorFilter)
+      : data;
+    
     // Contabiliza atendimentos e no-shows por semana
-    data.forEach(record => {
+    sourceData.forEach(record => {
       if (record.semana > 0 && record.semana <= 53) {
         weekStats[record.semana].total += 1;
         if (record.resultado?.toLowerCase().includes('no-show') || 
@@ -1071,7 +1077,7 @@ const RadarComercial = () => {
         total: stats.total,
       };
     });
-  }, [data]);
+  }, [data, noShowSetorFilter]);
 
   // Dados para o gráfico de tempo médio de atendimento por setor
   const tempoMedioSetorChartData = useMemo(() => {
@@ -1825,9 +1831,25 @@ const RadarComercial = () => {
           {/* Gráfico de Linha - Percentual de No-Show por Semana */}
           <Card>
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <TrendingUp className="h-5 w-5 text-destructive" />
-            <CardTitle className="text-lg">Percentual de No-Show por Semana</CardTitle>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <TrendingUp className="h-5 w-5 text-destructive" />
+              <CardTitle className="text-lg">Percentual de No-Show por Semana</CardTitle>
+            </div>
+            <Select
+              value={noShowSetorFilter ?? "all"}
+              onValueChange={(v) => setNoShowSetorFilter(v === "all" ? null : v)}
+            >
+              <SelectTrigger className="w-[180px] h-8 text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Todos os Setores</SelectItem>
+                {filterOptions.setores.map((s) => (
+                  <SelectItem key={s} value={s}>{s}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         </CardHeader>
         <CardContent>
