@@ -450,6 +450,7 @@ export default function ReelsMachine() {
 
     setProjects((prev) => [newProject, ...prev]);
     setVariations((prev) => [...newVariations, ...prev]);
+    setSelectedProject(nome);
     setActiveTab("galeria");
     toast.success(`${totalVar} variações criadas para "${nome}"!`);
   };
