@@ -140,7 +140,11 @@ export function VoipDialer({ leadId, leadNome, numero, papel, onCallStatusChange
       setChamadaId(chamada.id);
 
       // Format number for Brazil
-      const formattedNumber = numero.startsWith("+") ? numero : `+55${numero.replace(/\D/g, "")}`;
+      const cleanDigits = numero.replace(/\D/g, "");
+      const withoutCountry = cleanDigits.startsWith("55") && cleanDigits.length > 11
+        ? cleanDigits.slice(2)
+        : cleanDigits;
+      const formattedNumber = `+55${withoutCountry}`;
       console.log("[VoIP] Connecting to:", formattedNumber);
 
       const call = await device.connect({
