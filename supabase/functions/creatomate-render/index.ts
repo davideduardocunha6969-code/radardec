@@ -39,12 +39,15 @@ Deno.serve(async (req) => {
 
     // ─── Submit render job to Creatomate ───
     if (action === "render") {
-      const { apiKey, hookUrl, corpoUrl, ctaUrl, variacaoId } = body;
+      const { apiKey, variacaoId } = body;
+      const hook_url = body.hook_url ?? body.hookUrl;
+      const corpo_url = body.corpo_url ?? body.corpoUrl;
+      const cta_url = body.cta_url ?? body.ctaUrl;
 
       console.log("=== CREATOMATE RENDER REQUEST ===");
-      console.log("hookUrl:", hookUrl);
-      console.log("corpoUrl:", corpoUrl);
-      console.log("ctaUrl:", ctaUrl);
+      console.log("hook_url:", hook_url);
+      console.log("corpo_url:", corpo_url);
+      console.log("cta_url:", cta_url);
       console.log("variacaoId:", variacaoId);
 
       if (!apiKey) {
@@ -55,10 +58,10 @@ Deno.serve(async (req) => {
       }
 
       // Validate URLs
-      if (!hookUrl || !corpoUrl || !ctaUrl) {
-        console.error("Missing URLs - hook:", !!hookUrl, "corpo:", !!corpoUrl, "cta:", !!ctaUrl);
+      if (!hook_url || !corpo_url || !cta_url) {
+        console.error("Missing URLs - hook:", !!hook_url, "corpo:", !!corpo_url, "cta:", !!cta_url);
         return new Response(
-          JSON.stringify({ error: "URLs dos vídeos são obrigatórias", hookUrl, corpoUrl, ctaUrl }),
+          JSON.stringify({ error: "URLs dos vídeos são obrigatórias", hook_url, corpo_url, cta_url }),
           { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
@@ -66,9 +69,9 @@ Deno.serve(async (req) => {
       const requestBody = {
         template_id: "433aa2ca-f109-4256-be02-e21efe6f855b",
         modifications: {
-          "hook.source": hookUrl,
-          "corpo.source": corpoUrl,
-          "cta.source": ctaUrl,
+          "hook.source": hook_url,
+          "corpo.source": corpo_url,
+          "cta.source": cta_url,
         },
       };
 
