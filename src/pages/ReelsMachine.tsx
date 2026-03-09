@@ -864,6 +864,7 @@ export default function ReelsMachine() {
     }
   };
 
+  const handleGenerate = async (nome: string, hooks: VideoItem[], corpo: VideoItem[], ctas: VideoItem[]) => {
     const config = loadConfig();
     if (!config.apiKey) {
       toast.error("Configure a API Key do Creatomate nas Configurações antes de gerar variações.");
