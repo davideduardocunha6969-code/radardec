@@ -267,7 +267,7 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange }: 
 
   const filtered = variations.filter((v) => {
     const matchStatus = filterStatus === "todos" || v.status === filterStatus;
-    const matchProject = filterProject === "todos" || v.projeto === filterProject;
+    const matchProject = selectedProject === "todos" || v.projeto === selectedProject;
     return matchStatus && matchProject;
   });
 
