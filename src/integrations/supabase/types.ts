@@ -2846,6 +2846,10 @@ export type Database = {
         Returns: boolean
       }
       is_coordinator: { Args: { _user_id: string }; Returns: boolean }
+      update_resultado_por_numero: {
+        Args: { p_numero: string; p_session_id: string; p_status: string }
+        Returns: undefined
+      }
     }
     Enums: {
       app_role: "admin" | "user" | "marketing_manager" | "coordinator"
