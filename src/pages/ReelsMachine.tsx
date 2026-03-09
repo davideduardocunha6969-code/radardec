@@ -473,15 +473,15 @@ function GaleriaTab({ variations, projects, selectedProject, onProjectChange, on
                 </AlertDialogContent>
               </AlertDialog>
 
-              <div className="aspect-[9/16] bg-muted flex items-center justify-center">
+              <div className="h-[180px] bg-muted flex items-center justify-center">
                 {v.video_url ? (
                   <video src={v.video_url} className="w-full h-full object-cover" controls />
                 ) : v.status === "Renderizando" ? (
-                  <Loader2 className="h-10 w-10 text-chart-4 animate-spin" />
+                  <Loader2 className="h-8 w-8 text-chart-4 animate-spin" />
                 ) : v.status === "Erro" ? (
-                  <AlertCircle className="h-10 w-10 text-destructive/40" />
+                  <AlertCircle className="h-8 w-8 text-destructive/40" />
                 ) : (
-                  <Video className="h-10 w-10 text-muted-foreground/40" />
+                  <Video className="h-8 w-8 text-muted-foreground/40" />
                 )}
               </div>
               <CardContent className="p-3 space-y-2">
