@@ -837,9 +837,17 @@ export default function ReelsMachine() {
     for (const v of renderingVars) {
       try {
         const { data, error } = await supabase.functions.invoke("creatomate-render", {
-          body: { action: "check-status", apiKey: config.apiKey, renderId: v.render_id, variacaoId: v.id },
+          body: { action: "check-status", apiKey: config.apiKey, renderId: v.render_id },
         });
-        if (error) console.error("Poll error:", error);
+        if (error) {
+          console.error("Poll error:", error);
+          continue;
+        }
+        if (data?.status === "succeeded" && data?.url) {
+          await supabase.from("reels_variacoes").update({ status: "Pronto", video_url: data.url }).eq("id", v.id);
+        } else if (data?.status === "failed") {
+          await supabase.from("reels_variacoes").update({ status: "Erro", erro: "Falha na renderização" }).eq("id", v.id);
+        }
       } catch (e) {
         console.error("Poll exception:", e);
       }
@@ -976,21 +984,23 @@ export default function ReelsMachine() {
         const payload = {
           action: "render",
           apiKey: config.apiKey,
-          hook_url: hookUrls[entry.h],
-          corpo_url: corpoUrl,
-          cta_url: ctaUrls[entry.c],
-          variacaoId: varRow.id,
+          hookUrl: hookUrls[entry.h],
+          corpoUrl: corpoUrl,
+          ctaUrl: ctaUrls[entry.c],
+          variationId: varRow.id,
         };
 
         console.log("[ReelsMachine] invoking creatomate-render with body:", payload);
 
         try {
-          const { error } = await supabase.functions.invoke("creatomate-render", {
+          const { data, error } = await supabase.functions.invoke("creatomate-render", {
             body: payload,
           });
           if (error) {
             console.error("Render error:", error);
             await supabase.from("reels_variacoes").update({ status: "Erro", erro: error.message }).eq("id", varRow.id);
+          } else if (data?.renderId) {
+            await supabase.from("reels_variacoes").update({ render_id: data.renderId, status: "Renderizando" }).eq("id", varRow.id);
           }
         } catch (e: any) {
           console.error("Render exception:", e);
