@@ -1,79 +1,42 @@
 
+# Tres Paineis de Atendimento — Status
 
-## Power Dialer — Fix Plan
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-### Problem Summary
-The Twilio Device lives in the CRM window (`PowerDialerButton`), auto-accepts the call there, and then a redirect to `/atendimento` creates a NEW Device that never receives the call. Audio stays in the wrong window.
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-### Why Option A (BroadcastChannel to pass Call object) won't work
-Twilio `Call` objects contain WebRTC connections, audio streams, and event listeners — these are **not serializable**. You cannot transfer them between windows via BroadcastChannel or postMessage. Only primitive data can cross window boundaries.
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-### Option B (Move Device to AtendimentoAguardando) — Recommended, with refinement
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-The critical insight: **you cannot redirect away from the window holding the active call** without killing the audio. So AtendimentoAguardando must stay alive as the audio bridge and open `/atendimento` as a separate window.
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-### Architecture After Fix
-
-```text
-CRM Window (PowerDialerButton)
-  └── Starts session → opens /atendimento-aguardando popup
-      (NO Twilio Device here anymore)
-
-AtendimentoAguardando Window (PERSISTENT — never redirects)
-  ├── Registers Twilio Device on mount
-  ├── Shows "Discando..." UI with batch progress
-  ├── When lead answers:
-  │   ├── Device accepts incoming call (audio lives HERE)
-  │   ├── Transforms UI into audio bridge (mute, hangup, timer)
-  │   ├── Opens /atendimento?powerDialerMode=true as NEW window
-  │   └── Sends call state via BroadcastChannel (simple strings)
-  └── On hangup → notifies atendimento, resets or closes
-
-/atendimento?powerDialerMode=true (NEW window)
-  ├── Does NOT render VoipDialer (no second Device)
-  ├── Listens to BroadcastChannel for call state
-  ├── Auto-starts coaching panel (activeRecording=true)
-  └── Shows scripts, extractor, lacunas, estimativa
-```
-
-### Files to Change
-
-| File | Change |
-|------|--------|
-| `PowerDialerButton.tsx` | Remove Device init, remove incoming handler, remove redirect logic. Keep only: session start, cancel button, missed-alert. |
-| `AtendimentoAguardando.tsx` | Add Device registration. On incoming call → accept, transform UI to audio bridge (mute/hangup/timer). Open `/atendimento?powerDialerMode=true` as new window. Send call state via BroadcastChannel. |
-| `Atendimento.tsx` | Detect `powerDialerMode` param. Skip VoipDialer render. Listen to BroadcastChannel for call-ended to stop coaching. Auto-set `activeRecording=true`. |
-| `power-dialer-twiml/index.ts` | Atomic winner: `.eq("id", sessionId).is("lead_atendido_id", null)` instead of read-check-write. |
-| `power-dialer-status/index.ts` | Same atomic winner fix. Use RPC for JSONB update. |
-| **DB migration** | Create `update_resultado_por_numero` RPC function for atomic JSONB merge. |
-
-### BroadcastChannel Protocol (simple)
-Channel name: `power-dialer-audio`
-Messages: `{ type: "call-active", leadId, numero }`, `{ type: "call-ended" }`, `{ type: "mute-changed", muted: boolean }`
-
-### Atomic Winner Fix (both Edge Functions)
-```typescript
-const { data: winner } = await supabase
-  .from("power_dialer_sessions")
-  .update({ lead_atendido_id: chamada.lead_id, telefone_atendido: chamada.numero_discado, status: "atendida" })
-  .eq("id", sessionId)
-  .is("lead_atendido_id", null)
-  .select("id")
-  .maybeSingle();
-
-if (!winner) {
-  // Lost the race — hang up
-  return new Response(hangupTwiml, { headers: { ...corsHeaders, "Content-Type": "text/xml" } });
-}
-```
-
-### JSONB RPC Function
-```sql
-CREATE OR REPLACE FUNCTION update_resultado_por_numero(p_session_id uuid, p_numero text, p_status text)
-RETURNS void AS $$
-  UPDATE power_dialer_sessions
-  SET resultado_por_numero = COALESCE(resultado_por_numero, '{}'::jsonb) || jsonb_build_object(p_numero, p_status)
-  WHERE id = p_session_id;
-$$ LANGUAGE sql SECURITY DEFINER SET search_path = public;
-```
-
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções

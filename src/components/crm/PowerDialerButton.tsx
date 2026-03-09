@@ -1,12 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { useAuthContext } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogContent, AlertDialogHeader, AlertDialogTitle, AlertDialogDescription, AlertDialogFooter, AlertDialogAction } from "@/components/ui/alert-dialog";
 import { PhoneCall, Loader2, PhoneOff } from "lucide-react";
 import { toast } from "sonner";
-import { Device } from "@twilio/voice-sdk";
 
 interface PowerDialerButtonProps {
   funilId: string;
@@ -15,50 +13,16 @@ interface PowerDialerButtonProps {
 }
 
 export function PowerDialerButton({ funilId, colunaId, leadsCount }: PowerDialerButtonProps) {
-  const { user } = useAuthContext();
   const [roleDialog, setRoleDialog] = useState(false);
   const [loading, setLoading] = useState(false);
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [cancelling, setCancelling] = useState(false);
   const [missedAlert, setMissedAlert] = useState<{ leadNome: string; leadId: string; numero: string; papel: string } | null>(null);
   const windowRef = useRef<Window | null>(null);
-  const deviceRef = useRef<Device | null>(null);
 
-  // Initialize Twilio Device on mount (standby)
-  useEffect(() => {
-    if (!user) return;
+  // NO Twilio Device here — Device lives in AtendimentoAguardando
 
-    const initDevice = async () => {
-      try {
-        const { data, error } = await supabase.functions.invoke("twilio-token");
-        if (error || !data?.token) return;
-
-        const device = new Device(data.token, {
-          logLevel: 1,
-        });
-
-        device.on("incoming", (call) => {
-          console.log("[PowerDialer] Incoming call, auto-accepting");
-          call.accept();
-        });
-
-        await device.register();
-        deviceRef.current = device;
-        console.log("[PowerDialer] Device registered in standby");
-      } catch (e) {
-        console.error("[PowerDialer] Device init error:", e);
-      }
-    };
-
-    initDevice();
-
-    return () => {
-      deviceRef.current?.destroy();
-      deviceRef.current = null;
-    };
-  }, [user]);
-
-  // Subscribe to session Realtime when active
+  // Subscribe to session Realtime when active — only for cancel button state + missed alert
   useEffect(() => {
     if (!activeSessionId) return;
 
@@ -76,13 +40,9 @@ export function PowerDialerButton({ funilId, colunaId, leadsCount }: PowerDialer
           const sess = payload.new;
 
           if (sess.lead_atendido_id) {
-            // Lead answered!
-            const redirectUrl = `/atendimento?leadId=${sess.lead_atendido_id}&numero=${encodeURIComponent(sess.telefone_atendido || "")}&tipo=voip&funilId=${sess.funil_id}&papel=${sess.papel}`;
-
-            if (windowRef.current && !windowRef.current.closed) {
-              windowRef.current.location.href = redirectUrl;
-            } else {
-              // Window was closed — show inline alert
+            // Lead answered — AtendimentoAguardando handles audio + opening atendimento
+            // Just check if window was closed (missed alert)
+            if (!windowRef.current || windowRef.current.closed) {
               const info = (sess.leads_info as any[])?.find((l: any) => l.leadId === sess.lead_atendido_id);
               setMissedAlert({
                 leadNome: info?.leadNome || "Lead",
@@ -93,21 +53,6 @@ export function PowerDialerButton({ funilId, colunaId, leadsCount }: PowerDialer
             }
             setActiveSessionId(null);
             return;
-          }
-
-          // Check if all calls in batch are done (no em_andamento left)
-          const resultados = sess.resultado_por_numero as Record<string, string> || {};
-          const leadsInfo = sess.leads_info as Array<{ numero: string }> || [];
-          const allDone = leadsInfo.length > 0 && leadsInfo.every(
-            (li) => resultados[li.numero] && !["em_andamento", "em_chamada"].includes(resultados[li.numero])
-          );
-
-          if (allDone && sess.status === "ativo") {
-            // Auto next-batch
-            console.log("[PowerDialer] Batch done, calling next-batch");
-            supabase.functions.invoke("power-dialer", {
-              body: { action: "next-batch", sessionId: activeSessionId },
-            }).catch((e) => console.error("[PowerDialer] next-batch error:", e));
           }
 
           if (sess.status === "finalizado_sem_atendimento" || sess.status === "cancelado" || sess.status === "expirado") {
@@ -234,7 +179,7 @@ export function PowerDialerButton({ funilId, colunaId, leadsCount }: PowerDialer
               onClick={() => {
                 if (missedAlert) {
                   window.open(
-                    `/atendimento?leadId=${missedAlert.leadId}&numero=${encodeURIComponent(missedAlert.numero)}&tipo=voip&funilId=${funilId}&papel=${(missedAlert as any).papel || "sdr"}`,
+                    `/atendimento?leadId=${missedAlert.leadId}&numero=${encodeURIComponent(missedAlert.numero)}&tipo=voip&funilId=${funilId}&papel=${missedAlert.papel}`,
                     `atendimento_${missedAlert.leadId}`,
                     "width=1200,height=800"
                   );

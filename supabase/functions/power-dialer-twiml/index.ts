@@ -20,6 +20,11 @@ serve(async (req) => {
   const ACCOUNT_SID = Deno.env.get("TWILIO_ACCOUNT_SID")!;
   const AUTH_TOKEN = Deno.env.get("TWILIO_AUTH_TOKEN")!;
 
+  const hangupTwiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Hangup/>
+</Response>`;
+
   try {
     const url = new URL(req.url);
     const clientIdentity = url.searchParams.get("clientIdentity");
@@ -29,15 +34,23 @@ serve(async (req) => {
       throw new Error("clientIdentity is required");
     }
 
-    // Parse form data (Twilio sends POST with form-urlencoded for sync AMD)
-    let answeredBy = "";
-    let callSid = "";
+    // Parse AnsweredBy + CallSid from POST form data OR URL query params (AMD fallback)
+    let answeredBy = url.searchParams.get("AnsweredBy") || "";
+    let callSid = url.searchParams.get("CallSid") || "";
     const contentType = req.headers.get("content-type") || "";
 
     if (contentType.includes("application/x-www-form-urlencoded")) {
-      const formData = await req.formData();
-      answeredBy = (formData.get("AnsweredBy") as string) || "";
-      callSid = (formData.get("CallSid") as string) || "";
+      try {
+        const formData = await req.formData();
+        answeredBy = (formData.get("AnsweredBy") as string) || answeredBy;
+        callSid = (formData.get("CallSid") as string) || callSid;
+      } catch {
+        // Fallback: parse as text
+        const text = await req.text();
+        const params = new URLSearchParams(text);
+        answeredBy = params.get("AnsweredBy") || answeredBy;
+        callSid = params.get("CallSid") || callSid;
+      }
     }
 
     console.log(`[power-dialer-twiml] CallSid=${callSid} AnsweredBy=${answeredBy} SessionId=${sessionId}`);
@@ -48,16 +61,12 @@ serve(async (req) => {
 
     if (isMachine) {
       console.log(`[power-dialer-twiml] Machine detected (${answeredBy}), hanging up`);
-      const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Hangup/>
-</Response>`;
-      return new Response(twiml, {
+      return new Response(hangupTwiml, {
         headers: { ...corsHeaders, "Content-Type": "text/xml" },
       });
     }
 
-    // === HUMAN ANSWERED — set winner in session ===
+    // === HUMAN ANSWERED — attempt atomic winner selection ===
     console.log(`[power-dialer-twiml] Human detected! CallSid=${callSid} SessionId=${sessionId}`);
 
     let winnerSet = false;
@@ -78,71 +87,57 @@ serve(async (req) => {
           .update({ status: "em_chamada" })
           .eq("id", chamada.id);
 
-        // Load session
-        const { data: session } = await supabase
+        // ATOMIC winner selection: only succeeds if lead_atendido_id is still null
+        const { data: winner } = await supabase
           .from("power_dialer_sessions")
-          .select("lead_atendido_id, call_sids")
+          .update({
+            lead_atendido_id: chamada.lead_id,
+            telefone_atendido: chamada.numero_discado,
+            status: "atendida",
+          })
           .eq("id", sessionId)
-          .single();
+          .is("lead_atendido_id", null)
+          .select("id, call_sids")
+          .maybeSingle();
 
-        // Idempotent: only set winner if not already set
-        if (session && !session.lead_atendido_id) {
-          winnerSet = true;
-
+        if (!winner) {
+          // Lost the race — another call already won
+          console.log(`[power-dialer-twiml] Race lost! Another call already won. Hanging up.`);
           await supabase
-            .from("power_dialer_sessions")
-            .update({
-              lead_atendido_id: chamada.lead_id,
-              telefone_atendido: chamada.numero_discado,
-              status: "atendida",
-            })
-            .eq("id", sessionId);
+            .from("crm_chamadas")
+            .update({ status: "cancelada" })
+            .eq("id", chamada.id);
+          return new Response(hangupTwiml, {
+            headers: { ...corsHeaders, "Content-Type": "text/xml" },
+          });
+        }
 
-          // Re-read to confirm THIS call won the race
-          const { data: confirmed } = await supabase
-            .from("power_dialer_sessions")
-            .select("lead_atendido_id")
-            .eq("id", sessionId)
-            .single();
-
-          if (confirmed?.lead_atendido_id !== chamada.lead_id) {
-            // Another call won the race — hang up this one
-            console.log(`[power-dialer-twiml] Race lost! Expected lead=${chamada.lead_id}, got=${confirmed?.lead_atendido_id}. Hanging up.`);
-            const hangupTwiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Hangup/>
-</Response>`;
-            return new Response(hangupTwiml, {
-              headers: { ...corsHeaders, "Content-Type": "text/xml" },
+        // We won the race! Cancel all OTHER calls in this batch
+        winnerSet = true;
+        const allSids = (winner.call_sids || {}) as Record<string, string>;
+        for (const [sid, chamadaId] of Object.entries(allSids)) {
+          if (sid === callSid) continue;
+          try {
+            const cancelUrl = `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Calls/${sid}.json`;
+            await fetch(cancelUrl, {
+              method: "POST",
+              headers: {
+                Authorization: "Basic " + btoa(`${ACCOUNT_SID}:${AUTH_TOKEN}`),
+                "Content-Type": "application/x-www-form-urlencoded",
+              },
+              body: "Status=canceled",
             });
+            canceledCount++;
+            console.log(`[power-dialer-twiml] Cancelled call ${sid}`);
+          } catch (e) {
+            console.error(`[power-dialer-twiml] Error cancelling ${sid}:`, e);
           }
-
-          // Cancel all OTHER calls in this batch
-          const allSids = (session.call_sids || {}) as Record<string, string>;
-          for (const [sid, chamadaId] of Object.entries(allSids)) {
-            if (sid === callSid) continue;
-            try {
-              const cancelUrl = `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Calls/${sid}.json`;
-              await fetch(cancelUrl, {
-                method: "POST",
-                headers: {
-                  Authorization: "Basic " + btoa(`${ACCOUNT_SID}:${AUTH_TOKEN}`),
-                  "Content-Type": "application/x-www-form-urlencoded",
-                },
-                body: "Status=canceled",
-              });
-              canceledCount++;
-              console.log(`[power-dialer-twiml] Cancelled call ${sid}`);
-            } catch (e) {
-              console.error(`[power-dialer-twiml] Error cancelling ${sid}:`, e);
-            }
-            // Mark sibling chamada as cancelada
-            await supabase
-              .from("crm_chamadas")
-              .update({ status: "cancelada" })
-              .eq("id", chamadaId)
-              .in("status", ["em_andamento", "iniciando"]);
-          }
+          // Mark sibling chamada as cancelada
+          await supabase
+            .from("crm_chamadas")
+            .update({ status: "cancelada" })
+            .eq("id", chamadaId)
+            .in("status", ["em_andamento", "iniciando"]);
         }
       }
     }

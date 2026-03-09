@@ -76,27 +76,24 @@ serve(async (req) => {
         newStatus = "em_chamada";
 
         if (chamada.power_dialer_session_id) {
-          const { data: session } = await supabase
+          // ATOMIC winner selection fallback (same as TwiML)
+          const { data: winner } = await supabase
             .from("power_dialer_sessions")
-            .select("call_sids, lead_atendido_id")
+            .update({
+              lead_atendido_id: chamada.lead_id,
+              telefone_atendido: chamada.numero_discado,
+              status: "atendida",
+            })
             .eq("id", chamada.power_dialer_session_id)
-            .single();
+            .is("lead_atendido_id", null)
+            .select("id, call_sids")
+            .maybeSingle();
 
-          // Fallback: set winner if TwiML didn't (idempotent)
-          if (session && !session.lead_atendido_id) {
+          if (winner) {
             console.log(`[power-dialer-status] Fallback winner! Lead=${chamada.lead_id}`);
 
-            await supabase
-              .from("power_dialer_sessions")
-              .update({
-                lead_atendido_id: chamada.lead_id,
-                telefone_atendido: chamada.numero_discado,
-                status: "atendida",
-              })
-              .eq("id", chamada.power_dialer_session_id);
-
             // Cancel other calls
-            const allSids = (session.call_sids || {}) as Record<string, string>;
+            const allSids = (winner.call_sids || {}) as Record<string, string>;
             for (const [sid, chamadaId] of Object.entries(allSids)) {
               if (sid === callSid) continue;
               try {
@@ -161,22 +158,13 @@ serve(async (req) => {
       .update(updateData)
       .eq("id", chamada.id);
 
-    // Update resultado_por_numero on session
+    // ATOMIC JSONB update via RPC (no read-modify-write race)
     if (chamada.power_dialer_session_id && newStatus) {
-      const { data: session } = await supabase
-        .from("power_dialer_sessions")
-        .select("resultado_por_numero")
-        .eq("id", chamada.power_dialer_session_id)
-        .single();
-
-      if (session) {
-        const resultados = (session.resultado_por_numero || {}) as Record<string, string>;
-        resultados[chamada.numero_discado] = newStatus;
-        await supabase
-          .from("power_dialer_sessions")
-          .update({ resultado_por_numero: resultados })
-          .eq("id", chamada.power_dialer_session_id);
-      }
+      await supabase.rpc("update_resultado_por_numero", {
+        p_session_id: chamada.power_dialer_session_id,
+        p_numero: chamada.numero_discado,
+        p_status: newStatus,
+      });
     }
 
     return new Response("OK", { headers: corsHeaders });
