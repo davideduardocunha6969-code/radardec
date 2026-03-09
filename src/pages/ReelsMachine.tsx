@@ -247,7 +247,7 @@ function DashboardTab({ projects, variations }: { projects: DbProject[]; variati
 
 // ─── Novo Projeto Tab ───────────────────────────────────────────
 function NovoProjetoTab({ onGenerate, isGenerating, progressInfo }: {
-  onGenerate: (nome: string, hooks: VideoItem[], corpo: VideoItem[], ctas: VideoItem[]) => void;
+  onGenerate: (nome: string, hooks: VideoItem[], corpo: VideoItem[], ctas: VideoItem[]) => Promise<void>;
   isGenerating: boolean;
   progressInfo: { current: number; total: number; step: string };
 }) {
@@ -265,8 +265,12 @@ function NovoProjetoTab({ onGenerate, isGenerating, progressInfo }: {
   const totalVariations = hooks.length * (corpo.length > 0 ? 1 : 0) * ctas.length;
   const canGenerate = hooks.length > 0 && corpo.length > 0 && ctas.length > 0 && !isGenerating;
 
-  const handleGenerate = () => {
-    onGenerate(nome || "Sem nome", hooks, corpo, ctas);
+  const handleGenerate = async () => {
+    const capturedNome = nome || "Sem nome";
+    const capturedHooks = [...hooks];
+    const capturedCorpo = [...corpo];
+    const capturedCtas = [...ctas];
+    await onGenerate(capturedNome, capturedHooks, capturedCorpo, capturedCtas);
     setNome("");
     setHooks([]);
     setCorpo([]);
@@ -933,58 +937,63 @@ export default function ReelsMachine() {
         }
       }
 
-      // 5. Create variations and submit renders
-      for (let h = 0; h < hooks.length; h++) {
-        for (let c = 0; c < ctas.length; c++) {
-          currentStep++;
-          const varName = `Hook ${h + 1} + Corpo + CTA ${c + 1}`;
-          setProgressInfo({ current: currentStep, total: totalSteps, step: `Renderizando ${varName}...` });
-
-          // Insert variation in DB
-          const { data: varData, error: varError } = await supabase
-            .from("reels_variacoes")
-            .insert({
-              projeto_id: projectId,
-              user_id: user.id,
-              nome: varName,
-              status: "Renderizando",
-              hook_url: hookUrls[h],
-              corpo_url: corpoUrl,
-              cta_url: ctaUrls[c],
-            })
-            .select()
-            .single();
-
-          if (varError) {
-            console.error("Var insert error:", varError);
-            continue;
-          }
-
-          const variacaoId = (varData as any).id;
-
-          // Call Creatomate via edge function
-          try {
-            const { data, error } = await supabase.functions.invoke("creatomate-render", {
-              body: {
-                action: "render",
-                apiKey: config.apiKey,
-                hookUrl: hookUrls[h],
-                corpoUrl,
-                ctaUrl: ctaUrls[c],
-                variacaoId,
-              },
-            });
-
-            if (error) {
-              console.error("Render error:", error);
-              await supabase.from("reels_variacoes").update({ status: "Erro", erro: error.message }).eq("id", variacaoId);
-            }
-          } catch (e: any) {
-            console.error("Render exception:", e);
-            await supabase.from("reels_variacoes").update({ status: "Erro", erro: e.message }).eq("id", variacaoId);
-          }
+      // 5. Create ALL variations in DB first
+      const variationEntries: { h: number; c: number; varName: string }[] = [];
+      for (let h = 0; h < hookUrls.length; h++) {
+        for (let c = 0; c < ctaUrls.length; c++) {
+          variationEntries.push({ h, c, varName: `Hook ${h + 1} + Corpo + CTA ${c + 1}` });
         }
       }
+
+      currentStep++;
+      setProgressInfo({ current: currentStep, total: totalSteps, step: `Criando ${variationEntries.length} variações...` });
+
+      const insertRows = variationEntries.map((e) => ({
+        projeto_id: projectId,
+        user_id: user.id,
+        nome: e.varName,
+        status: "Renderizando" as const,
+        hook_url: hookUrls[e.h],
+        corpo_url: corpoUrl,
+        cta_url: ctaUrls[e.c],
+      }));
+
+      const { data: allVarData, error: allVarError } = await supabase
+        .from("reels_variacoes")
+        .insert(insertRows)
+        .select();
+
+      if (allVarError || !allVarData) {
+        throw new Error(allVarError?.message || "Erro ao criar variações");
+      }
+
+      // 6. Submit ALL renders in parallel
+      setProgressInfo({ current: currentStep, total: totalSteps, step: `Enviando ${allVarData.length} renders ao Creatomate...` });
+
+      const renderPromises = (allVarData as any[]).map(async (varRow: any, idx: number) => {
+        const entry = variationEntries[idx];
+        try {
+          const { data, error } = await supabase.functions.invoke("creatomate-render", {
+            body: {
+              action: "render",
+              apiKey: config.apiKey,
+              hookUrl: hookUrls[entry.h],
+              corpoUrl,
+              ctaUrl: ctaUrls[entry.c],
+              variacaoId: varRow.id,
+            },
+          });
+          if (error) {
+            console.error("Render error:", error);
+            await supabase.from("reels_variacoes").update({ status: "Erro", erro: error.message }).eq("id", varRow.id);
+          }
+        } catch (e: any) {
+          console.error("Render exception:", e);
+          await supabase.from("reels_variacoes").update({ status: "Erro", erro: e.message }).eq("id", varRow.id);
+        }
+      });
+
+      await Promise.all(renderPromises);
 
       await loadData();
       setSelectedProject(projectId);
