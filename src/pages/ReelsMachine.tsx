@@ -53,6 +53,8 @@ interface InstaPage {
   userId: string;
   token: string;
   areaDireito: AreaDireito;
+  facebookPageId?: string;
+  facebookToken?: string;
 }
 
 interface ReelsConfig {
