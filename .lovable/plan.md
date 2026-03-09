@@ -1,42 +1,31 @@
 
-# Tres Paineis de Atendimento — Status
 
-## Fase 1 — Infraestrutura ✅ CONCLUÍDA
+## Plan: Add "Reels Machine" to Marketing sidebar
 
-- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
-- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
-- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
-- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
-- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
-- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
-- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
-- [x] Interface `RoboCoach` e mutations atualizados com novos campos
+### Overview
+Add a new "Reels Machine" sub-item under Marketing in the sidebar, with a full page containing 4 internal tabs (Dashboard, Novo Projeto, Galeria, Configurações) using mock data. Follows existing patterns exactly.
 
-## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
-- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
-- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
-- [x] `estimarImpactoCampo()` — para ordenação de lacunas
-- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
-- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
+### Files to Create
 
-## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
-- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
-- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
-- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
-- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
-- [x] Botão Confirmar promove campo para manual
-- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
+**1. `src/pages/ReelsMachine.tsx`** — Main page with 4 tabs:
+- **Dashboard tab**: 4 summary cards (Vídeos Hoje, Renderizando, Prontos para Publicar, Publicados) + table of recent projects with status badges
+- **Novo Projeto tab**: Project name input, 3 file upload zones (Hooks multi, Corpo single, CTAs multi) using react-dropzone, live variation counter ("X hooks × 1 corpo × Y CTAs = Z variações"), disabled "Gerar Variações" button until all 3 have files
+- **Galeria tab**: Grid of video variation cards with thumbnail placeholder, name, status badge (Pendente/Renderizando/Pronto/Publicado), "Publicar" button on Pronto cards, status filter at top
+- **Configurações tab**: Creatomate API Key input, dynamic list of Instagram pages (nome, user ID, access token), add/save buttons
 
-## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
-- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
-- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
-- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
-- [x] Debounce de 2s nas mudanças de dados
-- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
-- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
+### Files to Modify
 
-## Fase 5 — Integração Final ✅ CONCLUÍDA
-- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
-- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
-- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
-- [x] Config.toml atualizado com as duas novas funções
+**2. `src/components/AppSidebar.tsx`**:
+- Add `{ title: "Reels Machine", url: "/marketing/reels-machine", icon: Flame, pageKey: "marketing-reels-machine" }` to `marketingItems` array
+- Update `isAnyMarketingActive` to also match this new route
+
+**3. `src/App.tsx`**:
+- Import `ReelsMachine` page
+- Add route: `<Route path="/marketing/reels-machine" element={<ProtectedRoute pageKey="marketing-reels-machine"><ReelsMachine /></ProtectedRoute>} />`
+
+### UI Details
+- Uses existing components: `Card`, `Tabs`, `Table`, `Input`, `Button`, `Badge`, `Select`
+- File uploads via `react-dropzone` (already installed)
+- Mock data: 5 sample projects, 12 sample variations
+- Same visual style as existing pages (dark header, card grid, consistent spacing)
+
