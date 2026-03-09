@@ -218,7 +218,7 @@ export function ConteudoStatsSection({
     }
 
     return data.sort((a, b) => a.semana - b.semana);
-  }, [conteudos]);
+  }, [conteudos, chartSetorFilter]);
 
   return (
     <Collapsible open={isOpen} onOpenChange={onOpenChange}>
