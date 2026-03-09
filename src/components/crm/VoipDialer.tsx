@@ -180,23 +180,47 @@ export function VoipDialer({ leadId, leadNome, numero, papel, onCallStatusChange
           }
         }
 
-        // Notify parent that call is active (enables coaching panel)
-        onRecordingStateChange?.(true, { micStream: null, systemStream: null, mixedStream: null });
+        // Capture audio streams for live transcription
+        let micStream: MediaStream | null = null;
+        let remoteStream: MediaStream | null = null;
+        try {
+          micStream = await navigator.mediaDevices.getUserMedia({
+            audio: { echoCancellation: true, noiseSuppression: true },
+          });
+          micStreamRef.current = micStream;
+          console.log("[VoIP] Mic stream captured for transcription");
+        } catch (e) {
+          console.warn("[VoIP] Failed to capture mic stream:", e);
+        }
+        try {
+          remoteStream = (call as any).getRemoteStream?.() || null;
+          console.log("[VoIP] Remote stream:", remoteStream ? "captured" : "not available");
+        } catch (e) {
+          console.warn("[VoIP] Failed to get remote stream:", e);
+        }
+
+        onRecordingStateChange?.(true, { micStream, systemStream: remoteStream, mixedStream: null });
       });
+
+      const stopMicStream = () => {
+        if (micStreamRef.current) {
+          micStreamRef.current.getTracks().forEach(t => t.stop());
+          micStreamRef.current = null;
+        }
+      };
 
       call.on("disconnect", () => {
         setCallStatus("completed");
         updateChamada.mutate({ id: chamada.id, leadId, status: "finalizada", duracao_segundos: duration });
-        // Notify parent that call ended
+        stopMicStream();
         onRecordingStateChange?.(false, { micStream: null, systemStream: null, mixedStream: null });
-        // Note: transcription + feedback for VoIP is triggered server-side by twilio-webhook
-        // when the recording is ready
         cleanupCall();
       });
 
       call.on("cancel", () => {
         setCallStatus("completed");
         updateChamada.mutate({ id: chamada.id, leadId, status: "cancelada" });
+        stopMicStream();
         onRecordingStateChange?.(false, { micStream: null, systemStream: null, mixedStream: null });
         cleanupCall();
       });
@@ -204,6 +228,7 @@ export function VoipDialer({ leadId, leadNome, numero, papel, onCallStatusChange
       call.on("reject", () => {
         setCallStatus("busy");
         updateChamada.mutate({ id: chamada.id, leadId, status: "ocupado" });
+        stopMicStream();
         onRecordingStateChange?.(false, { micStream: null, systemStream: null, mixedStream: null });
         cleanupCall();
       });
@@ -212,6 +237,7 @@ export function VoipDialer({ leadId, leadNome, numero, papel, onCallStatusChange
         console.error("Call error:", error);
         setCallStatus("failed");
         updateChamada.mutate({ id: chamada.id, leadId, status: "falhou" });
+        stopMicStream();
         onRecordingStateChange?.(false, { micStream: null, systemStream: null, mixedStream: null });
         toast.error("Erro na chamada: " + (error.message || "Erro desconhecido"));
         cleanupCall();
