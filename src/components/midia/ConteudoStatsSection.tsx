@@ -38,6 +38,14 @@ import {
 
 const WEEKLY_GOAL = 21;
 
+const SETOR_OPTIONS: { value: Setor | "all"; label: string }[] = [
+  { value: "all", label: "Todos os Setores" },
+  ...Object.entries(SETOR_LABELS).map(([value, label]) => ({
+    value: value as Setor,
+    label,
+  })),
+];
+
 interface ConteudoStatsSectionProps {
   conteudos: ConteudoMidia[];
   isOpen: boolean;
