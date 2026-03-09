@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useEffect } from "react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,34 +8,41 @@ import { Badge } from "@/components/ui/badge";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useDropzone } from "react-dropzone";
-import { Video, Upload, Play, Clock, CheckCircle, Loader2, Plus, Trash2, Save, Settings, LayoutDashboard, FolderPlus, Grid3X3 } from "lucide-react";
+import { Video, Upload, Play, CheckCircle, Loader2, Plus, Trash2, Save, Settings, LayoutDashboard, FolderPlus, Grid3X3 } from "lucide-react";
 import { toast } from "sonner";
 
-// ─── Mock Data ───────────────────────────────────────────────────
-const mockProjects = [
-  { id: "1", nome: "Campanha Previdenciário", hooks: 3, ctas: 2, variacoes: 6, status: "Pronto", criadoEm: "2026-03-08" },
-  { id: "2", nome: "Dicas Trabalhistas", hooks: 5, ctas: 3, variacoes: 15, status: "Renderizando", criadoEm: "2026-03-07" },
-  { id: "3", nome: "Bancário Urgente", hooks: 2, ctas: 2, variacoes: 4, status: "Publicado", criadoEm: "2026-03-06" },
-  { id: "4", nome: "Reforma INSS", hooks: 4, ctas: 1, variacoes: 4, status: "Pendente", criadoEm: "2026-03-05" },
-  { id: "5", nome: "Reels Semana 10", hooks: 6, ctas: 4, variacoes: 24, status: "Pronto", criadoEm: "2026-03-04" },
-];
-
-const mockVariations = [
-  { id: "v1", nome: "Hook1_Corpo_CTA1", projeto: "Campanha Previdenciário", status: "Pronto" },
-  { id: "v2", nome: "Hook1_Corpo_CTA2", projeto: "Campanha Previdenciário", status: "Pronto" },
-  { id: "v3", nome: "Hook2_Corpo_CTA1", projeto: "Campanha Previdenciário", status: "Publicado" },
-  { id: "v4", nome: "Hook2_Corpo_CTA2", projeto: "Campanha Previdenciário", status: "Pendente" },
-  { id: "v5", nome: "Hook3_Corpo_CTA1", projeto: "Campanha Previdenciário", status: "Renderizando" },
-  { id: "v6", nome: "Hook3_Corpo_CTA2", projeto: "Campanha Previdenciário", status: "Pronto" },
-  { id: "v7", nome: "Hook1_Corpo_CTA1", projeto: "Dicas Trabalhistas", status: "Renderizando" },
-  { id: "v8", nome: "Hook1_Corpo_CTA2", projeto: "Dicas Trabalhistas", status: "Renderizando" },
-  { id: "v9", nome: "Hook2_Corpo_CTA1", projeto: "Dicas Trabalhistas", status: "Pendente" },
-  { id: "v10", nome: "Hook1_Corpo_CTA1", projeto: "Bancário Urgente", status: "Publicado" },
-  { id: "v11", nome: "Hook1_Corpo_CTA2", projeto: "Bancário Urgente", status: "Publicado" },
-  { id: "v12", nome: "Hook2_Corpo_CTA1", projeto: "Bancário Urgente", status: "Publicado" },
-];
-
+// ─── Types ──────────────────────────────────────────────────────
 type VideoStatus = "Pendente" | "Renderizando" | "Pronto" | "Publicado";
+
+interface Variation {
+  id: string;
+  nome: string;
+  projeto: string;
+  status: VideoStatus;
+}
+
+interface Project {
+  id: string;
+  nome: string;
+  hooks: number;
+  ctas: number;
+  variacoes: number;
+  status: string;
+  criadoEm: string;
+}
+
+interface InstaPage {
+  nome: string;
+  userId: string;
+  token: string;
+}
+
+interface ReelsConfig {
+  apiKey: string;
+  pages: InstaPage[];
+}
+
+const LS_CONFIG_KEY = "reels-machine-config";
 
 const statusColor: Record<VideoStatus, string> = {
   Pendente: "bg-muted text-muted-foreground",
@@ -43,6 +50,18 @@ const statusColor: Record<VideoStatus, string> = {
   Pronto: "bg-chart-2/20 text-chart-2",
   Publicado: "bg-primary/20 text-primary",
 };
+
+function loadConfig(): ReelsConfig {
+  try {
+    const raw = localStorage.getItem(LS_CONFIG_KEY);
+    if (raw) return JSON.parse(raw);
+  } catch {}
+  return { apiKey: "", pages: [] };
+}
+
+function saveConfig(config: ReelsConfig) {
+  localStorage.setItem(LS_CONFIG_KEY, JSON.stringify(config));
+}
 
 // ─── Upload Zone Component ──────────────────────────────────────
 function UploadZone({ label, multiple, files, onDrop, onRemove }: {
@@ -90,12 +109,18 @@ function UploadZone({ label, multiple, files, onDrop, onRemove }: {
 }
 
 // ─── Dashboard Tab ──────────────────────────────────────────────
-function DashboardTab() {
+function DashboardTab({ projects, variations }: { projects: Project[]; variations: Variation[] }) {
+  const hoje = new Date().toISOString().slice(0, 10);
+  const videosHoje = variations.filter((v) => {
+    const proj = projects.find((p) => p.nome === v.projeto);
+    return proj?.criadoEm === hoje;
+  }).length;
+
   const stats = [
-    { label: "Vídeos Hoje", value: 12, icon: Video, color: "text-primary" },
-    { label: "Renderizando", value: 3, icon: Loader2, color: "text-chart-4" },
-    { label: "Prontos para Publicar", value: 9, icon: CheckCircle, color: "text-chart-2" },
-    { label: "Publicados", value: 45, icon: Play, color: "text-chart-1" },
+    { label: "Vídeos Hoje", value: videosHoje, icon: Video, color: "text-primary" },
+    { label: "Renderizando", value: variations.filter((v) => v.status === "Renderizando").length, icon: Loader2, color: "text-chart-4" },
+    { label: "Prontos para Publicar", value: variations.filter((v) => v.status === "Pronto").length, icon: CheckCircle, color: "text-chart-2" },
+    { label: "Publicados", value: variations.filter((v) => v.status === "Publicado").length, icon: Play, color: "text-chart-1" },
   ];
 
   return (
@@ -121,34 +146,38 @@ function DashboardTab() {
           <CardTitle className="text-lg">Últimos Projetos</CardTitle>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Projeto</TableHead>
-                <TableHead className="text-center">Hooks</TableHead>
-                <TableHead className="text-center">CTAs</TableHead>
-                <TableHead className="text-center">Variações</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Criado em</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {mockProjects.map((p) => (
-                <TableRow key={p.id}>
-                  <TableCell className="font-medium">{p.nome}</TableCell>
-                  <TableCell className="text-center">{p.hooks}</TableCell>
-                  <TableCell className="text-center">{p.ctas}</TableCell>
-                  <TableCell className="text-center">{p.variacoes}</TableCell>
-                  <TableCell>
-                    <Badge className={statusColor[p.status as VideoStatus]} variant="secondary">
-                      {p.status}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-muted-foreground">{p.criadoEm}</TableCell>
+          {projects.length === 0 ? (
+            <p className="text-sm text-muted-foreground text-center py-8">Nenhum projeto criado ainda.</p>
+          ) : (
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Projeto</TableHead>
+                  <TableHead className="text-center">Hooks</TableHead>
+                  <TableHead className="text-center">CTAs</TableHead>
+                  <TableHead className="text-center">Variações</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead>Criado em</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                {projects.map((p) => (
+                  <TableRow key={p.id}>
+                    <TableCell className="font-medium">{p.nome}</TableCell>
+                    <TableCell className="text-center">{p.hooks}</TableCell>
+                    <TableCell className="text-center">{p.ctas}</TableCell>
+                    <TableCell className="text-center">{p.variacoes}</TableCell>
+                    <TableCell>
+                      <Badge className={statusColor[p.status as VideoStatus]} variant="secondary">
+                        {p.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-muted-foreground">{p.criadoEm}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
         </CardContent>
       </Card>
     </div>
@@ -156,7 +185,7 @@ function DashboardTab() {
 }
 
 // ─── Novo Projeto Tab ───────────────────────────────────────────
-function NovoProjetoTab() {
+function NovoProjetoTab({ onGenerate }: { onGenerate: (nome: string, hookCount: number, ctaCount: number) => void }) {
   const [nome, setNome] = useState("");
   const [hooks, setHooks] = useState<File[]>([]);
   const [corpo, setCorpo] = useState<File[]>([]);
@@ -168,6 +197,14 @@ function NovoProjetoTab() {
 
   const totalVariations = hooks.length * (corpo.length > 0 ? 1 : 0) * ctas.length;
   const canGenerate = hooks.length > 0 && corpo.length > 0 && ctas.length > 0;
+
+  const handleGenerate = () => {
+    onGenerate(nome || "Sem nome", hooks.length, ctas.length);
+    setNome("");
+    setHooks([]);
+    setCorpo([]);
+    setCtas([]);
+  };
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -213,11 +250,7 @@ function NovoProjetoTab() {
             </p>
           </div>
 
-          <Button
-            className="w-full"
-            disabled={!canGenerate}
-            onClick={() => toast.success(`Gerando ${totalVariations} variações para "${nome || "Sem nome"}"...`)}
-          >
+          <Button className="w-full" disabled={!canGenerate} onClick={handleGenerate}>
             Gerar Variações
           </Button>
         </CardContent>
@@ -227,10 +260,10 @@ function NovoProjetoTab() {
 }
 
 // ─── Galeria Tab ────────────────────────────────────────────────
-function GaleriaTab() {
+function GaleriaTab({ variations }: { variations: Variation[] }) {
   const [filter, setFilter] = useState<string>("todos");
 
-  const filtered = filter === "todos" ? mockVariations : mockVariations.filter((v) => v.status === filter);
+  const filtered = filter === "todos" ? variations : variations.filter((v) => v.status === filter);
 
   return (
     <div className="space-y-4">
@@ -250,29 +283,38 @@ function GaleriaTab() {
         <span className="text-sm text-muted-foreground">{filtered.length} vídeo(s)</span>
       </div>
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {filtered.map((v) => (
-          <Card key={v.id} className="overflow-hidden">
-            <div className="aspect-[9/16] bg-muted flex items-center justify-center">
-              <Video className="h-10 w-10 text-muted-foreground/40" />
-            </div>
-            <CardContent className="p-3 space-y-2">
-              <p className="text-sm font-medium truncate">{v.nome}</p>
-              <p className="text-xs text-muted-foreground">{v.projeto}</p>
-              <div className="flex items-center justify-between">
-                <Badge className={statusColor[v.status as VideoStatus]} variant="secondary">
-                  {v.status}
-                </Badge>
-                {v.status === "Pronto" && (
-                  <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => toast.success(`Publicando ${v.nome}...`)}>
-                    Publicar
-                  </Button>
-                )}
+      {filtered.length === 0 ? (
+        <Card>
+          <CardContent className="py-12 text-center">
+            <Video className="h-10 w-10 mx-auto mb-3 text-muted-foreground/40" />
+            <p className="text-sm text-muted-foreground">Nenhuma variação encontrada. Crie um projeto na aba "Novo Projeto".</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {filtered.map((v) => (
+            <Card key={v.id} className="overflow-hidden">
+              <div className="aspect-[9/16] bg-muted flex items-center justify-center">
+                <Video className="h-10 w-10 text-muted-foreground/40" />
               </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              <CardContent className="p-3 space-y-2">
+                <p className="text-sm font-medium truncate">{v.nome}</p>
+                <p className="text-xs text-muted-foreground">{v.projeto}</p>
+                <div className="flex items-center justify-between">
+                  <Badge className={statusColor[v.status]} variant="secondary">
+                    {v.status}
+                  </Badge>
+                  {v.status === "Pronto" && (
+                    <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => toast.success(`Publicando ${v.nome}...`)}>
+                      Publicar
+                    </Button>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </div>
   );
 }
@@ -280,14 +322,23 @@ function GaleriaTab() {
 // ─── Configurações Tab ──────────────────────────────────────────
 function ConfiguracoesTab() {
   const [apiKey, setApiKey] = useState("");
-  const [pages, setPages] = useState([
-    { nome: "Adv Previdenciário", userId: "17841400123456", token: "EAA..." },
-  ]);
+  const [pages, setPages] = useState<InstaPage[]>([]);
+
+  useEffect(() => {
+    const config = loadConfig();
+    setApiKey(config.apiKey);
+    setPages(config.pages);
+  }, []);
 
   const addPage = () => setPages((prev) => [...prev, { nome: "", userId: "", token: "" }]);
   const removePage = (i: number) => setPages((prev) => prev.filter((_, idx) => idx !== i));
-  const updatePage = (i: number, field: string, value: string) =>
+  const updatePage = (i: number, field: keyof InstaPage, value: string) =>
     setPages((prev) => prev.map((p, idx) => (idx === i ? { ...p, [field]: value } : p)));
+
+  const handleSave = () => {
+    saveConfig({ apiKey, pages });
+    toast.success("Configurações salvas!");
+  };
 
   return (
     <div className="space-y-6 max-w-3xl">
@@ -311,6 +362,9 @@ function ConfiguracoesTab() {
           </Button>
         </CardHeader>
         <CardContent className="space-y-4">
+          {pages.length === 0 && (
+            <p className="text-sm text-muted-foreground text-center py-4">Nenhuma página configurada.</p>
+          )}
           {pages.map((p, i) => (
             <div key={i} className="border rounded-lg p-4 space-y-3 relative">
               <Button variant="ghost" size="icon" className="absolute top-2 right-2 h-7 w-7" onClick={() => removePage(i)}>
@@ -335,7 +389,7 @@ function ConfiguracoesTab() {
         </CardContent>
       </Card>
 
-      <Button className="w-full" onClick={() => toast.success("Configurações salvas!")}>
+      <Button className="w-full" onClick={handleSave}>
         <Save className="h-4 w-4 mr-2" /> Salvar Configurações
       </Button>
     </div>
@@ -344,6 +398,43 @@ function ConfiguracoesTab() {
 
 // ─── Main Page ──────────────────────────────────────────────────
 export default function ReelsMachine() {
+  const [activeTab, setActiveTab] = useState("dashboard");
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [variations, setVariations] = useState<Variation[]>([]);
+
+  const handleGenerate = (nome: string, hookCount: number, ctaCount: number) => {
+    const hoje = new Date().toISOString().slice(0, 10);
+    const projectId = crypto.randomUUID();
+    const totalVar = hookCount * ctaCount;
+
+    const newProject: Project = {
+      id: projectId,
+      nome,
+      hooks: hookCount,
+      ctas: ctaCount,
+      variacoes: totalVar,
+      status: "Pendente",
+      criadoEm: hoje,
+    };
+
+    const newVariations: Variation[] = [];
+    for (let h = 1; h <= hookCount; h++) {
+      for (let c = 1; c <= ctaCount; c++) {
+        newVariations.push({
+          id: crypto.randomUUID(),
+          nome: `Hook ${h} + Corpo + CTA ${c}`,
+          projeto: nome,
+          status: "Pendente",
+        });
+      }
+    }
+
+    setProjects((prev) => [newProject, ...prev]);
+    setVariations((prev) => [...newVariations, ...prev]);
+    setActiveTab("galeria");
+    toast.success(`${totalVar} variações criadas para "${nome}"!`);
+  };
+
   return (
     <div className="space-y-6">
       <div>
@@ -351,7 +442,7 @@ export default function ReelsMachine() {
         <p className="text-muted-foreground">Geração em massa de variações de Reels com hooks, corpo e CTAs.</p>
       </div>
 
-      <Tabs defaultValue="dashboard" className="space-y-4">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
         <TabsList>
           <TabsTrigger value="dashboard" className="gap-1.5">
             <LayoutDashboard className="h-4 w-4" /> Dashboard
@@ -367,9 +458,9 @@ export default function ReelsMachine() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="dashboard"><DashboardTab /></TabsContent>
-        <TabsContent value="novo"><NovoProjetoTab /></TabsContent>
-        <TabsContent value="galeria"><GaleriaTab /></TabsContent>
+        <TabsContent value="dashboard"><DashboardTab projects={projects} variations={variations} /></TabsContent>
+        <TabsContent value="novo"><NovoProjetoTab onGenerate={handleGenerate} /></TabsContent>
+        <TabsContent value="galeria"><GaleriaTab variations={variations} /></TabsContent>
         <TabsContent value="config"><ConfiguracoesTab /></TabsContent>
       </Tabs>
     </div>
