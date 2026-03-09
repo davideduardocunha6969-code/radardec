@@ -1,21 +1,42 @@
 
+# Tres Paineis de Atendimento — Status
 
-## Fix: Live Transcription Not Working for VoIP Calls
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-### Root Cause
-`VoipDialer.tsx` line 179 passes `{ micStream: null, systemStream: null, mixedStream: null }` to `onRecordingStateChange`. The `RealtimeCoachingPanel` connects dual Scribe instances but the audio piping `useEffect` (lines 594-608) checks `if (!micStream ...)` and `if (!systemStream ...)` — both are null, so no audio ever reaches Scribe.
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-### Fix
-In `VoipDialer.tsx`, on the `accept` event (line 161), capture the user's microphone via `getUserMedia` and extract the remote audio stream from the Twilio Call object, then pass both to the parent.
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-**VoipDialer.tsx changes:**
-1. Add a `micStreamRef` to track the captured mic stream for cleanup
-2. In `call.on("accept")`: 
-   - Capture mic: `navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } })`
-   - Get remote stream: Twilio SDK v2 exposes `call.getRemoteStream()` — use this for lead audio
-   - Pass both to `onRecordingStateChange(true, { micStream, systemStream: remoteStream, mixedStream: null })`
-3. On disconnect/cancel/error: stop mic stream tracks and pass nulls
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-### Files to modify
-- `src/components/crm/VoipDialer.tsx` — capture and pass audio streams on call accept
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções
