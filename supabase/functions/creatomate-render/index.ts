@@ -26,9 +26,8 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: { user }, error: userError } = await supabase.auth.getUser();
+    if (userError || !user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
@@ -64,33 +63,41 @@ Deno.serve(async (req) => {
         );
       }
 
+      const requestBody = {
+        template_id: "433aa2ca-f109-4256-be02-e21efe6f855b",
+        modifications: {
+          "hook.source": hookUrl,
+          "corpo.source": corpoUrl,
+          "cta.source": ctaUrl,
+        },
+      };
+
+      console.log("Creatomate request body:", JSON.stringify(requestBody));
+
       const creatomateRes = await fetch("https://api.creatomate.com/v2/renders", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${apiKey}`,
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          template_id: "433aa2ca-f109-4256-be02-e21efe6f855b",
-          modifications: {
-            "hook": hookUrl,
-            "corpo": corpoUrl,
-            "cta": ctaUrl,
-          },
-        }),
+        body: JSON.stringify(requestBody),
       });
 
+      const responseText = await creatomateRes.text();
+      console.log("Creatomate response status:", creatomateRes.status);
+      console.log("Creatomate response body:", responseText);
+
       if (!creatomateRes.ok) {
-        const errText = await creatomateRes.text();
-        console.error("Creatomate error:", errText);
         return new Response(
-          JSON.stringify({ error: `Erro Creatomate: ${creatomateRes.status}`, details: errText }),
+          JSON.stringify({ error: `Erro Creatomate: ${creatomateRes.status}`, details: responseText }),
           { status: creatomateRes.status, headers: { ...corsHeaders, "Content-Type": "application/json" } }
         );
       }
 
-      const renderData = await creatomateRes.json();
+      const renderData = JSON.parse(responseText);
       const renderId = Array.isArray(renderData) ? renderData[0]?.id : renderData?.id;
+
+      console.log("Render ID:", renderId);
 
       // Update variation with render_id
       if (variacaoId && renderId) {
@@ -133,6 +140,8 @@ Deno.serve(async (req) => {
       const status = statusData.status;
       const videoUrl = statusData.output?.[0]?.url || statusData.url;
 
+      console.log("Status check - renderId:", renderId, "status:", status, "videoUrl:", videoUrl);
+
       // Update DB based on status
       if (variacaoId) {
         if (status === "succeeded") {
@@ -143,7 +152,7 @@ Deno.serve(async (req) => {
         } else if (status === "failed") {
           await supabase
             .from("reels_variacoes")
-            .update({ status: "Pendente", erro: statusData.error_message || "Erro na renderização" })
+            .update({ status: "Erro", erro: statusData.error_message || "Erro na renderização" })
             .eq("id", variacaoId);
         }
       }
