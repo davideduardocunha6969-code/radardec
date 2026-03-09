@@ -837,9 +837,17 @@ export default function ReelsMachine() {
     for (const v of renderingVars) {
       try {
         const { data, error } = await supabase.functions.invoke("creatomate-render", {
-          body: { action: "check-status", apiKey: config.apiKey, renderId: v.render_id, variacaoId: v.id },
+          body: { action: "check-status", apiKey: config.apiKey, renderId: v.render_id },
         });
-        if (error) console.error("Poll error:", error);
+        if (error) {
+          console.error("Poll error:", error);
+          continue;
+        }
+        if (data?.status === "succeeded" && data?.url) {
+          await supabase.from("reels_variacoes").update({ status: "Pronto", video_url: data.url }).eq("id", v.id);
+        } else if (data?.status === "failed") {
+          await supabase.from("reels_variacoes").update({ status: "Erro", erro: "Falha na renderização" }).eq("id", v.id);
+        }
       } catch (e) {
         console.error("Poll exception:", e);
       }
