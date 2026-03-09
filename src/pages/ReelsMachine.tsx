@@ -260,22 +260,21 @@ function NovoProjetoTab({ onGenerate }: { onGenerate: (nome: string, hookCount: 
 }
 
 // ─── Galeria Tab ────────────────────────────────────────────────
-function GaleriaTab({ variations, projects }: { variations: Variation[]; projects: Project[] }) {
+function GaleriaTab({ variations, projects, selectedProject, onProjectChange }: { variations: Variation[]; projects: Project[]; selectedProject: string; onProjectChange: (v: string) => void }) {
   const [filterStatus, setFilterStatus] = useState<string>("todos");
-  const [filterProject, setFilterProject] = useState<string>("todos");
 
   const projectNames = [...new Set(variations.map((v) => v.projeto))];
 
   const filtered = variations.filter((v) => {
     const matchStatus = filterStatus === "todos" || v.status === filterStatus;
-    const matchProject = filterProject === "todos" || v.projeto === filterProject;
+    const matchProject = selectedProject === "todos" || v.projeto === selectedProject;
     return matchStatus && matchProject;
   });
 
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-3 flex-wrap">
-        <Select value={filterProject} onValueChange={setFilterProject}>
+        <Select value={selectedProject} onValueChange={onProjectChange}>
           <SelectTrigger className="w-56">
             <SelectValue placeholder="Filtrar por projeto" />
           </SelectTrigger>
@@ -419,6 +418,7 @@ export default function ReelsMachine() {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [projects, setProjects] = useState<Project[]>([]);
   const [variations, setVariations] = useState<Variation[]>([]);
+  const [selectedProject, setSelectedProject] = useState<string>("todos");
 
   const handleGenerate = (nome: string, hookCount: number, ctaCount: number) => {
     const hoje = new Date().toISOString().slice(0, 10);
@@ -449,6 +449,7 @@ export default function ReelsMachine() {
 
     setProjects((prev) => [newProject, ...prev]);
     setVariations((prev) => [...newVariations, ...prev]);
+    setSelectedProject(nome);
     setActiveTab("galeria");
     toast.success(`${totalVar} variações criadas para "${nome}"!`);
   };
@@ -478,7 +479,7 @@ export default function ReelsMachine() {
 
         <TabsContent value="dashboard"><DashboardTab projects={projects} variations={variations} /></TabsContent>
         <TabsContent value="novo"><NovoProjetoTab onGenerate={handleGenerate} /></TabsContent>
-        <TabsContent value="galeria"><GaleriaTab variations={variations} projects={projects} /></TabsContent>
+        <TabsContent value="galeria"><GaleriaTab variations={variations} projects={projects} selectedProject={selectedProject} onProjectChange={setSelectedProject} /></TabsContent>
         <TabsContent value="config"><ConfiguracoesTab /></TabsContent>
       </Tabs>
     </div>
