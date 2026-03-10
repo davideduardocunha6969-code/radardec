@@ -1,27 +1,42 @@
 
+# Tres Paineis de Atendimento — Status
 
-## Correção do Power Dialer: Áudio e Tela de Atendimento
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-A análise está correta nos 3 pontos. Confirmei no código:
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-1. **`power-dialer/index.ts`** — `MachineDetection: "DetectMessageEnd"` com timeout de 5s causa delay antes do TwiML ser chamado. Trocar para `"Enable"` (async) elimina essa espera.
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-2. **`power-dialer-twiml/index.ts`** — Após o winner selection atômico (linha ~107), as 8 cancelações são feitas sequencialmente com `await` antes de retornar o TwiML. Mover para fire-and-forget (sem await) permite retornar o `<Dial><Client>` imediatamente.
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-3. **`AtendimentoAguardando.tsx`** — Linhas 154-165: `window.open()` dentro de `setTimeout` no `useEffect` é bloqueado por popup blockers. Substituir por um botão visível que o usuário clica manualmente.
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-### Alterações
-
-**`supabase/functions/power-dialer/index.ts`**
-- Remover `MachineDetectionTimeout: "5"`
-- Trocar `MachineDetection: "DetectMessageEnd"` para `MachineDetection: "Enable"`
-
-**`supabase/functions/power-dialer-twiml/index.ts`**
-- Após winner selection e update de status, retornar o TwiML imediatamente
-- Mover cancelamentos das chamadas perdedoras para `Promise.all` sem `await` (fire-and-forget)
-
-**`src/pages/AtendimentoAguardando.tsx`**
-- Adicionar estados `showOpenButton` e `atendimentoUrl`
-- No useEffect do `lead_atendido_id`, preparar a URL mas não chamar `window.open()`
-- Na view `callActive`, renderizar botão "Abrir Tela de Atendimento" que chama `window.open()` no `onClick`
-
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções

@@ -66,6 +66,8 @@ export default function AtendimentoAguardando() {
   const broadcastRef = useRef<BroadcastChannel | null>(null);
   const atendimentoWindowRef = useRef<Window | null>(null);
   const [answeredLeadName, setAnsweredLeadName] = useState("");
+  const [showOpenButton, setShowOpenButton] = useState(false);
+  const [atendimentoUrl, setAtendimentoUrl] = useState("");
 
   // Initialize BroadcastChannel
   useEffect(() => {
@@ -136,7 +138,7 @@ export default function AtendimentoAguardando() {
     broadcastRef.current?.postMessage({ type: "call-ended" });
   }, []);
 
-  // When session gets lead_atendido_id AND call is active → open atendimento window
+  // When session gets lead_atendido_id AND call is active → prepare atendimento button
   useEffect(() => {
     if (!session?.lead_atendido_id || !callActive) return;
 
@@ -151,18 +153,10 @@ export default function AtendimentoAguardando() {
       numero: session.telefone_atendido || "",
     });
 
-    // Open atendimento as a NEW window (don't redirect — audio stays here)
-    const atendimentoUrl = `/atendimento?leadId=${session.lead_atendido_id}&numero=${encodeURIComponent(session.telefone_atendido || "")}&tipo=voip&funilId=${session.funil_id}&papel=${session.papel}&powerDialerMode=true`;
-
-    // Small delay to ensure call audio is stable
-    setTimeout(() => {
-      const win = window.open(
-        atendimentoUrl,
-        `atendimento_${session.lead_atendido_id}`,
-        "width=1200,height=800"
-      );
-      atendimentoWindowRef.current = win;
-    }, 500);
+    // Prepare URL but don't open automatically (popup blockers block non-user-gesture opens)
+    const url = `/atendimento?leadId=${session.lead_atendido_id}&numero=${encodeURIComponent(session.telefone_atendido || "")}&tipo=voip&funilId=${session.funil_id}&papel=${session.papel}&powerDialerMode=true`;
+    setAtendimentoUrl(url);
+    setShowOpenButton(true);
   }, [session?.lead_atendido_id, callActive]);
 
   // Fetch session via edge function (bypasses RLS)
@@ -361,6 +355,25 @@ export default function AtendimentoAguardando() {
                 <PhoneOff className="h-6 w-6" />
               </Button>
             </div>
+
+            {showOpenButton && (
+              <Button
+                size="lg"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => {
+                  const win = window.open(
+                    atendimentoUrl,
+                    `atendimento_${session?.lead_atendido_id}`,
+                    "width=1200,height=800"
+                  );
+                  atendimentoWindowRef.current = win;
+                  setShowOpenButton(false);
+                }}
+              >
+                <PhoneCall className="h-5 w-5 mr-2" />
+                Abrir Tela de Atendimento — {answeredLeadName}
+              </Button>
+            )}
 
             <p className="text-xs text-center text-muted-foreground">
               ⚠️ Não feche esta janela — o áudio da chamada está aqui.
