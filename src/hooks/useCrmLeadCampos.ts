@@ -58,6 +58,24 @@ export function useCreateCrmLeadCampo() {
   });
 }
 
+export function useDeleteCrmLeadCampo() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("crm_lead_campos" as any)
+        .delete()
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["crm_lead_campos"] });
+      toast.success("Campo excluído!");
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
+}
+
 export function normalizeKey(str: string): string {
   return str
     .toLowerCase()

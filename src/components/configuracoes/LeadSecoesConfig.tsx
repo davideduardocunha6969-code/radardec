@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useCrmLeadCampos, type CrmLeadCampo } from "@/hooks/useCrmLeadCampos";
+import { useCrmLeadCampos, useCreateCrmLeadCampo, useDeleteCrmLeadCampo, normalizeKey, type CrmLeadCampo } from "@/hooks/useCrmLeadCampos";
 import {
   useCrmLeadSecoes,
   useCreateCrmLeadSecao,
