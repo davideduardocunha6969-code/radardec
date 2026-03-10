@@ -4,11 +4,26 @@ import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, Phone, PhoneOff, AlertCircle, Mic, MicOff, Clock, PhoneCall, PhoneMissed, X } from "lucide-react";
+import {
+  Loader2, Phone, PhoneOff, AlertCircle, Mic, MicOff,
+  Clock, PhoneCall, PhoneMissed, X, User, MapPin, FileText,
+  FileSearch, HelpCircle, Calculator,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Progress } from "@/components/ui/progress";
 import { Device } from "@twilio/voice-sdk";
 import type { Call } from "@twilio/voice-sdk";
+import { RealtimeCoachingPanel, type AudioMonitorInfo, type LabeledTranscript } from "@/components/crm/RealtimeCoachingPanel";
+import { CoachingErrorBoundary } from "@/components/crm/coaching/CoachingErrorBoundary";
+import { GapsPanel } from "@/components/crm/lacunas/GapsPanel";
+import { DataExtractorPanel } from "@/components/crm/extrator/DataExtractorPanel";
+import { ValuesEstimationPanel } from "@/components/crm/estimativa/ValuesEstimationPanel";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
+import { useLeadDadosSync } from "@/hooks/useLeadDadosSync";
+import { getFieldValue, type DadosExtrasMap } from "@/utils/trabalhista/types";
+import type { RoboCoach } from "@/hooks/useRobosCoach";
+import type { ScriptSdr } from "@/hooks/useScriptsSdr";
+import logoEscritorio from "@/assets/logo-escritorio.webp";
 
 interface LeadInfo {
   leadId: string;
@@ -64,10 +79,21 @@ export default function AtendimentoAguardando() {
   const [callDuration, setCallDuration] = useState(0);
   const callTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const broadcastRef = useRef<BroadcastChannel | null>(null);
-  const atendimentoWindowRef = useRef<Window | null>(null);
   const [answeredLeadName, setAnsweredLeadName] = useState("");
-  const [showOpenButton, setShowOpenButton] = useState(false);
-  const [atendimentoUrl, setAtendimentoUrl] = useState("");
+
+  // Inline coaching state
+  const [callStreams, setCallStreams] = useState<{ mic: MediaStream | null; remote: MediaStream | null }>({ mic: null, remote: null });
+  const [coach, setCoach] = useState<RoboCoach | null>(null);
+  const [script, setScript] = useState<ScriptSdr | null>(null);
+  const [leadData, setLeadData] = useState<any>(null);
+  const [transcriptChunks, setTranscriptChunks] = useState<LabeledTranscript[]>([]);
+  const [audioMonitor, setAudioMonitor] = useState<AudioMonitorInfo | undefined>(undefined);
+  const [activePanel, setActivePanel] = useState<"extrator" | "lacunas" | "estimativa" | null>(null);
+  const leadDadosSync = useLeadDadosSync(leadData?.id ?? null);
+
+  const handleTranscriptUpdate = useCallback((transcripts: LabeledTranscript[]) => {
+    setTranscriptChunks(transcripts);
+  }, []);
 
   // Initialize BroadcastChannel
   useEffect(() => {
@@ -94,6 +120,20 @@ export default function AtendimentoAguardando() {
           call.accept();
           activeCallRef.current = call;
           setCallActive(true);
+
+          // Retry to capture native streams (up to 5 attempts, 500ms apart)
+          const tryGetStreams = (attempt = 0) => {
+            const localStream = (call as any).getLocalStream?.() ?? null;
+            const remoteStream = (call as any).getRemoteStream?.() ?? null;
+            if ((!localStream || !remoteStream) && attempt < 5) {
+              setTimeout(() => tryGetStreams(attempt + 1), 500);
+              return;
+            }
+            setCallStreams({ mic: localStream, remote: remoteStream });
+            if (localStream) console.log("[Aguardando] Streams captured on attempt", attempt);
+            else console.warn("[Aguardando] Failed to capture streams after 5 attempts");
+          };
+          setTimeout(() => tryGetStreams(), 500);
 
           // Start duration timer
           callTimerRef.current = setInterval(() => {
@@ -138,9 +178,9 @@ export default function AtendimentoAguardando() {
     broadcastRef.current?.postMessage({ type: "call-ended" });
   }, []);
 
-  // When session gets lead_atendido_id AND call is active → prepare atendimento button
+  // When session gets lead_atendido_id → set answered lead name
   useEffect(() => {
-    if (!session?.lead_atendido_id || !callActive) return;
+    if (!session?.lead_atendido_id) return;
 
     const leadsInfo = (session.leads_info || []) as LeadInfo[];
     const answeredLead = leadsInfo.find(l => l.leadId === session.lead_atendido_id);
@@ -152,12 +192,63 @@ export default function AtendimentoAguardando() {
       leadId: session.lead_atendido_id,
       numero: session.telefone_atendido || "",
     });
+  }, [session?.lead_atendido_id]);
 
-    // Prepare URL but don't open automatically (popup blockers block non-user-gesture opens)
-    const url = `/atendimento?leadId=${session.lead_atendido_id}&numero=${encodeURIComponent(session.telefone_atendido || "")}&tipo=voip&funilId=${session.funil_id}&papel=${session.papel}&powerDialerMode=true`;
-    setAtendimentoUrl(url);
-    setShowOpenButton(true);
-  }, [session?.lead_atendido_id, callActive]);
+  // Fetch coaching data when lead is answered
+  useEffect(() => {
+    if (!session?.lead_atendido_id) return;
+
+    const fetchCoachingData = async () => {
+      try {
+        // Fetch lead
+        const { data: leadRow } = await supabase
+          .from("crm_leads")
+          .select("id, nome, endereco, resumo_caso, telefones, coluna_id, funil_id, dados_extras")
+          .eq("id", session.lead_atendido_id)
+          .single();
+
+        if (leadRow) setLeadData(leadRow);
+
+        // Fetch funil → coach + script
+        const resolvedFunilId = session.funil_id || leadRow?.funil_id;
+        const papel = session.papel || "sdr";
+
+        if (resolvedFunilId) {
+          const { data: funilData } = await supabase
+            .from("crm_funis")
+            .select("robo_coach_sdr_id, robo_coach_closer_id, script_sdr_id, script_closer_id")
+            .eq("id", resolvedFunilId)
+            .single();
+
+          if (funilData) {
+            const coachId = papel === "closer" ? funilData.robo_coach_closer_id : funilData.robo_coach_sdr_id;
+            if (coachId) {
+              const { data: coachRow } = await supabase.from("robos_coach").select("*").eq("id", coachId).single();
+              if (coachRow) setCoach(coachRow as unknown as RoboCoach);
+            }
+
+            const scriptId = papel === "closer" ? funilData.script_closer_id : funilData.script_sdr_id;
+            if (scriptId) {
+              const { data: scriptRow } = await supabase.from("scripts_sdr").select("*").eq("id", scriptId).single();
+              if (scriptRow) {
+                const s = scriptRow as unknown as ScriptSdr;
+                setScript({
+                  ...s,
+                  apresentacao: Array.isArray(s.apresentacao) ? s.apresentacao : [],
+                  qualificacao: Array.isArray(s.qualificacao) ? s.qualificacao : [],
+                  show_rate: Array.isArray(s.show_rate) ? s.show_rate : [],
+                });
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.error("[Aguardando] Error fetching coaching data:", e);
+      }
+    };
+
+    fetchCoachingData();
+  }, [session?.lead_atendido_id, session?.funil_id, session?.papel]);
 
   // Fetch session via edge function (bypasses RLS)
   const fetchSessionViaEdge = useCallback(async (): Promise<any | null> => {
@@ -315,8 +406,192 @@ export default function AtendimentoAguardando() {
   };
 
   const isFinished = session?.status === "finalizado_sem_atendimento" || session?.status === "cancelado" || session?.status === "expirado";
+  const papel = session?.papel || "sdr";
 
-  // === AUDIO BRIDGE MODE — call is active, show controls ===
+  // === INLINE COACHING MODE — call is active with lead answered ===
+  if (callActive && session?.lead_atendido_id) {
+    return (
+      <div className="h-screen flex flex-col bg-background overflow-hidden">
+        {/* Header */}
+        <header className="gradient-primary px-4 py-2 shrink-0">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <img src={logoEscritorio} alt="Logo" className="h-7" />
+              <div className="h-6 w-px bg-white/20" />
+              {leadData ? (
+                <>
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-white/70" />
+                    <span className="font-semibold text-sm text-white">{leadData.nome}</span>
+                  </div>
+                  {leadData.endereco && (
+                    <div className="flex items-center gap-1 text-xs text-white/60">
+                      <MapPin className="h-3 w-3" />
+                      {leadData.endereco}
+                    </div>
+                  )}
+                </>
+              ) : (
+                <span className="text-xs text-white/60">{answeredLeadName}</span>
+              )}
+              <Badge variant="outline" className="text-xs text-white/80 border-white/30">
+                {papel === "closer" ? "Closer" : "SDR"}
+              </Badge>
+              <Badge className="bg-green-500/20 text-green-300 border-green-500/30 text-xs">
+                Power Dialer
+              </Badge>
+            </div>
+            <div className="flex items-center gap-3">
+              <Badge className="bg-red-500 text-white animate-pulse gap-1">
+                <span className="h-2 w-2 rounded-full bg-white" />
+                Em chamada
+              </Badge>
+              <span className="text-sm font-mono text-white font-bold">{formatDuration(callDuration)}</span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className={`text-white hover:bg-white/20 ${muted ? "bg-red-500/30" : ""}`}
+                onClick={handleMuteToggle}
+                title={muted ? "Desmutar" : "Mutar"}
+              >
+                {muted ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="text-red-300 hover:bg-red-500/30 hover:text-white"
+                onClick={handleHangup}
+                title="Desligar"
+              >
+                <PhoneOff className="h-4 w-4 mr-1" />
+                Desligar
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        {/* Lead context bar */}
+        {leadData && (leadData.resumo_caso || leadData.dados_extras) && (
+          <div className="border-b bg-muted/30 px-4 py-2 shrink-0">
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs">
+              {Object.entries((leadData.dados_extras as DadosExtrasMap) || {}).map(([key, raw]) => {
+                const val = getFieldValue({ [key]: raw }, key).valor;
+                if (!val) return null;
+                return (
+                  <span key={key} className="inline-flex items-center gap-1 bg-background/60 rounded px-2 py-0.5 border border-border/50">
+                    <span className="text-muted-foreground capitalize">{key.replace(/_/g, ' ')}:</span>
+                    <strong className="text-foreground">{val}</strong>
+                  </span>
+                );
+              })}
+              {leadData.resumo_caso && (
+                <span className="inline-flex items-center gap-1 bg-background/60 rounded px-2 py-0.5 border border-border/50">
+                  <FileText className="h-3 w-3 text-muted-foreground" />
+                  <span className="text-foreground truncate max-w-md">{leadData.resumo_caso}</span>
+                </span>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Coaching panel with real streams */}
+        <div className="flex-1 min-h-0 p-3 flex flex-col gap-2">
+          {callStreams.mic ? (
+            <CoachingErrorBoundary>
+              <RealtimeCoachingPanel
+                coach={coach}
+                leadNome={leadData?.nome || answeredLeadName}
+                leadContext={leadData?.resumo_caso || undefined}
+                isRecording={true}
+                micStream={callStreams.mic}
+                systemStream={callStreams.remote}
+                audioMonitor={audioMonitor}
+                script={script}
+                onTranscriptUpdate={handleTranscriptUpdate}
+              />
+            </CoachingErrorBoundary>
+          ) : (
+            <div className="flex items-center justify-center gap-2 py-8 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              <span className="text-sm">Conectando áudio...</span>
+            </div>
+          )}
+        </div>
+
+        {/* Backdrop — click outside to close panel */}
+        {activePanel && (
+          <div className="fixed inset-0 z-30" onClick={() => setActivePanel(null)} />
+        )}
+
+        {/* Overlay sidebar — icon bar + sliding panel */}
+        <TooltipProvider delayDuration={200}>
+          <div className="fixed right-2 top-1/2 -translate-y-1/2 z-50 flex flex-col gap-2">
+            {([
+              { key: "extrator" as const, icon: FileSearch, label: "Extrator de Dados" },
+              { key: "lacunas" as const, icon: HelpCircle, label: "Lacunas" },
+              { key: "estimativa" as const, icon: Calculator, label: "Estimativa de Valores" },
+            ]).map(({ key, icon: Icon, label }) => (
+              <Tooltip key={key}>
+                <TooltipTrigger asChild>
+                  <button
+                    onClick={() => setActivePanel(prev => prev === key ? null : key)}
+                    className={`p-2.5 rounded-full transition-all shadow-md border ${
+                      activePanel === key
+                        ? "bg-primary text-primary-foreground border-primary shadow-lg scale-110"
+                        : "bg-card/80 backdrop-blur-sm text-foreground border-border/50 hover:bg-card hover:shadow-lg hover:scale-105"
+                    }`}
+                  >
+                    <Icon className="h-5 w-5" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent side="left">{label}</TooltipContent>
+              </Tooltip>
+            ))}
+          </div>
+
+          {activePanel && (
+            <div className="fixed top-0 bottom-0 right-14 w-1/3 min-w-[320px] max-w-[480px] z-40 bg-background border-l border-border shadow-2xl overflow-y-auto animate-in slide-in-from-right duration-300">
+              <div className="p-4">
+                {activePanel === "extrator" && leadData && coach && (
+                  <DataExtractorPanel
+                    leadId={leadData.id}
+                    coachId={coach.id}
+                    scriptId={script?.id}
+                    transcriptChunks={transcriptChunks}
+                    dados={leadDadosSync.dados}
+                    dadosLoading={leadDadosSync.loading}
+                    setField={leadDadosSync.setField}
+                    setFields={leadDadosSync.setFields}
+                  />
+                )}
+                {activePanel === "lacunas" && leadData && coach && (
+                  <GapsPanel
+                    leadId={leadData.id}
+                    coachId={coach.id}
+                    scriptId={script?.id}
+                    dados={leadDadosSync.dados}
+                    dadosLoading={leadDadosSync.loading}
+                  />
+                )}
+                {activePanel === "estimativa" && leadData && (
+                  <ValuesEstimationPanel
+                    dados={leadDadosSync.dados}
+                    loading={leadDadosSync.loading}
+                  />
+                )}
+              </div>
+            </div>
+          )}
+        </TooltipProvider>
+
+        <p className="text-xs text-center text-muted-foreground py-1 shrink-0">
+          ⚠️ Não feche esta janela — o áudio da chamada está aqui.
+        </p>
+      </div>
+    );
+  }
+
+  // === CALL ACTIVE but no lead_atendido_id yet (brief transitional state) ===
   if (callActive) {
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
@@ -330,18 +605,15 @@ export default function AtendimentoAguardando() {
                   <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
                 </span>
               </div>
-              <p className="text-lg font-semibold text-green-600">Em chamada</p>
-              <p className="text-sm text-muted-foreground">{answeredLeadName}</p>
+              <p className="text-lg font-semibold text-green-600">Conectando...</p>
               <p className="text-2xl font-mono font-bold">{formatDuration(callDuration)}</p>
             </div>
-
             <div className="flex justify-center gap-4">
               <Button
                 variant={muted ? "destructive" : "outline"}
                 size="lg"
                 className="rounded-full h-14 w-14"
                 onClick={handleMuteToggle}
-                title={muted ? "Desmutar" : "Mutar"}
               >
                 {muted ? <MicOff className="h-6 w-6" /> : <Mic className="h-6 w-6" />}
               </Button>
@@ -350,31 +622,10 @@ export default function AtendimentoAguardando() {
                 size="lg"
                 className="rounded-full h-14 w-14"
                 onClick={handleHangup}
-                title="Desligar"
               >
                 <PhoneOff className="h-6 w-6" />
               </Button>
             </div>
-
-            {showOpenButton && (
-              <Button
-                size="lg"
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
-                onClick={() => {
-                  const win = window.open(
-                    atendimentoUrl,
-                    `atendimento_${session?.lead_atendido_id}`,
-                    "width=1200,height=800"
-                  );
-                  atendimentoWindowRef.current = win;
-                  setShowOpenButton(false);
-                }}
-              >
-                <PhoneCall className="h-5 w-5 mr-2" />
-                Abrir Tela de Atendimento — {answeredLeadName}
-              </Button>
-            )}
-
             <p className="text-xs text-center text-muted-foreground">
               ⚠️ Não feche esta janela — o áudio da chamada está aqui.
             </p>
