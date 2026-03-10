@@ -38,14 +38,6 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
     const values: Record<string, string> = {};
     const groups: Array<{ secaoNome: string; fields: Array<{ key: string; nome: string }> }> = [];
 
-    // Add native "nome" field
-    values["__nome__"] = lead.nome || "";
-
-    // Add endereco if present
-    if (lead.endereco) {
-      values["__endereco__"] = lead.endereco;
-    }
-
     // Filter only "Dados Pessoais" section
     const secaoMap = new Map<string, { nome: string; ordem: number; fields: Array<{ key: string; nome: string }> }>();
 
