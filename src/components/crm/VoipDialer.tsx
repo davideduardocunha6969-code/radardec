@@ -80,8 +80,13 @@ export function VoipDialer({ leadId, leadNome, numero, papel, onCallStatusChange
   useEffect(() => {
     if (callStatus === "in-progress") {
       setDuration(0);
+      durationRef.current = 0;
       timerRef.current = setInterval(() => {
-        setDuration((d) => d + 1);
+        setDuration((d) => {
+          const next = d + 1;
+          durationRef.current = next;
+          return next;
+        });
       }, 1000);
     } else {
       if (timerRef.current) {
