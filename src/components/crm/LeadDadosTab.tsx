@@ -226,13 +226,8 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
     setEditTelefones((prev) => prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)));
   };
 
-  const removeTelefone = (index: number) => {
-    setEditTelefones((prev) => prev.filter((_, i) => i !== index));
-  };
 
-  const addTelefone = () => {
-    setEditTelefones((prev) => [...prev, { numero: "", tipo: "celular", observacao: "" }]);
-  };
+
 
   // Telefones UI blocks — unified format with 4 fixed slots
   const renderTelefonesView = () => {
