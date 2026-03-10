@@ -105,6 +105,21 @@ export function LeadSecoesConfig() {
     campos: camposExtended.filter((c) => c.secao_id === s.id),
   }));
 
+  const handleCreateCampo = () => {
+    if (!newCampoName.trim()) return;
+    const key = normalizeKey(newCampoName.trim());
+    if (!key) return;
+    createCampo.mutate(
+      { nome: newCampoName.trim(), key, tipo: newCampoTipo, ordem: (campos?.length || 0) + 1 },
+      { onSuccess: () => { setNewCampoName(""); setNewCampoTipo("texto"); } }
+    );
+  };
+
+  const handleDeleteCampo = (campo: CrmLeadCampo) => {
+    if (!confirm(`Excluir o campo "${campo.nome}"? Esta ação não pode ser desfeita.`)) return;
+    deleteCampo.mutate(campo.id);
+  };
+
   const handleCreateSecao = () => {
     if (!newSecaoName.trim()) return;
     createSecao.mutate(
