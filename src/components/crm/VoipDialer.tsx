@@ -301,6 +301,8 @@ export function VoipDialer({ leadId, leadNome, numero, papel, onCallStatusChange
   const cleanupCall = () => {
     callRef.current = null;
     setChamadaId(null);
+    chamadaIdRef.current = null;
+    callSidRef.current = null;
     setTimeout(() => setCallStatus("idle"), 3000);
   };
 
