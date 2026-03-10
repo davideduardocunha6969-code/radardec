@@ -342,6 +342,7 @@ function DroppableSection({
   onCancelEdit,
   onDelete,
   onEditDescricao,
+  onDeleteCampo,
 }: {
   id: string;
   title: string;
@@ -355,6 +356,7 @@ function DroppableSection({
   onCancelEdit?: () => void;
   onDelete?: () => void;
   onEditDescricao?: (campo: CrmLeadCampo & { secao_id?: string | null }) => void;
+  onDeleteCampo?: (campo: CrmLeadCampo) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
