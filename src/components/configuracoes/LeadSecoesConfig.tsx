@@ -243,6 +243,31 @@ export function LeadSecoesConfig() {
         </Card>
       )}
 
+      {/* Criar novo campo */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Input
+          placeholder="Nome do campo (ex: Estado Civil)"
+          value={newCampoName}
+          onChange={(e) => setNewCampoName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleCreateCampo()}
+          className="max-w-xs"
+        />
+        <Select value={newCampoTipo} onValueChange={setNewCampoTipo}>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="texto">Texto</SelectItem>
+            <SelectItem value="numero">Número</SelectItem>
+            <SelectItem value="data">Data</SelectItem>
+            <SelectItem value="select">Seleção</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button onClick={handleCreateCampo} disabled={createCampo.isPending || !newCampoName.trim()}>
+          <Plus className="h-4 w-4 mr-1" />Novo Campo
+        </Button>
+      </div>
+
       {/* Criar nova seção */}
       <div className="flex items-center gap-2">
         <Input
