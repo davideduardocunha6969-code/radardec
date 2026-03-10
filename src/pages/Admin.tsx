@@ -40,6 +40,8 @@ const AVAILABLE_PAGES_GROUPED = [
     group: 'Comercial',
     pages: [
       { key: 'comercial-atendimentos', label: 'Atendimentos' },
+      { key: 'radar-outbound', label: 'Radar Outbound' },
+      { key: 'crm-outbound', label: 'CRM Outbound' },
     ],
   },
   {
@@ -49,15 +51,26 @@ const AVAILABLE_PAGES_GROUPED = [
       { key: 'content-hub', label: 'Content Hub' },
       { key: 'midia-social', label: 'Calendário de Conteúdo' },
       { key: 'marketing-modelador', label: 'Modelador de Conteúdo' },
+      { key: 'marketing-radar', label: 'Radar de Viralização' },
+      { key: 'marketing-reels-machine', label: 'Reels Machine' },
     ],
   },
   {
     group: 'Robôs',
     pages: [
+      { key: 'robos-perfil-ia', label: 'Perfil IA' },
+      { key: 'robos-coach', label: 'Robô Coach' },
       { key: 'robos-transcricao', label: 'Transcritor de Audiências' },
       { key: 'robos-prompts', label: 'Prompts de IA' },
       { key: 'robos-prompts-modelador', label: 'Prompts Modelador' },
+      { key: 'robos-modelador-replica', label: 'Modelador Réplica' },
       { key: 'robos-produtos', label: 'Tipos de Produtos' },
+    ],
+  },
+  {
+    group: 'Recrutamento',
+    pages: [
+      { key: 'recrutamento', label: 'Recrutamento Inteligente' },
     ],
   },
 ];
