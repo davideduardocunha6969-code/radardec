@@ -139,6 +139,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
           dados_extras: JSON.parse(JSON.stringify(newDadosExtras)),
           nome,
           endereco,
+          email,
           telefones: JSON.parse(JSON.stringify(newTelefones)),
         })
         .eq("id", lead.id)
