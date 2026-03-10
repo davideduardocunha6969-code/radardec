@@ -26,16 +26,15 @@ Deno.serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const token = authHeader.replace("Bearer ", "");
-    const { data: claimsData, error: claimsError } = await supabase.auth.getClaims(token);
-    if (claimsError || !claimsData?.claims) {
+    const { data: userData, error: userError } = await supabase.auth.getUser();
+    if (userError || !userData?.user) {
       return new Response(JSON.stringify({ error: "Unauthorized" }), {
         status: 401,
         headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
-    const userId = claimsData.claims.sub as string;
+    const userId = userData.user.id;
     const body = await req.json();
     const { template_id, signer_name, signer_email, signer_phone, lead_id, template_nome } = body;
 
@@ -54,14 +53,13 @@ Deno.serve(async (req) => {
       });
     }
 
-    // Create document from template
     const zapBody: Record<string, unknown> = {
       signer_name,
     };
     if (signer_email) zapBody.signer_email = signer_email;
     if (signer_phone) zapBody.signer_phone = signer_phone;
 
-    const resp = await fetch(`https://api.zapsign.com.br/api/v1/models/${template_id}/create-doc/`, {
+    const resp = await fetch(`https://api.zapsign.com.br/api/v1/templates/${template_id}/create-doc/`, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${zapSignToken}`,
@@ -81,14 +79,12 @@ Deno.serve(async (req) => {
 
     const docResult = await resp.json();
 
-    // Extract sign_url from first signer
     const signers = docResult.signers || [];
     const firstSigner = signers[0] || {};
     const sign_url = firstSigner.sign_url || "";
     const signer_token = firstSigner.token || "";
     const doc_token = docResult.token || "";
 
-    // Save to database using service_role
     const adminClient = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
