@@ -147,7 +147,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
           if (error) {
             toast.error(error.message);
           } else {
-            onLeadUpdate({ ...lead, nome, endereco, dados_extras: newDadosExtras, telefones: newTelefones });
+            onLeadUpdate({ ...lead, nome, endereco, email, dados_extras: newDadosExtras, telefones: newTelefones });
             setEditing(false);
             toast.success("Dados atualizados!");
           }
