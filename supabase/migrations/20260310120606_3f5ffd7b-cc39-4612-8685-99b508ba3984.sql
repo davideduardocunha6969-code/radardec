@@ -1,0 +1,1 @@
+UPDATE public.crm_lead_secoes SET ordem = 1 WHERE id = 'e02d048b-768d-4e19-bb10-4d519534a10d';
