@@ -219,8 +219,8 @@ export default function CrmFunilKanban() {
   const [leadForm, setLeadForm] = useState({ nome: "", endereco: "", telefones: [{ numero: "", tipo: "celular" }] as LeadTelefone[], coluna_id: "" });
 
   const [detailLead, setDetailLead] = useState<CrmLead | null>(null);
-  const [editingLeadData, setEditingLeadData] = useState(false);
-  const [editLeadForm, setEditLeadForm] = useState<{ nome: string; endereco: string; telefones: LeadTelefone[] }>({ nome: "", endereco: "", telefones: [] });
+
+
 
   // Funnel config dialog
   const [funilConfigDialog, setFunilConfigDialog] = useState(false);
@@ -465,7 +465,7 @@ export default function CrmFunilKanban() {
       />
 
       {/* Dialog Detalhe Lead */}
-      <Dialog open={!!detailLead} onOpenChange={(o) => { if (!o) { setDetailLead(null); setEditingLeadData(false); } }}>
+      <Dialog open={!!detailLead} onOpenChange={(o) => { if (!o) { setDetailLead(null); } }}>
         <DialogContent className="max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] rounded-none border-0 overflow-y-auto overflow-x-hidden flex flex-col p-0">
           <DialogHeader className="px-6 pt-4 pb-2 shrink-0 border-b">
             <DialogTitle>{detailLead?.nome}</DialogTitle>
@@ -501,100 +501,55 @@ export default function CrmFunilKanban() {
                     )}
                     {detailLead.endereco && <div><label className="text-sm font-medium text-muted-foreground">Endereço</label><p className="text-sm">{detailLead.endereco}</p></div>}
                     <div>
-                      <div className="flex items-center justify-between mb-1">
-                        <label className="text-sm font-medium text-muted-foreground">Telefones</label>
-                        {!editingLeadData && (
-                          <Button variant="outline" size="sm" onClick={() => { setEditLeadForm({ nome: detailLead.nome, endereco: detailLead.endereco || "", telefones: [...detailLead.telefones] }); setEditingLeadData(true); }}>
-                            <Pencil className="h-3.5 w-3.5 mr-1" />Editar Dados
-                          </Button>
-                        )}
-                      </div>
-                      {editingLeadData ? (
-                        <div className="space-y-3 rounded-lg border p-4">
-                          <div><label className="text-xs font-medium text-muted-foreground">Nome</label><Input value={editLeadForm.nome} onChange={(e) => setEditLeadForm({ ...editLeadForm, nome: e.target.value })} /></div>
-                          <div><label className="text-xs font-medium text-muted-foreground">Endereço</label><Input value={editLeadForm.endereco} onChange={(e) => setEditLeadForm({ ...editLeadForm, endereco: e.target.value })} /></div>
-                          <div>
-                            <label className="text-xs font-medium text-muted-foreground">Telefones</label>
-                            {editLeadForm.telefones.map((t, i) => (
-                              <div key={i} className="space-y-1 mt-2 p-2 border rounded-md">
-                                <div className="flex gap-2 items-center">
-                                  <Input value={t.numero} onChange={(e) => { const tels = [...editLeadForm.telefones]; tels[i] = { ...tels[i], numero: e.target.value }; setEditLeadForm({ ...editLeadForm, telefones: tels }); }} placeholder="(99) 99999-9999" className="flex-1" />
-                                  <Input value={t.tipo} onChange={(e) => { const tels = [...editLeadForm.telefones]; tels[i] = { ...tels[i], tipo: e.target.value }; setEditLeadForm({ ...editLeadForm, telefones: tels }); }} placeholder="celular" className="w-28" />
-                                  <Button variant="ghost" size="icon" className="h-8 w-8 shrink-0" onClick={() => { const tels = editLeadForm.telefones.filter((_, j) => j !== i); setEditLeadForm({ ...editLeadForm, telefones: tels }); }}>
-                                    <Trash2 className="h-3.5 w-3.5 text-destructive" />
-                                  </Button>
-                                </div>
-                                <Input value={t.observacao || ""} onChange={(e) => { const tels = [...editLeadForm.telefones]; tels[i] = { ...tels[i], observacao: e.target.value }; setEditLeadForm({ ...editLeadForm, telefones: tels }); }} placeholder="Observação: ex. ligar após 18h, contato da esposa..." className="text-xs" />
-                              </div>
-                            ))}
-                            <Button variant="outline" size="sm" className="mt-2" onClick={() => setEditLeadForm({ ...editLeadForm, telefones: [...editLeadForm.telefones, { numero: "", tipo: "celular", observacao: "" }] })}>
-                              <Plus className="h-3.5 w-3.5 mr-1" />Adicionar Telefone
-                            </Button>
-                          </div>
-                          <div className="flex gap-2 justify-end">
-                            <Button variant="outline" size="sm" onClick={() => setEditingLeadData(false)}>Cancelar</Button>
-                            <Button size="sm" onClick={() => {
-                              const validPhones = editLeadForm.telefones.filter(t => t.numero.trim());
-                              updateLead.mutate({ id: detailLead.id, funilId: funilId!, nome: editLeadForm.nome, endereco: editLeadForm.endereco || undefined, telefones: validPhones }, {
-                                onSuccess: () => {
-                                  setDetailLead({ ...detailLead, nome: editLeadForm.nome, endereco: editLeadForm.endereco || null, telefones: validPhones });
-                                  setEditingLeadData(false);
-                                  toast.success("Dados atualizados!");
-                                },
-                              });
-                            }}>Salvar</Button>
-                          </div>
-                        </div>
-                      ) : (
-                        detailLead.telefones.map((t, i) => (
-                          <div key={i} className="mt-1">
-                            <div className="flex items-center gap-2">
-                              <Phone className="h-4 w-4 text-muted-foreground" />
-                              <span className="text-sm">{t.numero}</span>
-                              <Badge variant="outline" className="text-xs">{t.tipo}</Badge>
-                              <div className="flex items-center gap-1 ml-auto">
-                                <WhatsAppAICallButton leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} papel="sdr" />
-                                 <Button
-                                  size="sm"
-                                  className="gap-1.5 bg-green-600 hover:bg-green-700 text-white h-8 px-2 text-xs"
-                                   onClick={(e) => {
-                                     const btn = e.currentTarget;
-                                     if (btn.dataset.opening) return;
-                                     btn.dataset.opening = "1";
-                                     setTimeout(() => delete btn.dataset.opening, 2000);
-                                     const sid = crypto.randomUUID().slice(0, 8);
-                                     window.open(
-                                       `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=whatsapp&funilId=${funilId}&papel=sdr&autoStart=true&sid=${sid}`,
-                                       `atendimento_${detailLead.id}_${sid}`,
-                                       "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
-                                     );
-                                   }}
-                                   disabled={!t.numero}
-                                >
-                                  <Phone className="h-3.5 w-3.5" />
-                                  WhatsApp
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  className="gap-1.5 h-8 px-2 text-xs"
-                                  onClick={() => {
-                                    window.open(
-                                      `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=voip&funilId=${funilId}&papel=sdr`,
-                                      `atendimento_${detailLead.id}`,
-                                      "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
-                                    );
-                                  }}
-                                  disabled={!t.numero}
-                                >
-                                  <Phone className="h-3.5 w-3.5" />
-                                  Ligar
-                                </Button>
-                              </div>
+                      <label className="text-sm font-medium text-muted-foreground">Telefones</label>
+                      {detailLead.telefones.map((t, i) => (
+                        <div key={i} className="mt-1">
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4 text-muted-foreground" />
+                            <span className="text-sm">{t.numero}</span>
+                            <Badge variant="outline" className="text-xs">{t.tipo}</Badge>
+                            <div className="flex items-center gap-1 ml-auto">
+                              <WhatsAppAICallButton leadId={detailLead.id} leadNome={detailLead.nome} numero={t.numero} papel="sdr" />
+                               <Button
+                                size="sm"
+                                className="gap-1.5 bg-green-600 hover:bg-green-700 text-white h-8 px-2 text-xs"
+                                 onClick={(e) => {
+                                   const btn = e.currentTarget;
+                                   if (btn.dataset.opening) return;
+                                   btn.dataset.opening = "1";
+                                   setTimeout(() => delete btn.dataset.opening, 2000);
+                                   const sid = crypto.randomUUID().slice(0, 8);
+                                   window.open(
+                                     `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=whatsapp&funilId=${funilId}&papel=sdr&autoStart=true&sid=${sid}`,
+                                     `atendimento_${detailLead.id}_${sid}`,
+                                     "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
+                                   );
+                                 }}
+                                 disabled={!t.numero}
+                              >
+                                <Phone className="h-3.5 w-3.5" />
+                                WhatsApp
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="gap-1.5 h-8 px-2 text-xs"
+                                onClick={() => {
+                                  window.open(
+                                    `/atendimento?leadId=${detailLead.id}&numero=${encodeURIComponent(t.numero)}&tipo=voip&funilId=${funilId}&papel=sdr`,
+                                    `atendimento_${detailLead.id}`,
+                                    "width=1200,height=800,menubar=no,toolbar=no,location=no,status=no"
+                                  );
+                                }}
+                                disabled={!t.numero}
+                              >
+                                <Phone className="h-3.5 w-3.5" />
+                                Ligar
+                              </Button>
                             </div>
-                            {t.observacao && <p className="text-xs text-muted-foreground ml-6 mt-0.5 italic">{t.observacao}</p>}
                           </div>
-                        ))
-                      )}
+                          {t.observacao && <p className="text-xs text-muted-foreground ml-6 mt-0.5 italic">{t.observacao}</p>}
+                        </div>
+                      ))}
                     </div>
 
 
