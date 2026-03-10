@@ -204,29 +204,6 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
 
             <ScrollArea className="h-[50vh] pr-3">
               <div className="space-y-4">
-                {/* Native fields */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dados Nativos</h4>
-                  <div>
-                    <Label className="text-xs">Nome *</Label>
-                    <Input
-                      value={fieldValues["__nome__"] || ""}
-                      onChange={(e) => updateField("__nome__", e.target.value)}
-                      className="mt-0.5"
-                    />
-                  </div>
-                  {fieldValues["__endereco__"] !== undefined && (
-                    <div>
-                      <Label className="text-xs">Endereço</Label>
-                      <Input
-                        value={fieldValues["__endereco__"] || ""}
-                        onChange={(e) => updateField("__endereco__", e.target.value)}
-                        className="mt-0.5"
-                      />
-                    </div>
-                  )}
-                </div>
-
                 {/* Dynamic fields grouped by section */}
                 {groupedFields.map((group) => (
                   <div key={group.secaoNome} className="space-y-2">
