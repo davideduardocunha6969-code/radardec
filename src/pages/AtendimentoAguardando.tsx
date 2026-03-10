@@ -66,6 +66,8 @@ export default function AtendimentoAguardando() {
   const broadcastRef = useRef<BroadcastChannel | null>(null);
   const atendimentoWindowRef = useRef<Window | null>(null);
   const [answeredLeadName, setAnsweredLeadName] = useState("");
+  const [showOpenButton, setShowOpenButton] = useState(false);
+  const [atendimentoUrl, setAtendimentoUrl] = useState("");
 
   // Initialize BroadcastChannel
   useEffect(() => {
