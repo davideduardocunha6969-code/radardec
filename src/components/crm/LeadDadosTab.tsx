@@ -386,6 +386,8 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
           )}
         </div>
       )}
+
+      <ZapSignDialog open={zapSignOpen} onOpenChange={setZapSignOpen} lead={lead} />
     </div>
   );
 }
