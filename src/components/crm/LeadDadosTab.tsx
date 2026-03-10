@@ -14,7 +14,7 @@ import { getFieldValue, createField, type DadosExtrasMap } from "@/utils/trabalh
 
 interface TelefoneEntry {
   numero: string;
-  tipo?: string;
+  tipo: string;
   obs?: string;
 }
 
