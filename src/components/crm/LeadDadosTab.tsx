@@ -4,8 +4,7 @@ import { useCrmLeadSecoes } from "@/hooks/useCrmLeadSecoes";
 import { useUpdateLead, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
-import { Pencil, Save, X, Info, Phone, Plus, Trash2 } from "lucide-react";
+import { Pencil, Save, X, Info, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { formatCpf, normalizeCpf, isCpfKey } from "@/utils/cpfFormat";
 import { formatDateValue } from "@/utils/dateFormat";
@@ -26,20 +25,33 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [editTelefones, setEditTelefones] = useState<LeadTelefone[]>([]);
 
+  const isPhoneFieldKey = (key: string) => /^telefone_\d+$/.test(key);
   const camposExtended = (campos as (CrmLeadCampo & { secao_id?: string | null })[]) || [];
   const dadosExtras = (lead.dados_extras as DadosExtrasMap) || {};
 
+  // Merge legacy telefone_* from dados_extras into telefones array
   const telefones: LeadTelefone[] = useMemo(() => {
     const raw = lead.telefones as any;
-    if (Array.isArray(raw)) return raw.filter((t: any) => t?.numero);
-    return [];
-  }, [lead.telefones]);
+    const arr: LeadTelefone[] = Array.isArray(raw) ? raw.filter((t: any) => t?.numero) : [];
+    // If array is empty, try to recover from legacy dados_extras fields
+    if (arr.length === 0) {
+      for (let i = 1; i <= 4; i++) {
+        const { valor } = getFieldValue(dadosExtras, `telefone_${i}`);
+        if (valor.trim()) {
+          arr.push({ numero: valor.trim(), tipo: "celular", observacao: "" });
+        }
+      }
+    }
+    return arr;
+  }, [lead.telefones, dadosExtras]);
 
   const groupedCampos = useMemo(() => {
-    const semSecao = camposExtended.filter((c) => !c.secao_id);
+    // Filter out telefone_* fields — they are managed via the telefones array
+    const filtered = camposExtended.filter((c) => !isPhoneFieldKey(c.key));
+    const semSecao = filtered.filter((c) => !c.secao_id);
     const porSecao = (secoes || []).map((s) => ({
       secao: s,
-      campos: camposExtended.filter((c) => c.secao_id === s.id),
+      campos: filtered.filter((c) => c.secao_id === s.id),
     })).filter((g) => g.campos.length > 0);
     return { semSecao, porSecao };
   }, [camposExtended, secoes]);
@@ -70,16 +82,23 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
   const startEditing = () => {
     const values: Record<string, string> = {};
     camposExtended.forEach((c) => {
-      values[c.key] = getFieldValue(dadosExtras, c.key).valor;
+      if (!isPhoneFieldKey(c.key)) {
+        values[c.key] = getFieldValue(dadosExtras, c.key).valor;
+      }
     });
     values.__nome__ = lead.nome;
     values.__endereco__ = lead.endereco || "";
     setEditValues(values);
-    setEditTelefones(
-      telefones.length > 0
-        ? telefones.map((t) => ({ numero: t.numero, tipo: t.tipo, observacao: t.observacao }))
-        : [{ numero: "", tipo: "celular", observacao: "" }]
-    );
+    // Always provide 4 fixed slots for phones
+    const slots: LeadTelefone[] = [];
+    for (let i = 0; i < 4; i++) {
+      slots.push({
+        numero: telefones[i]?.numero || "",
+        tipo: telefones[i]?.tipo || "celular",
+        observacao: telefones[i]?.observacao || "",
+      });
+    }
+    setEditTelefones(slots);
     setEditing(true);
   };
 
@@ -207,15 +226,10 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
     setEditTelefones((prev) => prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)));
   };
 
-  const removeTelefone = (index: number) => {
-    setEditTelefones((prev) => prev.filter((_, i) => i !== index));
-  };
 
-  const addTelefone = () => {
-    setEditTelefones((prev) => [...prev, { numero: "", tipo: "celular", observacao: "" }]);
-  };
 
-  // Telefones UI blocks
+
+  // Telefones UI blocks — unified format with 4 fixed slots
   const renderTelefonesView = () => {
     if (telefones.length === 0) return null;
     return (
@@ -225,8 +239,8 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
           {telefones.map((tel, i) => (
             <div key={i} className="flex items-center gap-2 text-sm">
               <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="font-medium text-xs text-muted-foreground">Telefone {i + 1}:</span>
               <span>{tel.numero}</span>
-              {tel.tipo && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{tel.tipo}</Badge>}
               {tel.observacao && <span className="text-xs text-muted-foreground">({tel.observacao})</span>}
             </div>
           ))}
@@ -240,33 +254,24 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
       <label className="text-xs font-medium text-muted-foreground mb-2 block">Telefones</label>
       <div className="space-y-2">
         {editTelefones.map((tel, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <Input
-              value={tel.numero}
-              onChange={(e) => updateTelefone(i, "numero", e.target.value)}
-              placeholder="(00) 00000-0000"
-              className="flex-1"
-            />
-            <Input
-              value={tel.tipo || ""}
-              onChange={(e) => updateTelefone(i, "tipo", e.target.value)}
-              placeholder="Tipo"
-              className="w-24"
-            />
-            <Input
-              value={tel.observacao || ""}
-              onChange={(e) => updateTelefone(i, "observacao", e.target.value)}
-              placeholder="Obs"
-              className="w-32"
-            />
-            <Button variant="ghost" size="icon" onClick={() => removeTelefone(i)} className="shrink-0">
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+          <div key={i} className="space-y-1">
+            <label className="text-xs text-muted-foreground">Telefone {i + 1}</label>
+            <div className="flex items-center gap-2">
+              <Input
+                value={tel.numero}
+                onChange={(e) => updateTelefone(i, "numero", e.target.value)}
+                placeholder="(00) 00000-0000"
+                className="flex-1"
+              />
+              <Input
+                value={tel.observacao || ""}
+                onChange={(e) => updateTelefone(i, "observacao", e.target.value)}
+                placeholder="Observação"
+                className="w-40"
+              />
+            </div>
           </div>
         ))}
-        <Button variant="outline" size="sm" onClick={addTelefone}>
-          <Plus className="h-3.5 w-3.5 mr-1" />Adicionar Telefone
-        </Button>
       </div>
     </div>
   );
