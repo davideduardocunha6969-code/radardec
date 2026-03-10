@@ -1,42 +1,55 @@
 
-# Tres Paineis de Atendimento — Status
 
-## Fase 1 — Infraestrutura ✅ CONCLUÍDA
+## Integração ZapSign — Assinatura Digital via Templates
 
-- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
-- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
-- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
-- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
-- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
-- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
-- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
-- [x] Interface `RoboCoach` e mutations atualizados com novos campos
+### Resumo
+Botão "Enviar para Assinatura" na aba Dados do Lead. Ao clicar, abre dialog que lista templates ZapSign, pré-preenche os dados do signatário a partir dos campos da seção "Dados de Contato" do lead (nome, email, telefone, CPF, etc.), permite edição, e envia para assinatura. O link gerado pode ser copiado.
 
-## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
-- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
-- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
-- [x] `estimarImpactoCampo()` — para ordenação de lacunas
-- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
-- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
+### Pré-requisito
+- Secret `ZAPSIGN_API_TOKEN` (token da API ZapSign) — será solicitado ao usuário.
 
-## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
-- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
-- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
-- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
-- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
-- [x] Botão Confirmar promove campo para manual
-- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
+### Arquivos novos
 
-## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
-- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
-- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
-- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
-- [x] Debounce de 2s nas mudanças de dados
-- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
-- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
+**1. Migração SQL — tabela `zapsign_documentos`**
+- Colunas: `id`, `lead_id` (uuid), `user_id` (uuid), `doc_token`, `signer_token`, `sign_url`, `template_id`, `template_nome`, `status` (text default 'pendente'), `dados_enviados` (jsonb), `created_at`
+- RLS: authenticated users podem INSERT e SELECT onde `user_id = auth.uid()`
 
-## Fase 5 — Integração Final ✅ CONCLUÍDA
-- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
-- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
-- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
-- [x] Config.toml atualizado com as duas novas funções
+**2. `supabase/functions/zapsign-list-templates/index.ts`**
+- GET `https://api.zapsign.com.br/api/v1/models/` com `Authorization: Bearer {ZAPSIGN_API_TOKEN}`
+- Retorna lista de templates
+
+**3. `supabase/functions/zapsign-create-doc/index.ts`**
+- Recebe: `template_id`, `signer_name`, `signer_email`, `signer_phone`, `lead_id`, `user_id`
+- POST `https://api.zapsign.com.br/api/v1/models/create-doc/`
+- Salva registro em `zapsign_documentos` via service_role
+- Retorna `sign_url`
+
+**4. `src/hooks/useZapSignDocumentos.ts`**
+- Query: lista documentos por `lead_id`
+- Mutations: listar templates (via edge function) e criar documento
+
+**5. `src/components/crm/ZapSignDialog.tsx`**
+- Dialog com 2 passos:
+  - **Passo 1**: Selecionar template (dropdown)
+  - **Passo 2**: Revisar/editar dados do signatário — pré-preenchidos da seção "Dados de Contato" do lead
+- Lógica de pré-preenchimento: identifica a seção cujo nome contém "contato" (mesmo padrão já usado em `LeadDadosTab` via `contatoSecaoId`), extrai todos os campos dessa seção + telefones do lead usando `getFieldValue`
+- Botão "Enviar para Assinatura" → chama edge function → exibe link com botão copiar
+
+### Arquivo modificado
+
+**6. `src/components/crm/LeadDadosTab.tsx`**
+- Adicionar botão com ícone `FileSignature` ao lado do botão "Editar"
+- Abre `ZapSignDialog` passando `lead`, `campos` filtrados pela seção de contato, e `telefones`
+
+### Fluxo
+```text
+Aba Dados → Botão "Enviar para Assinatura"
+  → Dialog abre
+  → Seleciona template ZapSign
+  → Campos da seção "Dados de Contato" pré-preenchidos (editáveis)
+  → Clica "Enviar"
+  → Edge function cria doc na ZapSign
+  → Salva em zapsign_documentos
+  → Exibe link de assinatura com botão copiar
+```
+
