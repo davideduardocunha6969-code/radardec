@@ -4,12 +4,13 @@ import { useCrmLeadSecoes } from "@/hooks/useCrmLeadSecoes";
 import { useUpdateLead, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pencil, Save, X, Info, Phone } from "lucide-react";
+import { Pencil, Save, X, Info, Phone, FileSignature } from "lucide-react";
 import { toast } from "sonner";
 import { formatCpf, normalizeCpf, isCpfKey } from "@/utils/cpfFormat";
 import { formatDateValue } from "@/utils/dateFormat";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getFieldValue, createField, type DadosExtrasMap } from "@/utils/trabalhista/types";
+import { ZapSignDialog } from "./ZapSignDialog";
 
 interface LeadDadosTabProps {
   lead: CrmLead;
