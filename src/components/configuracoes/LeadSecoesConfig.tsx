@@ -26,7 +26,7 @@ interface DraggableCampoProps {
   isDragging?: boolean;
 }
 
-function DraggableCampo({ campo, isDragging, onEditDescricao }: DraggableCampoProps & { onEditDescricao?: (campo: CrmLeadCampo & { secao_id?: string | null }) => void }) {
+function DraggableCampo({ campo, isDragging, onEditDescricao, onDelete }: DraggableCampoProps & { onEditDescricao?: (campo: CrmLeadCampo & { secao_id?: string | null }) => void; onDelete?: (campo: CrmLeadCampo) => void }) {
   const desc = (campo as any).descricao;
   return (
     <div
@@ -57,6 +57,15 @@ function DraggableCampo({ campo, isDragging, onEditDescricao }: DraggableCampoPr
         title="Editar descrição"
       >
         <Info className="h-3 w-3" />
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 shrink-0 text-destructive hover:text-destructive"
+        onClick={(e) => { e.stopPropagation(); onDelete?.(campo); }}
+        title="Excluir campo"
+      >
+        <X className="h-3 w-3" />
       </Button>
     </div>
   );
