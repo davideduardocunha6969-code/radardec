@@ -100,4 +100,10 @@ verify_jwt = false
  verify_jwt = false
 
  [functions.feedback-chamada]
+  verify_jwt = false
+
+ [functions.zapsign-list-templates]
+ verify_jwt = false
+
+ [functions.zapsign-create-doc]
  verify_jwt = false
