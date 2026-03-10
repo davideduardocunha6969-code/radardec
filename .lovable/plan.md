@@ -1,25 +1,42 @@
 
+# Tres Paineis de Atendimento — Status
 
-## Bug: Telefones sumiram da aba Dados
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-### Causa raiz
-Linha 55 do `LeadDadosTab.tsx`:
-```
-.filter((g) => g.campos.length > 0)
-```
-Após filtrar campos `telefone_*` (linha 50), a seção "Dados de Contato" fica com 0 campos e é removida do array `porSecao`. Porém, `contatoSecaoId` continua definido (linha 61), então `hasContatoSection = true` e o fallback no final também não renderiza. Resultado: telefones não aparecem em lugar nenhum.
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-### Correção
-Alterar o filtro na linha 55 para **manter** a seção "contato" mesmo que tenha 0 campos não-telefone, pois os telefones serão injetados nela:
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-```typescript
-.filter((g) => g.campos.length > 0 || g.secao.id === contatoSecaoId)
-```
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-Problema: `contatoSecaoId` é calculado depois de `groupedCampos`. Solução: mover o cálculo de `contatoSecaoId` para antes do `groupedCampos`, ou calcular inline.
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-### Alterações em `src/components/crm/LeadDadosTab.tsx`
-1. Mover o `useMemo` de `contatoSecaoId` (linhas 59-63) para **antes** do `useMemo` de `groupedCampos` (linha 48)
-2. Incluir `contatoSecaoId` como dependência do `groupedCampos`
-3. Alterar o filtro para: `.filter((g) => g.campos.length > 0 || g.secao.id === contatoSecaoId)`
-
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções
