@@ -802,7 +802,7 @@ export default function ReelsMachine() {
   const [selectedProject, setSelectedProject] = useState<string>("todos");
   const [isGenerating, setIsGenerating] = useState(false);
   const [progressInfo, setProgressInfo] = useState({ current: 0, total: 0, step: "" });
-  const pollingRef = useRef<NodeJS.Timeout | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Load data from DB
   const loadData = useCallback(async () => {

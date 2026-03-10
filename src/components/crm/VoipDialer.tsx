@@ -50,7 +50,7 @@ export function VoipDialer({ leadId, leadNome, numero, papel, onCallStatusChange
 
   const deviceRef = useRef<any>(null);
   const callRef = useRef<any>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
   const durationRef = useRef(0);
   const chamadaIdRef = useRef<string | null>(null);
