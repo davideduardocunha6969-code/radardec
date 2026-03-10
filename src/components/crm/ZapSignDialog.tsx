@@ -55,8 +55,12 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
         secaoEntry.fields.push({ key: campo.key, nome: campo.nome });
         // Get value from dados_extras
         const { valor } = getFieldValue(dadosExtras, campo.key);
-        if (valor.trim()) {
-          values[campo.key] = valor;
+        let finalValue = valor.trim();
+        if (!finalValue && campo.key === "nome" && lead.nome) {
+          finalValue = lead.nome;
+        }
+        if (finalValue) {
+          values[campo.key] = finalValue;
         }
       }
     }
