@@ -1,42 +1,49 @@
 
-# Tres Paineis de Atendimento — Status
 
-## Fase 1 — Infraestrutura ✅ CONCLUÍDA
+## Correção: Enviar dados do lead como variáveis do template ZapSign
 
-- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
-- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
-- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
-- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
-- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
-- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
-- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
-- [x] Interface `RoboCoach` e mutations atualizados com novos campos
+### Problema
+Você tem razão em dois pontos:
 
-## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
-- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
-- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
-- [x] `estimarImpactoCampo()` — para ordenação de lacunas
-- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
-- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
+1. **Dados incompletos**: O dialog só envia nome, email e telefone — mas deveria enviar TODOS os campos da seção "Dados Pessoais" (e potencialmente outras seções) do lead.
+2. **Mapeamento de variáveis**: A API ZapSign usa variáveis dinâmicas no formato `{{nome_variavel}}` dentro do DOCX. Para preencher essas variáveis, o endpoint `create-doc` aceita um array `data` com pares `de`/`para` (de = nome da variável no template, para = valor a substituir). Atualmente, não estamos enviando esse array.
 
-## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
-- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
-- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
-- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
-- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
-- [x] Botão Confirmar promove campo para manual
-- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
+### Como funciona o ZapSign
+O template DOCX deve conter placeholders como `{{nome_completo}}`, `{{cpf}}`, `{{endereco}}`, etc. Na chamada da API, enviamos:
+```text
+data: [
+  { "de": "nome_completo", "para": "LUCAS CARDOSO DA COSTA REIS" },
+  { "de": "cpf",           "para": "123.456.789-00" },
+  { "de": "email",         "para": "david@..." },
+  ...
+]
+```
 
-## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
-- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
-- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
-- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
-- [x] Debounce de 2s nas mudanças de dados
-- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
-- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
+### Plano de implementação
 
-## Fase 5 — Integração Final ✅ CONCLUÍDA
-- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
-- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
-- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
-- [x] Config.toml atualizado com as duas novas funções
+**1. Frontend — `ZapSignDialog.tsx`**
+- No step 2, em vez de mostrar apenas nome/email/telefone, coletar TODOS os campos de TODAS as seções do lead (ou pelo menos "Dados Pessoais" + "Dados de Contato")
+- Mostrar uma lista editável com os campos do lead e seus valores pré-preenchidos do `dados_extras`
+- Incluir também o campo `nome` nativo do lead
+- Enviar todos os dados como um objeto `field_data` para a edge function
+
+**2. Edge Function — `zapsign-create-doc/index.ts`**
+- Corrigir o endpoint para `POST /api/v1/models/create-doc/` (que é o endpoint correto segundo a documentação oficial)
+- Receber o `field_data` (Record de key→value) do frontend
+- Montar o array `data` no formato `[{ de: "{{key}}", para: "valor" }, ...]`
+- Enviar junto com `signer_name`, `signer_email`, `signer_phone` e `template_id`
+
+**3. Frontend — Step 2 revisado**
+- Agrupar campos por seção (Dados Pessoais, Dados de Contato, etc.)
+- Cada campo editável com label = nome do campo e valor pré-preenchido do `dados_extras`
+- Scroll area para comportar muitos campos
+- O usuário pode revisar/editar antes de enviar
+
+### Nota importante sobre os templates DOCX
+Para que o preenchimento automático funcione, as variáveis no template DOCX devem corresponder exatamente às keys dos campos do CRM (ex: `{{nome_completo}}`, `{{cpf}}`, `{{data_nascimento}}`). Isso é configurado diretamente no arquivo DOCX do template no painel ZapSign — não é algo que configuramos via código.
+
+### Arquivos alterados
+- `src/components/crm/ZapSignDialog.tsx` — redesenhar step 2 para mostrar todos os campos do lead
+- `src/hooks/useZapSignDocumentos.ts` — ajustar interface de parâmetros para incluir `field_data`
+- `supabase/functions/zapsign-create-doc/index.ts` — corrigir endpoint e montar array `data` com pares de/para
+
