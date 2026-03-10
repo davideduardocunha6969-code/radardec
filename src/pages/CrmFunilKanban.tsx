@@ -465,7 +465,7 @@ export default function CrmFunilKanban() {
       />
 
       {/* Dialog Detalhe Lead */}
-      <Dialog open={!!detailLead} onOpenChange={(o) => { if (!o) { setDetailLead(null); setEditingLeadData(false); } }}>
+      <Dialog open={!!detailLead} onOpenChange={(o) => { if (!o) { setDetailLead(null); } }}>
         <DialogContent className="max-w-[100vw] w-[100vw] h-[100vh] max-h-[100vh] rounded-none border-0 overflow-y-auto overflow-x-hidden flex flex-col p-0">
           <DialogHeader className="px-6 pt-4 pb-2 shrink-0 border-b">
             <DialogTitle>{detailLead?.nome}</DialogTitle>
