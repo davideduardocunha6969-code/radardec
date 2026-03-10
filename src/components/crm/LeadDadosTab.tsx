@@ -363,7 +363,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
             const filled = secaoCampos.filter(hasValue);
             const isContatoSection = secao.id === contatoSecaoId;
             // Show contato section if it has telefones OR filled fields
-            if (filled.length === 0 && !(isContatoSection && telefones.length > 0)) return null;
+            if (filled.length === 0 && !(isContatoSection && (telefones.length > 0 || lead.email))) return null;
             return (
               <div key={secao.id}>
                 <div className="flex items-center gap-2 mb-3 mt-1">

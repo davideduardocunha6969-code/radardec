@@ -138,8 +138,8 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
         template_id: selectedTemplate,
         template_nome: selectedTemplateName,
         signer_name: name,
-        signer_email: fieldData["email"] || undefined,
-        signer_phone: fieldData["telefone"] || undefined,
+        signer_email: fieldData["__email__"] || lead.email || undefined,
+        signer_phone: fieldData["__telefone__"] || (Array.isArray(lead.telefones) && (lead.telefones as LeadTelefone[])[0]?.numero) || undefined,
         lead_id: lead.id,
         field_data: fieldData,
       });
