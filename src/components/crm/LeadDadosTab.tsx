@@ -91,6 +91,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
     });
     values.__nome__ = lead.nome;
     values.__endereco__ = lead.endereco || "";
+    values.__email__ = lead.email || "";
     setEditValues(values);
     // Always provide 4 fixed slots for phones
     const slots: LeadTelefone[] = [];
