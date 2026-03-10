@@ -9,9 +9,9 @@ import { useZapSignTemplates, useCreateZapSignDoc } from "@/hooks/useZapSignDocu
 import { useCrmLeadCampos } from "@/hooks/useCrmLeadCampos";
 import { useCrmLeadSecoes } from "@/hooks/useCrmLeadSecoes";
 import { getFieldValue, type DadosExtrasMap } from "@/utils/trabalhista/types";
-import type { CrmLead } from "@/hooks/useCrmOutbound";
+import type { CrmLead, LeadTelefone } from "@/hooks/useCrmOutbound";
 import { toast } from "sonner";
-import { Copy, Check, Loader2, FileSignature } from "lucide-react";
+import { Copy, Check, Loader2, FileSignature, Mail, Phone } from "lucide-react";
 
 interface ZapSignDialogProps {
   open: boolean;
