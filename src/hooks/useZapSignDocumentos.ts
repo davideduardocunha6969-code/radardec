@@ -61,6 +61,7 @@ export function useCreateZapSignDoc() {
       signer_email?: string;
       signer_phone?: string;
       lead_id: string;
+      field_data?: Record<string, string>;
     }) => {
       const { data, error } = await supabase.functions.invoke("zapsign-create-doc", {
         body: params,

@@ -36,7 +36,7 @@ Deno.serve(async (req) => {
 
     const userId = userData.user.id;
     const body = await req.json();
-    const { template_id, signer_name, signer_email, signer_phone, lead_id, template_nome } = body;
+    const { template_id, signer_name, signer_email, signer_phone, lead_id, template_nome, field_data } = body;
 
     if (!template_id || !signer_name || !lead_id) {
       return new Response(JSON.stringify({ error: "template_id, signer_name e lead_id são obrigatórios" }), {
@@ -53,13 +53,29 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Build the data array for template variable replacement
+    const dataArray: Array<{ de: string; para: string }> = [];
+    if (field_data && typeof field_data === "object") {
+      for (const [key, value] of Object.entries(field_data)) {
+        if (typeof value === "string" && value.trim()) {
+          dataArray.push({ de: `{{${key}}}`, para: value.trim() });
+        }
+      }
+    }
+
     const zapBody: Record<string, unknown> = {
       signer_name,
+      ...(signer_email && { signer_email }),
+      ...(signer_phone && { signer_phone }),
+      ...(dataArray.length > 0 && { data: dataArray }),
     };
-    if (signer_email) zapBody.signer_email = signer_email;
-    if (signer_phone) zapBody.signer_phone = signer_phone;
 
-    const resp = await fetch(`https://api.zapsign.com.br/api/v1/templates/${template_id}/create-doc/`, {
+    console.log("DEBUG: ZapSign create-doc payload:", JSON.stringify(zapBody));
+
+    const apiUrl = `https://api.zapsign.com.br/api/v1/templates/${template_id}/create-doc/`;
+    console.log("DEBUG: Requesting URL:", apiUrl);
+
+    const resp = await fetch(apiUrl, {
       method: "POST",
       headers: {
         Authorization: `Bearer ${zapSignToken}`,
@@ -100,7 +116,7 @@ Deno.serve(async (req) => {
       template_nome: template_nome || "",
       nome_documento: docResult.name || signer_name,
       status: "pendente",
-      dados_enviados: { signer_name, signer_email, signer_phone },
+      dados_enviados: { signer_name, signer_email, signer_phone, field_data },
     });
 
     if (insertError) {
