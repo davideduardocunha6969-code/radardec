@@ -312,8 +312,9 @@ export function LeadSecoesConfig() {
             onConfirmEdit={() => handleRenameSecao(secao.id)}
             onCancelEdit={() => setEditingSecao(null)}
             onDelete={() => handleDeleteSecao(secao.id)}
-            onEditDescricao={handleEditDescricao}
-          />
+             onEditDescricao={handleEditDescricao}
+             onDeleteCampo={handleDeleteCampo}
+           />
         ))}
 
         <DragOverlay>
