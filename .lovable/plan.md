@@ -1,42 +1,66 @@
 
-# Tres Paineis de Atendimento — Status
 
-## Fase 1 — Infraestrutura ✅ CONCLUÍDA
+## Correção: Atendimento Inline no Power Dialer com Retry de Streams
 
-- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
-- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
-- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
-- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
-- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
-- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
-- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
-- [x] Interface `RoboCoach` e mutations atualizados com novos campos
+### Resumo
+Eliminar a segunda janela (`window.open`). Quando a chamada conectar, renderizar o coaching completo diretamente dentro de `AtendimentoAguardando`, passando os streams reais do Twilio ao `RealtimeCoachingPanel`. Incluir retry com até 5 tentativas para capturar streams.
 
-## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
-- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
-- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
-- [x] `estimarImpactoCampo()` — para ordenação de lacunas
-- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
-- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
+### Alterações — `src/pages/AtendimentoAguardando.tsx` (único arquivo)
 
-## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
-- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
-- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
-- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
-- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
-- [x] Botão Confirmar promove campo para manual
-- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
+**1. Novos imports**
+- `RealtimeCoachingPanel`, `AudioMonitorInfo`, `LabeledTranscript`
+- `CoachingErrorBoundary`
+- `GapsPanel`, `DataExtractorPanel`, `ValuesEstimationPanel`
+- `useLeadDadosSync`
+- `Tooltip`, `TooltipProvider`, `TooltipTrigger`, `TooltipContent`
+- `FileSearch`, `HelpCircle`, `Calculator`, `User`, `MapPin`, `FileText`
+- Types: `RoboCoach`, `ScriptSdr`
+- `getFieldValue`, `DadosExtrasMap`
+- `logoEscritorio`
 
-## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
-- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
-- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
-- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
-- [x] Debounce de 2s nas mudanças de dados
-- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
-- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
+**2. Novos estados (topo do componente)**
+```typescript
+const [callStreams, setCallStreams] = useState<{ mic: MediaStream | null; remote: MediaStream | null }>({ mic: null, remote: null });
+const [coach, setCoach] = useState<RoboCoach | null>(null);
+const [script, setScript] = useState<ScriptSdr | null>(null);
+const [leadData, setLeadData] = useState<any>(null);
+const [transcriptChunks, setTranscriptChunks] = useState<LabeledTranscript[]>([]);
+const [activePanel, setActivePanel] = useState<"extrator" | "lacunas" | "estimativa" | null>(null);
+const leadDadosSync = useLeadDadosSync(leadData?.id ?? null);
+```
 
-## Fase 5 — Integração Final ✅ CONCLUÍDA
-- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
-- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
-- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
-- [x] Config.toml atualizado com as duas novas funções
+**3. Remover** `showOpenButton`, `atendimentoUrl`, `atendimentoWindowRef` e o useEffect que preparava URL/botão (linhas 67-70 e 141-160)
+
+**4. Captura de streams com retry** — dentro de `device.on("incoming")`, após `call.accept()`:
+```typescript
+const tryGetStreams = (attempt = 0) => {
+  const localStream = (call as any).getLocalStream?.() ?? null;
+  const remoteStream = (call as any).getRemoteStream?.() ?? null;
+  if ((!localStream || !remoteStream) && attempt < 5) {
+    setTimeout(() => tryGetStreams(attempt + 1), 500);
+    return;
+  }
+  setCallStreams({ mic: localStream, remote: remoteStream });
+};
+setTimeout(() => tryGetStreams(), 500);
+```
+
+**5. Fetch coaching data** — novo `useEffect` quando `session.lead_atendido_id` é setado:
+- Buscar lead de `crm_leads` (mesma query de Atendimento.tsx linha 134-138)
+- Buscar funil via `crm_funis` usando `session.funil_id` e `session.papel`
+- Setar `coach` e `script` (copiar lógica de Atendimento.tsx linhas 146-179)
+
+**6. Substituir render `callActive`** (linhas 319-385) pelo layout completo:
+- Header com logo, nome do lead, badge SDR/Closer, badge Power Dialer
+- Barra de contexto do lead (dados_extras + resumo_caso)
+- Barra de chamada: nome, timer, botões mute/hangup
+- `RealtimeCoachingPanel` com `micStream={callStreams.mic}`, `systemStream={callStreams.remote}`, `coach`, `script`, `leadNome`, `leadContext`, `isRecording={true}`, `onTranscriptUpdate`
+- Sidebar de ícones (Extrator, Lacunas, Estimativa) com painéis deslizantes — copiar estrutura de Atendimento.tsx linhas 357-416
+- Mensagem "Conectando áudio..." enquanto `callStreams.mic` é null
+
+### O que NÃO muda
+- `RealtimeCoachingPanel` — zero alterações
+- `Atendimento.tsx` — mantém como está (usado para discagem direta)
+- Edge functions — nenhuma alteração
+- Nenhuma migration
+
