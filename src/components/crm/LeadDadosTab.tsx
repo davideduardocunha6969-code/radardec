@@ -64,11 +64,12 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
     return { semSecao, porSecao };
   }, [camposExtended, secoes, contatoSecaoId]);
 
-  const nativeKeys = ["__nome__", "__endereco__"];
+  const nativeKeys = ["__nome__", "__endereco__", "__email__"];
 
   const getNativeValue = (key: string) => {
     if (key === "__nome__") return lead.nome;
     if (key === "__endereco__") return lead.endereco || "";
+    if (key === "__email__") return lead.email || "";
     return "";
   };
 
