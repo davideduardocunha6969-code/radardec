@@ -66,6 +66,15 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
       }
     }
 
+    // Inject native contact fields (email + first phone) into values
+    if (lead.email) {
+      values["__email__"] = lead.email;
+    }
+    const telefones = Array.isArray(lead.telefones) ? lead.telefones as LeadTelefone[] : [];
+    if (telefones.length > 0 && telefones[0]?.numero) {
+      values["__telefone__"] = telefones[0].numero;
+    }
+
     // Sort sections by ordem and build groups
     const sorted = Array.from(secaoMap.values())
       .filter((s) => s.fields.length > 0)
@@ -73,6 +82,14 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
 
     for (const s of sorted) {
       groups.push({ secaoNome: s.nome, fields: s.fields });
+    }
+
+    // Add native contact group at the end
+    const contactFields: Array<{ key: string; nome: string }> = [];
+    if (lead.email !== undefined) contactFields.push({ key: "__email__", nome: "Email" });
+    if (telefones.length > 0) contactFields.push({ key: "__telefone__", nome: "Telefone" });
+    if (contactFields.length > 0) {
+      groups.push({ secaoNome: "Contato (Signatário)", fields: contactFields });
     }
 
     return { groupedFields: groups, initialFieldValues: values };
