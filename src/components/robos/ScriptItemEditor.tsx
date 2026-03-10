@@ -6,6 +6,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, X, GripVertical, GitBranch, ChevronDown, ChevronRight, Database } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { DndContext, closestCenter, PointerSensor, KeyboardSensor, useSensor, useSensors, type DragEndEvent } from "@dnd-kit/core";
+import { SortableContext, verticalListSortingStrategy, useSortable, arrayMove } from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 const TIPO_CAMPO_OPTIONS = [
   { value: "", label: "Nenhum" },
@@ -138,8 +141,96 @@ function SubItemEditor({
   );
 }
 
+function SortableScriptItem({
+  item,
+  index,
+  isExpanded,
+  onToggleExpand,
+  onUpdateItem,
+  onRemoveItem,
+  onAddCondicional,
+  onUpdateSubItems,
+}: {
+  item: ScriptItem;
+  index: number;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+  onUpdateItem: (field: string, value: any) => void;
+  onRemoveItem: () => void;
+  onAddCondicional: () => void;
+  onUpdateSubItems: (subs: ScriptItem[]) => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: item.id });
+  const style = { transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.5 : 1 };
+  const subCount = item.sub_items?.length || 0;
+
+  return (
+    <div ref={setNodeRef} style={style}>
+      <div className="flex gap-2 items-start bg-muted/30 rounded-md p-2">
+        <button
+          {...attributes}
+          {...listeners}
+          className="cursor-grab active:cursor-grabbing p-0.5 rounded hover:bg-muted touch-none shrink-0 mt-2"
+          aria-label="Arrastar para reordenar"
+        >
+          <GripVertical className="h-4 w-4 text-muted-foreground" />
+        </button>
+        <div className="flex-1 space-y-1">
+          <Input
+            value={item.label}
+            onChange={(e) => onUpdateItem("label", e.target.value)}
+            placeholder="Título (ex: Jornada diária)"
+            className="h-8 text-sm"
+          />
+          <Textarea
+            value={item.description}
+            onChange={(e) => onUpdateItem("description", e.target.value)}
+            placeholder="Fala/pergunta sugerida"
+            className="text-xs min-h-[60px] resize-y"
+          />
+          <CampoLeadFields item={item} onChange={(field, value) => onUpdateItem(field, value)} />
+          {item.campo_lead_key && (
+            <Badge variant="outline" className="text-[10px] h-5 px-1.5 gap-1 mt-0.5">
+              <Database className="h-3 w-3" />
+              {item.campo_lead_key}
+              {item.tipo_campo && <span className="text-muted-foreground">({item.tipo_campo})</span>}
+            </Badge>
+          )}
+        </div>
+        <div className="flex flex-col items-center gap-1 shrink-0">
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onAddCondicional} title="Adicionar pergunta condicional">
+            <GitBranch className="h-3.5 w-3.5 text-primary" />
+          </Button>
+          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={onRemoveItem}>
+            <X className="h-3.5 w-3.5 text-destructive" />
+          </Button>
+        </div>
+      </div>
+      {subCount > 0 && (
+        <div className="ml-8 mt-1">
+          <button
+            onClick={onToggleExpand}
+            className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
+          >
+            {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
+            <GitBranch className="h-3 w-3 text-primary/60" />
+            <Badge variant="outline" className="text-[9px] h-4 px-1.5">{subCount} condicional{subCount > 1 ? "is" : ""}</Badge>
+          </button>
+          {isExpanded && (
+            <SubItemEditor subItems={item.sub_items || []} onChange={onUpdateSubItems} />
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export function ScriptItemEditor({ title, icon, items, onChange }: ScriptItemEditorProps) {
   const [expandedItems, setExpandedItems] = useState<Set<number>>(new Set());
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+    useSensor(KeyboardSensor)
+  );
 
   const addItem = () => {
     onChange([...items, { id: `item_${Date.now()}`, label: "", description: "" }]);
@@ -159,10 +250,7 @@ export function ScriptItemEditor({ title, icon, items, onChange }: ScriptItemEdi
     onChange(updated);
   };
   const updateSubItems = (index: number, subItems: ScriptItem[]) => {
-    const updated = items.map((item, i) =>
-      i === index ? { ...item, sub_items: subItems } : item
-    );
-    onChange(updated);
+    onChange(items.map((item, i) => i === index ? { ...item, sub_items: subItems } : item));
   };
   const toggleExpand = (index: number) => {
     setExpandedItems(prev => {
@@ -175,6 +263,26 @@ export function ScriptItemEditor({ title, icon, items, onChange }: ScriptItemEdi
     const current = items[index].sub_items || [];
     updateSubItems(index, [...current, { id: `sub_${Date.now()}`, label: "", description: "" }]);
     setExpandedItems(prev => new Set(prev).add(index));
+  };
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = items.findIndex(i => i.id === active.id);
+    const newIndex = items.findIndex(i => i.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    onChange(arrayMove(items, oldIndex, newIndex));
+    // Update expanded set to follow moved items
+    setExpandedItems(prev => {
+      const n = new Set<number>();
+      prev.forEach(idx => {
+        if (idx === oldIndex) n.add(newIndex);
+        else if (oldIndex < newIndex && idx > oldIndex && idx <= newIndex) n.add(idx - 1);
+        else if (oldIndex > newIndex && idx >= newIndex && idx < oldIndex) n.add(idx + 1);
+        else n.add(idx);
+      });
+      return n;
+    });
   };
 
   return (
@@ -190,70 +298,25 @@ export function ScriptItemEditor({ title, icon, items, onChange }: ScriptItemEdi
           Nenhum item. Clique em "+ Item" para adicionar.
         </p>
       )}
-      <div className="space-y-2">
-        {items.map((item, i) => {
-          const subCount = item.sub_items?.length || 0;
-          const isExpanded = expandedItems.has(i);
-          return (
-            <div key={i}>
-              <div className="flex gap-2 items-start bg-muted/30 rounded-md p-2">
-                <GripVertical className="h-4 w-4 text-muted-foreground shrink-0 mt-2 opacity-40" />
-                <div className="flex-1 space-y-1">
-                  <Input
-                    value={item.label}
-                    onChange={(e) => updateItem(i, "label", e.target.value)}
-                    placeholder="Título (ex: Jornada diária)"
-                    className="h-8 text-sm"
-                  />
-                  <Textarea
-                    value={item.description}
-                    onChange={(e) => updateItem(i, "description", e.target.value)}
-                    placeholder="Fala/pergunta sugerida"
-                    className="text-xs min-h-[60px] resize-y"
-                  />
-                  <CampoLeadFields
-                    item={item}
-                    onChange={(field, value) => updateItem(i, field, value)}
-                  />
-                  {item.campo_lead_key && (
-                    <Badge variant="outline" className="text-[10px] h-5 px-1.5 gap-1 mt-0.5">
-                      <Database className="h-3 w-3" />
-                      {item.campo_lead_key}
-                      {item.tipo_campo && <span className="text-muted-foreground">({item.tipo_campo})</span>}
-                    </Badge>
-                  )}
-                </div>
-                <div className="flex flex-col items-center gap-1 shrink-0">
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => addCondicional(i)} title="Adicionar pergunta condicional">
-                    <GitBranch className="h-3.5 w-3.5 text-primary" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => removeItem(i)}>
-                    <X className="h-3.5 w-3.5 text-destructive" />
-                  </Button>
-                </div>
-              </div>
-              {subCount > 0 && (
-                <div className="ml-8 mt-1">
-                  <button
-                    onClick={() => toggleExpand(i)}
-                    className="flex items-center gap-1 text-[10px] text-muted-foreground hover:text-foreground transition-colors"
-                  >
-                    {isExpanded ? <ChevronDown className="h-3 w-3" /> : <ChevronRight className="h-3 w-3" />}
-                    <GitBranch className="h-3 w-3 text-primary/60" />
-                    <Badge variant="outline" className="text-[9px] h-4 px-1.5">{subCount} condicional{subCount > 1 ? "is" : ""}</Badge>
-                  </button>
-                  {isExpanded && (
-                    <SubItemEditor
-                      subItems={item.sub_items || []}
-                      onChange={(subs) => updateSubItems(i, subs)}
-                    />
-                  )}
-                </div>
-              )}
-            </div>
-          );
-        })}
-      </div>
+      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <SortableContext items={items.map(i => i.id)} strategy={verticalListSortingStrategy}>
+          <div className="space-y-2">
+            {items.map((item, i) => (
+              <SortableScriptItem
+                key={item.id}
+                item={item}
+                index={i}
+                isExpanded={expandedItems.has(i)}
+                onToggleExpand={() => toggleExpand(i)}
+                onUpdateItem={(field, value) => updateItem(i, field, value)}
+                onRemoveItem={() => removeItem(i)}
+                onAddCondicional={() => addCondicional(i)}
+                onUpdateSubItems={(subs) => updateSubItems(i, subs)}
+              />
+            ))}
+          </div>
+        </SortableContext>
+      </DndContext>
     </div>
   );
 }
