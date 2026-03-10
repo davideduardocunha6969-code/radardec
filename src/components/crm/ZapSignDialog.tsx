@@ -38,11 +38,12 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
     const values: Record<string, string> = {};
     const groups: Array<{ secaoNome: string; fields: Array<{ key: string; nome: string }> }> = [];
 
-    // Filter only "Dados Pessoais" section
+    // Filter "Dados Pessoais" and "Dados de Contato" sections
     const secaoMap = new Map<string, { nome: string; ordem: number; fields: Array<{ key: string; nome: string }> }>();
 
     for (const secao of secoes) {
-      if (secao.nome.toLowerCase().includes("dados pessoais")) {
+      const lower = secao.nome.toLowerCase();
+      if (lower.includes("dados pessoais") || lower.includes("contato")) {
         secaoMap.set(secao.id, { nome: secao.nome, ordem: secao.ordem, fields: [] });
       }
     }
