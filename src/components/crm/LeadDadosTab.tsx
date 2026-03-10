@@ -4,7 +4,7 @@ import { useCrmLeadSecoes } from "@/hooks/useCrmLeadSecoes";
 import { useUpdateLead, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pencil, Save, X, Info, Phone, FileSignature } from "lucide-react";
+import { Pencil, Save, X, Info, Phone, FileSignature, Mail } from "lucide-react";
 import { toast } from "sonner";
 import { formatCpf, normalizeCpf, isCpfKey } from "@/utils/cpfFormat";
 import { formatDateValue } from "@/utils/dateFormat";
@@ -64,11 +64,12 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
     return { semSecao, porSecao };
   }, [camposExtended, secoes, contatoSecaoId]);
 
-  const nativeKeys = ["__nome__", "__endereco__"];
+  const nativeKeys = ["__nome__", "__endereco__", "__email__"];
 
   const getNativeValue = (key: string) => {
     if (key === "__nome__") return lead.nome;
     if (key === "__endereco__") return lead.endereco || "";
+    if (key === "__email__") return lead.email || "";
     return "";
   };
 
@@ -90,6 +91,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
     });
     values.__nome__ = lead.nome;
     values.__endereco__ = lead.endereco || "";
+    values.__email__ = lead.email || "";
     setEditValues(values);
     // Always provide 4 fixed slots for phones
     const slots: LeadTelefone[] = [];
@@ -125,6 +127,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
 
     const nome = editValues.__nome__?.trim() || lead.nome;
     const endereco = editValues.__endereco__?.trim() || null;
+    const email = editValues.__email__?.trim() || null;
     const newTelefones: LeadTelefone[] = editTelefones
       .filter((t) => t.numero.trim() !== "")
       .map((t) => ({ numero: t.numero, tipo: t.tipo, observacao: t.observacao }));
@@ -136,6 +139,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
           dados_extras: JSON.parse(JSON.stringify(newDadosExtras)),
           nome,
           endereco,
+          email,
           telefones: JSON.parse(JSON.stringify(newTelefones)),
         })
         .eq("id", lead.id)
@@ -143,7 +147,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
           if (error) {
             toast.error(error.message);
           } else {
-            onLeadUpdate({ ...lead, nome, endereco, dados_extras: newDadosExtras, telefones: newTelefones });
+            onLeadUpdate({ ...lead, nome, endereco, email, dados_extras: newDadosExtras, telefones: newTelefones });
             setEditing(false);
             toast.success("Dados atualizados!");
           }
@@ -233,47 +237,72 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
 
   // Telefones UI blocks — unified format with 4 fixed slots
   const renderTelefonesView = () => {
-    if (telefones.length === 0) return null;
+    const hasEmail = lead.email && lead.email.trim();
+    if (telefones.length === 0 && !hasEmail) return null;
     return (
-      <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefones</label>
-        <div className="space-y-1">
-          {telefones.map((tel, i) => (
-            <div key={i} className="flex items-center gap-2 text-sm">
-              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="font-medium text-xs text-muted-foreground">Telefone {i + 1}:</span>
-              <span>{tel.numero}</span>
-              {tel.observacao && <span className="text-xs text-muted-foreground">({tel.observacao})</span>}
+      <div className="space-y-2">
+        {hasEmail && (
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Email</label>
+            <div className="flex items-center gap-2 text-sm">
+              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>{lead.email}</span>
             </div>
-          ))}
-        </div>
+          </div>
+        )}
+        {telefones.length > 0 && (
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefones</label>
+            <div className="space-y-1">
+              {telefones.map((tel, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="font-medium text-xs text-muted-foreground">Telefone {i + 1}:</span>
+                  <span>{tel.numero}</span>
+                  {tel.observacao && <span className="text-xs text-muted-foreground">({tel.observacao})</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
 
   const renderTelefonesEdit = () => (
-    <div>
-      <label className="text-xs font-medium text-muted-foreground mb-2 block">Telefones</label>
-      <div className="space-y-2">
-        {editTelefones.map((tel, i) => (
-          <div key={i} className="space-y-1">
-            <label className="text-xs text-muted-foreground">Telefone {i + 1}</label>
-            <div className="flex items-center gap-2">
-              <Input
-                value={tel.numero}
-                onChange={(e) => updateTelefone(i, "numero", e.target.value)}
-                placeholder="(00) 00000-0000"
-                className="flex-1"
-              />
-              <Input
-                value={tel.observacao || ""}
-                onChange={(e) => updateTelefone(i, "observacao", e.target.value)}
-                placeholder="Observação"
-                className="w-40"
-              />
+    <div className="space-y-3">
+      <div>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Email</label>
+        <Input
+          type="email"
+          value={editValues.__email__ || ""}
+          onChange={(e) => setEditValues({ ...editValues, __email__: e.target.value })}
+          placeholder="email@exemplo.com"
+        />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-muted-foreground mb-2 block">Telefones</label>
+        <div className="space-y-2">
+          {editTelefones.map((tel, i) => (
+            <div key={i} className="space-y-1">
+              <label className="text-xs text-muted-foreground">Telefone {i + 1}</label>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={tel.numero}
+                  onChange={(e) => updateTelefone(i, "numero", e.target.value)}
+                  placeholder="(00) 00000-0000"
+                  className="flex-1"
+                />
+                <Input
+                  value={tel.observacao || ""}
+                  onChange={(e) => updateTelefone(i, "observacao", e.target.value)}
+                  placeholder="Observação"
+                  className="w-40"
+                />
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
@@ -281,7 +310,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
   if (isLoading) return <div className="text-sm text-muted-foreground">Carregando campos...</div>;
 
   const filledSemSecao = groupedCampos.semSecao.filter(hasValue);
-  const hasAnyFilled = filledSemSecao.length > 0 || telefones.length > 0 || lead.endereco || groupedCampos.porSecao.some((g) => g.campos.some(hasValue));
+  const hasAnyFilled = filledSemSecao.length > 0 || telefones.length > 0 || lead.endereco || lead.email || groupedCampos.porSecao.some((g) => g.campos.some(hasValue));
 
   // If no "contato" section exists, we'll show telefones as fallback at the end
   const hasContatoSection = contatoSecaoId !== null;
@@ -359,7 +388,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
             const filled = secaoCampos.filter(hasValue);
             const isContatoSection = secao.id === contatoSecaoId;
             // Show contato section if it has telefones OR filled fields
-            if (filled.length === 0 && !(isContatoSection && telefones.length > 0)) return null;
+            if (filled.length === 0 && !(isContatoSection && (telefones.length > 0 || lead.email))) return null;
             return (
               <div key={secao.id}>
                 <div className="flex items-center gap-2 mb-3 mt-1">

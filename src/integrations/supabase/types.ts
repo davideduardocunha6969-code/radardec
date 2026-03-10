@@ -1105,6 +1105,7 @@ export type Database = {
           coluna_id: string
           created_at: string
           dados_extras: Json | null
+          email: string | null
           endereco: string | null
           etapa_desde: string | null
           funil_id: string
@@ -1123,6 +1124,7 @@ export type Database = {
           coluna_id: string
           created_at?: string
           dados_extras?: Json | null
+          email?: string | null
           endereco?: string | null
           etapa_desde?: string | null
           funil_id: string
@@ -1141,6 +1143,7 @@ export type Database = {
           coluna_id?: string
           created_at?: string
           dados_extras?: Json | null
+          email?: string | null
           endereco?: string | null
           etapa_desde?: string | null
           funil_id?: string
