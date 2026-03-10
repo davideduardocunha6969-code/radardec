@@ -416,12 +416,12 @@ function DroppableSection({
   );
 }
 
-function DraggableCampoWrapper({ campo, onEditDescricao }: { campo: CrmLeadCampo & { secao_id?: string | null }; onEditDescricao?: (campo: CrmLeadCampo & { secao_id?: string | null }) => void }) {
+function DraggableCampoWrapper({ campo, onEditDescricao, onDeleteCampo }: { campo: CrmLeadCampo & { secao_id?: string | null }; onEditDescricao?: (campo: CrmLeadCampo & { secao_id?: string | null }) => void; onDeleteCampo?: (campo: CrmLeadCampo) => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: campo.id });
 
   return (
     <div ref={setNodeRef} {...attributes} {...listeners}>
-      <DraggableCampo campo={campo} isDragging={isDragging} onEditDescricao={onEditDescricao} />
+      <DraggableCampo campo={campo} isDragging={isDragging} onEditDescricao={onEditDescricao} onDelete={onDeleteCampo} />
     </div>
   );
 }
