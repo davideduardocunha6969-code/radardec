@@ -270,28 +270,39 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
   };
 
   const renderTelefonesEdit = () => (
-    <div>
-      <label className="text-xs font-medium text-muted-foreground mb-2 block">Telefones</label>
-      <div className="space-y-2">
-        {editTelefones.map((tel, i) => (
-          <div key={i} className="space-y-1">
-            <label className="text-xs text-muted-foreground">Telefone {i + 1}</label>
-            <div className="flex items-center gap-2">
-              <Input
-                value={tel.numero}
-                onChange={(e) => updateTelefone(i, "numero", e.target.value)}
-                placeholder="(00) 00000-0000"
-                className="flex-1"
-              />
-              <Input
-                value={tel.observacao || ""}
-                onChange={(e) => updateTelefone(i, "observacao", e.target.value)}
-                placeholder="Observação"
-                className="w-40"
-              />
+    <div className="space-y-3">
+      <div>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Email</label>
+        <Input
+          type="email"
+          value={editValues.__email__ || ""}
+          onChange={(e) => setEditValues({ ...editValues, __email__: e.target.value })}
+          placeholder="email@exemplo.com"
+        />
+      </div>
+      <div>
+        <label className="text-xs font-medium text-muted-foreground mb-2 block">Telefones</label>
+        <div className="space-y-2">
+          {editTelefones.map((tel, i) => (
+            <div key={i} className="space-y-1">
+              <label className="text-xs text-muted-foreground">Telefone {i + 1}</label>
+              <div className="flex items-center gap-2">
+                <Input
+                  value={tel.numero}
+                  onChange={(e) => updateTelefone(i, "numero", e.target.value)}
+                  placeholder="(00) 00000-0000"
+                  className="flex-1"
+                />
+                <Input
+                  value={tel.observacao || ""}
+                  onChange={(e) => updateTelefone(i, "observacao", e.target.value)}
+                  placeholder="Observação"
+                  className="w-40"
+                />
+              </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
