@@ -1,25 +1,42 @@
 
+# Tres Paineis de Atendimento — Status
 
-## Problema identificado
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-Existem **dois bugs** que causam a perda de telefones nas abas SDR/Closer:
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-1. **Incompatibilidade de campo `obs` vs `observacao`**: `LeadDadosTab` usa `TelefoneEntry` com campo `obs`, mas `CrmLead`/`LeadTelefone` usa `observacao`. Quando o usuário salva na aba Dados, os telefones são salvos com `obs` no banco. As abas SDR/Closer leem `t.observacao` (linha 550), que não existe mais — e o mapeamento de `lead.telefones` para `TelefoneEntry` no `useMemo` (linha 38-42) não faz nenhuma conversão, mantendo o campo que vier do banco.
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-2. **Telefones no topo ao invés de dentro da seção "Dados de Contato"**: Conforme solicitação anterior (ainda pendente), os telefones devem ficar dentro da seção dinâmica "Dados de Contato", não no topo.
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-## Alterações
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-### 1. `src/components/crm/LeadDadosTab.tsx`
-
-- **Remover** `TelefoneEntry` interface — usar `LeadTelefone` de `useCrmOutbound` diretamente (campo `observacao`)
-- **Corrigir** `startEditing` para mapear `observacao` corretamente
-- **Corrigir** `handleSave` para salvar com campo `observacao` (não `obs`)
-- **Mover** a seção de telefones para dentro da seção cujo nome contenha "contato" (case-insensitive), tanto em visualização quanto edição
-- **Remover** a exibição de telefones do topo do componente
-- Se nenhuma seção "contato" existir, renderizar telefones como fallback no final
-
-### 2. `src/pages/CrmFunilKanban.tsx`
-
-Nenhuma alteração necessária — o código já itera `detailLead.telefones` corretamente. O bug era que após editar na aba Dados, o `onLeadUpdate` passava telefones com `obs` ao invés de `observacao`, corrompendo o estado. A correção no `LeadDadosTab` resolve isso.
-
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções

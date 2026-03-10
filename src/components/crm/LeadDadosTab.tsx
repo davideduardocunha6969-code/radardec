@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useCrmLeadCampos, type CrmLeadCampo } from "@/hooks/useCrmLeadCampos";
 import { useCrmLeadSecoes } from "@/hooks/useCrmLeadSecoes";
-import { useUpdateLead, type CrmLead } from "@/hooks/useCrmOutbound";
+import { useUpdateLead, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,12 +11,6 @@ import { formatCpf, normalizeCpf, isCpfKey } from "@/utils/cpfFormat";
 import { formatDateValue } from "@/utils/dateFormat";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getFieldValue, createField, type DadosExtrasMap } from "@/utils/trabalhista/types";
-
-interface TelefoneEntry {
-  numero: string;
-  tipo: string;
-  obs?: string;
-}
 
 interface LeadDadosTabProps {
   lead: CrmLead;
@@ -30,12 +24,12 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
   const updateLead = useUpdateLead();
   const [editing, setEditing] = useState(false);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
-  const [editTelefones, setEditTelefones] = useState<TelefoneEntry[]>([]);
+  const [editTelefones, setEditTelefones] = useState<LeadTelefone[]>([]);
 
   const camposExtended = (campos as (CrmLeadCampo & { secao_id?: string | null })[]) || [];
   const dadosExtras = (lead.dados_extras as DadosExtrasMap) || {};
 
-  const telefones: TelefoneEntry[] = useMemo(() => {
+  const telefones: LeadTelefone[] = useMemo(() => {
     const raw = lead.telefones as any;
     if (Array.isArray(raw)) return raw.filter((t: any) => t?.numero);
     return [];
@@ -49,6 +43,12 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
     })).filter((g) => g.campos.length > 0);
     return { semSecao, porSecao };
   }, [camposExtended, secoes]);
+
+  // Check if any section contains "contato" in name
+  const contatoSecaoId = useMemo(() => {
+    const match = (secoes || []).find((s) => s.nome.toLowerCase().includes("contato"));
+    return match?.id || null;
+  }, [secoes]);
 
   const nativeKeys = ["__nome__", "__endereco__"];
 
@@ -77,8 +77,8 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
     setEditValues(values);
     setEditTelefones(
       telefones.length > 0
-        ? telefones.map((t) => ({ ...t }))
-        : [{ numero: "", tipo: "celular", obs: "" }]
+        ? telefones.map((t) => ({ numero: t.numero, tipo: t.tipo, observacao: t.observacao }))
+        : [{ numero: "", tipo: "celular", observacao: "" }]
     );
     setEditing(true);
   };
@@ -104,7 +104,9 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
 
     const nome = editValues.__nome__?.trim() || lead.nome;
     const endereco = editValues.__endereco__?.trim() || null;
-    const newTelefones = editTelefones.filter((t) => t.numero.trim() !== "");
+    const newTelefones: LeadTelefone[] = editTelefones
+      .filter((t) => t.numero.trim() !== "")
+      .map((t) => ({ numero: t.numero, tipo: t.tipo, observacao: t.observacao }));
 
     import("@/integrations/supabase/client").then(({ supabase }) => {
       supabase
@@ -201,7 +203,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
     </div>
   );
 
-  const updateTelefone = (index: number, field: keyof TelefoneEntry, value: string) => {
+  const updateTelefone = (index: number, field: keyof LeadTelefone, value: string) => {
     setEditTelefones((prev) => prev.map((t, i) => (i === index ? { ...t, [field]: value } : t)));
   };
 
@@ -210,13 +212,72 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
   };
 
   const addTelefone = () => {
-    setEditTelefones((prev) => [...prev, { numero: "", tipo: "celular", obs: "" }]);
+    setEditTelefones((prev) => [...prev, { numero: "", tipo: "celular", observacao: "" }]);
   };
+
+  // Telefones UI blocks
+  const renderTelefonesView = () => {
+    if (telefones.length === 0) return null;
+    return (
+      <div>
+        <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefones</label>
+        <div className="space-y-1">
+          {telefones.map((tel, i) => (
+            <div key={i} className="flex items-center gap-2 text-sm">
+              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>{tel.numero}</span>
+              {tel.tipo && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{tel.tipo}</Badge>}
+              {tel.observacao && <span className="text-xs text-muted-foreground">({tel.observacao})</span>}
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderTelefonesEdit = () => (
+    <div>
+      <label className="text-xs font-medium text-muted-foreground mb-2 block">Telefones</label>
+      <div className="space-y-2">
+        {editTelefones.map((tel, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <Input
+              value={tel.numero}
+              onChange={(e) => updateTelefone(i, "numero", e.target.value)}
+              placeholder="(00) 00000-0000"
+              className="flex-1"
+            />
+            <Input
+              value={tel.tipo || ""}
+              onChange={(e) => updateTelefone(i, "tipo", e.target.value)}
+              placeholder="Tipo"
+              className="w-24"
+            />
+            <Input
+              value={tel.observacao || ""}
+              onChange={(e) => updateTelefone(i, "observacao", e.target.value)}
+              placeholder="Obs"
+              className="w-32"
+            />
+            <Button variant="ghost" size="icon" onClick={() => removeTelefone(i)} className="shrink-0">
+              <Trash2 className="h-4 w-4 text-destructive" />
+            </Button>
+          </div>
+        ))}
+        <Button variant="outline" size="sm" onClick={addTelefone}>
+          <Plus className="h-3.5 w-3.5 mr-1" />Adicionar Telefone
+        </Button>
+      </div>
+    </div>
+  );
 
   if (isLoading) return <div className="text-sm text-muted-foreground">Carregando campos...</div>;
 
   const filledSemSecao = groupedCampos.semSecao.filter(hasValue);
   const hasAnyFilled = filledSemSecao.length > 0 || telefones.length > 0 || lead.endereco || groupedCampos.porSecao.some((g) => g.campos.some(hasValue));
+
+  // If no "contato" section exists, we'll show telefones as fallback at the end
+  const hasContatoSection = contatoSecaoId !== null;
 
   return (
     <div className="space-y-4">
@@ -240,41 +301,6 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
 
       {editing ? (
         <div className="space-y-5">
-          {/* Telefones - edição */}
-          <div>
-            <label className="text-xs font-medium text-muted-foreground mb-2 block">Telefones</label>
-            <div className="space-y-2">
-              {editTelefones.map((tel, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <Input
-                    value={tel.numero}
-                    onChange={(e) => updateTelefone(i, "numero", e.target.value)}
-                    placeholder="(00) 00000-0000"
-                    className="flex-1"
-                  />
-                  <Input
-                    value={tel.tipo || ""}
-                    onChange={(e) => updateTelefone(i, "tipo", e.target.value)}
-                    placeholder="Tipo"
-                    className="w-24"
-                  />
-                  <Input
-                    value={tel.obs || ""}
-                    onChange={(e) => updateTelefone(i, "obs", e.target.value)}
-                    placeholder="Obs"
-                    className="w-32"
-                  />
-                  <Button variant="ghost" size="icon" onClick={() => removeTelefone(i)} className="shrink-0">
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
-                </div>
-              ))}
-              <Button variant="outline" size="sm" onClick={addTelefone}>
-                <Plus className="h-3.5 w-3.5 mr-1" />Adicionar Telefone
-              </Button>
-            </div>
-          </div>
-
           {/* Campos sem seção */}
           {groupedCampos.semSecao.length > 0 && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -283,37 +309,32 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
           )}
 
           {/* Campos por seção */}
-          {groupedCampos.porSecao.map(({ secao, campos: secaoCampos }) => (
-            <div key={secao.id}>
-              <div className="flex items-center gap-2 mb-3 mt-1">
-                <div className="h-5 w-1 rounded-full bg-primary" />
-                <h4 className="text-sm font-semibold text-foreground">{secao.nome}</h4>
+          {groupedCampos.porSecao.map(({ secao, campos: secaoCampos }) => {
+            const isContatoSection = secao.id === contatoSecaoId;
+            return (
+              <div key={secao.id}>
+                <div className="flex items-center gap-2 mb-3 mt-1">
+                  <div className="h-5 w-1 rounded-full bg-primary" />
+                  <h4 className="text-sm font-semibold text-foreground">{secao.nome}</h4>
+                </div>
+                {/* Inject telefones inside contato section */}
+                {isContatoSection && (
+                  <div className="mb-4">
+                    {renderTelefonesEdit()}
+                  </div>
+                )}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {secaoCampos.map(renderFieldEdit)}
+                </div>
               </div>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                {secaoCampos.map(renderFieldEdit)}
-              </div>
-            </div>
-          ))}
+            );
+          })}
+
+          {/* Fallback: telefones at end if no contato section */}
+          {!hasContatoSection && renderTelefonesEdit()}
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Telefones - visualização */}
-          {telefones.length > 0 && (
-            <div>
-              <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefones</label>
-              <div className="space-y-1">
-                {telefones.map((tel, i) => (
-                  <div key={i} className="flex items-center gap-2 text-sm">
-                    <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-                    <span>{tel.numero}</span>
-                    {tel.tipo && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{tel.tipo}</Badge>}
-                    {tel.obs && <span className="text-xs text-muted-foreground">({tel.obs})</span>}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           {/* Campos sem seção - só com valor */}
           {filledSemSecao.length > 0 && (
             <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
@@ -324,19 +345,28 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
           {/* Campos por seção - só seções com dados */}
           {groupedCampos.porSecao.map(({ secao, campos: secaoCampos }) => {
             const filled = secaoCampos.filter(hasValue);
-            if (filled.length === 0) return null;
+            const isContatoSection = secao.id === contatoSecaoId;
+            // Show contato section if it has telefones OR filled fields
+            if (filled.length === 0 && !(isContatoSection && telefones.length > 0)) return null;
             return (
               <div key={secao.id}>
                 <div className="flex items-center gap-2 mb-3 mt-1">
                   <div className="h-5 w-1 rounded-full bg-primary" />
                   <h4 className="text-sm font-semibold text-foreground">{secao.nome}</h4>
                 </div>
-                <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                  {filled.map(renderFieldView)}
-                </div>
+                {/* Inject telefones inside contato section */}
+                {isContatoSection && renderTelefonesView()}
+                {filled.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-3 mt-2">
+                    {filled.map(renderFieldView)}
+                  </div>
+                )}
               </div>
             );
           })}
+
+          {/* Fallback: telefones at end if no contato section */}
+          {!hasContatoSection && renderTelefonesView()}
 
           {/* Mensagem quando vazio */}
           {!hasAnyFilled && (
