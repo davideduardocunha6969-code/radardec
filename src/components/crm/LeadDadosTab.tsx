@@ -127,6 +127,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
 
     const nome = editValues.__nome__?.trim() || lead.nome;
     const endereco = editValues.__endereco__?.trim() || null;
+    const email = editValues.__email__?.trim() || null;
     const newTelefones: LeadTelefone[] = editTelefones
       .filter((t) => t.numero.trim() !== "")
       .map((t) => ({ numero: t.numero, tipo: t.tipo, observacao: t.observacao }));
