@@ -237,20 +237,34 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
 
   // Telefones UI blocks — unified format with 4 fixed slots
   const renderTelefonesView = () => {
-    if (telefones.length === 0) return null;
+    const hasEmail = lead.email && lead.email.trim();
+    if (telefones.length === 0 && !hasEmail) return null;
     return (
-      <div>
-        <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefones</label>
-        <div className="space-y-1">
-          {telefones.map((tel, i) => (
-            <div key={i} className="flex items-center gap-2 text-sm">
-              <Phone className="h-3.5 w-3.5 text-muted-foreground" />
-              <span className="font-medium text-xs text-muted-foreground">Telefone {i + 1}:</span>
-              <span>{tel.numero}</span>
-              {tel.observacao && <span className="text-xs text-muted-foreground">({tel.observacao})</span>}
+      <div className="space-y-2">
+        {hasEmail && (
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Email</label>
+            <div className="flex items-center gap-2 text-sm">
+              <Mail className="h-3.5 w-3.5 text-muted-foreground" />
+              <span>{lead.email}</span>
             </div>
-          ))}
-        </div>
+          </div>
+        )}
+        {telefones.length > 0 && (
+          <div>
+            <label className="text-xs font-medium text-muted-foreground mb-1 block">Telefones</label>
+            <div className="space-y-1">
+              {telefones.map((tel, i) => (
+                <div key={i} className="flex items-center gap-2 text-sm">
+                  <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+                  <span className="font-medium text-xs text-muted-foreground">Telefone {i + 1}:</span>
+                  <span>{tel.numero}</span>
+                  {tel.observacao && <span className="text-xs text-muted-foreground">({tel.observacao})</span>}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
