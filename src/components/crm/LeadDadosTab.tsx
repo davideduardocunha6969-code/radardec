@@ -285,7 +285,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
   if (isLoading) return <div className="text-sm text-muted-foreground">Carregando campos...</div>;
 
   const filledSemSecao = groupedCampos.semSecao.filter(hasValue);
-  const hasAnyFilled = filledSemSecao.length > 0 || telefones.length > 0 || lead.endereco || groupedCampos.porSecao.some((g) => g.campos.some(hasValue));
+  const hasAnyFilled = filledSemSecao.length > 0 || telefones.length > 0 || lead.endereco || lead.email || groupedCampos.porSecao.some((g) => g.campos.some(hasValue));
 
   // If no "contato" section exists, we'll show telefones as fallback at the end
   const hasContatoSection = contatoSecaoId !== null;
