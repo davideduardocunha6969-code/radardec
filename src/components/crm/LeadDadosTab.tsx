@@ -4,12 +4,13 @@ import { useCrmLeadSecoes } from "@/hooks/useCrmLeadSecoes";
 import { useUpdateLead, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOutbound";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Pencil, Save, X, Info, Phone } from "lucide-react";
+import { Pencil, Save, X, Info, Phone, FileSignature } from "lucide-react";
 import { toast } from "sonner";
 import { formatCpf, normalizeCpf, isCpfKey } from "@/utils/cpfFormat";
 import { formatDateValue } from "@/utils/dateFormat";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getFieldValue, createField, type DadosExtrasMap } from "@/utils/trabalhista/types";
+import { ZapSignDialog } from "./ZapSignDialog";
 
 interface LeadDadosTabProps {
   lead: CrmLead;
@@ -24,6 +25,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
   const [editing, setEditing] = useState(false);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [editTelefones, setEditTelefones] = useState<LeadTelefone[]>([]);
+  const [zapSignOpen, setZapSignOpen] = useState(false);
 
   const isPhoneFieldKey = (key: string) => /^telefone_\d+$/.test(key);
   const camposExtended = (campos as (CrmLeadCampo & { secao_id?: string | null })[]) || [];
@@ -289,9 +291,14 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold">Dados do Lead</h3>
         {!editing ? (
-          <Button variant="outline" size="sm" onClick={startEditing}>
-            <Pencil className="h-3.5 w-3.5 mr-1" />Editar
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setZapSignOpen(true)}>
+              <FileSignature className="h-3.5 w-3.5 mr-1" />Assinatura
+            </Button>
+            <Button variant="outline" size="sm" onClick={startEditing}>
+              <Pencil className="h-3.5 w-3.5 mr-1" />Editar
+            </Button>
+          </div>
         ) : (
           <div className="flex gap-2">
             <Button variant="outline" size="sm" onClick={() => setEditing(false)}>
@@ -379,6 +386,8 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
           )}
         </div>
       )}
+
+      <ZapSignDialog open={zapSignOpen} onOpenChange={setZapSignOpen} lead={lead} />
     </div>
   );
 }
