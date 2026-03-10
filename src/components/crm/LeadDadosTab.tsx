@@ -45,6 +45,12 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
     return arr;
   }, [lead.telefones, dadosExtras]);
 
+  // Check if any section contains "contato" in name
+  const contatoSecaoId = useMemo(() => {
+    const match = (secoes || []).find((s) => s.nome.toLowerCase().includes("contato"));
+    return match?.id || null;
+  }, [secoes]);
+
   const groupedCampos = useMemo(() => {
     // Filter out telefone_* fields — they are managed via the telefones array
     const filtered = camposExtended.filter((c) => !isPhoneFieldKey(c.key));
@@ -52,15 +58,9 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
     const porSecao = (secoes || []).map((s) => ({
       secao: s,
       campos: filtered.filter((c) => c.secao_id === s.id),
-    })).filter((g) => g.campos.length > 0);
+    })).filter((g) => g.campos.length > 0 || g.secao.id === contatoSecaoId);
     return { semSecao, porSecao };
-  }, [camposExtended, secoes]);
-
-  // Check if any section contains "contato" in name
-  const contatoSecaoId = useMemo(() => {
-    const match = (secoes || []).find((s) => s.nome.toLowerCase().includes("contato"));
-    return match?.id || null;
-  }, [secoes]);
+  }, [camposExtended, secoes, contatoSecaoId]);
 
   const nativeKeys = ["__nome__", "__endereco__"];
 
