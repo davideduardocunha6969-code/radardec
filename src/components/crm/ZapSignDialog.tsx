@@ -127,7 +127,7 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
             <div className="flex items-center gap-2">
               <Input value={resultUrl} readOnly className="text-xs" />
               <Button variant="outline" size="icon" onClick={handleCopy}>
-                {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                {copied ? <Check className="h-4 w-4 text-primary" /> : <Copy className="h-4 w-4" />}
               </Button>
             </div>
             <Button variant="outline" className="w-full" onClick={handleClose}>
