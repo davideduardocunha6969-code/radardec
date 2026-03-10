@@ -230,16 +230,6 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
                       className="mt-0.5"
                     />
                   </div>
-                  {fieldValues["__telefone__"] !== undefined && (
-                    <div>
-                      <Label className="text-xs">Telefone</Label>
-                      <Input
-                        value={fieldValues["__telefone__"] || ""}
-                        onChange={(e) => updateField("__telefone__", e.target.value)}
-                        className="mt-0.5"
-                      />
-                    </div>
-                  )}
                   {fieldValues["__endereco__"] !== undefined && (
                     <div>
                       <Label className="text-xs">Endereço</Label>
