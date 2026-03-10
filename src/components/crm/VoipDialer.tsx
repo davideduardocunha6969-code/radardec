@@ -52,6 +52,9 @@ export function VoipDialer({ leadId, leadNome, numero, papel, onCallStatusChange
   const callRef = useRef<any>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
+  const durationRef = useRef(0);
+  const chamadaIdRef = useRef<string | null>(null);
+  const callSidRef = useRef<string | null>(null);
 
   const createChamada = useCreateChamada();
   const updateChamada = useUpdateChamada();
@@ -77,8 +80,13 @@ export function VoipDialer({ leadId, leadNome, numero, papel, onCallStatusChange
   useEffect(() => {
     if (callStatus === "in-progress") {
       setDuration(0);
+      durationRef.current = 0;
       timerRef.current = setInterval(() => {
-        setDuration((d) => d + 1);
+        setDuration((d) => {
+          const next = d + 1;
+          durationRef.current = next;
+          return next;
+        });
       }, 1000);
     } else {
       if (timerRef.current) {
@@ -143,6 +151,7 @@ export function VoipDialer({ leadId, leadNome, numero, papel, onCallStatusChange
         papel,
       });
       setChamadaId(chamada.id);
+      chamadaIdRef.current = chamada.id;
 
       // Format number for Brazil
       const cleanDigits = numero.replace(/\D/g, "");
@@ -160,23 +169,31 @@ export function VoipDialer({ leadId, leadNome, numero, papel, onCallStatusChange
 
       call.on("ringing", () => {
         setCallStatus("ringing");
-        updateChamada.mutate({ id: chamada.id, leadId, status: "discando", twilio_call_sid: call.parameters?.CallSid || "" });
+        const sid = call.parameters?.CallSid || "";
+        callSidRef.current = sid;
+        updateChamada.mutate({ id: chamada.id, leadId, status: "discando", twilio_call_sid: sid });
       });
 
       call.on("accept", async () => {
         setCallStatus("in-progress");
         const callSid = call.parameters?.CallSid || "";
+        callSidRef.current = callSid;
         updateChamada.mutate({ id: chamada.id, leadId, status: "em_chamada", twilio_call_sid: callSid });
 
         // Start Twilio server-side recording only now that the call is answered
         if (callSid) {
           try {
             console.log("[VoIP] Starting server-side recording for answered call:", callSid);
-            await supabase.functions.invoke("twilio-webhook", {
+            const { data: recData, error: recError } = await supabase.functions.invoke("twilio-webhook", {
               body: { action: "start-recording", callSid },
             });
+            if (recError) {
+              console.error("[VoIP] Failed to start recording:", recError);
+            } else {
+              console.log("[VoIP] Recording started successfully:", recData);
+            }
           } catch (e) {
-            console.warn("[VoIP] Failed to start recording:", e);
+            console.error("[VoIP] Failed to start recording:", e);
           }
         }
 
@@ -209,12 +226,43 @@ export function VoipDialer({ leadId, leadNome, numero, papel, onCallStatusChange
         }
       };
 
-      call.on("disconnect", () => {
-        setCallStatus("completed");
-        updateChamada.mutate({ id: chamada.id, leadId, status: "finalizada", duracao_segundos: duration });
+      const handleCallEnd = async (status: string) => {
+        const finalDuration = durationRef.current;
+        const finalChamadaId = chamadaIdRef.current;
+        const finalCallSid = callSidRef.current;
+
+        updateChamada.mutate({ id: chamada.id, leadId, status, duracao_segundos: finalDuration });
         stopMicStream();
         onRecordingStateChange?.(false, { micStream: null, systemStream: null, mixedStream: null });
+
+        // Fallback: if call had duration, check after delay if transcription arrived
+        if (finalDuration > 5 && finalChamadaId && finalCallSid) {
+          console.log("[VoIP] Will check transcription fallback in 15s for chamada:", finalChamadaId);
+          setTimeout(async () => {
+            try {
+              const { data: checkData } = await supabase
+                .from("crm_chamadas")
+                .select("transcricao, audio_url")
+                .eq("id", finalChamadaId)
+                .single();
+              
+              if (!checkData?.transcricao && !checkData?.audio_url) {
+                console.log("[VoIP] No transcription found after 15s, recording may not have been processed via callback");
+              } else {
+                console.log("[VoIP] Transcription/audio found, recording flow worked correctly");
+              }
+            } catch (e) {
+              console.warn("[VoIP] Error checking transcription fallback:", e);
+            }
+          }, 15000);
+        }
+
         cleanupCall();
+      };
+
+      call.on("disconnect", () => {
+        setCallStatus("completed");
+        handleCallEnd("finalizada");
       });
 
       call.on("cancel", () => {
@@ -248,11 +296,13 @@ export function VoipDialer({ leadId, leadNome, numero, papel, onCallStatusChange
       toast.error("Erro ao iniciar chamada: " + (error.message || "Erro desconhecido"));
       setTimeout(() => setCallStatus("idle"), 3000);
     }
-  }, [numero, leadId, createChamada, updateChamada, duration]);
+  }, [numero, leadId, createChamada, updateChamada]);
 
   const cleanupCall = () => {
     callRef.current = null;
     setChamadaId(null);
+    chamadaIdRef.current = null;
+    callSidRef.current = null;
     setTimeout(() => setCallStatus("idle"), 3000);
   };
 

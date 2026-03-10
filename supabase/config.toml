@@ -95,3 +95,9 @@ verify_jwt = false
 
  [functions.instagram-insights-all]
  verify_jwt = false
+
+ [functions.process-chamada-background]
+ verify_jwt = false
+
+ [functions.feedback-chamada]
+ verify_jwt = false
