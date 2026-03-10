@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useCrmLeadCampos, type CrmLeadCampo } from "@/hooks/useCrmLeadCampos";
+import { useCrmLeadCampos, useCreateCrmLeadCampo, useDeleteCrmLeadCampo, normalizeKey, type CrmLeadCampo } from "@/hooks/useCrmLeadCampos";
 import {
   useCrmLeadSecoes,
   useCreateCrmLeadSecao,
@@ -12,6 +12,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Plus, Trash2, GripVertical, FolderOpen, Pencil, Check, X, Info } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
@@ -25,7 +26,7 @@ interface DraggableCampoProps {
   isDragging?: boolean;
 }
 
-function DraggableCampo({ campo, isDragging, onEditDescricao }: DraggableCampoProps & { onEditDescricao?: (campo: CrmLeadCampo & { secao_id?: string | null }) => void }) {
+function DraggableCampo({ campo, isDragging, onEditDescricao, onDelete }: DraggableCampoProps & { onEditDescricao?: (campo: CrmLeadCampo & { secao_id?: string | null }) => void; onDelete?: (campo: CrmLeadCampo) => void }) {
   const desc = (campo as any).descricao;
   return (
     <div
@@ -57,6 +58,15 @@ function DraggableCampo({ campo, isDragging, onEditDescricao }: DraggableCampoPr
       >
         <Info className="h-3 w-3" />
       </Button>
+      <Button
+        variant="ghost"
+        size="icon"
+        className="h-6 w-6 shrink-0 text-destructive hover:text-destructive"
+        onClick={(e) => { e.stopPropagation(); onDelete?.(campo); }}
+        title="Excluir campo"
+      >
+        <X className="h-3 w-3" />
+      </Button>
     </div>
   );
 }
@@ -68,8 +78,12 @@ export function LeadSecoesConfig() {
   const updateSecao = useUpdateCrmLeadSecao();
   const deleteSecao = useDeleteCrmLeadSecao();
   const updateCampoSecao = useUpdateCampoSecao();
+  const createCampo = useCreateCrmLeadCampo();
+  const deleteCampo = useDeleteCrmLeadCampo();
 
   const [newSecaoName, setNewSecaoName] = useState("");
+  const [newCampoName, setNewCampoName] = useState("");
+  const [newCampoTipo, setNewCampoTipo] = useState("texto");
   const [editingSecao, setEditingSecao] = useState<string | null>(null);
   const [editingSecaoName, setEditingSecaoName] = useState("");
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
@@ -90,6 +104,21 @@ export function LeadSecoesConfig() {
     secao: s,
     campos: camposExtended.filter((c) => c.secao_id === s.id),
   }));
+
+  const handleCreateCampo = () => {
+    if (!newCampoName.trim()) return;
+    const key = normalizeKey(newCampoName.trim());
+    if (!key) return;
+    createCampo.mutate(
+      { nome: newCampoName.trim(), key, tipo: newCampoTipo, ordem: (campos?.length || 0) + 1 },
+      { onSuccess: () => { setNewCampoName(""); setNewCampoTipo("texto"); } }
+    );
+  };
+
+  const handleDeleteCampo = (campo: CrmLeadCampo) => {
+    if (!confirm(`Excluir o campo "${campo.nome}"? Esta ação não pode ser desfeita.`)) return;
+    deleteCampo.mutate(campo.id);
+  };
 
   const handleCreateSecao = () => {
     if (!newSecaoName.trim()) return;
@@ -214,6 +243,31 @@ export function LeadSecoesConfig() {
         </Card>
       )}
 
+      {/* Criar novo campo */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Input
+          placeholder="Nome do campo (ex: Estado Civil)"
+          value={newCampoName}
+          onChange={(e) => setNewCampoName(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && handleCreateCampo()}
+          className="max-w-xs"
+        />
+        <Select value={newCampoTipo} onValueChange={setNewCampoTipo}>
+          <SelectTrigger className="w-32">
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="texto">Texto</SelectItem>
+            <SelectItem value="numero">Número</SelectItem>
+            <SelectItem value="data">Data</SelectItem>
+            <SelectItem value="select">Seleção</SelectItem>
+          </SelectContent>
+        </Select>
+        <Button onClick={handleCreateCampo} disabled={createCampo.isPending || !newCampoName.trim()}>
+          <Plus className="h-4 w-4 mr-1" />Novo Campo
+        </Button>
+      </div>
+
       {/* Criar nova seção */}
       <div className="flex items-center gap-2">
         <Input
@@ -241,6 +295,7 @@ export function LeadSecoesConfig() {
           icon={<FolderOpen className="h-4 w-4 text-muted-foreground" />}
           campos={camposSemSecao}
           onEditDescricao={handleEditDescricao}
+          onDeleteCampo={handleDeleteCampo}
         />
 
         {/* Seções */}
@@ -257,8 +312,9 @@ export function LeadSecoesConfig() {
             onConfirmEdit={() => handleRenameSecao(secao.id)}
             onCancelEdit={() => setEditingSecao(null)}
             onDelete={() => handleDeleteSecao(secao.id)}
-            onEditDescricao={handleEditDescricao}
-          />
+             onEditDescricao={handleEditDescricao}
+             onDeleteCampo={handleDeleteCampo}
+           />
         ))}
 
         <DragOverlay>
@@ -286,6 +342,7 @@ function DroppableSection({
   onCancelEdit,
   onDelete,
   onEditDescricao,
+  onDeleteCampo,
 }: {
   id: string;
   title: string;
@@ -299,6 +356,7 @@ function DroppableSection({
   onCancelEdit?: () => void;
   onDelete?: () => void;
   onEditDescricao?: (campo: CrmLeadCampo & { secao_id?: string | null }) => void;
+  onDeleteCampo?: (campo: CrmLeadCampo) => void;
 }) {
   const { setNodeRef, isOver } = useDroppable({ id });
 
@@ -349,7 +407,7 @@ function DroppableSection({
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
             {campos.map((campo) => (
-              <DraggableCampoWrapper key={campo.id} campo={campo} onEditDescricao={onEditDescricao} />
+              <DraggableCampoWrapper key={campo.id} campo={campo} onEditDescricao={onEditDescricao} onDeleteCampo={onDeleteCampo} />
             ))}
           </div>
         )}
@@ -358,12 +416,12 @@ function DroppableSection({
   );
 }
 
-function DraggableCampoWrapper({ campo, onEditDescricao }: { campo: CrmLeadCampo & { secao_id?: string | null }; onEditDescricao?: (campo: CrmLeadCampo & { secao_id?: string | null }) => void }) {
+function DraggableCampoWrapper({ campo, onEditDescricao, onDeleteCampo }: { campo: CrmLeadCampo & { secao_id?: string | null }; onEditDescricao?: (campo: CrmLeadCampo & { secao_id?: string | null }) => void; onDeleteCampo?: (campo: CrmLeadCampo) => void }) {
   const { attributes, listeners, setNodeRef, isDragging } = useDraggable({ id: campo.id });
 
   return (
     <div ref={setNodeRef} {...attributes} {...listeners}>
-      <DraggableCampo campo={campo} isDragging={isDragging} onEditDescricao={onEditDescricao} />
+      <DraggableCampo campo={campo} isDragging={isDragging} onEditDescricao={onEditDescricao} onDelete={onDeleteCampo} />
     </div>
   );
 }

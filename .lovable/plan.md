@@ -1,36 +1,42 @@
 
+# Tres Paineis de Atendimento — Status
 
-## Adicionar criação/exclusão de campos na tela de Configurações
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-### Problema
-A página de Configurações (`LeadSecoesConfig`) permite apenas gerenciar seções (criar, renomear, excluir) e arrastar campos entre elas. Não há como criar novos campos ou excluir campos existentes — a criação só existe dentro do `ImportMappingDialog` durante importação de planilhas.
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-### Alterações
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-**`src/components/configuracoes/LeadSecoesConfig.tsx`**
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-1. Adicionar formulário de criação de campo com:
-   - Input "Nome do campo" (ex: "Estado Civil")
-   - Select de tipo (texto, numero, data, select)
-   - Botão "Novo Campo"
-   - Usa `useCreateCrmLeadCampo` + `normalizeKey` do hook existente para gerar a key automaticamente
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-2. Adicionar botão de excluir (X) em cada campo arrastável (`DraggableCampo`), com confirmação
-
-3. Adicionar hook `useDeleteCrmLeadCampo` em `useCrmLeadCampos.ts`:
-   - `DELETE FROM crm_lead_campos WHERE id = ?`
-   - Invalida query `crm_lead_campos`
-
-### Fluxo
-```text
-Configurações → Aba "Campos do Lead"
-  → Formulário no topo: Nome + Tipo → "Novo Campo"
-  → Campo criado aparece em "Sem seção"
-  → Cada campo tem botão X para excluir (com confirm)
-  → Arrasta para organizar em seções
-```
-
-### Arquivos modificados
-- `src/hooks/useCrmLeadCampos.ts` — adicionar `useDeleteCrmLeadCampo`
-- `src/components/configuracoes/LeadSecoesConfig.tsx` — formulário de criação + botão excluir nos campos
-
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções
