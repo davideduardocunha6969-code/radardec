@@ -26,20 +26,33 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [editTelefones, setEditTelefones] = useState<LeadTelefone[]>([]);
 
+  const isPhoneFieldKey = (key: string) => /^telefone_\d+$/.test(key);
   const camposExtended = (campos as (CrmLeadCampo & { secao_id?: string | null })[]) || [];
   const dadosExtras = (lead.dados_extras as DadosExtrasMap) || {};
 
+  // Merge legacy telefone_* from dados_extras into telefones array
   const telefones: LeadTelefone[] = useMemo(() => {
     const raw = lead.telefones as any;
-    if (Array.isArray(raw)) return raw.filter((t: any) => t?.numero);
-    return [];
-  }, [lead.telefones]);
+    const arr: LeadTelefone[] = Array.isArray(raw) ? raw.filter((t: any) => t?.numero) : [];
+    // If array is empty, try to recover from legacy dados_extras fields
+    if (arr.length === 0) {
+      for (let i = 1; i <= 4; i++) {
+        const { valor } = getFieldValue(dadosExtras, `telefone_${i}`);
+        if (valor.trim()) {
+          arr.push({ numero: valor.trim(), tipo: "celular", observacao: "" });
+        }
+      }
+    }
+    return arr;
+  }, [lead.telefones, dadosExtras]);
 
   const groupedCampos = useMemo(() => {
-    const semSecao = camposExtended.filter((c) => !c.secao_id);
+    // Filter out telefone_* fields — they are managed via the telefones array
+    const filtered = camposExtended.filter((c) => !isPhoneFieldKey(c.key));
+    const semSecao = filtered.filter((c) => !c.secao_id);
     const porSecao = (secoes || []).map((s) => ({
       secao: s,
-      campos: camposExtended.filter((c) => c.secao_id === s.id),
+      campos: filtered.filter((c) => c.secao_id === s.id),
     })).filter((g) => g.campos.length > 0);
     return { semSecao, porSecao };
   }, [camposExtended, secoes]);
