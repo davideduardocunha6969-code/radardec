@@ -42,7 +42,7 @@ export function WhatsAppAICallButton({ leadId, leadNome, numero, papel }: WhatsA
   // Use refs to avoid stale closures in callbacks
   const aiStatusRef = useRef<AICallStatus>("idle");
   const chamadaIdRef = useRef<string | null>(null);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const durationRef = useRef(0);
 
   const createChamada = useCreateChamada();
