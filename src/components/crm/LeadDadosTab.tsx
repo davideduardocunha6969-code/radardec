@@ -5,7 +5,7 @@ import { useUpdateLead, type CrmLead, type LeadTelefone } from "@/hooks/useCrmOu
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Pencil, Save, X, Info, Phone, Plus, Trash2 } from "lucide-react";
+import { Pencil, Save, X, Info, Phone } from "lucide-react";
 import { toast } from "sonner";
 import { formatCpf, normalizeCpf, isCpfKey } from "@/utils/cpfFormat";
 import { formatDateValue } from "@/utils/dateFormat";
