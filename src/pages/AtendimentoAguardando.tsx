@@ -138,7 +138,7 @@ export default function AtendimentoAguardando() {
     broadcastRef.current?.postMessage({ type: "call-ended" });
   }, []);
 
-  // When session gets lead_atendido_id AND call is active → open atendimento window
+  // When session gets lead_atendido_id AND call is active → prepare atendimento button
   useEffect(() => {
     if (!session?.lead_atendido_id || !callActive) return;
 
@@ -153,18 +153,10 @@ export default function AtendimentoAguardando() {
       numero: session.telefone_atendido || "",
     });
 
-    // Open atendimento as a NEW window (don't redirect — audio stays here)
-    const atendimentoUrl = `/atendimento?leadId=${session.lead_atendido_id}&numero=${encodeURIComponent(session.telefone_atendido || "")}&tipo=voip&funilId=${session.funil_id}&papel=${session.papel}&powerDialerMode=true`;
-
-    // Small delay to ensure call audio is stable
-    setTimeout(() => {
-      const win = window.open(
-        atendimentoUrl,
-        `atendimento_${session.lead_atendido_id}`,
-        "width=1200,height=800"
-      );
-      atendimentoWindowRef.current = win;
-    }, 500);
+    // Prepare URL but don't open automatically (popup blockers block non-user-gesture opens)
+    const url = `/atendimento?leadId=${session.lead_atendido_id}&numero=${encodeURIComponent(session.telefone_atendido || "")}&tipo=voip&funilId=${session.funil_id}&papel=${session.papel}&powerDialerMode=true`;
+    setAtendimentoUrl(url);
+    setShowOpenButton(true);
   }, [session?.lead_atendido_id, callActive]);
 
   // Fetch session via edge function (bypasses RLS)
