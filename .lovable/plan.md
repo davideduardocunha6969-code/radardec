@@ -1,42 +1,29 @@
 
-# Tres Paineis de Atendimento — Status
 
-## Fase 1 — Infraestrutura ✅ CONCLUÍDA
+## Plano de Implementação: Unificar Telefones
 
-- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
-- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
-- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
-- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
-- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
-- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
-- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
-- [x] Interface `RoboCoach` e mutations atualizados com novos campos
+### Problema
+1. Na importação de planilha, colunas mapeadas para `campo:telefone_1`, `campo:telefone_2`, etc. vão para `dados_extras` (strings) em vez do array `telefones` — por isso não aparecem nas abas SDR/Closer
+2. Na aba Dados, telefones de `dados_extras` (telefone_1..4) renderizam como campos de texto normais, e o array `telefones` renderiza separadamente com botões add/remove — dois formatos
+3. Abas SDR/Closer leem apenas `detailLead.telefones`, ignorando dados em `dados_extras`
 
-## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
-- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
-- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
-- [x] `estimarImpactoCampo()` — para ordenação de lacunas
-- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
-- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
+### Alterações
 
-## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
-- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
-- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
-- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
-- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
-- [x] Botão Confirmar promove campo para manual
-- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
+**1. `src/components/crm/ImportMappingDialog.tsx`**
+- No `buildLeads()`, interceptar mapeamentos `campo:telefone_1`, `campo:telefone_2`, `campo:telefone_3`, `campo:telefone_4` — redirecionar esses valores para o array `telefones` em vez de `dados_extras`
+- Manter `__telefone__` funcionando como antes
 
-## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
-- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
-- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
-- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
-- [x] Debounce de 2s nas mudanças de dados
-- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
-- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
+**2. `src/components/crm/LeadDadosTab.tsx`**
+- Filtrar campos dinâmicos cujo key comece com `telefone_` (regex `/^telefone_\d+$/`) — não renderizá-los como campos normais
+- No `useMemo` de telefones, mesclar dados legados de `dados_extras.telefone_1..4` se o array `telefones` estiver vazio
+- Renderizar 4 slots fixos (Telefone 1..4) no modo edição, com número + observação, sem botão add/remove dinâmico
+- No modo visualização, mostrar até 4 telefones numerados
 
-## Fase 5 — Integração Final ✅ CONCLUÍDA
-- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
-- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
-- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
-- [x] Config.toml atualizado com as duas novas funções
+**3. `src/pages/CrmFunilKanban.tsx`**
+- Ao setar `detailLead`, mesclar telefones legados de `dados_extras.telefone_*` no array `telefones` se o array estiver vazio — garante que abas SDR/Closer vejam todos os números
+
+### Compatibilidade
+- Power Dialer lê `lead.telefones` — continua funcionando
+- Dados legados em `dados_extras` são mesclados automaticamente
+- Novos imports vão direto para o array `telefones`
+
