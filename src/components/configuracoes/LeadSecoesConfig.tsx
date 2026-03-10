@@ -295,6 +295,7 @@ export function LeadSecoesConfig() {
           icon={<FolderOpen className="h-4 w-4 text-muted-foreground" />}
           campos={camposSemSecao}
           onEditDescricao={handleEditDescricao}
+          onDeleteCampo={handleDeleteCampo}
         />
 
         {/* Seções */}
