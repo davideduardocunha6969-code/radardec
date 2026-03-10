@@ -83,16 +83,23 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
   const startEditing = () => {
     const values: Record<string, string> = {};
     camposExtended.forEach((c) => {
-      values[c.key] = getFieldValue(dadosExtras, c.key).valor;
+      if (!isPhoneFieldKey(c.key)) {
+        values[c.key] = getFieldValue(dadosExtras, c.key).valor;
+      }
     });
     values.__nome__ = lead.nome;
     values.__endereco__ = lead.endereco || "";
     setEditValues(values);
-    setEditTelefones(
-      telefones.length > 0
-        ? telefones.map((t) => ({ numero: t.numero, tipo: t.tipo, observacao: t.observacao }))
-        : [{ numero: "", tipo: "celular", observacao: "" }]
-    );
+    // Always provide 4 fixed slots for phones
+    const slots: LeadTelefone[] = [];
+    for (let i = 0; i < 4; i++) {
+      slots.push({
+        numero: telefones[i]?.numero || "",
+        tipo: telefones[i]?.tipo || "celular",
+        observacao: telefones[i]?.observacao || "",
+      });
+    }
+    setEditTelefones(slots);
     setEditing(true);
   };
 
