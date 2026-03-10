@@ -1,42 +1,30 @@
 
-# Tres Paineis de Atendimento — Status
 
-## Fase 1 — Infraestrutura ✅ CONCLUÍDA
+## Unificar telefones: Dados de Contato como fonte única
 
-- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
-- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
-- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
-- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
-- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
-- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
-- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
-- [x] Interface `RoboCoach` e mutations atualizados com novos campos
+### Problema atual
+Os telefones aparecem em 3 lugares com código duplicado:
+- **Aba Dados** (`LeadDadosTab`): exibe telefones, permite editar — correto
+- **Aba Atendimento SDR** (inline no `CrmFunilKanban.tsx` linhas 503-597): tem sua própria seção de telefones com edição duplicada + botões de ligação
+- **Aba Atendimento Closer** (linhas 634-680): mesma duplicação
 
-## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
-- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
-- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
-- [x] `estimarImpactoCampo()` — para ordenação de lacunas
-- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
-- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
+### Solução
+1. **Remover** a seção de edição de telefones das abas SDR e Closer (remover `editingLeadData`, `editLeadForm` e todo o bloco de edição inline)
+2. **Manter** nas abas SDR e Closer apenas a **listagem de telefones com botões de ação** (WhatsApp AI, WhatsApp ligação, VoIP) — sem edição, pois a edição fica na aba Dados
+3. A aba Dados (`LeadDadosTab`) continua sendo a fonte única para CRUD de telefones
 
-## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
-- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
-- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
-- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
-- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
-- [x] Botão Confirmar promove campo para manual
-- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
+### Alteração — `src/pages/CrmFunilKanban.tsx`
 
-## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
-- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
-- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
-- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
-- [x] Debounce de 2s nas mudanças de dados
-- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
-- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
+**Aba Atendimento SDR (linhas ~503-597):**
+- Remover o bloco `editingLeadData` (botão "Editar Dados", formulário com nome/endereço/telefones, botões cancelar/salvar)
+- Manter apenas a listagem read-only de telefones com os botões WhatsApp AI, WhatsApp e Ligar
+- Remover estados `editingLeadData` e `editLeadForm` se não usados em outro lugar
 
-## Fase 5 — Integração Final ✅ CONCLUÍDA
-- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
-- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
-- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
-- [x] Config.toml atualizado com as duas novas funções
+**Aba Atendimento Closer (linhas ~634-680):**
+- Já está sem edição — manter como está
+
+### Resultado
+- Telefones editados apenas na aba "Dados"
+- Abas SDR e Closer mostram os mesmos telefones com botões de ação para ligação
+- Sem duplicação de código de edição
+
