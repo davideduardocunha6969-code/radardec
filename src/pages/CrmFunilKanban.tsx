@@ -218,9 +218,27 @@ export default function CrmFunilKanban() {
   const [leadDialog, setLeadDialog] = useState(false);
   const [leadForm, setLeadForm] = useState({ nome: "", endereco: "", telefones: [{ numero: "", tipo: "celular" }] as LeadTelefone[], coluna_id: "" });
 
-  const [detailLead, setDetailLead] = useState<CrmLead | null>(null);
+  const [detailLead, setDetailLeadRaw] = useState<CrmLead | null>(null);
 
-
+  // Merge legacy telefone_* from dados_extras into telefones array
+  const setDetailLead = useCallback((lead: CrmLead | null) => {
+    if (!lead) { setDetailLeadRaw(null); return; }
+    const tels = Array.isArray(lead.telefones) ? lead.telefones.filter((t: any) => t?.numero) : [];
+    if (tels.length === 0 && lead.dados_extras) {
+      const extras = lead.dados_extras as DadosExtrasMap;
+      for (let i = 1; i <= 4; i++) {
+        const { valor } = getFieldValue(extras, `telefone_${i}`);
+        if (valor.trim()) {
+          tels.push({ numero: valor.trim(), tipo: "celular", observacao: "" });
+        }
+      }
+      if (tels.length > 0) {
+        setDetailLeadRaw({ ...lead, telefones: tels });
+        return;
+      }
+    }
+    setDetailLeadRaw(lead);
+  }, []);
 
   // Funnel config dialog
   const [funilConfigDialog, setFunilConfigDialog] = useState(false);
