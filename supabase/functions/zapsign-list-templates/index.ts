@@ -42,10 +42,18 @@ Deno.serve(async (req) => {
       });
     }
 
-    const resp = await fetch("https://api.zapsign.com.br/api/v1/templates/", {
+    const apiUrl = "https://api.zapsign.com.br/api/v1/templates/";
+    const tokenPreview = zapSignToken.substring(0, 8);
+    console.log("DEBUG: Token preview:", tokenPreview, "length:", zapSignToken.length);
+    console.log("DEBUG: Requesting URL:", apiUrl);
+
+    const resp = await fetch(apiUrl, {
       method: "GET",
       headers: { Authorization: `Bearer ${zapSignToken}` },
     });
+
+    console.log("DEBUG: Response status:", resp.status);
+    console.log("DEBUG: Response headers:", JSON.stringify(Object.fromEntries(resp.headers.entries())));
 
     if (!resp.ok) {
       const errText = await resp.text();
