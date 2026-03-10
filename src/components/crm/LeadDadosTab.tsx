@@ -25,6 +25,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
   const [editing, setEditing] = useState(false);
   const [editValues, setEditValues] = useState<Record<string, string>>({});
   const [editTelefones, setEditTelefones] = useState<LeadTelefone[]>([]);
+  const [zapSignOpen, setZapSignOpen] = useState(false);
 
   const isPhoneFieldKey = (key: string) => /^telefone_\d+$/.test(key);
   const camposExtended = (campos as (CrmLeadCampo & { secao_id?: string | null })[]) || [];
