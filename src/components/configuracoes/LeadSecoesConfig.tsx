@@ -78,8 +78,12 @@ export function LeadSecoesConfig() {
   const updateSecao = useUpdateCrmLeadSecao();
   const deleteSecao = useDeleteCrmLeadSecao();
   const updateCampoSecao = useUpdateCampoSecao();
+  const createCampo = useCreateCrmLeadCampo();
+  const deleteCampo = useDeleteCrmLeadCampo();
 
   const [newSecaoName, setNewSecaoName] = useState("");
+  const [newCampoName, setNewCampoName] = useState("");
+  const [newCampoTipo, setNewCampoTipo] = useState("texto");
   const [editingSecao, setEditingSecao] = useState<string | null>(null);
   const [editingSecaoName, setEditingSecaoName] = useState("");
   const [activeDragId, setActiveDragId] = useState<string | null>(null);
