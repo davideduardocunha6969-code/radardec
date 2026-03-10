@@ -1,42 +1,42 @@
 
-# Tres Paineis de Atendimento — Status
 
-## Fase 1 — Infraestrutura ✅ CONCLUÍDA
+## Diagnóstico: Transcrições de chamadas VoIP não aparecem no card do lead
 
-- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
-- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
-- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
-- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
-- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
-- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
-- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
-- [x] Interface `RoboCoach` e mutations atualizados com novos campos
+### Evidência do banco de dados
+Todas as chamadas VoIP (`canal: voip`) têm:
+- `recording_url: NULL` — nenhuma gravação foi salva
+- `audio_url: NULL` — nenhum áudio no storage
+- `transcricao: NULL` — sem transcrição
+- `duracao_segundos: 0` — duração zerada
 
-## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
-- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
-- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
-- [x] `estimarImpactoCampo()` — para ordenação de lacunas
-- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
-- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
+Chamadas WhatsApp do mesmo período têm áudio + transcrição funcionando normalmente.
 
-## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
-- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
-- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
-- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
-- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
-- [x] Botão Confirmar promove campo para manual
-- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
+### Causa raiz (2 problemas)
 
-## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
-- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
-- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
-- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
-- [x] Debounce de 2s nas mudanças de dados
-- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
-- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
+**Problema 1: Stale closure no `duration`**
+No `VoipDialer.tsx`, o handler `disconnect` captura a variável `duration` no momento em que a closure é criada (dentro de `startCall`), quando `duration = 0`. Assim, `duracao_segundos` é sempre salvo como 0.
 
-## Fase 5 — Integração Final ✅ CONCLUÍDA
-- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
-- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
-- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
-- [x] Config.toml atualizado com as duas novas funções
+**Problema 2: Gravação nunca é processada**
+O fluxo de gravação depende do callback do Twilio (`RecordingStatusCallback`) para o webhook. O webhook baixa o áudio, salva no storage e dispara a transcrição. Porém:
+- A resposta do `start-recording` não é verificada (pode falhar silenciosamente)
+- O `process-chamada-background` e `feedback-chamada` NÃO estão no `config.toml`, então têm `verify_jwt = true` — chamadas internas com service_role key DEVEM funcionar, mas para robustez devem estar explícitos
+- Não há fallback se o callback do Twilio nunca chegar
+
+### Plano de correção
+
+**1. Corrigir stale closure do `duration` (`VoipDialer.tsx`)**
+Usar um `ref` para rastrear a duração, garantindo que o handler `disconnect` sempre tenha o valor atual.
+
+**2. Verificar resposta do `start-recording` (`VoipDialer.tsx`)**
+Checar se a resposta do `start-recording` foi bem-sucedida e logar erros detalhados.
+
+**3. Adicionar funções ao `config.toml`**
+Incluir `process-chamada-background` e `feedback-chamada` com `verify_jwt = false` para eliminar riscos de JWT.
+
+**4. Adicionar fallback de transcrição no `disconnect` (`VoipDialer.tsx`)**
+Quando a chamada desconecta, se houver `callSid` e duração > 0, aguardar alguns segundos e verificar se a gravação foi processada. Caso não tenha sido, disparar `process-chamada-background` diretamente pelo cliente usando o áudio do Twilio como fallback.
+
+### Arquivos a modificar
+- `src/components/crm/VoipDialer.tsx` — fix stale closure, verificar resposta start-recording, fallback de transcrição
+- `supabase/config.toml` — adicionar `process-chamada-background` e `feedback-chamada`
+
