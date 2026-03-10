@@ -235,7 +235,7 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
     setEditTelefones((prev) => [...prev, { numero: "", tipo: "celular", observacao: "" }]);
   };
 
-  // Telefones UI blocks
+  // Telefones UI blocks — unified format with 4 fixed slots
   const renderTelefonesView = () => {
     if (telefones.length === 0) return null;
     return (
@@ -245,8 +245,8 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
           {telefones.map((tel, i) => (
             <div key={i} className="flex items-center gap-2 text-sm">
               <Phone className="h-3.5 w-3.5 text-muted-foreground" />
+              <span className="font-medium text-xs text-muted-foreground">Telefone {i + 1}:</span>
               <span>{tel.numero}</span>
-              {tel.tipo && <Badge variant="secondary" className="text-[10px] px-1.5 py-0">{tel.tipo}</Badge>}
               {tel.observacao && <span className="text-xs text-muted-foreground">({tel.observacao})</span>}
             </div>
           ))}
@@ -260,33 +260,24 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
       <label className="text-xs font-medium text-muted-foreground mb-2 block">Telefones</label>
       <div className="space-y-2">
         {editTelefones.map((tel, i) => (
-          <div key={i} className="flex items-center gap-2">
-            <Input
-              value={tel.numero}
-              onChange={(e) => updateTelefone(i, "numero", e.target.value)}
-              placeholder="(00) 00000-0000"
-              className="flex-1"
-            />
-            <Input
-              value={tel.tipo || ""}
-              onChange={(e) => updateTelefone(i, "tipo", e.target.value)}
-              placeholder="Tipo"
-              className="w-24"
-            />
-            <Input
-              value={tel.observacao || ""}
-              onChange={(e) => updateTelefone(i, "observacao", e.target.value)}
-              placeholder="Obs"
-              className="w-32"
-            />
-            <Button variant="ghost" size="icon" onClick={() => removeTelefone(i)} className="shrink-0">
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+          <div key={i} className="space-y-1">
+            <label className="text-xs text-muted-foreground">Telefone {i + 1}</label>
+            <div className="flex items-center gap-2">
+              <Input
+                value={tel.numero}
+                onChange={(e) => updateTelefone(i, "numero", e.target.value)}
+                placeholder="(00) 00000-0000"
+                className="flex-1"
+              />
+              <Input
+                value={tel.observacao || ""}
+                onChange={(e) => updateTelefone(i, "observacao", e.target.value)}
+                placeholder="Observação"
+                className="w-40"
+              />
+            </div>
           </div>
         ))}
-        <Button variant="outline" size="sm" onClick={addTelefone}>
-          <Plus className="h-3.5 w-3.5 mr-1" />Adicionar Telefone
-        </Button>
       </div>
     </div>
   );

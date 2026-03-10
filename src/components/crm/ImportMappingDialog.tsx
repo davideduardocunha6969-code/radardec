@@ -118,6 +118,8 @@ export function ImportMappingDialog({ open, onOpenChange, funilId, colunas }: Im
     setCreatingFieldForIdx(null);
   };
 
+  const isPhoneFieldKey = (key: string) => /^telefone_\d+$/.test(key);
+
   const buildLeads = () => {
     const leads: { nome: string; endereco?: string; telefones: LeadTelefone[]; dados_extras?: Record<string, string> }[] = [];
 
@@ -137,6 +139,11 @@ export function ImportMappingDialog({ open, onOpenChange, funilId, colunas }: Im
           telefones.push({ numero: val, tipo: "celular" });
         } else if (target.startsWith("campo:")) {
           const key = target.replace("campo:", "");
+          // Redirect telefone_1..4 fields to the telefones array
+          if (isPhoneFieldKey(key)) {
+            telefones.push({ numero: val, tipo: "celular", observacao: headers[idx] || "" });
+            continue;
+          }
           // Auto-convert excel dates for date fields
           const campo = campos?.find((c) => c.key === key);
           let processedVal = campo?.tipo === "data" ? excelDateToString(val) : val;
@@ -148,7 +155,6 @@ export function ImportMappingDialog({ open, onOpenChange, funilId, colunas }: Im
         }
       }
 
-      // Also check for additional phone columns mapped to telefone
       if (!nome) continue;
       leads.push({ nome, telefones, dados_extras: Object.keys(dados_extras).length ? dados_extras : undefined });
     }
