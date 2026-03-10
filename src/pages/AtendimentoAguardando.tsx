@@ -356,6 +356,25 @@ export default function AtendimentoAguardando() {
               </Button>
             </div>
 
+            {showOpenButton && (
+              <Button
+                size="lg"
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+                onClick={() => {
+                  const win = window.open(
+                    atendimentoUrl,
+                    `atendimento_${session?.lead_atendido_id}`,
+                    "width=1200,height=800"
+                  );
+                  atendimentoWindowRef.current = win;
+                  setShowOpenButton(false);
+                }}
+              >
+                <PhoneCall className="h-5 w-5 mr-2" />
+                Abrir Tela de Atendimento — {answeredLeadName}
+              </Button>
+            )}
+
             <p className="text-xs text-center text-muted-foreground">
               ⚠️ Não feche esta janela — o áudio da chamada está aqui.
             </p>

@@ -112,39 +112,39 @@ serve(async (req) => {
           });
         }
 
-        // We won the race! Cancel all OTHER calls in this batch
+        // We won the race! Fire-and-forget: cancel other calls in background
         winnerSet = true;
         const allSids = (winner.call_sids || {}) as Record<string, string>;
-        for (const [sid, chamadaId] of Object.entries(allSids)) {
-          if (sid === callSid) continue;
-          try {
-            const cancelUrl = `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Calls/${sid}.json`;
-            await fetch(cancelUrl, {
-              method: "POST",
-              headers: {
-                Authorization: "Basic " + btoa(`${ACCOUNT_SID}:${AUTH_TOKEN}`),
-                "Content-Type": "application/x-www-form-urlencoded",
-              },
-              body: "Status=canceled",
-            });
-            canceledCount++;
-            console.log(`[power-dialer-twiml] Cancelled call ${sid}`);
-          } catch (e) {
-            console.error(`[power-dialer-twiml] Error cancelling ${sid}:`, e);
-          }
-          // Mark sibling chamada as cancelada
-          await supabase
-            .from("crm_chamadas")
-            .update({ status: "cancelada" })
-            .eq("id", chamadaId)
-            .in("status", ["em_andamento", "iniciando"]);
-        }
+        const cancelPromises = Object.entries(allSids)
+          .filter(([sid]) => sid !== callSid)
+          .map(async ([sid, chamadaId]) => {
+            try {
+              await fetch(`https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Calls/${sid}.json`, {
+                method: "POST",
+                headers: {
+                  Authorization: "Basic " + btoa(`${ACCOUNT_SID}:${AUTH_TOKEN}`),
+                  "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: "Status=canceled",
+              });
+              console.log(`[power-dialer-twiml] Cancelled call ${sid}`);
+            } catch (e) {
+              console.error(`[power-dialer-twiml] Error cancelling ${sid}:`, e);
+            }
+            await supabase
+              .from("crm_chamadas")
+              .update({ status: "cancelada" })
+              .eq("id", chamadaId)
+              .in("status", ["em_andamento", "iniciando", "chamando"]);
+          });
+        // Don't await — return TwiML immediately so audio connects now
+        Promise.all(cancelPromises).catch(console.error);
       }
     }
 
-    console.log(`[power-dialer-twiml] winner_set=${winnerSet} canceled_calls=${canceledCount}`);
+    console.log(`[power-dialer-twiml] winner_set=${winnerSet} — returning TwiML immediately`);
 
-    // Connect to browser Client
+    // Return TwiML immediately — audio bridge starts in <1s instead of ~8s
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Dial>
