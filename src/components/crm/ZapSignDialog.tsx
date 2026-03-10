@@ -38,14 +38,6 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
     const values: Record<string, string> = {};
     const groups: Array<{ secaoNome: string; fields: Array<{ key: string; nome: string }> }> = [];
 
-    // Add native "nome" field
-    values["__nome__"] = lead.nome || "";
-
-    // Add endereco if present
-    if (lead.endereco) {
-      values["__endereco__"] = lead.endereco;
-    }
-
     // Filter only "Dados Pessoais" section
     const secaoMap = new Map<string, { nome: string; ordem: number; fields: Array<{ key: string; nome: string }> }>();
 
@@ -108,23 +100,16 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
   };
 
   const handleSend = async () => {
-    const name = fieldValues["__nome__"]?.trim();
-    if (!name) {
-      toast.error("Nome do signatário é obrigatório");
-      return;
-    }
-
-    // Build field_data: all non-empty fields (excluding internal keys)
+    // Build field_data from dynamic fields
     const fieldData: Record<string, string> = {};
     for (const [key, val] of Object.entries(fieldValues)) {
       if (val.trim()) {
-        // Map internal keys to readable names for ZapSign
-        if (key === "__nome__") fieldData["nome"] = val.trim();
-        else if (key === "__telefone__") fieldData["telefone"] = val.trim();
-        else if (key === "__endereco__") fieldData["endereco"] = val.trim();
-        else fieldData[key] = val.trim();
+        fieldData[key] = val.trim();
       }
     }
+
+    // signer_name: use "nome" field from dados pessoais, fallback to lead.nome
+    const name = fieldData["nome"] || lead.nome || "";
 
     try {
       const result = await createDoc.mutateAsync({
@@ -219,29 +204,6 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
 
             <ScrollArea className="h-[50vh] pr-3">
               <div className="space-y-4">
-                {/* Native fields */}
-                <div className="space-y-2">
-                  <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Dados Nativos</h4>
-                  <div>
-                    <Label className="text-xs">Nome *</Label>
-                    <Input
-                      value={fieldValues["__nome__"] || ""}
-                      onChange={(e) => updateField("__nome__", e.target.value)}
-                      className="mt-0.5"
-                    />
-                  </div>
-                  {fieldValues["__endereco__"] !== undefined && (
-                    <div>
-                      <Label className="text-xs">Endereço</Label>
-                      <Input
-                        value={fieldValues["__endereco__"] || ""}
-                        onChange={(e) => updateField("__endereco__", e.target.value)}
-                        className="mt-0.5"
-                      />
-                    </div>
-                  )}
-                </div>
-
                 {/* Dynamic fields grouped by section */}
                 {groupedFields.map((group) => (
                   <div key={group.secaoNome} className="space-y-2">
