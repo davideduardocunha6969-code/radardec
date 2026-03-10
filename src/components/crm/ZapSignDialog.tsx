@@ -113,7 +113,7 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
     }
 
     // signer_name: use "nome" field from dados pessoais, fallback to lead.nome
-    const name = fieldData["nome"] || lead.nome || "";
+    const name = fieldData["__nome__"] || lead.nome || "";
 
     try {
       const result = await createDoc.mutateAsync({
