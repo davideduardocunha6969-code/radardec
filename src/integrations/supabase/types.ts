@@ -2826,6 +2826,51 @@ export type Database = {
         }
         Relationships: []
       }
+      zapsign_documentos: {
+        Row: {
+          created_at: string
+          dados_enviados: Json | null
+          doc_token: string | null
+          id: string
+          lead_id: string
+          nome_documento: string | null
+          sign_url: string | null
+          signer_token: string | null
+          status: string
+          template_id: string | null
+          template_nome: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dados_enviados?: Json | null
+          doc_token?: string | null
+          id?: string
+          lead_id: string
+          nome_documento?: string | null
+          sign_url?: string | null
+          signer_token?: string | null
+          status?: string
+          template_id?: string | null
+          template_nome?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dados_enviados?: Json | null
+          doc_token?: string | null
+          id?: string
+          lead_id?: string
+          nome_documento?: string | null
+          sign_url?: string | null
+          signer_token?: string | null
+          status?: string
+          template_id?: string | null
+          template_nome?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
