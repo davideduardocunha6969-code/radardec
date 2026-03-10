@@ -1,39 +1,42 @@
 
+# Tres Paineis de Atendimento — Status
 
-## Adicionar gravação no power-dialer-twiml
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-### Problema
-No Power Dialer, a gravação precisa ser iniciada na perna outbound (Twilio → lead), cujo CallSid está salvo em `crm_chamadas.twilio_call_sid`. O `device.on("incoming")` no browser recebe o CallSid da perna inbound (Twilio → browser) — SID diferente, que não é encontrado pelo webhook ao salvar o MP3.
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-### Solução
-Adicionar o start-recording em `supabase/functions/power-dialer-twiml/index.ts`, logo após `winnerSet = true;`, antes do `Promise.all(cancelPromises)`. Fire-and-forget para não bloquear o retorno do TwiML.
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-### Alteração — `supabase/functions/power-dialer-twiml/index.ts`
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-Após a linha `winnerSet = true;` (~linha 89), adicionar:
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-```typescript
-// Start dual-channel recording on the OUTBOUND call leg
-// (callSid here is the outbound SID stored in crm_chamadas.twilio_call_sid)
-const SUPABASE_URL_ENV = Deno.env.get("SUPABASE_URL")!;
-fetch(
-  `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Calls/${callSid}/Recordings.json`,
-  {
-    method: "POST",
-    headers: {
-      Authorization: "Basic " + btoa(`${ACCOUNT_SID}:${AUTH_TOKEN}`),
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: new URLSearchParams({
-      RecordingChannels: "dual",
-      RecordingStatusCallback: `${SUPABASE_URL_ENV}/functions/v1/twilio-webhook`,
-      RecordingStatusCallbackEvent: "completed",
-    }).toString(),
-  }
-).then(r => r.json())
- .then(d => console.log("[twiml] Recording started:", d.sid))
- .catch(e => console.error("[twiml] start-recording error:", e));
-```
-
-Nenhum outro arquivo alterado. Nenhuma migration.
-
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções
