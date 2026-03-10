@@ -114,6 +114,27 @@ serve(async (req) => {
 
         // We won the race! Fire-and-forget: cancel other calls in background
         winnerSet = true;
+
+        // Start dual-channel recording on the OUTBOUND call leg
+        // (callSid here is the outbound SID stored in crm_chamadas.twilio_call_sid)
+        const SUPABASE_URL_ENV = Deno.env.get("SUPABASE_URL")!;
+        fetch(
+          `https://api.twilio.com/2010-04-01/Accounts/${ACCOUNT_SID}/Calls/${callSid}/Recordings.json`,
+          {
+            method: "POST",
+            headers: {
+              Authorization: "Basic " + btoa(`${ACCOUNT_SID}:${AUTH_TOKEN}`),
+              "Content-Type": "application/x-www-form-urlencoded",
+            },
+            body: new URLSearchParams({
+              RecordingChannels: "dual",
+              RecordingStatusCallback: `${SUPABASE_URL_ENV}/functions/v1/twilio-webhook`,
+              RecordingStatusCallbackEvent: "completed",
+            }).toString(),
+          }
+        ).then(r => r.json())
+         .then(d => console.log("[twiml] Recording started:", d.sid))
+         .catch(e => console.error("[twiml] start-recording error:", e));
         const allSids = (winner.call_sids || {}) as Record<string, string>;
         const cancelPromises = Object.entries(allSids)
           .filter(([sid]) => sid !== callSid)
