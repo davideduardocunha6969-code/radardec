@@ -223,7 +223,7 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
               Revise os dados que serão inseridos no documento. As variáveis no template DOCX (ex: {"{{cpf}}"}) devem corresponder às chaves dos campos abaixo.
             </p>
 
-            <ScrollArea className="max-h-[50vh] pr-3">
+            <ScrollArea className="h-[50vh] pr-3">
               <div className="space-y-4">
                 {/* Native fields */}
                 <div className="space-y-2">
