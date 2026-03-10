@@ -41,23 +41,18 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
     // Add native "nome" field
     values["__nome__"] = lead.nome || "";
 
-    // Get phone from telefones
-    const raw = lead.telefones as any;
-    const telefones: LeadTelefone[] = Array.isArray(raw) ? raw.filter((t: any) => t?.numero) : [];
-    if (telefones.length > 0) {
-      values["__telefone__"] = telefones[0].numero;
-    }
-
     // Add endereco if present
     if (lead.endereco) {
       values["__endereco__"] = lead.endereco;
     }
 
-    // Group campos by secao
+    // Filter only "Dados Pessoais" section
     const secaoMap = new Map<string, { nome: string; ordem: number; fields: Array<{ key: string; nome: string }> }>();
 
     for (const secao of secoes) {
-      secaoMap.set(secao.id, { nome: secao.nome, ordem: secao.ordem, fields: [] });
+      if (secao.nome.toLowerCase().includes("dados pessoais")) {
+        secaoMap.set(secao.id, { nome: secao.nome, ordem: secao.ordem, fields: [] });
+      }
     }
 
     for (const campo of (campos as any[])) {
@@ -66,12 +61,11 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
 
       if (secaoEntry) {
         secaoEntry.fields.push({ key: campo.key, nome: campo.nome });
-      }
-
-      // Get value from dados_extras
-      const { valor } = getFieldValue(dadosExtras, campo.key);
-      if (valor.trim()) {
-        values[campo.key] = valor;
+        // Get value from dados_extras
+        const { valor } = getFieldValue(dadosExtras, campo.key);
+        if (valor.trim()) {
+          values[campo.key] = valor;
+        }
       }
     }
 
