@@ -64,6 +64,7 @@ Deno.serve(async (req) => {
     }
 
     const zapBody: Record<string, unknown> = {
+      template_id,
       signer_name,
       ...(signer_email && { signer_email }),
       ...(signer_phone && { signer_phone }),
@@ -72,7 +73,7 @@ Deno.serve(async (req) => {
 
     console.log("DEBUG: ZapSign create-doc payload:", JSON.stringify(zapBody));
 
-    const apiUrl = `https://api.zapsign.com.br/api/v1/templates/${template_id}/create-doc/`;
+    const apiUrl = "https://api.zapsign.com.br/api/v1/models/create-doc/";
     console.log("DEBUG: Requesting URL:", apiUrl);
 
     const resp = await fetch(apiUrl, {
