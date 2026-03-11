@@ -11,6 +11,7 @@ import { formatDateValue } from "@/utils/dateFormat";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getFieldValue, createField, type DadosExtrasMap } from "@/utils/trabalhista/types";
 import { ZapSignDialog } from "./ZapSignDialog";
+import { withRetry } from "@/utils/supabaseRetry";
 
 interface LeadDadosTabProps {
   lead: CrmLead;
@@ -132,26 +133,27 @@ export function LeadDadosTab({ lead, funilId, onLeadUpdate }: LeadDadosTabProps)
       .filter((t) => t.numero.trim() !== "")
       .map((t) => ({ numero: t.numero, tipo: t.tipo, observacao: t.observacao }));
 
-    import("@/integrations/supabase/client").then(({ supabase }) => {
-      supabase
-        .from("crm_leads")
-        .update({
-          dados_extras: JSON.parse(JSON.stringify(newDadosExtras)),
-          nome,
-          endereco,
-          email,
-          telefones: JSON.parse(JSON.stringify(newTelefones)),
-        })
-        .eq("id", lead.id)
-        .then(({ error }) => {
-          if (error) {
-            toast.error(error.message);
-          } else {
-            onLeadUpdate({ ...lead, nome, endereco, email, dados_extras: newDadosExtras, telefones: newTelefones });
-            setEditing(false);
-            toast.success("Dados atualizados!");
-          }
+    import("@/integrations/supabase/client").then(async ({ supabase }) => {
+      try {
+        await withRetry(async () => {
+          const { error } = await supabase
+            .from("crm_leads")
+            .update({
+              dados_extras: JSON.parse(JSON.stringify(newDadosExtras)),
+              nome,
+              endereco,
+              email,
+              telefones: JSON.parse(JSON.stringify(newTelefones)),
+            })
+            .eq("id", lead.id);
+          if (error) throw error;
         });
+        onLeadUpdate({ ...lead, nome, endereco, email, dados_extras: newDadosExtras, telefones: newTelefones });
+        setEditing(false);
+        toast.success("Dados atualizados!");
+      } catch (error: any) {
+        toast.error(error.message || "Erro ao salvar");
+      }
     });
   };
 
