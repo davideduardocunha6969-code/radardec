@@ -58,8 +58,8 @@ Deno.serve(async (req) => {
     if (field_data && typeof field_data === "object") {
       for (const [key, value] of Object.entries(field_data)) {
         if (typeof value === "string" && value.trim()) {
-          const cleanKey = key.replace(/^_+|_+$/g, '');
-          dataArray.push({ de: `{{${cleanKey}}}`, para: value.trim() });
+          // Keys are now human-readable placeholder names (e.g. "NOME COMPLETO")
+          dataArray.push({ de: `{{${key}}}`, para: value.trim() });
         }
       }
     }

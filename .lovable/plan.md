@@ -1,34 +1,42 @@
 
+# Tres Paineis de Atendimento — Status
 
-## Plano: Campo "Variável" editável + Persistência do mapeamento
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-O Claude está correto — e a sugestão de salvar o mapeamento é valiosa e não difícil de implementar. Proponho fazer ambos agora.
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-### Parte 1: Campo "Variável" editável (correção imediata)
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-**Arquivo:** `src/components/crm/ZapSignDialog.tsx`
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-- Adicionar estado `fieldPlaceholders` (Record<string, string>) inicializado com `campo.nome`
-- No Step 2, cada campo mostra dois inputs: **Variável** (editável) e **Valor**
-- No `handleSend`, usar `fieldPlaceholders[key]` como chave do `field_data` em vez de `campo.key`
-- Remover injeção de `__email__`/`__telefone__` e grupo "Contato (Signatário)"
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-### Parte 2: Persistir mapeamento por template
-
-**Migração:** criar tabela `zapsign_template_mappings`
-```
-id, template_id (text), campo_key (text), variavel_zapsign (text), user_id (uuid), created_at
-unique(template_id, campo_key)
-```
-
-**Lógica no `ZapSignDialog.tsx`:**
-- Ao carregar Step 2, buscar mapeamentos salvos para o template selecionado
-- Se existir mapeamento para um `campo.key`, pré-preencher o input "Variável" com o valor salvo (em vez de `campo.nome`)
-- Ao enviar com sucesso, fazer upsert dos mapeamentos editados
-
-Resultado: na primeira vez o usuário ajusta manualmente. A partir da segunda vez, os nomes das variáveis já vêm corretos.
-
-### Arquivos alterados
-- `src/components/crm/ZapSignDialog.tsx` — UI + lógica de persistência
-- Migração SQL — nova tabela `zapsign_template_mappings`
-
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções

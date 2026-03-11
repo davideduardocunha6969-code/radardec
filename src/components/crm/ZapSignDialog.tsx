@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -10,8 +10,9 @@ import { useCrmLeadCampos } from "@/hooks/useCrmLeadCampos";
 import { useCrmLeadSecoes } from "@/hooks/useCrmLeadSecoes";
 import { getFieldValue, type DadosExtrasMap } from "@/utils/trabalhista/types";
 import type { CrmLead, LeadTelefone } from "@/hooks/useCrmOutbound";
+import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Copy, Check, Loader2, FileSignature, Mail, Phone } from "lucide-react";
+import { Copy, Check, Loader2, FileSignature } from "lucide-react";
 
 interface ZapSignDialogProps {
   open: boolean;
@@ -30,7 +31,7 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
 
-  // Build grouped fields from all sections with pre-filled values
+  // Build grouped fields from "Dados Pessoais" and "Dados de Contato" sections
   const { groupedFields, initialFieldValues } = useMemo(() => {
     if (!campos || !secoes) return { groupedFields: [] as any[], initialFieldValues: {} as Record<string, string> };
 
@@ -38,7 +39,6 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
     const values: Record<string, string> = {};
     const groups: Array<{ secaoNome: string; fields: Array<{ key: string; nome: string }> }> = [];
 
-    // Filter "Dados Pessoais" and "Dados de Contato" sections
     const secaoMap = new Map<string, { nome: string; ordem: number; fields: Array<{ key: string; nome: string }> }>();
 
     for (const secao of secoes) {
@@ -54,7 +54,6 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
 
       if (secaoEntry) {
         secaoEntry.fields.push({ key: campo.key, nome: campo.nome });
-        // Get value from dados_extras
         const { valor } = getFieldValue(dadosExtras, campo.key);
         let finalValue = valor.trim();
         if (!finalValue && campo.key === "__nome__" && lead.nome) {
@@ -66,16 +65,6 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
       }
     }
 
-    // Inject native contact fields (email + first phone) into values
-    if (lead.email) {
-      values["__email__"] = lead.email;
-    }
-    const telefones = Array.isArray(lead.telefones) ? lead.telefones as LeadTelefone[] : [];
-    if (telefones.length > 0 && telefones[0]?.numero) {
-      values["__telefone__"] = telefones[0].numero;
-    }
-
-    // Sort sections by ordem and build groups
     const sorted = Array.from(secaoMap.values())
       .filter((s) => s.fields.length > 0)
       .sort((a, b) => a.ordem - b.ordem);
@@ -84,27 +73,62 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
       groups.push({ secaoNome: s.nome, fields: s.fields });
     }
 
-    // Add native contact group at the end
-    const contactFields: Array<{ key: string; nome: string }> = [];
-    if (lead.email !== undefined) contactFields.push({ key: "__email__", nome: "Email" });
-    if (telefones.length > 0) contactFields.push({ key: "__telefone__", nome: "Telefone" });
-    if (contactFields.length > 0) {
-      groups.push({ secaoNome: "Contato (Signatário)", fields: contactFields });
-    }
-
     return { groupedFields: groups, initialFieldValues: values };
   }, [campos, secoes, lead]);
 
   // Editable field values state
   const [fieldValues, setFieldValues] = useState<Record<string, string>>({});
+  // Editable variable name per field (what goes into the DOCX placeholder)
+  const [fieldPlaceholders, setFieldPlaceholders] = useState<Record<string, string>>({});
 
   // Initialize field values when initialFieldValues change
   useMemo(() => {
     setFieldValues(initialFieldValues);
   }, [initialFieldValues]);
 
+  // Initialize placeholders with campo.nome defaults
+  useEffect(() => {
+    if (!groupedFields.length) return;
+    const defaults: Record<string, string> = {};
+    for (const group of groupedFields) {
+      for (const field of group.fields) {
+        defaults[field.key] = field.nome;
+      }
+    }
+    setFieldPlaceholders(defaults);
+  }, [groupedFields]);
+
+  // Load saved mappings when template is selected (step 2)
+  useEffect(() => {
+    if (step !== 2 || !selectedTemplate) return;
+
+    const loadMappings = async () => {
+      const { data } = await supabase
+        .from("zapsign_template_mappings" as any)
+        .select("campo_key, variavel_zapsign")
+        .eq("template_id", selectedTemplate);
+
+      if (data && (data as any[]).length > 0) {
+        setFieldPlaceholders((prev) => {
+          const updated = { ...prev };
+          for (const row of data as any[]) {
+            if (row.campo_key && row.variavel_zapsign) {
+              updated[row.campo_key] = row.variavel_zapsign;
+            }
+          }
+          return updated;
+        });
+      }
+    };
+    loadMappings();
+  }, [step, selectedTemplate]);
+
   const updateField = (key: string, value: string) => {
     setFieldValues((prev) => ({ ...prev, [key]: value }));
+  };
+
+  const updatePlaceholder = (key: string, value: string) => {
+    setFieldPlaceholders((prev) => ({ ...prev, [key]: value }));
   };
 
   const selectedTemplateName = useMemo(() => {
@@ -121,30 +145,61 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
     setStep(2);
   };
 
+  const saveMappings = async () => {
+    const rows = Object.entries(fieldPlaceholders)
+      .filter(([_, v]) => v.trim())
+      .map(([key, variavel]) => ({
+        template_id: selectedTemplate,
+        campo_key: key,
+        variavel_zapsign: variavel.trim(),
+      }));
+
+    if (rows.length === 0) return;
+
+    // Get user id for the rows
+    const { data: userData } = await supabase.auth.getUser();
+    if (!userData?.user) return;
+
+    for (const row of rows) {
+      await supabase
+        .from("zapsign_template_mappings" as any)
+        .upsert(
+          { ...row, user_id: userData.user.id },
+          { onConflict: "template_id,campo_key" }
+        );
+    }
+  };
+
   const handleSend = async () => {
-    // Build field_data from dynamic fields
+    // Build field_data using the editable placeholder names as keys
     const fieldData: Record<string, string> = {};
     for (const [key, val] of Object.entries(fieldValues)) {
       if (val.trim()) {
-        fieldData[key] = val.trim();
+        const placeholder = fieldPlaceholders[key]?.trim();
+        if (placeholder) {
+          fieldData[placeholder] = val.trim();
+        }
       }
     }
 
-    // signer_name: use "nome" field from dados pessoais, fallback to lead.nome
-    const name = fieldData["__nome__"] || lead.nome || "";
+    const name = fieldValues["__nome__"] || lead.nome || "";
+    const telefones = Array.isArray(lead.telefones) ? lead.telefones as LeadTelefone[] : [];
 
     try {
       const result = await createDoc.mutateAsync({
         template_id: selectedTemplate,
         template_nome: selectedTemplateName,
         signer_name: name,
-        signer_email: fieldData["__email__"] || lead.email || undefined,
-        signer_phone: fieldData["__telefone__"] || (Array.isArray(lead.telefones) && (lead.telefones as LeadTelefone[])[0]?.numero) || undefined,
+        signer_email: lead.email || undefined,
+        signer_phone: telefones[0]?.numero || undefined,
         lead_id: lead.id,
         field_data: fieldData,
       });
       setResultUrl(result.sign_url);
       toast.success("Documento enviado para assinatura!");
+
+      // Save mappings in background
+      saveMappings();
     } catch (err: any) {
       toast.error(err?.message || "Erro ao criar documento");
     }
@@ -221,26 +276,37 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
         ) : (
           <div className="space-y-4">
             <p className="text-xs text-muted-foreground">
-              Revise os dados que serão inseridos no documento. As variáveis no template DOCX (ex: {"{{cpf}}"}) devem corresponder às chaves dos campos abaixo.
+              Ajuste o nome da <strong>Variável</strong> para corresponder exatamente ao placeholder do template DOCX (ex: {"{{NOME COMPLETO}}"}).
+              O mapeamento será salvo para uso futuro.
             </p>
 
             <ScrollArea className="h-[50vh] pr-3">
               <div className="space-y-4">
-                {/* Dynamic fields grouped by section */}
                 {groupedFields.map((group) => (
                   <div key={group.secaoNome} className="space-y-2">
                     <h4 className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
                       {group.secaoNome}
                     </h4>
                     {group.fields.map((field: { key: string; nome: string }) => (
-                      <div key={field.key}>
-                        <Label className="text-xs">{field.nome}</Label>
-                        <Input
-                          value={fieldValues[field.key] || ""}
-                          onChange={(e) => updateField(field.key, e.target.value)}
-                          placeholder={`{{${field.key}}}`}
-                          className="mt-0.5"
-                        />
+                      <div key={field.key} className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">Variável</Label>
+                          <Input
+                            value={fieldPlaceholders[field.key] || ""}
+                            onChange={(e) => updatePlaceholder(field.key, e.target.value)}
+                            placeholder="Nome no template"
+                            className="mt-0.5 text-xs font-mono"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs">{field.nome}</Label>
+                          <Input
+                            value={fieldValues[field.key] || ""}
+                            onChange={(e) => updateField(field.key, e.target.value)}
+                            placeholder="Valor"
+                            className="mt-0.5"
+                          />
+                        </div>
                       </div>
                     ))}
                   </div>
