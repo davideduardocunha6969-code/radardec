@@ -66,11 +66,13 @@ export function useLeadDadosSync(leadId: string | null): UseLeadDadosSyncReturn 
   const persistToDb = useCallback(
     async (newDados: DadosExtrasMap) => {
       if (!leadId) return;
-      const { error } = await supabase
-        .from("crm_leads")
-        .update({ dados_extras: JSON.parse(JSON.stringify(newDados)) })
-        .eq("id", leadId);
-      if (error) console.error("useLeadDadosSync: persist error", error);
+      await withRetry(async () => {
+        const { error } = await supabase
+          .from("crm_leads")
+          .update({ dados_extras: JSON.parse(JSON.stringify(newDados)) })
+          .eq("id", leadId);
+        if (error) throw error;
+      });
     },
     [leadId]
   );
