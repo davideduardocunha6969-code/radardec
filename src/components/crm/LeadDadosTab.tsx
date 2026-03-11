@@ -11,6 +11,7 @@ import { formatDateValue } from "@/utils/dateFormat";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { getFieldValue, createField, type DadosExtrasMap } from "@/utils/trabalhista/types";
 import { ZapSignDialog } from "./ZapSignDialog";
+import { withRetry } from "@/utils/supabaseRetry";
 
 interface LeadDadosTabProps {
   lead: CrmLead;
