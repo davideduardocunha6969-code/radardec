@@ -2874,6 +2874,33 @@ export type Database = {
         }
         Relationships: []
       }
+      zapsign_template_mappings: {
+        Row: {
+          campo_key: string
+          created_at: string
+          id: string
+          template_id: string
+          user_id: string
+          variavel_zapsign: string
+        }
+        Insert: {
+          campo_key: string
+          created_at?: string
+          id?: string
+          template_id: string
+          user_id: string
+          variavel_zapsign: string
+        }
+        Update: {
+          campo_key?: string
+          created_at?: string
+          id?: string
+          template_id?: string
+          user_id?: string
+          variavel_zapsign?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
