@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useCrmLeadCampos } from "@/hooks/useCrmLeadCampos";
 import type { DadosExtrasMap, DadosExtrasField } from "@/utils/trabalhista/types";
 import { getFieldValue, createField, isManualField } from "@/utils/trabalhista/types";
+import { withRetry } from "@/utils/supabaseRetry";
 
 export interface UseLeadDadosSyncReturn {
   dados: DadosExtrasMap;
