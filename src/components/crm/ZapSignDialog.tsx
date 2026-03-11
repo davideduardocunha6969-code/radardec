@@ -295,7 +295,7 @@ export function ZapSignDialog({ open, onOpenChange, lead }: ZapSignDialogProps) 
                             value={fieldPlaceholders[field.key] || ""}
                             onChange={(e) => updatePlaceholder(field.key, e.target.value)}
                             placeholder="Nome no template"
-                            className="mt-0.5 text-xs font-mono"
+                            className="mt-0.5 text-xs"
                           />
                         </div>
                         <div>
