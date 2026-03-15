@@ -1792,9 +1792,12 @@ const RadarComercial = () => {
           {/* Gráfico de Resultado de Todos os Atendimentos */}
           <Card>
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Resultado de Todos os Atendimentos</CardTitle>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Resultado de Todos os Atendimentos</CardTitle>
+            </div>
+            <CardFilterSelects cardKey="resultadoTodos" {...cardFilterProps} />
           </div>
         </CardHeader>
         <CardContent>
