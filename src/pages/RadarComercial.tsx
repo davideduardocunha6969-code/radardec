@@ -35,6 +35,7 @@ import { useCommercialData } from "@/hooks/useCommercialData";
 import { AposentadoriasFuturasDialog } from "@/components/AposentadoriasFuturasDialog";
 import { GoalProgressCard } from "@/components/GoalProgressCard";
 import { ContractProductCard } from "@/components/ContractProductCard";
+import { CardFilterSelects } from "@/components/comercial/CardFilterSelects";
 import {
   Collapsible,
   CollapsibleContent,
@@ -82,7 +83,7 @@ const RadarComercial = () => {
   const [adminRankingWeek, setAdminRankingWeek] = useState<number | null>(null);
   const [testemunhasWeekFilter, setTestemunhasWeekFilter] = useState<number | null>(null);
   const [atendimentosWeekFilter, setAtendimentosWeekFilter] = useState<number | null>(null);
-  const [noShowSetorFilter, setNoShowSetorFilter] = useState<string | null>(null);
+  const [cardFilters, setCardFilters] = useState<Record<string, { setor: string | null; produto: string | null }>>({});
 
   // Handlers para abrir/fechar seções (comportamento accordion)
   const handleSectionToggle = (section: string) => {
@@ -94,8 +95,42 @@ const RadarComercial = () => {
     const setores = [...new Set(data.map(r => r.setor).filter(Boolean))].sort();
     const responsaveis = [...new Set(data.map(r => r.responsavel).filter(Boolean))].sort();
     const resultados = [...new Set(data.map(r => r.resultado).filter(Boolean))].sort();
-    return { setores, responsaveis, resultados };
+    const produtos = [...new Set(data.map(r => r.produto).filter(Boolean))].sort();
+    const produtosBySetor: Record<string, string[]> = {};
+    setores.forEach(setor => {
+      produtosBySetor[setor] = [...new Set(data.filter(r => r.setor === setor).map(r => r.produto).filter(Boolean))].sort();
+    });
+    return { setores, responsaveis, resultados, produtos, produtosBySetor };
   }, [data]);
+
+  const updateCardFilter = (cardKey: string, field: 'setor' | 'produto', value: string | null) => {
+    setCardFilters(prev => ({
+      ...prev,
+      [cardKey]: {
+        setor: prev[cardKey]?.setor ?? null,
+        produto: prev[cardKey]?.produto ?? null,
+        [field]: value,
+      },
+    }));
+  };
+
+  const cardFilterProps = {
+    setores: filterOptions.setores,
+    produtosBySetor: filterOptions.produtosBySetor as Record<string, string[]>,
+    allProdutos: filterOptions.produtos,
+    cardFilters,
+    onFilterChange: updateCardFilter,
+  };
+
+  const getCardFilteredData = (cardKey: string, baseData: typeof data) => {
+    const cf = cardFilters[cardKey];
+    if (!cf?.setor && !cf?.produto) return baseData;
+    return baseData.filter(r => {
+      if (cf.setor && r.setor !== cf.setor) return false;
+      if (cf.produto && r.produto !== cf.produto) return false;
+      return true;
+    });
+  };
 
   // Filtra os dados pelos filtros selecionados
   const filteredData = useMemo(() => {
@@ -663,26 +698,22 @@ const RadarComercial = () => {
 
   // Dados para o gráfico de atendimentos por semana (todas as 53 semanas)
   const weeklyChartData = useMemo(() => {
+    const sourceData = getCardFilteredData('semana', data);
     const weekCounts: Record<number, number> = {};
-    
-    // Inicializa todas as 53 semanas com 0
     for (let i = 1; i <= 53; i++) {
       weekCounts[i] = 0;
     }
-    
-    // Contabiliza os atendimentos por semana
-    data.forEach(record => {
+    sourceData.forEach(record => {
       if (record.semana > 0 && record.semana <= 53) {
         weekCounts[record.semana] = (weekCounts[record.semana] || 0) + 1;
       }
     });
-    
     return Array.from({ length: 53 }, (_, i) => ({
       semana: `${i + 1}`,
       weekNumber: i + 1,
       atendimentos: weekCounts[i + 1] || 0,
     }));
-  }, [data]);
+  }, [data, cardFilters]);
 
   // Dados para o gráfico de agendamentos SDR por semana (todas as 53 semanas) - Total geral
   const sdrWeeklyChartData = useMemo(() => {
@@ -835,117 +866,96 @@ const RadarComercial = () => {
   }, [filteredData, atendimentosWeekFilter]);
 
   const responsavelChartData = useMemo(() => {
+    const sourceData = getCardFilteredData('responsavel', atendimentosFilteredData);
     const counts: Record<string, number> = {};
-    
-    atendimentosFilteredData.forEach(record => {
+    sourceData.forEach(record => {
       if (record.responsavel) {
         counts[record.responsavel] = (counts[record.responsavel] || 0) + 1;
       }
     });
-    
     return Object.entries(counts)
-      .map(([responsavel, total]) => ({
-        responsavel,
-        atendimentos: total,
-      }))
+      .map(([responsavel, total]) => ({ responsavel, atendimentos: total }))
       .sort((a, b) => b.atendimentos - a.atendimentos);
-  }, [atendimentosFilteredData]);
+  }, [atendimentosFilteredData, cardFilters]);
 
   // Dados para o gráfico de pizza - Modalidade de Atendimento
   const modalidadeChartData = useMemo(() => {
+    const sourceData = getCardFilteredData('modalidade', atendimentosFilteredData);
     const counts: Record<string, number> = {};
-    
-    atendimentosFilteredData.forEach(record => {
+    sourceData.forEach(record => {
       if (record.modalidade) {
         counts[record.modalidade] = (counts[record.modalidade] || 0) + 1;
       }
     });
-    
     const total = Object.values(counts).reduce((sum, val) => sum + val, 0);
-    
     return Object.entries(counts)
       .map(([name, value]) => ({
-        name,
-        value,
+        name, value,
         percentage: total > 0 ? ((value / total) * 100).toFixed(1) : '0',
       }))
       .sort((a, b) => b.value - a.value);
-  }, [atendimentosFilteredData]);
+  }, [atendimentosFilteredData, cardFilters]);
 
   // Dados para o gráfico de pizza - Possui Direito
   const possuiDireitoChartData = useMemo(() => {
+    const sourceData = getCardFilteredData('direito', atendimentosFilteredData);
     const counts: Record<string, number> = {};
-    
-    atendimentosFilteredData.forEach(record => {
+    sourceData.forEach(record => {
       if (record.possuiDireito) {
         const label = record.possuiDireito === 'SIM' ? 'Possui Direito' : 
                       record.possuiDireito === 'NÃO' ? 'Não Possui Direito' : record.possuiDireito;
         counts[label] = (counts[label] || 0) + 1;
       }
     });
-    
     const total = Object.values(counts).reduce((sum, val) => sum + val, 0);
-    
     return Object.entries(counts)
       .map(([name, value]) => ({
-        name,
-        value,
+        name, value,
         percentage: total > 0 ? ((value / total) * 100).toFixed(1) : '0',
       }))
       .sort((a, b) => b.value - a.value);
-  }, [atendimentosFilteredData]);
+  }, [atendimentosFilteredData, cardFilters]);
 
   // Dados para o gráfico de resultado dos atendimentos qualificados (clientes com direito)
   const resultadoQualificadosChartData = useMemo(() => {
+    const sourceData = getCardFilteredData('qualificados', atendimentosFilteredData);
     const counts: Record<string, number> = {};
-    
-    // Filtra apenas clientes que possuem direito
-    atendimentosFilteredData
+    sourceData
       .filter(record => record.possuiDireito === 'SIM')
       .forEach(record => {
         if (record.resultado) {
           counts[record.resultado] = (counts[record.resultado] || 0) + 1;
         }
       });
-    
     return Object.entries(counts)
-      .map(([resultado, total]) => ({
-        resultado,
-        total,
-      }))
+      .map(([resultado, total]) => ({ resultado, total }))
       .sort((a, b) => b.total - a.total);
-  }, [atendimentosFilteredData]);
+  }, [atendimentosFilteredData, cardFilters]);
 
   // Dados para o gráfico de atendimentos por setor
   const setorChartData = useMemo(() => {
+    const sourceData = getCardFilteredData('atendSetor', atendimentosFilteredData);
     const counts: Record<string, number> = {};
-    
-    atendimentosFilteredData.forEach(record => {
+    sourceData.forEach(record => {
       if (record.setor) {
         counts[record.setor] = (counts[record.setor] || 0) + 1;
       }
     });
-    
     return Object.entries(counts)
-      .map(([setor, total]) => ({
-        setor,
-        total,
-      }))
+      .map(([setor, total]) => ({ setor, total }))
       .sort((a, b) => b.total - a.total);
-  }, [atendimentosFilteredData]);
+  }, [atendimentosFilteredData, cardFilters]);
 
   // Dados para o gráfico de resultado de TODOS os atendimentos
   const resultadoTodosChartData = useMemo(() => {
+    const sourceData = getCardFilteredData('resultadoTodos', atendimentosFilteredData);
     const counts: Record<string, number> = {};
-    
-    atendimentosFilteredData.forEach(record => {
+    sourceData.forEach(record => {
       if (record.resultado) {
         counts[record.resultado] = (counts[record.resultado] || 0) + 1;
       }
     });
-    
     const total = Object.values(counts).reduce((sum, val) => sum + val, 0);
-    
     return Object.entries(counts)
       .map(([resultado, count]) => ({
         resultado,
@@ -953,7 +963,7 @@ const RadarComercial = () => {
         percentage: total > 0 ? ((count / total) * 100).toFixed(1) : '0',
       }))
       .sort((a, b) => b.total - a.total);
-  }, [atendimentosFilteredData]);
+  }, [atendimentosFilteredData, cardFilters]);
 
   // Dados para o gráfico de origem do cliente
   const origemClienteChartData = useMemo(() => {
@@ -1041,18 +1051,10 @@ const RadarComercial = () => {
 
   const noShowWeeklyChartData = useMemo(() => {
     const weekStats: Record<number, { total: number; noShow: number }> = {};
-    
-    // Inicializa todas as 53 semanas
     for (let i = 1; i <= 53; i++) {
       weekStats[i] = { total: 0, noShow: 0 };
     }
-    
-    // Filtra por setor se selecionado
-    const sourceData = noShowSetorFilter
-      ? data.filter(r => r.setor === noShowSetorFilter)
-      : data;
-    
-    // Contabiliza atendimentos e no-shows por semana
+    const sourceData = getCardFilteredData('noShow', data);
     sourceData.forEach(record => {
       if (record.semana > 0 && record.semana <= 53) {
         weekStats[record.semana].total += 1;
@@ -1063,7 +1065,6 @@ const RadarComercial = () => {
         }
       }
     });
-    
     return Array.from({ length: 53 }, (_, i) => {
       const weekNum = i + 1;
       const stats = weekStats[weekNum];
@@ -1077,24 +1078,19 @@ const RadarComercial = () => {
         total: stats.total,
       };
     });
-  }, [data, noShowSetorFilter]);
+  }, [data, cardFilters]);
 
   // Dados para o gráfico de tempo médio de atendimento por setor
   const tempoMedioSetorChartData = useMemo(() => {
+    const sourceData = getCardFilteredData('tempoMedio', filteredData);
     const setorStats: Record<string, { totalDias: number; count: number }> = {};
-    
-    filteredData.forEach(record => {
+    sourceData.forEach(record => {
       if (record.setor && record.dataAtendimento && record.dataFechamento) {
-        // Parse das datas
         const dataAtendimento = new Date(record.dataAtendimento);
         const dataFechamento = new Date(record.dataFechamento);
-        
-        // Verifica se as datas são válidas
         if (!isNaN(dataAtendimento.getTime()) && !isNaN(dataFechamento.getTime())) {
           const diffTime = dataFechamento.getTime() - dataAtendimento.getTime();
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          
-          // Apenas considera diferenças positivas ou zero
           if (diffDays >= 0) {
             if (!setorStats[record.setor]) {
               setorStats[record.setor] = { totalDias: 0, count: 0 };
@@ -1105,7 +1101,6 @@ const RadarComercial = () => {
         }
       }
     });
-    
     return Object.entries(setorStats)
       .map(([setor, stats]) => ({
         setor,
@@ -1113,18 +1108,16 @@ const RadarComercial = () => {
         totalAtendimentos: stats.count,
       }))
       .sort((a, b) => b.mediaDias - a.mediaDias);
-  }, [filteredData]);
+  }, [filteredData, cardFilters]);
 
   // Dados filtrados para os rankings de responsável (com filtro de possui direito e semana de fechamento)
   const rankingFilteredData = useMemo(() => {
-    return filteredData.filter(record => {
+    const sourceData = getCardFilteredData('ranking', filteredData);
+    return sourceData.filter(record => {
       if (rankingPossuiDireito && record.possuiDireito !== rankingPossuiDireito) return false;
-      // Filtra pela semana do fechamento (baseado na data de fechamento)
       if (rankingWeekFilter) {
-        // A semana já está calculada no record.semana, mas precisamos verificar se tem fechamento
         const dataFechamento = record.dataFechamento;
         if (!dataFechamento) return false;
-        // Calcula a semana do fechamento
         const dateParts = dataFechamento.split('/');
         if (dateParts.length === 3) {
           const fechamentoDate = new Date(parseInt(dateParts[2]), parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
@@ -1136,7 +1129,7 @@ const RadarComercial = () => {
       }
       return true;
     });
-  }, [filteredData, rankingPossuiDireito, rankingWeekFilter]);
+  }, [filteredData, rankingPossuiDireito, rankingWeekFilter, cardFilters]);
 
   // Dados para ranking de conversão por responsável (contratos fechados absolutos)
   const rankingConversaoResponsavelAbsolutoData = useMemo(() => {
@@ -1448,9 +1441,12 @@ const RadarComercial = () => {
           {/* Gráfico de Atendimentos por Semana */}
           <Card>
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Atendimentos por Semana</CardTitle>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Atendimentos por Semana</CardTitle>
+            </div>
+            <CardFilterSelects cardKey="semana" {...cardFilterProps} />
           </div>
         </CardHeader>
         <CardContent>
@@ -1497,9 +1493,12 @@ const RadarComercial = () => {
           {/* Gráfico de Atendimentos por Responsável */}
           <Card>
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <Users className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Atendimentos por Responsável</CardTitle>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <Users className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Atendimentos por Responsável</CardTitle>
+            </div>
+            <CardFilterSelects cardKey="responsavel" {...cardFilterProps} />
           </div>
         </CardHeader>
         <CardContent>
@@ -1546,9 +1545,12 @@ const RadarComercial = () => {
         {/* Modalidade de Atendimento - Barras Horizontais */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-3">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Modalidade de Atendimento</CardTitle>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Modalidade de Atendimento</CardTitle>
+              </div>
+              <CardFilterSelects cardKey="modalidade" {...cardFilterProps} />
             </div>
           </CardHeader>
           <CardContent>
@@ -1603,9 +1605,12 @@ const RadarComercial = () => {
         {/* Possui Direito */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-3">
-              <PieChart className="h-5 w-5 text-accent" />
-              <CardTitle className="text-lg">Clientes com Direito</CardTitle>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3">
+                <PieChart className="h-5 w-5 text-accent" />
+                <CardTitle className="text-lg">Clientes com Direito</CardTitle>
+              </div>
+              <CardFilterSelects cardKey="direito" {...cardFilterProps} />
             </div>
           </CardHeader>
           <CardContent>
@@ -1662,9 +1667,12 @@ const RadarComercial = () => {
           <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-3">
-              <Target className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Resultado dos Atendimentos Qualificados</CardTitle>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3">
+                <Target className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Resultado dos Atendimentos Qualificados</CardTitle>
+              </div>
+              <CardFilterSelects cardKey="qualificados" {...cardFilterProps} />
             </div>
           </CardHeader>
           <CardContent>
@@ -1712,9 +1720,12 @@ const RadarComercial = () => {
 
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-3">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Atendimentos por Setor</CardTitle>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Atendimentos por Setor</CardTitle>
+              </div>
+              <CardFilterSelects cardKey="atendSetor" {...cardFilterProps} />
             </div>
           </CardHeader>
           <CardContent>
@@ -1764,9 +1775,12 @@ const RadarComercial = () => {
           {/* Gráfico de Resultado de Todos os Atendimentos */}
           <Card>
         <CardHeader>
-          <div className="flex items-center gap-3">
-            <BarChart3 className="h-5 w-5 text-primary" />
-            <CardTitle className="text-lg">Resultado de Todos os Atendimentos</CardTitle>
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-3">
+              <BarChart3 className="h-5 w-5 text-primary" />
+              <CardTitle className="text-lg">Resultado de Todos os Atendimentos</CardTitle>
+            </div>
+            <CardFilterSelects cardKey="resultadoTodos" {...cardFilterProps} />
           </div>
         </CardHeader>
         <CardContent>
@@ -1836,20 +1850,7 @@ const RadarComercial = () => {
               <TrendingUp className="h-5 w-5 text-destructive" />
               <CardTitle className="text-lg">Percentual de No-Show por Semana</CardTitle>
             </div>
-            <Select
-              value={noShowSetorFilter ?? "all"}
-              onValueChange={(v) => setNoShowSetorFilter(v === "all" ? null : v)}
-            >
-              <SelectTrigger className="w-[180px] h-8 text-xs">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Todos os Setores</SelectItem>
-                {filterOptions.setores.map((s) => (
-                  <SelectItem key={s} value={s}>{s}</SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <CardFilterSelects cardKey="noShow" {...cardFilterProps} />
           </div>
         </CardHeader>
         <CardContent>
@@ -1898,10 +1899,13 @@ const RadarComercial = () => {
 
           {/* Cards de Tempo Médio para Fechamento por Setor */}
           <div>
-        <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-primary" />
-          Tempo Médio para Fechamento por Setor
-        </h2>
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" />
+            Tempo Médio para Fechamento por Setor
+          </h2>
+          <CardFilterSelects cardKey="tempoMedio" {...cardFilterProps} />
+        </div>
         {tempoMedioSetorChartData.length > 0 ? (
           <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {tempoMedioSetorChartData.map((item) => (
@@ -1932,6 +1936,7 @@ const RadarComercial = () => {
             {/* Filtros de Possui Direito e Semana de Fechamento */}
             <div className="flex flex-wrap items-center gap-4 p-4 bg-card rounded-lg border">
               <span className="text-sm font-medium text-muted-foreground">Filtrar por:</span>
+              <CardFilterSelects cardKey="ranking" {...cardFilterProps} />
               <Select
                 value={rankingPossuiDireito || "all"}
                 onValueChange={(value) => setRankingPossuiDireito(value === "all" ? null : value)}

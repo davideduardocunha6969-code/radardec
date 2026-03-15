@@ -1,60 +1,42 @@
 
+# Tres Paineis de Atendimento — Status
 
-## Filtros de Setor e Produto por gráfico/card na seção Atendimentos
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-### Situação atual
-A seção "Radar Atendimentos" possui filtros globais (Setor, Responsável, Resultado) que afetam todos os gráficos ao mesmo tempo. O campo `produto` existe nos dados (`CommercialRecord.produto`) mas não é usado como filtro.
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-### Proposta
-Adicionar filtros individuais de **Setor** e **Produto** em cada gráfico/card da seção. Cada card terá seus próprios selects no header, permitindo análise granular sem afetar os outros gráficos.
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-### Implementação
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-**Arquivo:** `src/pages/RadarComercial.tsx`
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-1. **Extrair opções de produto** no `filterOptions` (já existente, linha 93):
-   - Adicionar `produtos` como opção de filtro extraída dos dados
-
-2. **Criar estados de filtro por card** (10 pares de estado setor+produto):
-   - `atendSemanaSetor`, `atendSemanaProduto`
-   - `atendResponsavelSetor`, `atendResponsavelProduto`
-   - `atendModalidadeSetor`, `atendModalidadeProduto`
-   - `atendDireitoSetor`, `atendDireitoProduto`
-   - `atendQualificadosSetor`, `atendQualificadosProduto`
-   - `atendSetorSetor`, `atendSetorProduto`
-   - `atendResultadoSetor`, `atendResultadoProduto`
-   - `atendNoShowSetor`, `atendNoShowProduto`
-   - `atendTempoSetor`, `atendTempoProduto`
-   - `atendRankingSetor`, `atendRankingProduto`
-
-   Para evitar a explosão de `useState`, criar um **único estado objeto** para gerenciar todos os filtros por card:
-   ```ts
-   const [cardFilters, setCardFilters] = useState<Record<string, { setor: string | null; produto: string | null }>>({});
-   ```
-
-3. **Criar componente auxiliar de filtro** inline (ou extraído) que renderiza dois `Select` (Setor + Produto) no header de cada card. O produto será filtrado dinamicamente conforme o setor selecionado.
-
-4. **Criar helper de filtragem** que aplica setor+produto sobre `atendimentosFilteredData` para cada card:
-   ```ts
-   const getCardData = (cardKey: string) => {
-     const filters = cardFilters[cardKey];
-     let d = atendimentosFilteredData;
-     if (filters?.setor) d = d.filter(r => r.setor === filters.setor);
-     if (filters?.produto) d = d.filter(r => r.produto === filters.produto);
-     return d;
-   };
-   ```
-
-5. **Atualizar cada `useMemo`** dos gráficos (responsavelChartData, modalidadeChartData, etc.) para usar o dado filtrado por card OU mover a computação para dentro do JSX/helper.
-
-   Como alterar 10 useMemos para depender de `cardFilters` poderia ser pesado, a abordagem mais limpa é usar **funções de computação** em vez de useMemos separados, recalculando sob demanda com base nos filtros do card.
-
-6. **Adicionar os selects** no `CardHeader` de cada card, ao lado do título, com layout compacto (h-8, text-xs).
-
-### Resultado
-Cada gráfico terá dois dropdowns (Setor / Produto) no canto superior direito do card, permitindo análise independente por card. Os filtros globais da seção continuam funcionando como filtro base.
-
-### Escopo de alteração
-- **1 arquivo:** `src/pages/RadarComercial.tsx`
-- Estimativa: ~200 linhas adicionadas/modificadas
-
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções
