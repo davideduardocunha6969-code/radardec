@@ -1684,9 +1684,12 @@ const RadarComercial = () => {
           <div className="grid gap-6 md:grid-cols-2">
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-3">
-              <Target className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Resultado dos Atendimentos Qualificados</CardTitle>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3">
+                <Target className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Resultado dos Atendimentos Qualificados</CardTitle>
+              </div>
+              <CardFilterSelects cardKey="qualificados" {...cardFilterProps} />
             </div>
           </CardHeader>
           <CardContent>
