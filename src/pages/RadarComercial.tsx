@@ -1916,10 +1916,13 @@ const RadarComercial = () => {
 
           {/* Cards de Tempo Médio para Fechamento por Setor */}
           <div>
-        <h2 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-          <Calendar className="h-5 w-5 text-primary" />
-          Tempo Médio para Fechamento por Setor
-        </h2>
+        <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+          <h2 className="text-lg font-semibold text-foreground flex items-center gap-2">
+            <Calendar className="h-5 w-5 text-primary" />
+            Tempo Médio para Fechamento por Setor
+          </h2>
+          <CardFilterSelects cardKey="tempoMedio" {...cardFilterProps} />
+        </div>
         {tempoMedioSetorChartData.length > 0 ? (
           <div className="grid gap-4 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
             {tempoMedioSetorChartData.map((item) => (
