@@ -1622,9 +1622,12 @@ const RadarComercial = () => {
         {/* Possui Direito */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-3">
-              <PieChart className="h-5 w-5 text-accent" />
-              <CardTitle className="text-lg">Clientes com Direito</CardTitle>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3">
+                <PieChart className="h-5 w-5 text-accent" />
+                <CardTitle className="text-lg">Clientes com Direito</CardTitle>
+              </div>
+              <CardFilterSelects cardKey="direito" {...cardFilterProps} />
             </div>
           </CardHeader>
           <CardContent>
