@@ -95,8 +95,42 @@ const RadarComercial = () => {
     const setores = [...new Set(data.map(r => r.setor).filter(Boolean))].sort();
     const responsaveis = [...new Set(data.map(r => r.responsavel).filter(Boolean))].sort();
     const resultados = [...new Set(data.map(r => r.resultado).filter(Boolean))].sort();
-    return { setores, responsaveis, resultados };
+    const produtos = [...new Set(data.map(r => r.produto).filter(Boolean))].sort();
+    const produtosBySetor: Record<string, string[]> = {};
+    setores.forEach(setor => {
+      produtosBySetor[setor] = [...new Set(data.filter(r => r.setor === setor).map(r => r.produto).filter(Boolean))].sort();
+    });
+    return { setores, responsaveis, resultados, produtos, produtosBySetor };
   }, [data]);
+
+  const updateCardFilter = (cardKey: string, field: 'setor' | 'produto', value: string | null) => {
+    setCardFilters(prev => ({
+      ...prev,
+      [cardKey]: {
+        setor: prev[cardKey]?.setor ?? null,
+        produto: prev[cardKey]?.produto ?? null,
+        [field]: value,
+      },
+    }));
+  };
+
+  const cardFilterProps = {
+    setores: filterOptions.setores,
+    produtosBySetor: filterOptions.produtosBySetor as Record<string, string[]>,
+    allProdutos: filterOptions.produtos,
+    cardFilters,
+    onFilterChange: updateCardFilter,
+  };
+
+  const getCardFilteredData = (cardKey: string, baseData: typeof data) => {
+    const cf = cardFilters[cardKey];
+    if (!cf?.setor && !cf?.produto) return baseData;
+    return baseData.filter(r => {
+      if (cf.setor && r.setor !== cf.setor) return false;
+      if (cf.produto && r.produto !== cf.produto) return false;
+      return true;
+    });
+  };
 
   // Filtra os dados pelos filtros selecionados
   const filteredData = useMemo(() => {
