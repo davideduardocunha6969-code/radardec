@@ -1953,6 +1953,7 @@ const RadarComercial = () => {
             {/* Filtros de Possui Direito e Semana de Fechamento */}
             <div className="flex flex-wrap items-center gap-4 p-4 bg-card rounded-lg border">
               <span className="text-sm font-medium text-muted-foreground">Filtrar por:</span>
+              <CardFilterSelects cardKey="ranking" {...cardFilterProps} />
               <Select
                 value={rankingPossuiDireito || "all"}
                 onValueChange={(value) => setRankingPossuiDireito(value === "all" ? null : value)}
