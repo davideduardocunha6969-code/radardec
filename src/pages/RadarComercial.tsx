@@ -1082,20 +1082,15 @@ const RadarComercial = () => {
 
   // Dados para o gráfico de tempo médio de atendimento por setor
   const tempoMedioSetorChartData = useMemo(() => {
+    const sourceData = getCardFilteredData('tempoMedio', filteredData);
     const setorStats: Record<string, { totalDias: number; count: number }> = {};
-    
-    filteredData.forEach(record => {
+    sourceData.forEach(record => {
       if (record.setor && record.dataAtendimento && record.dataFechamento) {
-        // Parse das datas
         const dataAtendimento = new Date(record.dataAtendimento);
         const dataFechamento = new Date(record.dataFechamento);
-        
-        // Verifica se as datas são válidas
         if (!isNaN(dataAtendimento.getTime()) && !isNaN(dataFechamento.getTime())) {
           const diffTime = dataFechamento.getTime() - dataAtendimento.getTime();
           const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-          
-          // Apenas considera diferenças positivas ou zero
           if (diffDays >= 0) {
             if (!setorStats[record.setor]) {
               setorStats[record.setor] = { totalDias: 0, count: 0 };
@@ -1106,7 +1101,6 @@ const RadarComercial = () => {
         }
       }
     });
-    
     return Object.entries(setorStats)
       .map(([setor, stats]) => ({
         setor,
@@ -1114,7 +1108,7 @@ const RadarComercial = () => {
         totalAtendimentos: stats.count,
       }))
       .sort((a, b) => b.mediaDias - a.mediaDias);
-  }, [filteredData]);
+  }, [filteredData, cardFilters]);
 
   // Dados filtrados para os rankings de responsável (com filtro de possui direito e semana de fechamento)
   const rankingFilteredData = useMemo(() => {
