@@ -1112,14 +1112,12 @@ const RadarComercial = () => {
 
   // Dados filtrados para os rankings de responsável (com filtro de possui direito e semana de fechamento)
   const rankingFilteredData = useMemo(() => {
-    return filteredData.filter(record => {
+    const sourceData = getCardFilteredData('ranking', filteredData);
+    return sourceData.filter(record => {
       if (rankingPossuiDireito && record.possuiDireito !== rankingPossuiDireito) return false;
-      // Filtra pela semana do fechamento (baseado na data de fechamento)
       if (rankingWeekFilter) {
-        // A semana já está calculada no record.semana, mas precisamos verificar se tem fechamento
         const dataFechamento = record.dataFechamento;
         if (!dataFechamento) return false;
-        // Calcula a semana do fechamento
         const dateParts = dataFechamento.split('/');
         if (dateParts.length === 3) {
           const fechamentoDate = new Date(parseInt(dateParts[2]), parseInt(dateParts[1]) - 1, parseInt(dateParts[0]));
@@ -1131,7 +1129,7 @@ const RadarComercial = () => {
       }
       return true;
     });
-  }, [filteredData, rankingPossuiDireito, rankingWeekFilter]);
+  }, [filteredData, rankingPossuiDireito, rankingWeekFilter, cardFilters]);
 
   // Dados para ranking de conversão por responsável (contratos fechados absolutos)
   const rankingConversaoResponsavelAbsolutoData = useMemo(() => {
