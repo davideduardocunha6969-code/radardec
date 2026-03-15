@@ -83,7 +83,7 @@ const RadarComercial = () => {
   const [adminRankingWeek, setAdminRankingWeek] = useState<number | null>(null);
   const [testemunhasWeekFilter, setTestemunhasWeekFilter] = useState<number | null>(null);
   const [atendimentosWeekFilter, setAtendimentosWeekFilter] = useState<number | null>(null);
-  const [noShowSetorFilter, setNoShowSetorFilter] = useState<string | null>(null);
+  const [cardFilters, setCardFilters] = useState<Record<string, { setor: string | null; produto: string | null }>>({});
 
   // Handlers para abrir/fechar seções (comportamento accordion)
   const handleSectionToggle = (section: string) => {
