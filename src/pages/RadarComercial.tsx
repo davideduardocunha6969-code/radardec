@@ -866,117 +866,96 @@ const RadarComercial = () => {
   }, [filteredData, atendimentosWeekFilter]);
 
   const responsavelChartData = useMemo(() => {
+    const sourceData = getCardFilteredData('responsavel', atendimentosFilteredData);
     const counts: Record<string, number> = {};
-    
-    atendimentosFilteredData.forEach(record => {
+    sourceData.forEach(record => {
       if (record.responsavel) {
         counts[record.responsavel] = (counts[record.responsavel] || 0) + 1;
       }
     });
-    
     return Object.entries(counts)
-      .map(([responsavel, total]) => ({
-        responsavel,
-        atendimentos: total,
-      }))
+      .map(([responsavel, total]) => ({ responsavel, atendimentos: total }))
       .sort((a, b) => b.atendimentos - a.atendimentos);
-  }, [atendimentosFilteredData]);
+  }, [atendimentosFilteredData, cardFilters]);
 
   // Dados para o gráfico de pizza - Modalidade de Atendimento
   const modalidadeChartData = useMemo(() => {
+    const sourceData = getCardFilteredData('modalidade', atendimentosFilteredData);
     const counts: Record<string, number> = {};
-    
-    atendimentosFilteredData.forEach(record => {
+    sourceData.forEach(record => {
       if (record.modalidade) {
         counts[record.modalidade] = (counts[record.modalidade] || 0) + 1;
       }
     });
-    
     const total = Object.values(counts).reduce((sum, val) => sum + val, 0);
-    
     return Object.entries(counts)
       .map(([name, value]) => ({
-        name,
-        value,
+        name, value,
         percentage: total > 0 ? ((value / total) * 100).toFixed(1) : '0',
       }))
       .sort((a, b) => b.value - a.value);
-  }, [atendimentosFilteredData]);
+  }, [atendimentosFilteredData, cardFilters]);
 
   // Dados para o gráfico de pizza - Possui Direito
   const possuiDireitoChartData = useMemo(() => {
+    const sourceData = getCardFilteredData('direito', atendimentosFilteredData);
     const counts: Record<string, number> = {};
-    
-    atendimentosFilteredData.forEach(record => {
+    sourceData.forEach(record => {
       if (record.possuiDireito) {
         const label = record.possuiDireito === 'SIM' ? 'Possui Direito' : 
                       record.possuiDireito === 'NÃO' ? 'Não Possui Direito' : record.possuiDireito;
         counts[label] = (counts[label] || 0) + 1;
       }
     });
-    
     const total = Object.values(counts).reduce((sum, val) => sum + val, 0);
-    
     return Object.entries(counts)
       .map(([name, value]) => ({
-        name,
-        value,
+        name, value,
         percentage: total > 0 ? ((value / total) * 100).toFixed(1) : '0',
       }))
       .sort((a, b) => b.value - a.value);
-  }, [atendimentosFilteredData]);
+  }, [atendimentosFilteredData, cardFilters]);
 
   // Dados para o gráfico de resultado dos atendimentos qualificados (clientes com direito)
   const resultadoQualificadosChartData = useMemo(() => {
+    const sourceData = getCardFilteredData('qualificados', atendimentosFilteredData);
     const counts: Record<string, number> = {};
-    
-    // Filtra apenas clientes que possuem direito
-    atendimentosFilteredData
+    sourceData
       .filter(record => record.possuiDireito === 'SIM')
       .forEach(record => {
         if (record.resultado) {
           counts[record.resultado] = (counts[record.resultado] || 0) + 1;
         }
       });
-    
     return Object.entries(counts)
-      .map(([resultado, total]) => ({
-        resultado,
-        total,
-      }))
+      .map(([resultado, total]) => ({ resultado, total }))
       .sort((a, b) => b.total - a.total);
-  }, [atendimentosFilteredData]);
+  }, [atendimentosFilteredData, cardFilters]);
 
   // Dados para o gráfico de atendimentos por setor
   const setorChartData = useMemo(() => {
+    const sourceData = getCardFilteredData('atendSetor', atendimentosFilteredData);
     const counts: Record<string, number> = {};
-    
-    atendimentosFilteredData.forEach(record => {
+    sourceData.forEach(record => {
       if (record.setor) {
         counts[record.setor] = (counts[record.setor] || 0) + 1;
       }
     });
-    
     return Object.entries(counts)
-      .map(([setor, total]) => ({
-        setor,
-        total,
-      }))
+      .map(([setor, total]) => ({ setor, total }))
       .sort((a, b) => b.total - a.total);
-  }, [atendimentosFilteredData]);
+  }, [atendimentosFilteredData, cardFilters]);
 
   // Dados para o gráfico de resultado de TODOS os atendimentos
   const resultadoTodosChartData = useMemo(() => {
+    const sourceData = getCardFilteredData('resultadoTodos', atendimentosFilteredData);
     const counts: Record<string, number> = {};
-    
-    atendimentosFilteredData.forEach(record => {
+    sourceData.forEach(record => {
       if (record.resultado) {
         counts[record.resultado] = (counts[record.resultado] || 0) + 1;
       }
     });
-    
     const total = Object.values(counts).reduce((sum, val) => sum + val, 0);
-    
     return Object.entries(counts)
       .map(([resultado, count]) => ({
         resultado,
@@ -984,7 +963,7 @@ const RadarComercial = () => {
         percentage: total > 0 ? ((count / total) * 100).toFixed(1) : '0',
       }))
       .sort((a, b) => b.total - a.total);
-  }, [atendimentosFilteredData]);
+  }, [atendimentosFilteredData, cardFilters]);
 
   // Dados para o gráfico de origem do cliente
   const origemClienteChartData = useMemo(() => {
