@@ -1562,9 +1562,12 @@ const RadarComercial = () => {
         {/* Modalidade de Atendimento - Barras Horizontais */}
         <Card>
           <CardHeader>
-            <div className="flex items-center gap-3">
-              <BarChart3 className="h-5 w-5 text-primary" />
-              <CardTitle className="text-lg">Modalidade de Atendimento</CardTitle>
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex items-center gap-3">
+                <BarChart3 className="h-5 w-5 text-primary" />
+                <CardTitle className="text-lg">Modalidade de Atendimento</CardTitle>
+              </div>
+              <CardFilterSelects cardKey="modalidade" {...cardFilterProps} />
             </div>
           </CardHeader>
           <CardContent>
