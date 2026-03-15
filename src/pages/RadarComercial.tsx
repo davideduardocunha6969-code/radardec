@@ -35,6 +35,7 @@ import { useCommercialData } from "@/hooks/useCommercialData";
 import { AposentadoriasFuturasDialog } from "@/components/AposentadoriasFuturasDialog";
 import { GoalProgressCard } from "@/components/GoalProgressCard";
 import { ContractProductCard } from "@/components/ContractProductCard";
+import { CardFilterSelects } from "@/components/comercial/CardFilterSelects";
 import {
   Collapsible,
   CollapsibleContent,
