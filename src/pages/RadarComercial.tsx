@@ -698,26 +698,22 @@ const RadarComercial = () => {
 
   // Dados para o gráfico de atendimentos por semana (todas as 53 semanas)
   const weeklyChartData = useMemo(() => {
+    const sourceData = getCardFilteredData('semana', data);
     const weekCounts: Record<number, number> = {};
-    
-    // Inicializa todas as 53 semanas com 0
     for (let i = 1; i <= 53; i++) {
       weekCounts[i] = 0;
     }
-    
-    // Contabiliza os atendimentos por semana
-    data.forEach(record => {
+    sourceData.forEach(record => {
       if (record.semana > 0 && record.semana <= 53) {
         weekCounts[record.semana] = (weekCounts[record.semana] || 0) + 1;
       }
     });
-    
     return Array.from({ length: 53 }, (_, i) => ({
       semana: `${i + 1}`,
       weekNumber: i + 1,
       atendimentos: weekCounts[i + 1] || 0,
     }));
-  }, [data]);
+  }, [data, cardFilters]);
 
   // Dados para o gráfico de agendamentos SDR por semana (todas as 53 semanas) - Total geral
   const sdrWeeklyChartData = useMemo(() => {
