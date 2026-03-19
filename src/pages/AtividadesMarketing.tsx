@@ -29,6 +29,7 @@ export default function AtividadesMarketing() {
     moveAtividade,
     addColuna,
     updateColuna,
+    reorderColunas,
     deleteColuna,
     addComentario,
     fetchComentarios,
