@@ -201,7 +201,7 @@ function FlowCanvasInner() {
         <Button onClick={handleCreate} size="sm" className="gap-2">
           <Plus className="h-4 w-4" /> Novo Card
         </Button>
-        <Button onClick={() => fitView({ padding: 0.15, duration: 300 })} size="sm" variant="outline" className="gap-2">
+        <Button onClick={() => fitView({ padding: 0.2, duration: 300, minZoom: 0.1 })} size="sm" variant="outline" className="gap-2">
           <Maximize2 className="h-4 w-4" /> Ver Tudo
         </Button>
       </div>
