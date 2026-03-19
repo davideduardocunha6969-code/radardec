@@ -6,13 +6,41 @@ interface PlanoStatsCardsProps {
   nodes: PlanoNode[];
 }
 
-function groupByCargo(nodes: PlanoNode[]): Record<string, number> {
-  const map: Record<string, number> = {};
+function groupBySetorCargo(nodes: PlanoNode[]): Record<string, Record<string, number>> {
+  const map: Record<string, Record<string, number>> = {};
   for (const n of nodes) {
+    const setor = n.setor || 'Sem setor';
     const cargo = n.label || 'Sem cargo';
-    map[cargo] = (map[cargo] || 0) + 1;
+    if (!map[setor]) map[setor] = {};
+    map[setor][cargo] = (map[setor][cargo] || 0) + 1;
   }
   return map;
+}
+
+function SetorCargoBreakdown({ data }: { data: Record<string, Record<string, number>> }) {
+  const sortedSetores = Object.entries(data).sort(([, a], [, b]) => {
+    const totalA = Object.values(a).reduce((s, v) => s + v, 0);
+    const totalB = Object.values(b).reduce((s, v) => s + v, 0);
+    return totalB - totalA;
+  });
+
+  return (
+    <div className="border-t border-border mt-2 pt-2 space-y-2">
+      {sortedSetores.map(([setor, cargos]) => (
+        <div key={setor}>
+          <p className="text-xs font-semibold text-card-foreground mb-0.5">── {setor}</p>
+          {Object.entries(cargos)
+            .sort(([, a], [, b]) => b - a)
+            .map(([cargo, count]) => (
+              <div key={cargo} className="flex items-center justify-between text-xs pl-4">
+                <span className="text-muted-foreground truncate mr-2">{cargo}</span>
+                <span className="font-medium text-card-foreground shrink-0">{count}</span>
+              </div>
+            ))}
+        </div>
+      ))}
+    </div>
+  );
 }
 
 export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
@@ -26,8 +54,8 @@ export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
       total: posicoes.length,
       ocupadas,
       pendentes,
-      ocupadasPorCargo: groupByCargo(ocupadas),
-      pendentesPorCargo: groupByCargo(pendentes),
+      ocupadasPorSetorCargo: groupBySetorCargo(ocupadas),
+      pendentesPorSetorCargo: groupBySetorCargo(pendentes),
     };
   }, [nodes]);
 
@@ -61,23 +89,14 @@ export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
             <p className="text-xs font-medium text-muted-foreground">Posições Ocupadas</p>
             <p className="text-xl font-bold text-card-foreground">{stats.ocupadas.length}</p>
           </div>
-          {Object.keys(stats.ocupadasPorCargo).length > 0 && (
+          {Object.keys(stats.ocupadasPorSetorCargo).length > 0 && (
             expanded
               ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
               : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
           )}
         </div>
-        {expanded && Object.keys(stats.ocupadasPorCargo).length > 0 && (
-          <div className="border-t border-border mt-2 pt-2 space-y-1">
-            {Object.entries(stats.ocupadasPorCargo)
-              .sort(([, a], [, b]) => b - a)
-              .map(([cargo, count]) => (
-                <div key={cargo} className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground truncate mr-2">{cargo}</span>
-                  <span className="font-medium text-card-foreground shrink-0">{count}</span>
-                </div>
-              ))}
-          </div>
+        {expanded && Object.keys(stats.ocupadasPorSetorCargo).length > 0 && (
+          <SetorCargoBreakdown data={stats.ocupadasPorSetorCargo} />
         )}
       </div>
 
@@ -94,23 +113,14 @@ export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
             <p className="text-xs font-medium text-muted-foreground">Posições Pendentes</p>
             <p className="text-xl font-bold text-card-foreground">{stats.pendentes.length}</p>
           </div>
-          {Object.keys(stats.pendentesPorCargo).length > 0 && (
+          {Object.keys(stats.pendentesPorSetorCargo).length > 0 && (
             expanded
               ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
               : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
           )}
         </div>
-        {expanded && Object.keys(stats.pendentesPorCargo).length > 0 && (
-          <div className="border-t border-border mt-2 pt-2 space-y-1">
-            {Object.entries(stats.pendentesPorCargo)
-              .sort(([, a], [, b]) => b - a)
-              .map(([cargo, count]) => (
-                <div key={cargo} className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground truncate mr-2">{cargo}</span>
-                  <span className="font-medium text-card-foreground shrink-0">{count}</span>
-                </div>
-              ))}
-          </div>
+        {expanded && Object.keys(stats.pendentesPorSetorCargo).length > 0 && (
+          <SetorCargoBreakdown data={stats.pendentesPorSetorCargo} />
         )}
       </div>
     </div>
