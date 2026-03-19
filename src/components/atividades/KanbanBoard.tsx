@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Calendar, GripVertical, MoreVertical, Plus, Trash2, User, Clock, AlertTriangle } from "lucide-react";
+import { Calendar, GripVertical, MoreVertical, Pencil, Plus, Trash2, User, Clock, AlertTriangle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
