@@ -346,6 +346,7 @@ export default function AtividadesMarketing() {
           onClickAtividade={handleClickAtividade}
           onAddColuna={(nome) => addColuna.mutate(nome)}
           onDeleteColuna={(id) => deleteColuna.mutate(id)}
+          onRenameColuna={(id, nome) => updateColuna.mutate({ id, nome })}
         />
       </div>
 

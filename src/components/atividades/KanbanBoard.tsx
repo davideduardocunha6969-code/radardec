@@ -200,6 +200,16 @@ export function KanbanBoard({
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
                       <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setEditingColunaId(coluna.id);
+                          setEditingColunaName(coluna.nome);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Renomear Coluna
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
                         className="text-destructive focus:text-destructive cursor-pointer"
                         onClick={() => onDeleteColuna(coluna.id)}
                       >
