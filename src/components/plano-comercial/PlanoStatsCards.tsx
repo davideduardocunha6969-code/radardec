@@ -54,8 +54,8 @@ export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
       total: posicoes.length,
       ocupadas,
       pendentes,
-      ocupadasPorCargo: groupByCargo(ocupadas),
-      pendentesPorCargo: groupByCargo(pendentes),
+      ocupadasPorSetorCargo: groupBySetorCargo(ocupadas),
+      pendentesPorSetorCargo: groupBySetorCargo(pendentes),
     };
   }, [nodes]);
 
