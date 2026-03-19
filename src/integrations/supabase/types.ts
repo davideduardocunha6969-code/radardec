@@ -1971,6 +1971,96 @@ export type Database = {
         }
         Relationships: []
       }
+      plano_comercial_edges: {
+        Row: {
+          created_at: string
+          id: string
+          label: string | null
+          source_node_id: string
+          target_node_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          source_node_id: string
+          target_node_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          label?: string | null
+          source_node_id?: string
+          target_node_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plano_comercial_edges_source_node_id_fkey"
+            columns: ["source_node_id"]
+            isOneToOne: false
+            referencedRelation: "plano_comercial_nodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "plano_comercial_edges_target_node_id_fkey"
+            columns: ["target_node_id"]
+            isOneToOne: false
+            referencedRelation: "plano_comercial_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      plano_comercial_nodes: {
+        Row: {
+          created_at: string
+          dados_extras: Json | null
+          funil: string | null
+          id: string
+          label: string
+          node_type: string
+          pessoa_nome: string | null
+          position_x: number
+          position_y: number
+          precisa_contratar: boolean
+          setor: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          dados_extras?: Json | null
+          funil?: string | null
+          id?: string
+          label: string
+          node_type?: string
+          pessoa_nome?: string | null
+          position_x?: number
+          position_y?: number
+          precisa_contratar?: boolean
+          setor?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          dados_extras?: Json | null
+          funil?: string | null
+          id?: string
+          label?: string
+          node_type?: string
+          pessoa_nome?: string | null
+          position_x?: number
+          position_y?: number
+          precisa_contratar?: boolean
+          setor?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       power_dialer_sessions: {
         Row: {
           call_sids: Json
