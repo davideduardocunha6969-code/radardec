@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useState, forwardRef, useImperativeHandle, useRef } from 'react';
 import {
   ReactFlow,
   ReactFlowProvider,
@@ -24,6 +24,10 @@ import { type PlanoNode, type PlanoEdge, type ChecklistItem } from '@/hooks/useP
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const nodeTypes = { posicao: PosicaoNode };
+
+export interface FlowCanvasHandle {
+  getFlowElement: () => HTMLElement | null;
+}
 
 export interface FlowCanvasProps {
   planoData: {
@@ -61,8 +65,13 @@ function getStatusColor(
   return undefined;
 }
 
-function FlowCanvasInner({ planoData }: FlowCanvasProps) {
+const FlowCanvasInner = forwardRef<FlowCanvasHandle, FlowCanvasProps>(({ planoData }, ref) => {
   const { fitView } = useReactFlow();
+  const flowContainerRef = useRef<HTMLDivElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    getFlowElement: () => flowContainerRef.current?.querySelector('.react-flow') as HTMLElement | null,
+  }));
 
   const {
     nodes: dbNodes, edges: dbEdges, checklist, loading,
@@ -210,7 +219,7 @@ function FlowCanvasInner({ planoData }: FlowCanvasProps) {
   }
 
   return (
-    <div className="relative h-[calc(100vh-280px)] w-full border border-border rounded-lg overflow-hidden bg-background">
+    <div ref={flowContainerRef} className="relative h-[calc(100vh-280px)] w-full border border-border rounded-lg overflow-hidden bg-background">
       <div className="absolute top-3 left-3 z-10 flex gap-2">
         <Button onClick={handleCreate} size="sm" className="gap-2">
           <Plus className="h-4 w-4" /> Novo Card
@@ -282,12 +291,18 @@ function FlowCanvasInner({ planoData }: FlowCanvasProps) {
       </AlertDialog>
     </div>
   );
-}
+});
 
-export default function FlowCanvas({ planoData }: FlowCanvasProps) {
+FlowCanvasInner.displayName = 'FlowCanvasInner';
+
+const FlowCanvas = forwardRef<FlowCanvasHandle, FlowCanvasProps>(({ planoData }, ref) => {
   return (
     <ReactFlowProvider>
-      <FlowCanvasInner planoData={planoData} />
+      <FlowCanvasInner ref={ref} planoData={planoData} />
     </ReactFlowProvider>
   );
-}
+});
+
+FlowCanvas.displayName = 'FlowCanvas';
+
+export default FlowCanvas;
