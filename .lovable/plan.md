@@ -1,42 +1,40 @@
 
-# Tres Paineis de Atendimento — Status
 
-## Fase 1 — Infraestrutura ✅ CONCLUÍDA
+## Botão de Imprimir Relatório do Plano Comercial
 
-- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
-- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
-- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
-- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
-- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
-- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
-- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
-- [x] Interface `RoboCoach` e mutations atualizados com novos campos
+### Resumo
 
-## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
-- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
-- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
-- [x] `estimarImpactoCampo()` — para ordenação de lacunas
-- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
-- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
+Adicionar um botão "Imprimir" na página que gera um relatório em paisagem contendo: resumo de posições, lista detalhada de ocupadas e pendentes (agrupadas por setor), e uma captura do fluxograma.
 
-## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
-- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
-- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
-- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
-- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
-- [x] Botão Confirmar promove campo para manual
-- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
+### Alterações
 
-## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
-- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
-- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
-- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
-- [x] Debounce de 2s nas mudanças de dados
-- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
-- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
+**1. `src/pages/PlanoImplementacaoComercial.tsx`**
+- Adicionar botão "Imprimir" ao lado do título
+- Importar e chamar a função de impressão passando `planoData.nodes` e uma ref do container do ReactFlow
 
-## Fase 5 — Integração Final ✅ CONCLUÍDA
-- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
-- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
-- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
-- [x] Config.toml atualizado com as duas novas funções
+**2. `src/components/plano-comercial/FlowCanvas.tsx`**
+- Expor uma `ref` ao container do ReactFlow para captura via `html2canvas` (ou usar a API `toObject`/`getNodes` do ReactFlow para renderizar)
+- Alternativa mais simples: usar `@xyflow/react`'s `useReactFlow().getViewport()` + capturar o `.react-flow` DOM node
+
+**3. Novo: `src/utils/printPlanoComercial.ts`**
+- Função `printPlanoComercial(nodes: PlanoNode[], flowElement: HTMLElement)` que:
+  1. Usa `html2canvas` para capturar o fluxograma como imagem
+  2. Abre uma janela `window.open()` com conteúdo HTML em orientação paisagem (`@page { size: landscape }`)
+  3. Seções do relatório:
+     - **Cabeçalho**: "Plano de Implementação Comercial" + data
+     - **Resumo**: Total, Ocupadas, Pendentes (números)
+     - **Posições Ocupadas** agrupadas por setor, com nome do cargo, pessoa contratada, funil e observações
+     - **Posições Pendentes** agrupadas por setor, com nome do cargo, funil e observações
+     - **Fluxograma**: imagem capturada do canvas
+  4. Chama `window.print()` automaticamente
+
+**4. Dependência: `html2canvas`**
+- Adicionar ao `package.json` para captura do fluxograma
+
+### Detalhes técnicos
+
+- Orientação paisagem via CSS `@page { size: landscape; }` na janela de impressão
+- Dados extras (observações) extraídos de `node.dados_extras.observacoes`
+- Agrupamento por setor reutiliza a mesma lógica de `groupBySetorCargo`
+- O fluxograma é capturado fazendo `fitView` antes do screenshot para garantir que todos os nodes apareçam
+
