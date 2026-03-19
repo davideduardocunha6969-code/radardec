@@ -44,7 +44,9 @@ function getStatusColor(
   return undefined;
 }
 
-export default function FlowCanvas() {
+function FlowCanvasInner() {
+  const { fitView } = useReactFlow();
+
   const {
     nodes: dbNodes, edges: dbEdges, checklist, loading,
     addNode, updateNode, deleteNode, addEdge, deleteEdge, updateNodePosition,
