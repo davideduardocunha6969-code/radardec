@@ -29,6 +29,7 @@ export default function AtividadesMarketing() {
     moveAtividade,
     addColuna,
     updateColuna,
+    reorderColunas,
     deleteColuna,
     addComentario,
     fetchComentarios,
@@ -348,6 +349,7 @@ export default function AtividadesMarketing() {
           onAddColuna={(nome) => addColuna.mutate(nome)}
           onDeleteColuna={(id) => deleteColuna.mutate(id)}
           onRenameColuna={(id, nome) => updateColuna.mutate({ id, nome })}
+          onReorderColunas={(ids) => reorderColunas.mutate(ids)}
         />
       </div>
 
