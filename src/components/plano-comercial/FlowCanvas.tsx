@@ -212,7 +212,7 @@ function FlowCanvasInner() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeDragStop={onNodesDragStop}
+        onNodeDragStop={onNodeDragStop}
         onEdgesDelete={onEdgeDelete}
         nodeTypes={nodeTypes}
         fitView
