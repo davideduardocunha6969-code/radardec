@@ -295,10 +295,14 @@ const FlowCanvasInner = forwardRef<FlowCanvasHandle, FlowCanvasProps>(({ planoDa
 
 FlowCanvasInner.displayName = 'FlowCanvasInner';
 
-export default function FlowCanvas({ planoData }: FlowCanvasProps) {
+const FlowCanvas = forwardRef<FlowCanvasHandle, FlowCanvasProps>(({ planoData }, ref) => {
   return (
     <ReactFlowProvider>
-      <FlowCanvasInner planoData={planoData} />
+      <FlowCanvasInner ref={ref} planoData={planoData} />
     </ReactFlowProvider>
   );
-}
+});
+
+FlowCanvas.displayName = 'FlowCanvas';
+
+export default FlowCanvas;
