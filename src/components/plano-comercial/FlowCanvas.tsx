@@ -197,9 +197,12 @@ function FlowCanvasInner() {
 
   return (
     <div className="relative h-[calc(100vh-120px)] w-full border border-border rounded-lg overflow-hidden bg-background">
-      <div className="absolute top-3 left-3 z-10">
+      <div className="absolute top-3 left-3 z-10 flex gap-2">
         <Button onClick={handleCreate} size="sm" className="gap-2">
           <Plus className="h-4 w-4" /> Novo Card
+        </Button>
+        <Button onClick={() => fitView({ padding: 0.15, duration: 300 })} size="sm" variant="outline" className="gap-2">
+          <Maximize2 className="h-4 w-4" /> Ver Tudo
         </Button>
       </div>
 
@@ -209,11 +212,14 @@ function FlowCanvasInner() {
         onNodesChange={onNodesChange}
         onEdgesChange={onEdgesChange}
         onConnect={onConnect}
-        onNodeDragStop={onNodeDragStop}
+        onNodesDragStop={onNodesDragStop}
         onEdgesDelete={onEdgeDelete}
         nodeTypes={nodeTypes}
         fitView
         deleteKeyCode="Delete"
+        selectionOnDrag
+        panOnDrag={[1, 2]}
+        selectionMode={SelectionMode.Partial}
         className="bg-background"
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} className="!bg-background" />
