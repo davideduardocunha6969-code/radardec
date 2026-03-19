@@ -62,7 +62,7 @@ export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
             <p className="text-xl font-bold text-card-foreground">{stats.ocupadas.length}</p>
           </div>
           {Object.keys(stats.ocupadasPorCargo).length > 0 && (
-            expandedCard === 'ocupadas'
+            expanded
               ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
               : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
           )}
