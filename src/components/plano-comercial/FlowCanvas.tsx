@@ -139,9 +139,12 @@ function FlowCanvasInner() {
     }
   }, [addEdge]);
 
-  const onNodeDragStop = useCallback((_: any, node: Node) => {
-    updateNodePosition(node.id, node.position.x, node.position.y);
+  const onNodesDragStop = useCallback((_: any, nodes: Node[]) => {
+    for (const node of nodes) {
+      updateNodePosition(node.id, node.position.x, node.position.y);
+    }
   }, [updateNodePosition]);
+
 
   const onEdgeDelete = useCallback(async (edges: Edge[]) => {
     for (const e of edges) await deleteEdge(e.id);
