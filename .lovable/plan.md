@@ -1,42 +1,116 @@
 
-# Tres Paineis de Atendimento — Status
 
-## Fase 1 — Infraestrutura ✅ CONCLUÍDA
+## Fluxograma Interativo para Plano de Implementação Comercial
 
-- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
-- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
-- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
-- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
-- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
-- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
-- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
-- [x] Interface `RoboCoach` e mutations atualizados com novos campos
+### Objetivo
+Construir um editor visual de fluxograma onde o usuário cria cards (posições/cargos), conecta-os com linhas hierárquicas, e organiza seu plano de implementação comercial com funis de atendimento.
 
-## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
-- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
-- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
-- [x] `estimarImpactoCampo()` — para ordenação de lacunas
-- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
-- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
+### Biblioteca
+Instalar **@xyflow/react** (React Flow v12) -- a biblioteca padrão para fluxogramas interativos em React. Suporta drag-and-drop, conexões com linhas, zoom/pan, e custom nodes.
 
-## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
-- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
-- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
-- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
-- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
-- [x] Botão Confirmar promove campo para manual
-- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
+### Modelo de Dados (banco de dados)
 
-## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
-- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
-- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
-- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
-- [x] Debounce de 2s nas mudanças de dados
-- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
-- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
+Criar tabela `plano_comercial_nodes` para persistir os cards:
 
-## Fase 5 — Integração Final ✅ CONCLUÍDA
-- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
-- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
-- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
-- [x] Config.toml atualizado com as duas novas funções
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid PK | |
+| user_id | uuid | Dono |
+| node_type | text | "posicao", "setor", "funil", "grupo" |
+| label | text | Nome do card (ex: "SDR Inbound") |
+| setor | text | "previdenciario", "trabalhista", null |
+| funil | text | Nome do funil (ex: "inbound", "caminhoneiros") |
+| pessoa_nome | text | Nome da pessoa contratada (null se vaga aberta) |
+| precisa_contratar | boolean | Se a posição precisa ser preenchida |
+| position_x | float | Posição X no canvas |
+| position_y | float | Posição Y no canvas |
+| dados_extras | jsonb | Campos livres (descrição, observações) |
+| created_at | timestamptz | |
+| updated_at | timestamptz | |
+
+Criar tabela `plano_comercial_edges` para persistir as conexões:
+
+| Coluna | Tipo | Descrição |
+|--------|------|-----------|
+| id | uuid PK | |
+| user_id | uuid | |
+| source_node_id | uuid FK | Card de origem |
+| target_node_id | uuid FK | Card de destino |
+| label | text | Rótulo opcional da conexão |
+| created_at | timestamptz | |
+
+RLS: usuários autenticados podem gerenciar seus próprios registros (`auth.uid() = user_id`).
+
+### Componentes
+
+1. **PlanoImplementacaoComercial.tsx** (page) -- canvas React Flow com toolbar
+2. **FlowCanvas.tsx** -- wrapper do React Flow com handlers de drag, connect, save
+3. **PosicaoNode.tsx** -- custom node que exibe:
+   - Tipo do card (ícone: setor, funil, posição)
+   - Label / cargo
+   - Setor + Funil (badges coloridos)
+   - Nome da pessoa ou badge "Precisa Contratar" (vermelho)
+   - Botão de editar
+4. **NodeFormDialog.tsx** -- dialog para criar/editar um card com campos:
+   - Tipo (setor, funil, posição)
+   - Label/cargo
+   - Setor (select: previdenciário, trabalhista)
+   - Funil (select dinâmico conforme setor)
+   - Pessoa (input texto)
+   - Precisa contratar (switch)
+   - Observações
+
+### Hook: usePlanoComercial.ts
+- Carrega nodes e edges do banco
+- Converte para formato React Flow
+- Salva alterações (posição, conexões, CRUD de nodes)
+- Auto-save ao mover cards ou criar conexões
+
+### UX do Fluxograma
+- **Adicionar card**: botão "+" na toolbar superior abre o dialog
+- **Conectar cards**: arrastar do handle de um card para outro (gera edge/linha)
+- **Mover cards**: drag livre no canvas, posição salva automaticamente
+- **Editar card**: duplo-clique ou botão de editar no card
+- **Excluir**: botão de excluir no card (com confirmação)
+- **Zoom/Pan**: scroll + arrastar canvas (nativo do React Flow)
+- **Minimap**: minimapa no canto inferior para navegação rápida
+
+### Arquivos a criar/editar
+
+| Arquivo | Ação |
+|---------|------|
+| `src/pages/PlanoImplementacaoComercial.tsx` | Reescrever com React Flow |
+| `src/components/plano-comercial/FlowCanvas.tsx` | Criar |
+| `src/components/plano-comercial/PosicaoNode.tsx` | Criar |
+| `src/components/plano-comercial/NodeFormDialog.tsx` | Criar |
+| `src/hooks/usePlanoComercial.ts` | Criar |
+| Migration SQL | Criar tabelas + RLS |
+| `package.json` | Adicionar `@xyflow/react` |
+
+### Visual dos Cards
+
+```text
+┌─────────────────────────────┐
+│ 🏢 Funil                    │
+│ ─────────────────────────── │
+│ SDR Inbound Previdenciário  │
+│ [Previdenciário] [Inbound]  │
+│                             │
+│ 👤 João Silva               │
+│   ou                        │
+│ 🔴 Precisa Contratar        │
+│                     [✏️][🗑️]│
+└─────────────────────────────┘
+         │
+         ▼
+┌─────────────────────────────┐
+│ 🏢 Posição                  │
+│ ─────────────────────────── │
+│ Closer Previdenciário       │
+│ [Previdenciário] [Inbound]  │
+│                             │
+│ 🔴 Precisa Contratar        │
+│                     [✏️][🗑️]│
+└─────────────────────────────┘
+```
+
