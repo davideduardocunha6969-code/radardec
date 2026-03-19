@@ -16,7 +16,7 @@ function groupByCargo(nodes: PlanoNode[]): Record<string, number> {
 }
 
 export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
-  const [expandedCard, setExpandedCard] = useState<'ocupadas' | 'pendentes' | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   const stats = useMemo(() => {
     const posicoes = nodes.filter(n => n.node_type === 'posicao');
@@ -31,8 +31,7 @@ export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
     };
   }, [nodes]);
 
-  const toggle = (card: 'ocupadas' | 'pendentes') =>
-    setExpandedCard(prev => (prev === card ? null : card));
+  const toggle = () => setExpanded(prev => !prev);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
