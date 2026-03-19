@@ -136,30 +136,53 @@ export function KanbanBoard({
     return COLUNA_COLORS[nome] || { bg: "bg-muted/30", border: "border-border", dot: "bg-muted-foreground" };
   };
 
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 10 } }),
+    useSensor(KeyboardSensor)
+  );
+
+  const handleColumnDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const oldIndex = colunas.findIndex((c) => c.id === active.id);
+    const newIndex = colunas.findIndex((c) => c.id === over.id);
+    if (oldIndex === -1 || newIndex === -1) return;
+    const newOrder = [...colunas];
+    const [moved] = newOrder.splice(oldIndex, 1);
+    newOrder.splice(newIndex, 0, moved);
+    onReorderColunas(newOrder.map((c) => c.id));
+  };
+
   return (
-    <div className="flex gap-4 h-full">
-      {colunas.map((coluna) => {
-        const colAtividades = getAtividadesByColuna(coluna.id);
-        const colors = getColunaColors(coluna.nome);
-        const isDropTarget = dragOverColuna === coluna.id;
-        
-        return (
-          <div
-            key={coluna.id}
-            className="flex-shrink-0 w-[280px] h-full flex flex-col"
-            onDragOver={(e) => handleDragOver(e, coluna.id)}
-            onDragLeave={handleDragLeave}
-            onDrop={(e) => handleDrop(e, coluna.id)}
-          >
-            <div
-              className={cn(
-                "flex-1 flex flex-col rounded-xl border-2 transition-all duration-200 overflow-hidden",
-                colors.bg,
-                colors.border,
-                isDropTarget && "ring-2 ring-primary ring-offset-2 border-primary scale-[1.02]"
-              )}
-            >
-              {/* Column Header */}
+    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleColumnDragEnd}>
+      <SortableContext items={colunas.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
+        <div className="flex gap-4 h-full">
+          {colunas.map((coluna) => {
+            const colAtividades = getAtividadesByColuna(coluna.id);
+            const colors = getColunaColors(coluna.nome);
+            const isDropTarget = dragOverColuna === coluna.id;
+
+            return (
+              <SortableColumn
+                key={coluna.id}
+                coluna={coluna}
+                colAtividades={colAtividades}
+                colors={colors}
+                isDropTarget={isDropTarget}
+                editingColunaId={editingColunaId}
+                editingColunaName={editingColunaName}
+                setEditingColunaId={setEditingColunaId}
+                setEditingColunaName={setEditingColunaName}
+                onRenameColuna={onRenameColuna}
+                onDeleteColuna={onDeleteColuna}
+                draggedAtividade={draggedAtividade}
+                onDragOver={(e) => handleDragOver(e, coluna.id)}
+                onDragLeave={handleDragLeave}
+                onDrop={(e) => handleDrop(e, coluna.id)}
+                onDragStartCard={handleDragStart}
+                onDragEndCard={handleDragEnd}
+                onClickAtividade={onClickAtividade}
+              />
               <div className="p-3 border-b border-inherit shrink-0">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
