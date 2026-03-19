@@ -1,19 +1,22 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   Controls,
   MiniMap,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   type Connection,
   type Edge,
   type Node,
   BackgroundVariant,
   MarkerType,
+  SelectionMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Plus } from 'lucide-react';
+import { Plus, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PosicaoNode from './PosicaoNode';
 import NodeFormDialog, { type NodeFormData } from './NodeFormDialog';
@@ -41,7 +44,9 @@ function getStatusColor(
   return undefined;
 }
 
-export default function FlowCanvas() {
+function FlowCanvasInner() {
+  const { fitView } = useReactFlow();
+
   const {
     nodes: dbNodes, edges: dbEdges, checklist, loading,
     addNode, updateNode, deleteNode, addEdge, deleteEdge, updateNodePosition,
@@ -134,9 +139,12 @@ export default function FlowCanvas() {
     }
   }, [addEdge]);
 
-  const onNodeDragStop = useCallback((_: any, node: Node) => {
-    updateNodePosition(node.id, node.position.x, node.position.y);
+  const onNodeDragStop = useCallback((_: any, _node: Node, nodes: Node[]) => {
+    for (const n of nodes) {
+      updateNodePosition(n.id, n.position.x, n.position.y);
+    }
   }, [updateNodePosition]);
+
 
   const onEdgeDelete = useCallback(async (edges: Edge[]) => {
     for (const e of edges) await deleteEdge(e.id);
@@ -189,9 +197,12 @@ export default function FlowCanvas() {
 
   return (
     <div className="relative h-[calc(100vh-120px)] w-full border border-border rounded-lg overflow-hidden bg-background">
-      <div className="absolute top-3 left-3 z-10">
+      <div className="absolute top-3 left-3 z-10 flex gap-2">
         <Button onClick={handleCreate} size="sm" className="gap-2">
           <Plus className="h-4 w-4" /> Novo Card
+        </Button>
+        <Button onClick={() => fitView({ padding: 0.15, duration: 300 })} size="sm" variant="outline" className="gap-2">
+          <Maximize2 className="h-4 w-4" /> Ver Tudo
         </Button>
       </div>
 
@@ -206,6 +217,9 @@ export default function FlowCanvas() {
         nodeTypes={nodeTypes}
         fitView
         deleteKeyCode="Delete"
+        selectionOnDrag
+        panOnDrag={[1, 2]}
+        selectionMode={SelectionMode.Partial}
         className="bg-background"
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} className="!bg-background" />
@@ -255,5 +269,13 @@ export default function FlowCanvas() {
         </AlertDialogContent>
       </AlertDialog>
     </div>
+  );
+}
+
+export default function FlowCanvas() {
+  return (
+    <ReactFlowProvider>
+      <FlowCanvasInner />
+    </ReactFlowProvider>
   );
 }
