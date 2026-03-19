@@ -16,7 +16,7 @@ function groupByCargo(nodes: PlanoNode[]): Record<string, number> {
 }
 
 export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
-  const [expandedCard, setExpandedCard] = useState<'ocupadas' | 'pendentes' | null>(null);
+  const [expanded, setExpanded] = useState(false);
 
   const stats = useMemo(() => {
     const posicoes = nodes.filter(n => n.node_type === 'posicao');
@@ -31,8 +31,7 @@ export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
     };
   }, [nodes]);
 
-  const toggle = (card: 'ocupadas' | 'pendentes') =>
-    setExpandedCard(prev => (prev === card ? null : card));
+  const toggle = () => setExpanded(prev => !prev);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
@@ -52,7 +51,7 @@ export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
       {/* Ocupadas */}
       <div
         className="rounded-xl border border-border bg-card px-4 py-3 shadow-sm cursor-pointer transition-all"
-        onClick={() => toggle('ocupadas')}
+        onClick={toggle}
       >
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-success/10 p-2">
@@ -63,12 +62,12 @@ export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
             <p className="text-xl font-bold text-card-foreground">{stats.ocupadas.length}</p>
           </div>
           {Object.keys(stats.ocupadasPorCargo).length > 0 && (
-            expandedCard === 'ocupadas'
+            expanded
               ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
               : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
           )}
         </div>
-        {expandedCard === 'ocupadas' && Object.keys(stats.ocupadasPorCargo).length > 0 && (
+        {expanded && Object.keys(stats.ocupadasPorCargo).length > 0 && (
           <div className="border-t border-border mt-2 pt-2 space-y-1">
             {Object.entries(stats.ocupadasPorCargo)
               .sort(([, a], [, b]) => b - a)
@@ -85,7 +84,7 @@ export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
       {/* Pendentes */}
       <div
         className="rounded-xl border border-border bg-card px-4 py-3 shadow-sm cursor-pointer transition-all"
-        onClick={() => toggle('pendentes')}
+        onClick={toggle}
       >
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-destructive/10 p-2">
@@ -96,12 +95,12 @@ export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
             <p className="text-xl font-bold text-card-foreground">{stats.pendentes.length}</p>
           </div>
           {Object.keys(stats.pendentesPorCargo).length > 0 && (
-            expandedCard === 'pendentes'
+            expanded
               ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
               : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
           )}
         </div>
-        {expandedCard === 'pendentes' && Object.keys(stats.pendentesPorCargo).length > 0 && (
+        {expanded && Object.keys(stats.pendentesPorCargo).length > 0 && (
           <div className="border-t border-border mt-2 pt-2 space-y-1">
             {Object.entries(stats.pendentesPorCargo)
               .sort(([, a], [, b]) => b - a)
