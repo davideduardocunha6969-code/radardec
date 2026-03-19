@@ -1,83 +1,42 @@
 
+# Tres Paineis de Atendimento — Status
 
-## Cores dos cards + Checklist de requisitos para funis
+## Fase 1 — Infraestrutura ✅ CONCLUÍDA
 
-### Resumo
-1. Adicionar cores aos cards: **vermelho** (precisa contratar), **amarelo** (ocupado), **verde** (funil completo)
-2. Criar tabela de checklist de requisitos por funil
-3. Criar dialog de checklist que abre ao clicar num card de tipo "funil"
-4. O funil só fica verde se TODAS as posições filhas estão ocupadas E TODOS os itens do checklist estão cumpridos. Caso contrário, fica vermelho.
+- [x] Migração: colunas `instrucoes_extrator` e `instrucoes_lacunas` em `robos_coach`
+- [x] Tipos: `DadosExtrasField`, `DadosExtrasMap`, `getFieldValue()`, `createField()`, `isManualField()`
+- [x] Hook `useLeadDadosSync` com sincronização bidirecional e prioridade manual
+- [x] `LeadDadosTab` adaptada para retrocompatibilidade (string legada + objeto com metadados)
+- [x] Indicadores visuais de confiança (círculos coloridos) e origem manual (ícone lápis)
+- [x] Esqueleto motor de cálculo: `calculator.ts`, `correcao.ts`, `rubricas.ts`, `types.ts`
+- [x] Painéis placeholder: `DataExtractorPanel`, `GapsPanel`, `ValuesEstimationPanel`
+- [x] Interface `RoboCoach` e mutations atualizados com novos campos
 
-### Banco de dados
+## Fase 2 — Painel 3 (Estimativa de Valores) ✅ CONCLUÍDA
+- [x] Motor v5.2 completo (22 fases) em `calculator.ts`
+- [x] `calcular_periodo_modulado(dataAdmissao, dataDemissao)` — ADI 5322
+- [x] `estimarImpactoCampo()` — para ordenação de lacunas
+- [x] `rubricas.ts` — 40+ rubricas com categorias alinhadas ao motor
+- [x] UI do accordion hierárquico com metadados, subtotais e avisos condicionais
 
-Nova tabela `plano_comercial_checklist`:
+## Fase 3 — Painel 1 (Extrator de Dados) ✅ CONCLUÍDA
+- [x] Edge function `extract-lead-data` — prompt lido de `robos_coach.instrucoes_extrator`
+- [x] JSON puro (sem tool calling), modelo `google/gemini-2.5-flash`
+- [x] Grava campos de alta confiança automaticamente, respeita `preenchimento_manual`
+- [x] UI com 3 categorias: auto-preenchidos (verde), revisão (amarelo), manuais (cinza)
+- [x] Botão Confirmar promove campo para manual
+- [x] Integração com transcrição em tempo real via `onTranscriptUpdate`
 
-| Coluna | Tipo | Descrição |
-|--------|------|-----------|
-| id | uuid PK | |
-| node_id | uuid FK → plano_comercial_nodes | Card de funil |
-| user_id | uuid | Dono |
-| texto | text | Descrição do requisito |
-| concluido | boolean | Se foi cumprido |
-| ordem | integer | Ordem de exibição |
-| created_at | timestamptz | |
+## Fase 4 — Painel 2 (Lacunas) ✅ CONCLUÍDA
+- [x] Edge function `analyze-gaps` — prompt lido de `robos_coach.instrucoes_lacunas`
+- [x] Ordenação por impacto via `estimarImpactoCampo()` (motor TS local, não IA)
+- [x] Condição: só chama IA se >= 3 lacunas com impacto > 0
+- [x] Debounce de 2s nas mudanças de dados
+- [x] UI com lista priorizada, badges de impacto, botão copiar pergunta
+- [x] Campos `contexto_para_o_closer` e `urgencia` preservados
 
-RLS: `auth.uid() = user_id` para ALL.
-
-### Alterações em componentes
-
-**1. `PosicaoNode.tsx`** -- Aplicar cores condicionais:
-- Card raiz `div`: classes de borda e fundo baseadas em `d.statusColor` (passado via data)
-  - `'red'` → `border-red-500 bg-red-500/10`
-  - `'yellow'` → `border-yellow-500 bg-yellow-500/10`
-  - `'green'` → `border-green-500 bg-green-500/10`
-- Para funis: adicionar indicador clicável "Requisitos (X/Y)" que chama `d.onOpenChecklist?.(d.nodeId)`
-
-**2. `FlowCanvas.tsx`** -- Calcular `statusColor` ao montar flowNodes:
-- Cards `posicao`/`grupo`/`setor`:
-  - `precisa_contratar` → `'red'`
-  - `pessoa_nome` preenchido → `'yellow'`
-  - Senão → sem cor especial
-- Cards `funil`:
-  - Buscar filhos (edges onde source = funil.id) + checklist items
-  - Se filhos existem E todos ocupados E todos checklist concluídos → `'green'`
-  - Senão → `'red'`
-- Adicionar estado para checklist items (carregar junto com nodes/edges no hook)
-- Adicionar estado `checklistNodeId` para abrir o dialog
-
-**3. Novo `FunilChecklistDialog.tsx`**:
-- Dialog que abre ao clicar no card de funil
-- Lista de itens de checklist com checkbox para marcar como concluído
-- Input para adicionar novos requisitos
-- Botão para excluir requisitos
-- Persistência via hook
-
-**4. `usePlanoComercial.ts`** -- Adicionar:
-- Estado `checklist` com fetch da tabela `plano_comercial_checklist`
-- CRUD: `addChecklistItem`, `toggleChecklistItem`, `deleteChecklistItem`
-- Expor `checklist` agrupado por `node_id`
-
-### Lógica de cor do funil (detalhada)
-
-```text
-funilCompleto = 
-  childNodes.length > 0
-  AND childNodes.every(n => n.pessoa_nome && !n.precisa_contratar)
-  AND checklistItems.filter(i => i.node_id === funil.id).length > 0
-  AND checklistItems.filter(i => i.node_id === funil.id).every(i => i.concluido)
-
-statusColor = funilCompleto ? 'green' : 'red'
-```
-
-Se o funil não tem checklist items cadastrados, ele fica vermelho (incentiva o usuário a cadastrar os requisitos).
-
-### Arquivos
-
-| Arquivo | Ação |
-|---------|------|
-| Migration SQL | Criar tabela `plano_comercial_checklist` + RLS |
-| `src/hooks/usePlanoComercial.ts` | Adicionar CRUD checklist |
-| `src/components/plano-comercial/PosicaoNode.tsx` | Cores + botão requisitos |
-| `src/components/plano-comercial/FlowCanvas.tsx` | Calcular statusColor, abrir dialog |
-| `src/components/plano-comercial/FunilChecklistDialog.tsx` | Criar |
-
+## Fase 5 — Integração Final ✅ CONCLUÍDA
+- [x] `RealtimeCoachingPanel` exporta tipo `LabeledTranscript` e prop `onTranscriptUpdate`
+- [x] `Atendimento.tsx` compartilha `transcriptChunks` com `DataExtractorPanel`
+- [x] `Atendimento.tsx` passa `coachId` para ambos os painéis
+- [x] Config.toml atualizado com as duas novas funções

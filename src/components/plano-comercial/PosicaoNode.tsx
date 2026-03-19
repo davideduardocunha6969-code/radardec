@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Building2, Users, Briefcase, Layers, Pencil, Trash2, User } from 'lucide-react';
+import { Building2, Users, Briefcase, Layers, Pencil, Trash2, User, ClipboardCheck } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 
@@ -16,18 +16,30 @@ const setorColors: Record<string, string> = {
   trabalhista: 'bg-amber-500/20 text-amber-300 border-amber-500/40',
 };
 
+const statusBorderMap: Record<string, string> = {
+  red: 'border-red-500 bg-red-500/10',
+  yellow: 'border-yellow-500 bg-yellow-500/10',
+  green: 'border-green-500 bg-green-500/10',
+};
+
 function PosicaoNode({ data }: NodeProps) {
   const d = data as any;
   const Icon = typeIcons[d.node_type] || Briefcase;
+  const statusClass = d.statusColor ? statusBorderMap[d.statusColor] || '' : '';
 
   return (
-    <div className="bg-card border border-border rounded-lg shadow-lg min-w-[220px] max-w-[280px]">
+    <div className={`border rounded-lg shadow-lg min-w-[220px] max-w-[280px] ${statusClass || 'bg-card border-border'}`}>
       <Handle type="target" position={Position.Top} className="!bg-primary !w-3 !h-3" />
 
-      <div className="px-3 py-2 border-b border-border flex items-center gap-2">
+      <div className="px-3 py-2 border-b border-border/50 flex items-center gap-2">
         <Icon className="h-4 w-4 text-muted-foreground" />
         <span className="text-xs text-muted-foreground capitalize">{d.node_type}</span>
         <div className="ml-auto flex gap-1">
+          {d.node_type === 'funil' && (
+            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => d.onOpenChecklist?.(d.nodeId)}>
+              <ClipboardCheck className="h-3 w-3" />
+            </Button>
+          )}
           <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => d.onEdit?.(d.nodeId)}>
             <Pencil className="h-3 w-3" />
           </Button>
@@ -53,6 +65,16 @@ function PosicaoNode({ data }: NodeProps) {
               </Badge>
             )}
           </div>
+        )}
+
+        {d.node_type === 'funil' && d.checklistTotal != null && (
+          <button
+            onClick={() => d.onOpenChecklist?.(d.nodeId)}
+            className="text-[11px] text-muted-foreground hover:text-foreground flex items-center gap-1"
+          >
+            <ClipboardCheck className="h-3 w-3" />
+            Requisitos: {d.checklistDone}/{d.checklistTotal}
+          </button>
         )}
 
         {d.pessoa_nome ? (

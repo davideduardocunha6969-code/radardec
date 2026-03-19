@@ -25,21 +25,34 @@ export interface PlanoEdge {
   label: string | null;
 }
 
+export interface ChecklistItem {
+  id: string;
+  node_id: string;
+  user_id: string;
+  texto: string;
+  concluido: boolean;
+  ordem: number;
+  created_at: string;
+}
+
 export function usePlanoComercial() {
   const { user } = useAuthContext();
   const [nodes, setNodes] = useState<PlanoNode[]>([]);
   const [edges, setEdges] = useState<PlanoEdge[]>([]);
+  const [checklist, setChecklist] = useState<ChecklistItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchData = useCallback(async () => {
     if (!user) return;
     setLoading(true);
-    const [nodesRes, edgesRes] = await Promise.all([
+    const [nodesRes, edgesRes, checklistRes] = await Promise.all([
       supabase.from('plano_comercial_nodes').select('*').eq('user_id', user.id),
       supabase.from('plano_comercial_edges').select('*').eq('user_id', user.id),
+      supabase.from('plano_comercial_checklist').select('*').eq('user_id', user.id).order('ordem'),
     ]);
     if (nodesRes.data) setNodes(nodesRes.data as unknown as PlanoNode[]);
     if (edgesRes.data) setEdges(edgesRes.data as unknown as PlanoEdge[]);
+    if (checklistRes.data) setChecklist(checklistRes.data as unknown as ChecklistItem[]);
     setLoading(false);
   }, [user]);
 
@@ -75,6 +88,7 @@ export function usePlanoComercial() {
     if (error) { toast.error('Erro ao excluir card'); return; }
     setNodes(prev => prev.filter(n => n.id !== id));
     setEdges(prev => prev.filter(e => e.source_node_id !== id && e.target_node_id !== id));
+    setChecklist(prev => prev.filter(c => c.node_id !== id));
   };
 
   const addEdge = async (source: string, target: string) => {
@@ -105,5 +119,44 @@ export function usePlanoComercial() {
     setNodes(prev => prev.map(n => n.id === id ? { ...n, position_x: x, position_y: y } : n));
   };
 
-  return { nodes, edges, loading, addNode, updateNode, deleteNode, addEdge, deleteEdge, updateNodePosition, refetch: fetchData };
+  // Checklist CRUD
+  const addChecklistItem = async (nodeId: string, texto: string) => {
+    if (!user) return null;
+    const maxOrdem = checklist.filter(c => c.node_id === nodeId).reduce((max, c) => Math.max(max, c.ordem), -1);
+    const { data: inserted, error } = await supabase
+      .from('plano_comercial_checklist')
+      .insert({ node_id: nodeId, user_id: user.id, texto, ordem: maxOrdem + 1 } as any)
+      .select()
+      .single();
+    if (error) { toast.error('Erro ao adicionar requisito'); return null; }
+    const item = inserted as unknown as ChecklistItem;
+    setChecklist(prev => [...prev, item]);
+    return item;
+  };
+
+  const toggleChecklistItem = async (id: string, concluido: boolean) => {
+    const { error } = await supabase
+      .from('plano_comercial_checklist')
+      .update({ concluido } as any)
+      .eq('id', id);
+    if (error) { toast.error('Erro ao atualizar requisito'); return; }
+    setChecklist(prev => prev.map(c => c.id === id ? { ...c, concluido } : c));
+  };
+
+  const deleteChecklistItem = async (id: string) => {
+    const { error } = await supabase
+      .from('plano_comercial_checklist')
+      .delete()
+      .eq('id', id);
+    if (error) { toast.error('Erro ao excluir requisito'); return; }
+    setChecklist(prev => prev.filter(c => c.id !== id));
+  };
+
+  return {
+    nodes, edges, checklist, loading,
+    addNode, updateNode, deleteNode,
+    addEdge, deleteEdge, updateNodePosition,
+    addChecklistItem, toggleChecklistItem, deleteChecklistItem,
+    refetch: fetchData,
+  };
 }

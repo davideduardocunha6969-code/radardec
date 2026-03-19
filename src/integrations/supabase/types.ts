@@ -1971,6 +1971,44 @@ export type Database = {
         }
         Relationships: []
       }
+      plano_comercial_checklist: {
+        Row: {
+          concluido: boolean
+          created_at: string
+          id: string
+          node_id: string
+          ordem: number
+          texto: string
+          user_id: string
+        }
+        Insert: {
+          concluido?: boolean
+          created_at?: string
+          id?: string
+          node_id: string
+          ordem?: number
+          texto: string
+          user_id: string
+        }
+        Update: {
+          concluido?: boolean
+          created_at?: string
+          id?: string
+          node_id?: string
+          ordem?: number
+          texto?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "plano_comercial_checklist_node_id_fkey"
+            columns: ["node_id"]
+            isOneToOne: false
+            referencedRelation: "plano_comercial_nodes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       plano_comercial_edges: {
         Row: {
           created_at: string

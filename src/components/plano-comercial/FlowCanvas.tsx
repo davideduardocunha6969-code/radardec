@@ -4,14 +4,11 @@ import {
   Background,
   Controls,
   MiniMap,
-  addEdge as rfAddEdge,
   useNodesState,
   useEdgesState,
   type Connection,
   type Edge,
   type Node,
-  type NodeChange,
-  type EdgeChange,
   BackgroundVariant,
   MarkerType,
 } from '@xyflow/react';
@@ -20,17 +17,41 @@ import { Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PosicaoNode from './PosicaoNode';
 import NodeFormDialog, { type NodeFormData } from './NodeFormDialog';
+import FunilChecklistDialog from './FunilChecklistDialog';
 import { usePlanoComercial, type PlanoNode } from '@/hooks/usePlanoComercial';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const nodeTypes = { posicao: PosicaoNode };
 
+function getStatusColor(
+  node: PlanoNode,
+  childNodeIds: string[],
+  allNodes: PlanoNode[],
+  checklistByNode: Record<string, { total: number; done: number }>
+): string | undefined {
+  if (node.node_type === 'funil') {
+    const children = childNodeIds.map(id => allNodes.find(n => n.id === id)).filter(Boolean) as PlanoNode[];
+    const allChildrenOccupied = children.length > 0 && children.every(c => c.pessoa_nome && !c.precisa_contratar);
+    const cl = checklistByNode[node.id];
+    const allChecklistDone = cl && cl.total > 0 && cl.done === cl.total;
+    return (allChildrenOccupied && allChecklistDone) ? 'green' : 'red';
+  }
+  if (node.precisa_contratar) return 'red';
+  if (node.pessoa_nome) return 'yellow';
+  return undefined;
+}
+
 export default function FlowCanvas() {
-  const { nodes: dbNodes, edges: dbEdges, loading, addNode, updateNode, deleteNode, addEdge, deleteEdge, updateNodePosition } = usePlanoComercial();
+  const {
+    nodes: dbNodes, edges: dbEdges, checklist, loading,
+    addNode, updateNode, deleteNode, addEdge, deleteEdge, updateNodePosition,
+    addChecklistItem, toggleChecklistItem, deleteChecklistItem,
+  } = usePlanoComercial();
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
   const [deletingNodeId, setDeletingNodeId] = useState<string | null>(null);
+  const [checklistNodeId, setChecklistNodeId] = useState<string | null>(null);
 
   const handleEdit = useCallback((nodeId: string) => {
     setEditingNodeId(nodeId);
@@ -41,19 +62,51 @@ export default function FlowCanvas() {
     setDeletingNodeId(nodeId);
   }, []);
 
+  const handleOpenChecklist = useCallback((nodeId: string) => {
+    setChecklistNodeId(nodeId);
+  }, []);
+
+  // Pre-compute checklist stats per node
+  const checklistByNode = useMemo(() => {
+    const map: Record<string, { total: number; done: number }> = {};
+    for (const item of checklist) {
+      if (!map[item.node_id]) map[item.node_id] = { total: 0, done: 0 };
+      map[item.node_id].total++;
+      if (item.concluido) map[item.node_id].done++;
+    }
+    return map;
+  }, [checklist]);
+
+  // Pre-compute children per node (edges where source = node)
+  const childrenByNode = useMemo(() => {
+    const map: Record<string, string[]> = {};
+    for (const e of dbEdges) {
+      if (!map[e.source_node_id]) map[e.source_node_id] = [];
+      map[e.source_node_id].push(e.target_node_id);
+    }
+    return map;
+  }, [dbEdges]);
+
   const flowNodes: Node[] = useMemo(() =>
-    dbNodes.map(n => ({
-      id: n.id,
-      type: 'posicao',
-      position: { x: n.position_x, y: n.position_y },
-      data: {
-        ...n,
-        nodeId: n.id,
-        onEdit: handleEdit,
-        onDelete: handleDeleteRequest,
-      },
-    })),
-    [dbNodes, handleEdit, handleDeleteRequest]
+    dbNodes.map(n => {
+      const cl = checklistByNode[n.id];
+      return {
+        id: n.id,
+        type: 'posicao',
+        position: { x: n.position_x, y: n.position_y },
+        data: {
+          ...n,
+          nodeId: n.id,
+          onEdit: handleEdit,
+          onDelete: handleDeleteRequest,
+          onOpenChecklist: handleOpenChecklist,
+          statusColor: getStatusColor(n, childrenByNode[n.id] || [], dbNodes, checklistByNode),
+          checklistTotal: cl?.total ?? null,
+          checklistDone: cl?.done ?? 0,
+        },
+      };
+    }),
+    [dbNodes, handleEdit, handleDeleteRequest, handleOpenChecklist, checklistByNode, childrenByNode]
   );
 
   const flowEdges: Edge[] = useMemo(() =>
@@ -72,7 +125,6 @@ export default function FlowCanvas() {
   const [rfNodes, setRfNodes, onNodesChange] = useNodesState(flowNodes);
   const [rfEdges, setRfEdges, onEdgesChange] = useEdgesState(flowEdges);
 
-  // Sync DB data → RF state
   useMemo(() => { setRfNodes(flowNodes); }, [flowNodes]);
   useMemo(() => { setRfEdges(flowEdges); }, [flowEdges]);
 
@@ -96,6 +148,7 @@ export default function FlowCanvas() {
   };
 
   const editingNode = editingNodeId ? dbNodes.find(n => n.id === editingNodeId) : null;
+  const checklistNode = checklistNodeId ? dbNodes.find(n => n.id === checklistNodeId) : null;
 
   const handleFormSubmit = async (data: NodeFormData) => {
     if (editingNodeId) {
@@ -175,6 +228,19 @@ export default function FlowCanvas() {
           observacoes: (editingNode.dados_extras as any)?.observacoes || '',
         } : undefined}
       />
+
+      {checklistNode && (
+        <FunilChecklistDialog
+          open={!!checklistNodeId}
+          onOpenChange={v => !v && setChecklistNodeId(null)}
+          nodeId={checklistNode.id}
+          nodeLabel={checklistNode.label}
+          items={checklist.filter(c => c.node_id === checklistNode.id)}
+          onAdd={addChecklistItem}
+          onToggle={toggleChecklistItem}
+          onDelete={deleteChecklistItem}
+        />
+      )}
 
       <AlertDialog open={!!deletingNodeId} onOpenChange={v => !v && setDeletingNodeId(null)}>
         <AlertDialogContent>
