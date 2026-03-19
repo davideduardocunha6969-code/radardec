@@ -89,23 +89,14 @@ export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
             <p className="text-xs font-medium text-muted-foreground">Posições Ocupadas</p>
             <p className="text-xl font-bold text-card-foreground">{stats.ocupadas.length}</p>
           </div>
-          {Object.keys(stats.ocupadasPorCargo).length > 0 && (
+          {Object.keys(stats.ocupadasPorSetorCargo).length > 0 && (
             expanded
               ? <ChevronUp className="h-4 w-4 text-muted-foreground shrink-0" />
               : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
           )}
         </div>
-        {expanded && Object.keys(stats.ocupadasPorCargo).length > 0 && (
-          <div className="border-t border-border mt-2 pt-2 space-y-1">
-            {Object.entries(stats.ocupadasPorCargo)
-              .sort(([, a], [, b]) => b - a)
-              .map(([cargo, count]) => (
-                <div key={cargo} className="flex items-center justify-between text-xs">
-                  <span className="text-muted-foreground truncate mr-2">{cargo}</span>
-                  <span className="font-medium text-card-foreground shrink-0">{count}</span>
-                </div>
-              ))}
-          </div>
+        {expanded && Object.keys(stats.ocupadasPorSetorCargo).length > 0 && (
+          <SetorCargoBreakdown data={stats.ocupadasPorSetorCargo} />
         )}
       </div>
 
