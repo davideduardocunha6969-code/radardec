@@ -1,4 +1,4 @@
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { type PlanoNode } from '@/hooks/usePlanoComercial';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
