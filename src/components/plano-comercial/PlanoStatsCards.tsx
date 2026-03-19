@@ -100,7 +100,7 @@ export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
               : <ChevronDown className="h-4 w-4 text-muted-foreground shrink-0" />
           )}
         </div>
-        {expandedCard === 'pendentes' && Object.keys(stats.pendentesPorCargo).length > 0 && (
+        {expanded && Object.keys(stats.pendentesPorCargo).length > 0 && (
           <div className="border-t border-border mt-2 pt-2 space-y-1">
             {Object.entries(stats.pendentesPorCargo)
               .sort(([, a], [, b]) => b - a)
