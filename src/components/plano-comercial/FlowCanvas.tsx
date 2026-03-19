@@ -13,7 +13,6 @@ import {
   type Node,
   BackgroundVariant,
   MarkerType,
-  SelectionMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Plus, Maximize2 } from 'lucide-react';
@@ -21,10 +20,28 @@ import { Button } from '@/components/ui/button';
 import PosicaoNode from './PosicaoNode';
 import NodeFormDialog, { type NodeFormData } from './NodeFormDialog';
 import FunilChecklistDialog from './FunilChecklistDialog';
-import { usePlanoComercial, type PlanoNode } from '@/hooks/usePlanoComercial';
+import { type PlanoNode, type PlanoEdge, type ChecklistItem } from '@/hooks/usePlanoComercial';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 
 const nodeTypes = { posicao: PosicaoNode };
+
+export interface FlowCanvasProps {
+  planoData: {
+    nodes: PlanoNode[];
+    edges: PlanoEdge[];
+    checklist: ChecklistItem[];
+    loading: boolean;
+    addNode: (data: Omit<PlanoNode, 'id' | 'user_id'>) => Promise<PlanoNode | null>;
+    updateNode: (id: string, data: Partial<PlanoNode>) => Promise<void>;
+    deleteNode: (id: string) => Promise<void>;
+    addEdge: (source: string, target: string) => Promise<PlanoEdge | null>;
+    deleteEdge: (id: string) => Promise<void>;
+    updateNodePosition: (id: string, x: number, y: number) => Promise<void>;
+    addChecklistItem: (nodeId: string, texto: string) => Promise<ChecklistItem | null>;
+    toggleChecklistItem: (id: string, concluido: boolean) => Promise<void>;
+    deleteChecklistItem: (id: string) => Promise<void>;
+  };
+}
 
 function getStatusColor(
   node: PlanoNode,
@@ -44,14 +61,14 @@ function getStatusColor(
   return undefined;
 }
 
-function FlowCanvasInner() {
+function FlowCanvasInner({ planoData }: FlowCanvasProps) {
   const { fitView } = useReactFlow();
 
   const {
     nodes: dbNodes, edges: dbEdges, checklist, loading,
     addNode, updateNode, deleteNode, addEdge, deleteEdge, updateNodePosition,
     addChecklistItem, toggleChecklistItem, deleteChecklistItem,
-  } = usePlanoComercial();
+  } = planoData;
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingNodeId, setEditingNodeId] = useState<string | null>(null);
@@ -71,7 +88,6 @@ function FlowCanvasInner() {
     setChecklistNodeId(nodeId);
   }, []);
 
-  // Pre-compute checklist stats per node
   const checklistByNode = useMemo(() => {
     const map: Record<string, { total: number; done: number }> = {};
     for (const item of checklist) {
@@ -82,7 +98,6 @@ function FlowCanvasInner() {
     return map;
   }, [checklist]);
 
-  // Pre-compute children per node (edges where source = node)
   const childrenByNode = useMemo(() => {
     const map: Record<string, string[]> = {};
     for (const e of dbEdges) {
@@ -145,7 +160,6 @@ function FlowCanvasInner() {
     }
   }, [updateNodePosition]);
 
-
   const onEdgeDelete = useCallback(async (edges: Edge[]) => {
     for (const e of edges) await deleteEdge(e.id);
   }, [deleteEdge]);
@@ -196,7 +210,7 @@ function FlowCanvasInner() {
   }
 
   return (
-    <div className="relative h-[calc(100vh-120px)] w-full border border-border rounded-lg overflow-hidden bg-background">
+    <div className="relative h-[calc(100vh-280px)] w-full border border-border rounded-lg overflow-hidden bg-background">
       <div className="absolute top-3 left-3 z-10 flex gap-2">
         <Button onClick={handleCreate} size="sm" className="gap-2">
           <Plus className="h-4 w-4" /> Novo Card
@@ -270,10 +284,10 @@ function FlowCanvasInner() {
   );
 }
 
-export default function FlowCanvas() {
+export default function FlowCanvas({ planoData }: FlowCanvasProps) {
   return (
     <ReactFlowProvider>
-      <FlowCanvasInner />
+      <FlowCanvasInner planoData={planoData} />
     </ReactFlowProvider>
   );
 }
