@@ -1,19 +1,22 @@
 import { useCallback, useMemo, useState } from 'react';
 import {
   ReactFlow,
+  ReactFlowProvider,
   Background,
   Controls,
   MiniMap,
   useNodesState,
   useEdgesState,
+  useReactFlow,
   type Connection,
   type Edge,
   type Node,
   BackgroundVariant,
   MarkerType,
+  SelectionMode,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Plus } from 'lucide-react';
+import { Plus, Maximize2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import PosicaoNode from './PosicaoNode';
 import NodeFormDialog, { type NodeFormData } from './NodeFormDialog';
