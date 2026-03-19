@@ -69,6 +69,7 @@ export function KanbanBoard({
   onAddColuna,
   onDeleteColuna,
   onRenameColuna,
+  onReorderColunas,
 }: KanbanBoardProps) {
   const [novaColunaName, setNovaColunaName] = useState("");
   const [showAddColuna, setShowAddColuna] = useState(false);
