@@ -139,9 +139,9 @@ function FlowCanvasInner() {
     }
   }, [addEdge]);
 
-  const onNodesDragStop = useCallback((_: any, nodes: Node[]) => {
-    for (const node of nodes) {
-      updateNodePosition(node.id, node.position.x, node.position.y);
+  const onNodeDragStop = useCallback((_: any, _node: Node, nodes: Node[]) => {
+    for (const n of nodes) {
+      updateNodePosition(n.id, n.position.x, n.position.y);
     }
   }, [updateNodePosition]);
 
