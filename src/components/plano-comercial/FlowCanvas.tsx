@@ -219,7 +219,7 @@ const FlowCanvasInner = forwardRef<FlowCanvasHandle, FlowCanvasProps>(({ planoDa
   }
 
   return (
-    <div className="relative h-[calc(100vh-280px)] w-full border border-border rounded-lg overflow-hidden bg-background">
+    <div ref={flowContainerRef} className="relative h-[calc(100vh-280px)] w-full border border-border rounded-lg overflow-hidden bg-background">
       <div className="absolute top-3 left-3 z-10 flex gap-2">
         <Button onClick={handleCreate} size="sm" className="gap-2">
           <Plus className="h-4 w-4" /> Novo Card
