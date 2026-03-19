@@ -23,6 +23,7 @@ interface KanbanBoardProps {
   onClickAtividade: (atividade: Atividade) => void;
   onAddColuna: (nome: string) => void;
   onDeleteColuna: (id: string) => void;
+  onRenameColuna: (id: string, nome: string) => void;
 }
 
 const COLUNA_COLORS: Record<string, { bg: string; border: string; dot: string }> = {
