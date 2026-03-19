@@ -242,6 +242,24 @@ export function useAtividadesMarketing() {
     },
   });
 
+  // Reorder colunas
+  const reorderColunas = useMutation({
+    mutationFn: async (orderedIds: string[]) => {
+      const updates = orderedIds.map((id, index) =>
+        supabase.from("atividades_colunas").update({ ordem: index }).eq("id", id)
+      );
+      const results = await Promise.all(updates);
+      const failed = results.find((r) => r.error);
+      if (failed?.error) throw failed.error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["atividades-colunas"] });
+    },
+    onError: (error) => {
+      toast.error("Erro ao reordenar colunas: " + error.message);
+    },
+  });
+
   // Delete coluna
   const deleteColuna = useMutation({
     mutationFn: async (id: string) => {
