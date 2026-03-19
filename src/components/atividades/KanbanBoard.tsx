@@ -362,8 +362,10 @@ export function KanbanBoard({
               </div>
             </div>
           </div>
-        );
-      })}
-    </div>
+            );
+          })}
+        </div>
+      </SortableContext>
+    </DndContext>
   );
 }
