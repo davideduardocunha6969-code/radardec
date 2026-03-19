@@ -291,7 +291,9 @@ const FlowCanvasInner = forwardRef<FlowCanvasHandle, FlowCanvasProps>(({ planoDa
       </AlertDialog>
     </div>
   );
-}
+});
+
+FlowCanvasInner.displayName = 'FlowCanvasInner';
 
 export default function FlowCanvas({ planoData }: FlowCanvasProps) {
   return (
