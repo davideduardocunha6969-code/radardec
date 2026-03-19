@@ -27,6 +27,7 @@ import ReelsMachine from "./pages/ReelsMachine";
 import MinhasContasDetail from "./pages/MinhasContasDetail";
 import AtividadesMarketing from "./pages/AtividadesMarketing";
 import AtendimentosClosers from "./pages/AtendimentosClosers";
+import PlanoImplementacaoComercial from "./pages/PlanoImplementacaoComercial";
 import CrmOutbound from "./pages/CrmOutbound";
 import CrmFunilKanban from "./pages/CrmFunilKanban";
 import RadarOutbound from "./pages/RadarOutbound";
@@ -67,6 +68,7 @@ const App = () => (
               <Route path="/radar-previdenciario" element={<ProtectedRoute pageKey="radar-previdenciario"><RadarPrevidenciario /></ProtectedRoute>} />
               <Route path="/radar-trabalhista" element={<ProtectedRoute pageKey="radar-trabalhista"><RadarTrabalhista /></ProtectedRoute>} />
               <Route path="/comercial/atendimentos" element={<ProtectedRoute pageKey="comercial-atendimentos"><AtendimentosClosers /></ProtectedRoute>} />
+              <Route path="/comercial/plano-implementacao" element={<ProtectedRoute pageKey="comercial-plano-implementacao"><PlanoImplementacaoComercial /></ProtectedRoute>} />
               <Route path="/radar-outbound" element={<ProtectedRoute pageKey="radar-outbound"><RadarOutbound /></ProtectedRoute>} />
               <Route path="/crm-outbound" element={<ProtectedRoute pageKey="crm-outbound"><CrmOutbound /></ProtectedRoute>} />
               <Route path="/crm-outbound/:funilId" element={<ProtectedRoute pageKey="crm-outbound"><CrmFunilKanban /></ProtectedRoute>} />
