@@ -65,8 +65,13 @@ function getStatusColor(
   return undefined;
 }
 
-function FlowCanvasInner({ planoData }: FlowCanvasProps) {
+const FlowCanvasInner = forwardRef<FlowCanvasHandle, FlowCanvasProps>(({ planoData }, ref) => {
   const { fitView } = useReactFlow();
+  const flowContainerRef = useRef<HTMLDivElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    getFlowElement: () => flowContainerRef.current?.querySelector('.react-flow') as HTMLElement | null,
+  }));
 
   const {
     nodes: dbNodes, edges: dbEdges, checklist, loading,
