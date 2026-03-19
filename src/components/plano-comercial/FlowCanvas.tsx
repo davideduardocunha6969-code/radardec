@@ -217,9 +217,7 @@ function FlowCanvasInner() {
         nodeTypes={nodeTypes}
         fitView
         deleteKeyCode="Delete"
-        selectionOnDrag
-        panOnDrag={[1, 2]}
-        selectionMode={SelectionMode.Partial}
+        minZoom={0.1}
         className="bg-background"
       >
         <Background variant={BackgroundVariant.Dots} gap={20} size={1} className="!bg-background" />
