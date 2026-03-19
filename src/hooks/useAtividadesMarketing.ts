@@ -388,6 +388,7 @@ export function useAtividadesMarketing() {
     moveAtividade,
     addColuna,
     updateColuna,
+    reorderColunas,
     deleteColuna,
     addComentario,
     fetchComentarios,
