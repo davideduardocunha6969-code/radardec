@@ -27,6 +27,7 @@ import ReelsMachine from "./pages/ReelsMachine";
 import MinhasContasDetail from "./pages/MinhasContasDetail";
 import AtividadesMarketing from "./pages/AtividadesMarketing";
 import AtendimentosClosers from "./pages/AtendimentosClosers";
+import PlanoImplementacaoComercial from "./pages/PlanoImplementacaoComercial";
 import CrmOutbound from "./pages/CrmOutbound";
 import CrmFunilKanban from "./pages/CrmFunilKanban";
 import RadarOutbound from "./pages/RadarOutbound";

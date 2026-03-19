@@ -39,6 +39,7 @@ const radarItems = [
 const comercialItems = [
   { title: "Atendimentos", url: "/comercial/atendimentos", icon: Phone, pageKey: "comercial-atendimentos" },
   { title: "CRM Outbound", url: "/crm-outbound", icon: TrendingUp, pageKey: "crm-outbound" },
+  { title: "Plano de Implementação", url: "/comercial/plano-implementacao", icon: ClipboardList, pageKey: "comercial-plano-implementacao" },
 ];
  
  // Recrutamento
