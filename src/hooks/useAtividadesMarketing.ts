@@ -224,6 +224,24 @@ export function useAtividadesMarketing() {
     },
   });
 
+  // Update coluna name
+  const updateColuna = useMutation({
+    mutationFn: async ({ id, nome }: { id: string; nome: string }) => {
+      const { error } = await supabase
+        .from("atividades_colunas")
+        .update({ nome })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["atividades-colunas"] });
+      toast.success("Coluna renomeada!");
+    },
+    onError: (error) => {
+      toast.error("Erro ao renomear coluna: " + error.message);
+    },
+  });
+
   // Delete coluna
   const deleteColuna = useMutation({
     mutationFn: async (id: string) => {
@@ -351,6 +369,7 @@ export function useAtividadesMarketing() {
     deleteAtividade,
     moveAtividade,
     addColuna,
+    updateColuna,
     deleteColuna,
     addComentario,
     fetchComentarios,

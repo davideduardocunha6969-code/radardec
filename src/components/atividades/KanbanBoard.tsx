@@ -3,7 +3,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Calendar, GripVertical, MoreVertical, Plus, Trash2, User, Clock, AlertTriangle } from "lucide-react";
+import { Calendar, GripVertical, MoreVertical, Pencil, Plus, Trash2, User, Clock, AlertTriangle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -23,6 +23,7 @@ interface KanbanBoardProps {
   onClickAtividade: (atividade: Atividade) => void;
   onAddColuna: (nome: string) => void;
   onDeleteColuna: (id: string) => void;
+  onRenameColuna: (id: string, nome: string) => void;
 }
 
 const COLUNA_COLORS: Record<string, { bg: string; border: string; dot: string }> = {
@@ -51,9 +52,12 @@ export function KanbanBoard({
   onClickAtividade,
   onAddColuna,
   onDeleteColuna,
+  onRenameColuna,
 }: KanbanBoardProps) {
   const [novaColunaName, setNovaColunaName] = useState("");
   const [showAddColuna, setShowAddColuna] = useState(false);
+  const [editingColunaId, setEditingColunaId] = useState<string | null>(null);
+  const [editingColunaName, setEditingColunaName] = useState("");
   const [draggedAtividade, setDraggedAtividade] = useState<string | null>(null);
   const [dragOverColuna, setDragOverColuna] = useState<string | null>(null);
 
@@ -143,8 +147,41 @@ export function KanbanBoard({
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
                     <div className={cn("w-2.5 h-2.5 rounded-full", colors.dot)} />
-                    <h3 className="font-semibold text-sm text-foreground">{coluna.nome}</h3>
-                    <Badge 
+                    {editingColunaId === coluna.id ? (
+                      <Input
+                        autoFocus
+                        value={editingColunaName}
+                        onChange={(e) => setEditingColunaName(e.target.value)}
+                        onBlur={() => {
+                          if (editingColunaName.trim() && editingColunaName.trim() !== coluna.nome) {
+                            onRenameColuna(coluna.id, editingColunaName.trim());
+                          }
+                          setEditingColunaId(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            if (editingColunaName.trim() && editingColunaName.trim() !== coluna.nome) {
+                              onRenameColuna(coluna.id, editingColunaName.trim());
+                            }
+                            setEditingColunaId(null);
+                          } else if (e.key === "Escape") {
+                            setEditingColunaId(null);
+                          }
+                        }}
+                        className="h-6 text-sm font-semibold px-1 py-0 w-28"
+                      />
+                    ) : (
+                      <h3
+                        className="font-semibold text-sm text-foreground cursor-pointer"
+                        onDoubleClick={() => {
+                          setEditingColunaId(coluna.id);
+                          setEditingColunaName(coluna.nome);
+                        }}
+                      >
+                        {coluna.nome}
+                      </h3>
+                    )}
+                    <Badge
                       variant="secondary" 
                       className="text-[10px] font-medium bg-background/80 h-5"
                     >
@@ -162,6 +199,16 @@ export function KanbanBoard({
                       </Button>
                     </DropdownMenuTrigger>
                     <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setEditingColunaId(coluna.id);
+                          setEditingColunaName(coluna.nome);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Renomear Coluna
+                      </DropdownMenuItem>
                       <DropdownMenuItem
                         className="text-destructive focus:text-destructive cursor-pointer"
                         onClick={() => onDeleteColuna(coluna.id)}
