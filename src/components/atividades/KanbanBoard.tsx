@@ -15,6 +15,21 @@ import { ptBR } from "date-fns/locale";
 import type { Atividade, Coluna } from "@/hooks/useAtividadesMarketing";
 import { PRIORIDADE_LABELS, PRIORIDADE_COLORS } from "@/hooks/useAtividadesMarketing";
 import { cn } from "@/lib/utils";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  SortableContext,
+  horizontalListSortingStrategy,
+  useSortable,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 
 interface KanbanBoardProps {
   colunas: Coluna[];
@@ -24,6 +39,7 @@ interface KanbanBoardProps {
   onAddColuna: (nome: string) => void;
   onDeleteColuna: (id: string) => void;
   onRenameColuna: (id: string, nome: string) => void;
+  onReorderColunas: (orderedIds: string[]) => void;
 }
 
 const COLUNA_COLORS: Record<string, { bg: string; border: string; dot: string }> = {
