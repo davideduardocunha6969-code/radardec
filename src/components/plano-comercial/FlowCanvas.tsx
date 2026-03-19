@@ -25,6 +25,10 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 
 const nodeTypes = { posicao: PosicaoNode };
 
+export interface FlowCanvasHandle {
+  getFlowElement: () => HTMLElement | null;
+}
+
 export interface FlowCanvasProps {
   planoData: {
     nodes: PlanoNode[];
