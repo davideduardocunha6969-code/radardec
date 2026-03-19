@@ -47,8 +47,8 @@ export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
       {/* Ocupadas */}
       <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
         <div className="flex items-center gap-3 mb-3">
-          <div className="rounded-lg bg-emerald-500/10 p-2.5">
-            <UserCheck className="h-5 w-5 text-emerald-500" />
+          <div className="rounded-lg bg-success/10 p-2.5">
+            <UserCheck className="h-5 w-5 text-success" />
           </div>
           <div>
             <p className="text-sm font-medium text-muted-foreground">Posições Ocupadas</p>
