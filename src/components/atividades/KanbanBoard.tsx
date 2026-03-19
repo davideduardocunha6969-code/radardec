@@ -52,9 +52,12 @@ export function KanbanBoard({
   onClickAtividade,
   onAddColuna,
   onDeleteColuna,
+  onRenameColuna,
 }: KanbanBoardProps) {
   const [novaColunaName, setNovaColunaName] = useState("");
   const [showAddColuna, setShowAddColuna] = useState(false);
+  const [editingColunaId, setEditingColunaId] = useState<string | null>(null);
+  const [editingColunaName, setEditingColunaName] = useState("");
   const [draggedAtividade, setDraggedAtividade] = useState<string | null>(null);
   const [dragOverColuna, setDragOverColuna] = useState<string | null>(null);
 
