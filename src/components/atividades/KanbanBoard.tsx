@@ -3,11 +3,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Calendar, GripVertical, MoreVertical, Pencil, Plus, Trash2, User, Clock, AlertTriangle } from "lucide-react";
+import { Calendar, ChevronLeft, ChevronRight, GripVertical, MoreVertical, Pencil, Plus, Trash2, User, Clock, AlertTriangle } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { format, isPast, differenceInDays } from "date-fns";
@@ -15,21 +16,6 @@ import { ptBR } from "date-fns/locale";
 import type { Atividade, Coluna } from "@/hooks/useAtividadesMarketing";
 import { PRIORIDADE_LABELS, PRIORIDADE_COLORS } from "@/hooks/useAtividadesMarketing";
 import { cn } from "@/lib/utils";
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  horizontalListSortingStrategy,
-  useSortable,
-} from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 
 interface KanbanBoardProps {
   colunas: Coluna[];
@@ -65,269 +51,6 @@ const getColunaColors = (nome: string) => {
   return COLUNA_COLORS[nome] || { bg: "bg-muted/30", border: "border-border", dot: "bg-muted-foreground" };
 };
 
-/* ── Sortable Column ── */
-
-interface SortableColumnProps {
-  coluna: Coluna;
-  colAtividades: Atividade[];
-  isDropTarget: boolean;
-  editingColunaId: string | null;
-  editingColunaName: string;
-  setEditingColunaId: (id: string | null) => void;
-  setEditingColunaName: (name: string) => void;
-  onRenameColuna: (id: string, nome: string) => void;
-  onDeleteColuna: (id: string) => void;
-  draggedAtividade: string | null;
-  onCardDragOver: (e: React.DragEvent) => void;
-  onCardDragLeave: () => void;
-  onCardDrop: (e: React.DragEvent) => void;
-  onCardDragStart: (e: React.DragEvent, id: string) => void;
-  onCardDragEnd: (e: React.DragEvent) => void;
-  onClickAtividade: (atividade: Atividade) => void;
-}
-
-function SortableColumn({
-  coluna,
-  colAtividades,
-  isDropTarget,
-  editingColunaId,
-  editingColunaName,
-  setEditingColunaId,
-  setEditingColunaName,
-  onRenameColuna,
-  onDeleteColuna,
-  draggedAtividade,
-  onCardDragOver,
-  onCardDragLeave,
-  onCardDrop,
-  onCardDragStart,
-  onCardDragEnd,
-  onClickAtividade,
-}: SortableColumnProps) {
-  const {
-    attributes,
-    listeners,
-    setNodeRef,
-    transform,
-    transition,
-    isDragging,
-  } = useSortable({ id: coluna.id });
-
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-    opacity: isDragging ? 0.5 : 1,
-  };
-
-  const colors = getColunaColors(coluna.nome);
-
-  return (
-    <div
-      ref={setNodeRef}
-      style={style}
-      className="flex-shrink-0 w-[280px] h-full flex flex-col"
-      onDragOver={onCardDragOver}
-      onDragLeave={onCardDragLeave}
-      onDrop={onCardDrop}
-    >
-      <div
-        className={cn(
-          "flex-1 flex flex-col rounded-xl border-2 transition-all duration-200 overflow-hidden",
-          colors.bg,
-          colors.border,
-          isDropTarget && "ring-2 ring-primary ring-offset-2 border-primary scale-[1.02]"
-        )}
-      >
-        {/* Column Header */}
-        <div className="p-3 border-b border-inherit shrink-0">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              {/* Column drag handle */}
-              <button
-                {...attributes}
-                {...listeners}
-                className="cursor-grab active:cursor-grabbing touch-none"
-              >
-                <GripVertical className="h-4 w-4 text-muted-foreground/50 hover:text-muted-foreground transition-colors" />
-              </button>
-              <div className={cn("w-2.5 h-2.5 rounded-full", colors.dot)} />
-              {editingColunaId === coluna.id ? (
-                <Input
-                  autoFocus
-                  value={editingColunaName}
-                  onChange={(e) => setEditingColunaName(e.target.value)}
-                  onBlur={() => {
-                    if (editingColunaName.trim() && editingColunaName.trim() !== coluna.nome) {
-                      onRenameColuna(coluna.id, editingColunaName.trim());
-                    }
-                    setEditingColunaId(null);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      if (editingColunaName.trim() && editingColunaName.trim() !== coluna.nome) {
-                        onRenameColuna(coluna.id, editingColunaName.trim());
-                      }
-                      setEditingColunaId(null);
-                    } else if (e.key === "Escape") {
-                      setEditingColunaId(null);
-                    }
-                  }}
-                  className="h-6 text-sm font-semibold px-1 py-0 w-28"
-                />
-              ) : (
-                <h3
-                  className="font-semibold text-sm text-foreground cursor-pointer"
-                  onDoubleClick={() => {
-                    setEditingColunaId(coluna.id);
-                    setEditingColunaName(coluna.nome);
-                  }}
-                >
-                  {coluna.nome}
-                </h3>
-              )}
-              <Badge
-                variant="secondary"
-                className="text-[10px] font-medium bg-background/80 h-5"
-              >
-                {colAtividades.length}
-              </Badge>
-            </div>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-6 w-6 hover:bg-background/50"
-                >
-                  <MoreVertical className="h-3.5 w-3.5" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-48">
-                <DropdownMenuItem
-                  className="cursor-pointer"
-                  onClick={() => {
-                    setEditingColunaId(coluna.id);
-                    setEditingColunaName(coluna.nome);
-                  }}
-                >
-                  <Pencil className="h-4 w-4 mr-2" />
-                  Renomear Coluna
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  className="text-destructive focus:text-destructive cursor-pointer"
-                  onClick={() => onDeleteColuna(coluna.id)}
-                >
-                  <Trash2 className="h-4 w-4 mr-2" />
-                  Excluir Coluna
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
-        </div>
-
-        {/* Cards Container */}
-        <div className="p-2 space-y-2 overflow-y-auto flex-1">
-          {colAtividades.length === 0 && (
-            <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
-              <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-2">
-                <Plus className="h-5 w-5" />
-              </div>
-              <p className="text-sm">Nenhuma atividade</p>
-            </div>
-          )}
-
-          {colAtividades.map((atividade) => {
-            const deadlineStatus = getDeadlineStatus(atividade.prazo_fatal);
-            const isOverdue = deadlineStatus?.status === "overdue";
-
-            return (
-              <Card
-                key={atividade.id}
-                className={cn(
-                  "group cursor-pointer transition-all duration-200",
-                  "hover:shadow-lg hover:-translate-y-1 hover:border-primary/50",
-                  "active:scale-[0.98]",
-                  "bg-card border-border/50",
-                  draggedAtividade === atividade.id && "opacity-50 rotate-2 scale-95",
-                  isOverdue && "border-l-4 border-l-red-500"
-                )}
-                draggable
-                onDragStart={(e) => onCardDragStart(e, atividade.id)}
-                onDragEnd={onCardDragEnd}
-                onClick={() => onClickAtividade(atividade)}
-              >
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between gap-2 mb-3">
-                    <Badge
-                      className={cn(
-                        "text-xs font-medium shadow-sm",
-                        PRIORIDADE_COLORS[atividade.prioridade],
-                        atividade.prioridade === "emergencia" && "animate-pulse"
-                      )}
-                    >
-                      {atividade.prioridade === "emergencia" && (
-                        <AlertTriangle className="h-3 w-3 mr-1" />
-                      )}
-                      {PRIORIDADE_LABELS[atividade.prioridade]}
-                    </Badge>
-                    <GripVertical className="h-4 w-4 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" />
-                  </div>
-
-                  <p className="text-sm font-medium text-foreground line-clamp-3 mb-4 leading-relaxed">
-                    {atividade.atividade}
-                  </p>
-
-                  <div className="flex items-center justify-between pt-3 border-t border-border/50">
-                    {atividade.responsavel ? (
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
-                          <User className="h-3 w-3 text-primary" />
-                        </div>
-                        <span className="text-xs text-muted-foreground truncate max-w-[100px]">
-                          {atividade.responsavel.display_name}
-                        </span>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-muted-foreground/50">
-                        <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
-                          <User className="h-3 w-3" />
-                        </div>
-                        <span className="text-xs">Sem responsável</span>
-                      </div>
-                    )}
-
-                    {atividade.prazo_fatal && (
-                      <div
-                        className={cn(
-                          "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full",
-                          isOverdue
-                            ? "bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400"
-                            : deadlineStatus?.status === "urgent"
-                              ? "bg-orange-100 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400"
-                              : "bg-muted text-muted-foreground"
-                        )}
-                      >
-                        {isOverdue ? (
-                          <Clock className="h-3 w-3" />
-                        ) : (
-                          <Calendar className="h-3 w-3" />
-                        )}
-                        {format(new Date(atividade.prazo_fatal), "dd MMM", { locale: ptBR })}
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-/* ── Main KanbanBoard ── */
-
 export function KanbanBoard({
   colunas,
   atividades,
@@ -345,7 +68,7 @@ export function KanbanBoard({
   const [draggedAtividade, setDraggedAtividade] = useState<string | null>(null);
   const [dragOverColuna, setDragOverColuna] = useState<string | null>(null);
 
-  const handleCardDragStart = (e: React.DragEvent, atividadeId: string) => {
+  const handleDragStart = (e: React.DragEvent, atividadeId: string) => {
     setDraggedAtividade(atividadeId);
     e.dataTransfer.effectAllowed = "move";
     setTimeout(() => {
@@ -354,24 +77,24 @@ export function KanbanBoard({
     }, 0);
   };
 
-  const handleCardDragEnd = (e: React.DragEvent) => {
+  const handleDragEnd = (e: React.DragEvent) => {
     const element = e.target as HTMLElement;
     element.style.opacity = "1";
     setDraggedAtividade(null);
     setDragOverColuna(null);
   };
 
-  const handleCardDragOver = (e: React.DragEvent, colunaId: string) => {
+  const handleDragOver = (e: React.DragEvent, colunaId: string) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
     setDragOverColuna(colunaId);
   };
 
-  const handleCardDragLeave = () => {
+  const handleDragLeave = () => {
     setDragOverColuna(null);
   };
 
-  const handleCardDrop = (e: React.DragEvent, colunaId: string) => {
+  const handleDrop = (e: React.DragEvent, colunaId: string) => {
     e.preventDefault();
     if (draggedAtividade) {
       onMoveAtividade(draggedAtividade, colunaId);
@@ -389,51 +112,240 @@ export function KanbanBoard({
       });
   };
 
-  // DndKit sensors for column reordering
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 10 } }),
-    useSensor(KeyboardSensor)
-  );
-
-  const handleColumnDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
-    if (!over || active.id === over.id) return;
-    const oldIndex = colunas.findIndex((c) => c.id === active.id);
-    const newIndex = colunas.findIndex((c) => c.id === over.id);
-    if (oldIndex === -1 || newIndex === -1) return;
+  const handleMoveColuna = (colunaId: string, direction: "left" | "right") => {
+    const idx = colunas.findIndex((c) => c.id === colunaId);
+    if (idx === -1) return;
+    const newIdx = direction === "left" ? idx - 1 : idx + 1;
+    if (newIdx < 0 || newIdx >= colunas.length) return;
     const newOrder = [...colunas];
-    const [moved] = newOrder.splice(oldIndex, 1);
-    newOrder.splice(newIndex, 0, moved);
+    const [moved] = newOrder.splice(idx, 1);
+    newOrder.splice(newIdx, 0, moved);
     onReorderColunas(newOrder.map((c) => c.id));
   };
 
   return (
-    <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleColumnDragEnd}>
-      <SortableContext items={colunas.map((c) => c.id)} strategy={horizontalListSortingStrategy}>
-        <div className="flex gap-4 h-full">
-          {colunas.map((coluna) => (
-            <SortableColumn
-              key={coluna.id}
-              coluna={coluna}
-              colAtividades={getAtividadesByColuna(coluna.id)}
-              isDropTarget={dragOverColuna === coluna.id}
-              editingColunaId={editingColunaId}
-              editingColunaName={editingColunaName}
-              setEditingColunaId={setEditingColunaId}
-              setEditingColunaName={setEditingColunaName}
-              onRenameColuna={onRenameColuna}
-              onDeleteColuna={onDeleteColuna}
-              draggedAtividade={draggedAtividade}
-              onCardDragOver={(e) => handleCardDragOver(e, coluna.id)}
-              onCardDragLeave={handleCardDragLeave}
-              onCardDrop={(e) => handleCardDrop(e, coluna.id)}
-              onCardDragStart={handleCardDragStart}
-              onCardDragEnd={handleCardDragEnd}
-              onClickAtividade={onClickAtividade}
-            />
-          ))}
-        </div>
-      </SortableContext>
-    </DndContext>
+    <div className="flex gap-4 h-full">
+      {colunas.map((coluna, index) => {
+        const colAtividades = getAtividadesByColuna(coluna.id);
+        const colors = getColunaColors(coluna.nome);
+        const isDropTarget = dragOverColuna === coluna.id;
+        const isFirst = index === 0;
+        const isLast = index === colunas.length - 1;
+
+        return (
+          <div
+            key={coluna.id}
+            className="flex-shrink-0 w-[280px] h-full flex flex-col"
+            onDragOver={(e) => handleDragOver(e, coluna.id)}
+            onDragLeave={handleDragLeave}
+            onDrop={(e) => handleDrop(e, coluna.id)}
+          >
+            <div
+              className={cn(
+                "flex-1 flex flex-col rounded-xl border-2 transition-all duration-200 overflow-hidden",
+                colors.bg,
+                colors.border,
+                isDropTarget && "ring-2 ring-primary ring-offset-2 border-primary scale-[1.02]"
+              )}
+            >
+              {/* Column Header */}
+              <div className="p-3 border-b border-inherit shrink-0">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={cn("w-2.5 h-2.5 rounded-full", colors.dot)} />
+                    {editingColunaId === coluna.id ? (
+                      <Input
+                        autoFocus
+                        value={editingColunaName}
+                        onChange={(e) => setEditingColunaName(e.target.value)}
+                        onBlur={() => {
+                          if (editingColunaName.trim() && editingColunaName.trim() !== coluna.nome) {
+                            onRenameColuna(coluna.id, editingColunaName.trim());
+                          }
+                          setEditingColunaId(null);
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") {
+                            if (editingColunaName.trim() && editingColunaName.trim() !== coluna.nome) {
+                              onRenameColuna(coluna.id, editingColunaName.trim());
+                            }
+                            setEditingColunaId(null);
+                          } else if (e.key === "Escape") {
+                            setEditingColunaId(null);
+                          }
+                        }}
+                        className="h-6 text-sm font-semibold px-1 py-0 w-28"
+                      />
+                    ) : (
+                      <h3
+                        className="font-semibold text-sm text-foreground cursor-pointer"
+                        onDoubleClick={() => {
+                          setEditingColunaId(coluna.id);
+                          setEditingColunaName(coluna.nome);
+                        }}
+                      >
+                        {coluna.nome}
+                      </h3>
+                    )}
+                    <Badge
+                      variant="secondary"
+                      className="text-[10px] font-medium bg-background/80 h-5"
+                    >
+                      {colAtividades.length}
+                    </Badge>
+                  </div>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-6 w-6 hover:bg-background/50"
+                      >
+                        <MoreVertical className="h-3.5 w-3.5" />
+                      </Button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent align="end" className="w-48">
+                      {!isFirst && (
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => handleMoveColuna(coluna.id, "left")}
+                        >
+                          <ChevronLeft className="h-4 w-4 mr-2" />
+                          Mover para esquerda
+                        </DropdownMenuItem>
+                      )}
+                      {!isLast && (
+                        <DropdownMenuItem
+                          className="cursor-pointer"
+                          onClick={() => handleMoveColuna(coluna.id, "right")}
+                        >
+                          <ChevronRight className="h-4 w-4 mr-2" />
+                          Mover para direita
+                        </DropdownMenuItem>
+                      )}
+                      {(!isFirst || !isLast) && <DropdownMenuSeparator />}
+                      <DropdownMenuItem
+                        className="cursor-pointer"
+                        onClick={() => {
+                          setEditingColunaId(coluna.id);
+                          setEditingColunaName(coluna.nome);
+                        }}
+                      >
+                        <Pencil className="h-4 w-4 mr-2" />
+                        Renomear Coluna
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        className="text-destructive focus:text-destructive cursor-pointer"
+                        onClick={() => onDeleteColuna(coluna.id)}
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Excluir Coluna
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </div>
+
+              {/* Cards Container */}
+              <div className="p-2 space-y-2 overflow-y-auto flex-1">
+                {colAtividades.length === 0 && (
+                  <div className="flex flex-col items-center justify-center py-8 text-muted-foreground">
+                    <div className="w-12 h-12 rounded-full bg-muted/50 flex items-center justify-center mb-2">
+                      <Plus className="h-5 w-5" />
+                    </div>
+                    <p className="text-sm">Nenhuma atividade</p>
+                  </div>
+                )}
+
+                {colAtividades.map((atividade) => {
+                  const deadlineStatus = getDeadlineStatus(atividade.prazo_fatal);
+                  const isOverdue = deadlineStatus?.status === "overdue";
+
+                  return (
+                    <Card
+                      key={atividade.id}
+                      className={cn(
+                        "group cursor-pointer transition-all duration-200",
+                        "hover:shadow-lg hover:-translate-y-1 hover:border-primary/50",
+                        "active:scale-[0.98]",
+                        "bg-card border-border/50",
+                        draggedAtividade === atividade.id && "opacity-50 rotate-2 scale-95",
+                        isOverdue && "border-l-4 border-l-red-500"
+                      )}
+                      draggable
+                      onDragStart={(e) => handleDragStart(e, atividade.id)}
+                      onDragEnd={handleDragEnd}
+                      onClick={() => onClickAtividade(atividade)}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-start justify-between gap-2 mb-3">
+                          <Badge
+                            className={cn(
+                              "text-xs font-medium shadow-sm",
+                              PRIORIDADE_COLORS[atividade.prioridade],
+                              atividade.prioridade === "emergencia" && "animate-pulse"
+                            )}
+                          >
+                            {atividade.prioridade === "emergencia" && (
+                              <AlertTriangle className="h-3 w-3 mr-1" />
+                            )}
+                            {PRIORIDADE_LABELS[atividade.prioridade]}
+                          </Badge>
+                          <GripVertical className="h-4 w-4 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" />
+                        </div>
+
+                        <p className="text-sm font-medium text-foreground line-clamp-3 mb-4 leading-relaxed">
+                          {atividade.atividade}
+                        </p>
+
+                        <div className="flex items-center justify-between pt-3 border-t border-border/50">
+                          {atividade.responsavel ? (
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center">
+                                <User className="h-3 w-3 text-primary" />
+                              </div>
+                              <span className="text-xs text-muted-foreground truncate max-w-[100px]">
+                                {atividade.responsavel.display_name}
+                              </span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center gap-2 text-muted-foreground/50">
+                              <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center">
+                                <User className="h-3 w-3" />
+                              </div>
+                              <span className="text-xs">Sem responsável</span>
+                            </div>
+                          )}
+
+                          {atividade.prazo_fatal && (
+                            <div
+                              className={cn(
+                                "flex items-center gap-1.5 text-xs font-medium px-2 py-1 rounded-full",
+                                isOverdue
+                                  ? "bg-red-100 dark:bg-red-950/50 text-red-600 dark:text-red-400"
+                                  : deadlineStatus?.status === "urgent"
+                                    ? "bg-orange-100 dark:bg-orange-950/50 text-orange-600 dark:text-orange-400"
+                                    : "bg-muted text-muted-foreground"
+                              )}
+                            >
+                              {isOverdue ? (
+                                <Clock className="h-3 w-3" />
+                              ) : (
+                                <Calendar className="h-3 w-3" />
+                              )}
+                              {format(new Date(atividade.prazo_fatal), "dd MMM", { locale: ptBR })}
+                            </div>
+                          )}
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        );
+      })}
+    </div>
   );
 }
