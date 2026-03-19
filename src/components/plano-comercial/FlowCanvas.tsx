@@ -271,3 +271,11 @@ function FlowCanvasInner() {
     </div>
   );
 }
+
+export default function FlowCanvas() {
+  return (
+    <ReactFlowProvider>
+      <FlowCanvasInner />
+    </ReactFlowProvider>
+  );
+}
