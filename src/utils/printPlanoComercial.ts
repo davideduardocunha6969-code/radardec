@@ -1,4 +1,4 @@
-import html2canvas from 'html2canvas';
+import { toPng } from 'html-to-image';
 import { type PlanoNode } from '@/hooks/usePlanoComercial';
 import { format } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
@@ -40,13 +40,15 @@ export async function printPlanoComercial(nodes: PlanoNode[], flowElement: HTMLE
   let flowImageHtml = '';
   if (flowElement) {
     try {
-      const canvas = await html2canvas(flowElement, {
+      const imgData = await toPng(flowElement, {
         backgroundColor: '#ffffff',
-        scale: 2,
-        useCORS: true,
-        logging: false,
+        pixelRatio: 2,
+        filter: (node: HTMLElement) => {
+          const cl = node?.classList;
+          if (!cl) return true;
+          return !cl.contains('react-flow__minimap') && !cl.contains('react-flow__controls');
+        },
       });
-      const imgData = canvas.toDataURL('image/png');
       flowImageHtml = `
         <div style="page-break-before:always;margin-top:24px;">
           <h2 style="font-size:18px;margin-bottom:12px;color:#1e293b;">Fluxograma</h2>
