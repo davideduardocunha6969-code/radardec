@@ -46,7 +46,7 @@ export async function printPlanoComercial(nodes: PlanoNode[], flowElement: HTMLE
         filter: (node: HTMLElement) => {
           const cl = node?.classList;
           if (!cl) return true;
-          return !cl.contains('react-flow__minimap') && !cl.contains('react-flow__controls');
+          return !cl.contains('react-flow__minimap') && !cl.contains('react-flow__controls') && !cl.contains('react-flow__background');
         },
       });
       flowImageHtml = `
