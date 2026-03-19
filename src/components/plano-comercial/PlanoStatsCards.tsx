@@ -84,7 +84,7 @@ export default function PlanoStatsCards({ nodes }: PlanoStatsCardsProps) {
       {/* Pendentes */}
       <div
         className="rounded-xl border border-border bg-card px-4 py-3 shadow-sm cursor-pointer transition-all"
-        onClick={() => toggle('pendentes')}
+        onClick={toggle}
       >
         <div className="flex items-center gap-3">
           <div className="rounded-lg bg-destructive/10 p-2">
