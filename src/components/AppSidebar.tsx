@@ -439,6 +439,23 @@ export function AppSidebar() {
                     </NavLink>
                   </SidebarMenuButton>
                 </SidebarMenuItem>
+                <SidebarMenuItem>
+                  <SidebarMenuButton 
+                    asChild 
+                    isActive={isActive("/admin/funcionalidades")}
+                    tooltip="Funcionalidades"
+                  >
+                    <NavLink 
+                      to="/admin/funcionalidades" 
+                      end 
+                      className="flex items-center gap-3 text-primary-foreground/80 hover:text-primary-foreground hover:bg-primary-foreground/10"
+                      activeClassName="bg-accent text-primary font-medium"
+                    >
+                      <FileText className="h-4 w-4" />
+                      <span>Funcionalidades</span>
+                    </NavLink>
+                  </SidebarMenuButton>
+                </SidebarMenuItem>
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
