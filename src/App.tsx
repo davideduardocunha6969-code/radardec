@@ -91,6 +91,7 @@ const App = () => (
               <Route path="/meu-painel" element={<MeuPainel />} />
               <Route path="/configuracoes" element={<Configuracoes />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/admin/funcionalidades" element={<Funcionalidades />} />
                {/* Recrutamento Inteligente */}
                <Route path="/recrutamento" element={<ProtectedRoute pageKey="recrutamento"><RecrutamentoLayout /></ProtectedRoute>}>
                  <Route index element={<Vagas />} />
