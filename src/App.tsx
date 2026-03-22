@@ -8,6 +8,7 @@ import { ProtectedRoute } from "./components/ProtectedRoute";
 import { MainLayout } from "./layouts/MainLayout";
 import Login from "./pages/Login";
 import Admin from "./pages/Admin";
+import Funcionalidades from "./pages/Funcionalidades";
 import GestaoGeral from "./pages/GestaoGeral";
 import RadarControladoria from "./pages/RadarControladoria";
 import RadarComercial from "./pages/RadarComercial";
