@@ -381,6 +381,401 @@ const sections = [
     ),
   },
   {
+    id: "script-closer-completo",
+    icon: FileText,
+    title: "Script Closer — Motorista de Caminhão (Completo)",
+    badge: "Script Real",
+    content: (
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">
+          Script real cadastrado no sistema com <strong>6 falas de apresentação</strong>, <strong>74 perguntas de qualificação</strong> (171 campos com sub-itens) e <strong>6 falas de fechamento</strong>.
+        </p>
+
+        <SubTitle>Etapa 1 — Apresentação (6 itens)</SubTitle>
+        <ScreenDesc>
+                    <strong>Apresentação pessoal</strong><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Bom dia/Boa tarde, [Nome]! Meu nome é [Closer], sou advogado(a) especialista em Direito Trabalhista do Motorista. Tudo bem com o(a) senhor(a)?</span><br />
+                    <strong>Contexto da ligação</strong><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Nosso escritório foi procurado porque identificamos que o(a) senhor(a) pode ter direitos trabalhistas que não foram respeitados durante o vínculo de emprego como motorista.</span><br />
+                    <strong>Objetivo do atendimento</strong><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Essa conversa é uma análise gratuita e sigilosa. Vou fazer algumas perguntas sobre a sua rotina de trabalho para entender se há algo a ser corrigido.</span><br />
+                    <strong>Expectativa de tempo</strong><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Vai levar cerca de 20 a 30 minutos, tá bem? Se em algum momento não souber responder, pode ficar tranquilo, é só me dizer que a gente pula.</span><br />
+                    <strong>Consentimento</strong><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Posso gravar essa ligação para fins de registro interno? É apenas para nosso controle.</span><br />
+                    <strong>Transição</strong><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Perfeito! Vamos começar com alguns dados básicos.</span><br />
+        </ScreenDesc>
+
+        <SubTitle>Etapa 2 — Qualificação Técnica (74 perguntas principais / 171 campos totais)</SubTitle>
+        <ScreenDesc>
+                    <strong>P1 — Data de nascimento</strong> <code className="text-[10px] bg-muted px-1 rounded">data_nascimento</code> <span className="text-[10px] text-muted-foreground italic">[data]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Qual a sua data de nascimento?</span><br />
+                    <strong>P2 — Data de admissão</strong> <code className="text-[10px] bg-muted px-1 rounded">data_admissao</code> <span className="text-[10px] text-muted-foreground italic">[data]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Qual foi a data de admissão na empresa?</span><br />
+                    <strong>P3 — Contrato ativo?</strong> <code className="text-[10px] bg-muted px-1 rounded">contrato_ativo</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ O contrato ainda está ativo ou já foi encerrado?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE NÃO: Data de desligamento</strong> <code className="text-[10px] bg-muted px-1 rounded">data_demissao</code> <span className="text-[10px] text-muted-foreground italic">[data]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual foi a data de desligamento?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE NÃO: Modalidade</strong> <code className="text-[10px] bg-muted px-1 rounded">modalidade_desligamento</code> <span className="text-[10px] text-muted-foreground italic">[selecao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Como foi o desligamento? (sem justa causa, pediu conta, acordo, justa causa)</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-[10px] text-muted-foreground ml-4">Opções: Sem justa causa | Pediu conta | Acordo | Justa causa</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE NÃO: Aviso prévio trabalhado?</strong> <code className="text-[10px] bg-muted px-1 rounded">aviso_previo_trabalhado</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Cumpriu aviso prévio trabalhado?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE NÃO: Aviso prévio indenizado?</strong> <code className="text-[10px] bg-muted px-1 rounded">aviso_previo_indenizado</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ O aviso prévio foi indenizado?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE NÃO: Dias de aviso pago</strong> <code className="text-[10px] bg-muted px-1 rounded">dias_aviso_previo_efetivamente_pago</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quantos dias de aviso prévio foram efetivamente pagos?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE NÃO: Rescisão paga em 10 dias?</strong> <code className="text-[10px] bg-muted px-1 rounded">rescisao_paga_10_dias</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ A rescisão foi paga dentro do prazo de 10 dias?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE NÃO: Verbas atrasadas?</strong> <code className="text-[10px] bg-muted px-1 rounded">verbas_incontroversas_atrasadas</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Há verbas incontroversas atrasadas?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Valor</strong> <code className="text-[10px] bg-muted px-1 rounded">valor_verbas_incontroversas</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual o valor aproximado?</span><br />
+                    <strong>P12 — Função na CTPS</strong> <code className="text-[10px] bg-muted px-1 rounded">funcao_ctps</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Qual a função registrada na sua CTPS?</span><br />
+                    <strong>P13 — Descarregava caminhão?</strong> <code className="text-[10px] bg-muted px-1 rounded">descarregava_caminhao</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Além de dirigir, o senhor também descarregava o caminhão?</span><br />
+                    <strong>P14 — Fazia abastecimento?</strong> <code className="text-[10px] bg-muted px-1 rounded">fazia_abastecimento</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Fazia o abastecimento do veículo?</span><br />
+                    <strong>P15 — Higienização do veículo?</strong> <code className="text-[10px] bg-muted px-1 rounded">fazia_higienizacao_veiculo</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Fazia higienização/limpeza do veículo?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Tempo (min/dia)</strong> <code className="text-[10px] bg-muted px-1 rounded">tempo_higienizacao_minutos_dia</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quanto tempo por dia gastava nisso?</span><br />
+                    <strong>P17 — Fazia manutenção?</strong> <code className="text-[10px] bg-muted px-1 rounded">fazia_manutencao</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Fazia manutenção básica do veículo?</span><br />
+                    <strong>P18 — Tarefas extras exigidas</strong> <code className="text-[10px] bg-muted px-1 rounded">tarefas_extras_exigidas</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Havia outras tarefas além de dirigir que eram exigidas?</span><br />
+                    <strong>P19 — Tipo de veículo</strong> <code className="text-[10px] bg-muted px-1 rounded">tipo_veiculo</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Qual o tipo de veículo que dirigia? (truck, carreta, bi-trem, etc.)</span><br />
+                    <strong>P20 — Equiparação salarial?</strong> <code className="text-[10px] bg-muted px-1 rounded">existe_equiparacao</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Havia algum colega que exercia a mesma função e ganhava mais?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Nome do colega</strong> <code className="text-[10px] bg-muted px-1 rounded">colega_salario_maior</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual o nome desse colega?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Salário do colega</strong> <code className="text-[10px] bg-muted px-1 rounded">salario_paradigma</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quanto esse colega ganhava?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Tempo na função (anos)</strong> <code className="text-[10px] bg-muted px-1 rounded">tempo_paradigma_na_funcao_anos</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Há quanto tempo esse colega está na mesma função?</span><br />
+                    <strong>P24 — Foi transferido?</strong> <code className="text-[10px] bg-muted px-1 rounded">foi_transferido</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ O senhor foi transferido de local em algum momento?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Definitiva?</strong> <code className="text-[10px] bg-muted px-1 rounded">transferencia_definitiva</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ A transferência foi definitiva?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Meses transferido</strong> <code className="text-[10px] bg-muted px-1 rounded">meses_transferido</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Por quantos meses ficou transferido?</span><br />
+                    <strong>P27 — Salário CTPS mensal</strong> <code className="text-[10px] bg-muted px-1 rounded">salario_ctps_mensal</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Qual o salário registrado na CTPS?</span><br />
+                    <strong>P28 — Recebia holerite?</strong> <code className="text-[10px] bg-muted px-1 rounded">holerite_existe</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Recebia holerite detalhado?</span><br />
+                    <strong>P29 — Comissão habitual?</strong> <code className="text-[10px] bg-muted px-1 rounded">comissao_habitual</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Recebia comissão habitualmente?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Média mensal</strong> <code className="text-[10px] bg-muted px-1 rounded">media_comissao_mensal</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual era a média mensal de comissão?</span><br />
+                    <strong>P31 — Prêmio habitual?</strong> <code className="text-[10px] bg-muted px-1 rounded">premio_habitual</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Recebia prêmio habitualmente?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Média mensal</strong> <code className="text-[10px] bg-muted px-1 rounded">media_premio_mensal</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual era a média mensal do prêmio?</span><br />
+                    <strong>P33 — Gratificação habitual?</strong> <code className="text-[10px] bg-muted px-1 rounded">gratificacao_habitual</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Recebia gratificação habitualmente?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Média mensal</strong> <code className="text-[10px] bg-muted px-1 rounded">media_gratificacao_mensal</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual era a média mensal?</span><br />
+                    <strong>P35 — Diárias habitual?</strong> <code className="text-[10px] bg-muted px-1 rounded">diarias_habitual</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Recebia diárias habitualmente?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Média mensal</strong> <code className="text-[10px] bg-muted px-1 rounded">media_diarias_mensal</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual era a média mensal de diárias?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Fixas ou variáveis?</strong> <code className="text-[10px] bg-muted px-1 rounded">diarias_fixas_ou_variaveis</code> <span className="text-[10px] text-muted-foreground italic">[selecao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ As diárias eram fixas ou variáveis?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-[10px] text-muted-foreground ml-4">Opções: Fixas | Variáveis</span><br />
+                    <strong>P38 — Ajuda de custo habitual?</strong> <code className="text-[10px] bg-muted px-1 rounded">ajuda_custo_habitual</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Recebia ajuda de custo?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Média mensal</strong> <code className="text-[10px] bg-muted px-1 rounded">media_ajuda_custo_mensal</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual era a média mensal?</span><br />
+                    <strong>P40 — Recebia por fora?</strong> <code className="text-[10px] bg-muted px-1 rounded">recebia_por_fora</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Recebia algum valor por fora do holerite?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Valor médio mensal</strong> <code className="text-[10px] bg-muted px-1 rounded">valor_por_fora_mensal_medio</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual era o valor médio mensal?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Forma de pagamento</strong> <code className="text-[10px] bg-muted px-1 rounded">forma_pagamento_por_fora</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Como era pago? (pix, dinheiro, envelope)</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Denominação</strong> <code className="text-[10px] bg-muted px-1 rounded">denominacao_por_fora</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Como chamavam esse pagamento?</span><br />
+                    <strong>P44 — Gratificação de função?</strong> <code className="text-[10px] bg-muted px-1 rounded">recebia_gratificacao_funcao</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Recebia gratificação de função?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Tempo recebendo (anos)</strong> <code className="text-[10px] bg-muted px-1 rounded">tempo_recebendo_gratificacao_anos</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Por quantos anos recebeu?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Foi suprimida?</strong> <code className="text-[10px] bg-muted px-1 rounded">gratificacao_foi_suprimida</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ A gratificação foi suprimida?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Data da supressão</strong> <code className="text-[10px] bg-muted px-1 rounded">data_supressao_gratificacao</code> <span className="text-[10px] text-muted-foreground italic">[data]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quando foi suprimida?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Valor suprimido</strong> <code className="text-[10px] bg-muted px-1 rounded">valor_gratificacao_suprimida</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual era o valor?</span><br />
+                    <strong>P49 — Hora início média</strong> <code className="text-[10px] bg-muted px-1 rounded">hora_inicio_media</code> <span className="text-[10px] text-muted-foreground italic">[horario]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ A que horas normalmente começava a trabalhar?</span><br />
+                    <strong>P50 — Hora fim média</strong> <code className="text-[10px] bg-muted px-1 rounded">hora_fim_media</code> <span className="text-[10px] text-muted-foreground italic">[horario]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ A que horas normalmente terminava?</span><br />
+                    <strong>P51 — Variação de horário</strong> <code className="text-[10px] bg-muted px-1 rounded">variacao_horario</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ O horário variava muito ou era mais ou menos fixo?</span><br />
+                    <strong>P52 — Regime semanal</strong> <code className="text-[10px] bg-muted px-1 rounded">regime_semanal_contratual</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Qual era o regime semanal contratual? (5x2, 6x1, escala)</span><br />
+                    <strong>P53 — Intervalo refeição?</strong> <code className="text-[10px] bg-muted px-1 rounded">fazia_intervalo_refeicao</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Fazia intervalo para refeição?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Quanto tempo (min)?</strong> <code className="text-[10px] bg-muted px-1 rounded">intervalo_refeicao_minutos_medio</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quanto tempo de intervalo em média?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Menor que 1 hora?</strong> <code className="text-[10px] bg-muted px-1 rounded">intervalo_menor_1hora</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ O intervalo era menor que 1 hora?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Intervalo real (min)</strong> <code className="text-[10px] bg-muted px-1 rounded">intervalo_real_minutos</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quantos minutos era o intervalo real?</span><br />
+                    <strong>P57 — Descanso entre jornadas (h)</strong> <code className="text-[10px] bg-muted px-1 rounded">descanso_entre_jornadas_horas_medio</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Quantas horas de descanso tinha entre uma jornada e outra?</span><br />
+                    <strong>P58 — Violação interjornada?</strong> <code className="text-[10px] bg-muted px-1 rounded">violacao_interjornada</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Acontecia de não ter as 11 horas de descanso entre jornadas?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Frequência</strong> <code className="text-[10px] bg-muted px-1 rounded">frequencia_violacao_interjornada</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Com que frequência isso acontecia?</span><br />
+                    <strong>P60 — Descanso coincidia com pausa condução?</strong> <code className="text-[10px] bg-muted px-1 rounded">descanso_coincidia_com_pausa_conducao</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ O descanso entre jornadas coincidia com a pausa obrigatória de condução?</span><br />
+                    <strong>P61 — Pausa 30min direção?</strong> <code className="text-[10px] bg-muted px-1 rounded">fazia_pausa_30min_direcao</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Fazia a pausa de 30 minutos a cada 5h30 de direção?</span><br />
+                    <strong>P62 — Dirigia após 22h?</strong> <code className="text-[10px] bg-muted px-1 rounded">dirigia_apos_22</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Costumava dirigir após as 22h?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Horas noturnas/dia</strong> <code className="text-[10px] bg-muted px-1 rounded">horas_noturnas_dia_media</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quantas horas por dia em média?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Adicional noturno pago?</strong> <code className="text-[10px] bg-muted px-1 rounded">adicional_noturno_pago</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Recebia adicional noturno?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Valor mensal</strong> <code className="text-[10px] bg-muted px-1 rounded">valor_noturno_pago_mensal</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quanto recebia por mês?</span><br />
+                    <strong>P66 — Trabalhava domingos?</strong> <code className="text-[10px] bg-muted px-1 rounded">trabalhava_domingos</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Trabalhava aos domingos?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Domingos/mês</strong> <code className="text-[10px] bg-muted px-1 rounded">domingos_trabalhados_mes_medio</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quantos domingos por mês em média?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Folga compensatória?</strong> <code className="text-[10px] bg-muted px-1 rounded">recebia_folga_compensatoria</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Recebia folga compensatória?</span><br />
+                    <strong>P69 — Pagava horas extras?</strong> <code className="text-[10px] bg-muted px-1 rounded">pagava_horas_extras</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ A empresa pagava horas extras?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Horas/mês</strong> <code className="text-[10px] bg-muted px-1 rounded">horas_extras_pagas_horas_mes_media</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quantas horas extras eram pagas por mês?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Percentual pago</strong> <code className="text-[10px] bg-muted px-1 rounded">percentual_hora_extra_pago</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual o percentual pago? (50%, 100%)</span><br />
+                    <strong>P72 — Banco de horas?</strong> <code className="text-[10px] bg-muted px-1 rounded">banco_horas</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Tinha banco de horas?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Recebia extrato?</strong> <code className="text-[10px] bg-muted px-1 rounded">recebia_extrato_banco</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Recebia extrato do banco de horas?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Assinava compensações?</strong> <code className="text-[10px] bg-muted px-1 rounded">assinava_compensacoes</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Assinava acordos de compensação?</span><br />
+                    <strong>P75 — Aguardava carga/descarga?</strong> <code className="text-[10px] bg-muted px-1 rounded">ficava_aguardando_carga_descarga</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Ficava aguardando carga ou descarga?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Tempo espera (h/dia)</strong> <code className="text-[10px] bg-muted px-1 rounded">tempo_espera_carga_descarga_horas_dia_medio</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quanto tempo em média por dia?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Era pago?</strong> <code className="text-[10px] bg-muted px-1 rounded">tempo_espera_era_pago</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Esse tempo era pago?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Percentual pago</strong> <code className="text-[10px] bg-muted px-1 rounded">percentual_pago_tempo_espera</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual percentual era pago?</span><br />
+                    <strong>P79 — Barreiras fiscais?</strong> <code className="text-[10px] bg-muted px-1 rounded">ficava_em_barreiras_fiscais</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Ficava parado em barreiras fiscais?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Tempo (h/dia)</strong> <code className="text-[10px] bg-muted px-1 rounded">tempo_fiscalizacao_barreira_horas_dia_medio</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quanto tempo em média?</span><br />
+                    <strong>P81 — Fila de balança?</strong> <code className="text-[10px] bg-muted px-1 rounded">ficava_em_fila_balanca</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Ficava em fila de balança?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Tempo (h/dia)</strong> <code className="text-[10px] bg-muted px-1 rounded">tempo_balanca_horas_dia_medio</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quanto tempo em média?</span><br />
+                    <strong>P83 — Dormia no veículo?</strong> <code className="text-[10px] bg-muted px-1 rounded">dormia_no_veiculo</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Dormia no veículo?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Obrigatório permanecer?</strong> <code className="text-[10px] bg-muted px-1 rounded">era_obrigatorio_permanecer</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Era obrigatório permanecer no veículo?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Horas berço/dia</strong> <code className="text-[10px] bg-muted px-1 rounded">horas_berco_dia_medio</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quantas horas no berço por dia em média?</span><br />
+                    <strong>P86 — Viagens longa distância?</strong> <code className="text-[10px] bg-muted px-1 rounded">fazia_viagens_longa_distancia</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Fazia viagens de longa distância?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Duração média (dias)</strong> <code className="text-[10px] bg-muted px-1 rounded">duracao_media_viagem_dias</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual a duração média de cada viagem?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Semanas/mês</strong> <code className="text-[10px] bg-muted px-1 rounded">semanas_em_viagem_por_mes_media</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quantas semanas por mês ficava em viagem?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Repouso semanal na viagem?</strong> <code className="text-[10px] bg-muted px-1 rounded">repouso_semanal_concedido_na_viagem</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Tinha repouso semanal durante a viagem?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Repouso fracionado?</strong> <code className="text-[10px] bg-muted px-1 rounded">repouso_semanal_era_fracionado</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ O repouso era fracionado?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Períodos/mês</strong> <code className="text-[10px] bg-muted px-1 rounded">periodos_fracionados_mes_medio</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quantos períodos fracionados por mês?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Acumulava repousos?</strong> <code className="text-[10px] bg-muted px-1 rounded">empresa_acumulava_repousos</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ A empresa acumulava repousos?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Máx consecutivos</strong> <code className="text-[10px] bg-muted px-1 rounded">repousos_acumulados_consecutivos_maximo</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual o máximo de repousos acumulados consecutivos?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Repouso com veículo em movimento?</strong> <code className="text-[10px] bg-muted px-1 rounded">repouso_era_feito_com_veiculo_em_movimento</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ O repouso era feito com o veículo em movimento?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Horas inválidas/dia</strong> <code className="text-[10px] bg-muted px-1 rounded">horas_repouso_invalido_dia_medio</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quantas horas de repouso inválido por dia?</span><br />
+                    <strong>P96 — Sobreaviso?</strong> <code className="text-[10px] bg-muted px-1 rounded">ficava_de_sobreaviso</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Ficava de sobreaviso?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Obrigação atender?</strong> <code className="text-[10px] bg-muted px-1 rounded">tinha_obrigacao_atender_chamado</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Tinha obrigação de atender o chamado?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Horas/dia</strong> <code className="text-[10px] bg-muted px-1 rounded">horas_sobreaviso_dia_medio</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quantas horas de sobreaviso por dia?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Recebia pagamento?</strong> <code className="text-[10px] bg-muted px-1 rounded">recebia_sobreaviso</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Recebia pelo sobreaviso?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Valor pago</strong> <code className="text-[10px] bg-muted px-1 rounded">valor_sobreaviso_pago</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual o valor pago?</span><br />
+                    <strong>P101 — Carga perigosa?</strong> <code className="text-[10px] bg-muted px-1 rounded">transportava_carga_perigosa</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Transportava carga perigosa (inflamáveis, químicos, explosivos)?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Periculosidade paga?</strong> <code className="text-[10px] bg-muted px-1 rounded">periculosidade_paga</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Recebia adicional de periculosidade?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Percentual pago</strong> <code className="text-[10px] bg-muted px-1 rounded">percentual_periculosidade_pago</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual percentual era pago?</span><br />
+                    <strong>P104 — Abastecimento frequente?</strong> <code className="text-[10px] bg-muted px-1 rounded">fazia_abastecimento_frequente</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Fazia abastecimento com frequência (contato com combustíveis)?</span><br />
+                    <strong>P105 — Câmara fria?</strong> <code className="text-[10px] bg-muted px-1 rounded">trabalhava_camara_fria</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Trabalhava com câmara fria?</span><br />
+                    <strong>P106 — Insalubridade paga?</strong> <code className="text-[10px] bg-muted px-1 rounded">insalubridade_paga</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Recebia adicional de insalubridade?</span><br />
+                    <strong>P107 — Ruído excessivo?</strong> <code className="text-[10px] bg-muted px-1 rounded">exposto_ruido_excessivo</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Era exposto a ruído excessivo?</span><br />
+                    <strong>P108 — Vibração constante?</strong> <code className="text-[10px] bg-muted px-1 rounded">vibracao_constante</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Sofria vibração constante do veículo?</span><br />
+                    <strong>P109 — Percentual insalubridade</strong> <code className="text-[10px] bg-muted px-1 rounded">percentual_insalubridade_pago</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Qual percentual de insalubridade era pago (se aplicável)?</span><br />
+                    <strong>P113 — Férias regulares?</strong> <code className="text-[10px] bg-muted px-1 rounded">ferias_regulares</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Gozou férias regularmente?</span><br />
+                    <strong>P114 — Férias pagas 2 dias antes?</strong> <code className="text-[10px] bg-muted px-1 rounded">ferias_pagas_2_dias_antes</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ As férias eram pagas com 2 dias de antecedência?</span><br />
+                    <strong>P115 — Férias vencidas não gozadas?</strong> <code className="text-[10px] bg-muted px-1 rounded">ferias_vencidas_nao_gozadas</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Tem férias vencidas que não gozou?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Quantos períodos?</strong> <code className="text-[10px] bg-muted px-1 rounded">periodos_ferias_vencidos_nao_gozados</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quantos períodos de férias vencidos?</span><br />
+                    <strong>P117 — 13º base real?</strong> <code className="text-[10px] bg-muted px-1 rounded">decimo_terceiro_base_real</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ O 13º salário era calculado sobre a remuneração real (incluindo extras)?</span><br />
+                    <strong>P118 — FGTS correto?</strong> <code className="text-[10px] bg-muted px-1 rounded">fgts_depositado_corretamente</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ O FGTS era depositado corretamente sobre toda a remuneração?</span><br />
+                    <strong>P119 — Deslocamento até pátio?</strong> <code className="text-[10px] bg-muted px-1 rounded">precisava_deslocamento_ate_patio</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Precisava se deslocar até o pátio da empresa para pegar o veículo?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Vale transporte?</strong> <code className="text-[10px] bg-muted px-1 rounded">recebia_vale_transporte</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Recebia vale transporte?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Custo mensal</strong> <code className="text-[10px] bg-muted px-1 rounded">custo_medio_transporte_mensal</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual o custo médio mensal de transporte?</span><br />
+                    <strong>P122 — Plano de saúde?</strong> <code className="text-[10px] bg-muted px-1 rounded">tinha_plano_saude_empresa</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Tinha plano de saúde pela empresa?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Contribuía?</strong> <code className="text-[10px] bg-muted px-1 rounded">contribuia_plano</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Contribuía com o plano?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Manteve após demissão?</strong> <code className="text-[10px] bg-muted px-1 rounded">empresa_manteve_plano_pos_demissao</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ A empresa manteve o plano após a demissão?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Custo mensal</strong> <code className="text-[10px] bg-muted px-1 rounded">custo_plano_mensal</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual o custo mensal do plano?</span><br />
+                    <strong>P126 — Guias seguro desemprego?</strong> <code className="text-[10px] bg-muted px-1 rounded">recebeu_guias_seguro_desemprego</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Recebeu as guias do seguro desemprego?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE NÃO: Conseguiu receber?</strong> <code className="text-[10px] bg-muted px-1 rounded">conseguiu_receber_seguro</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Conseguiu receber o seguro desemprego?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE NÃO: Valor parcelas perdidas</strong> <code className="text-[10px] bg-muted px-1 rounded">valor_parcelas_seguro_perdidas</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual o valor das parcelas perdidas?</span><br />
+                    <strong>P129 — Descontos indevidos?</strong> <code className="text-[10px] bg-muted px-1 rounded">empresa_fazia_descontos_indevidos</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ A empresa fazia descontos indevidos no salário?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Tipo de desconto</strong> <code className="text-[10px] bg-muted px-1 rounded">tipo_desconto_indevido</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Que tipo de desconto?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Valor médio mensal</strong> <code className="text-[10px] bg-muted px-1 rounded">valor_medio_desconto_mensal</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual o valor médio mensal?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Assinava autorização?</strong> <code className="text-[10px] bg-muted px-1 rounded">assinava_autorizacao_desconto</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Assinava autorização para os descontos?</span><br />
+                    <strong>P133 — Trabalhava para transportadora?</strong> <code className="text-[10px] bg-muted px-1 rounded">trabalhava_para_transportadora</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Trabalhava para uma transportadora terceirizada?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Nome da tomadora</strong> <code className="text-[10px] bg-muted px-1 rounded">nome_empresa_tomadora</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual o nome da empresa tomadora dos serviços?</span><br />
+                    <strong>P135 — Houve acidente?</strong> <code className="text-[10px] bg-muted px-1 rounded">houve_acidente</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Sofreu algum acidente de trabalho?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Tipo</strong> <code className="text-[10px] bg-muted px-1 rounded">tipo_acidente</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Que tipo de acidente?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Data</strong> <code className="text-[10px] bg-muted px-1 rounded">data_acidente</code> <span className="text-[10px] text-muted-foreground italic">[data]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quando aconteceu?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Houve CAT?</strong> <code className="text-[10px] bg-muted px-1 rounded">houve_cat</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Foi emitida a CAT?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Houve afastamento?</strong> <code className="text-[10px] bg-muted px-1 rounded">houve_afastamento</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Houve afastamento?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Período (meses)</strong> <code className="text-[10px] bg-muted px-1 rounded">periodo_afastamento_meses</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Por quanto tempo ficou afastado?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Auxílio INSS?</strong> <code className="text-[10px] bg-muted px-1 rounded">recebia_auxilio_doenca_inss</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Recebia auxílio doença do INSS?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Valor</strong> <code className="text-[10px] bg-muted px-1 rounded">valor_auxilio_recebido</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual o valor recebido?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Sequela atual</strong> <code className="text-[10px] bg-muted px-1 rounded">sequela_atual</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Ficou com alguma sequela?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Capacidade laboral</strong> <code className="text-[10px] bg-muted px-1 rounded">capacidade_laboral_atual</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Como está sua capacidade de trabalho hoje?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Gravidade</strong> <code className="text-[10px] bg-muted px-1 rounded">gravidade_sequela</code> <span className="text-[10px] text-muted-foreground italic">[selecao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual a gravidade da sequela? (leve, moderada, grave)</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-[10px] text-muted-foreground ml-4">Opções: Leve | Moderada | Grave</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Laudos médicos?</strong> <code className="text-[10px] bg-muted px-1 rounded">tem_laudos_medicos</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Tem laudos médicos?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: % incapacidade</strong> <code className="text-[10px] bg-muted px-1 rounded">percentual_incapacidade</code> <span className="text-[10px] text-muted-foreground italic">[numero]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual o percentual de incapacidade?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Gastos médicos?</strong> <code className="text-[10px] bg-muted px-1 rounded">gastos_medicos_comprovados</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Teve gastos médicos comprovados?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Valor</strong> <code className="text-[10px] bg-muted px-1 rounded">valor_gastos_medicos</code> <span className="text-[10px] text-muted-foreground italic">[valor]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual o valor total?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Alta médica?</strong> <code className="text-[10px] bg-muted px-1 rounded">teve_alta_medica</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Teve alta médica?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Data da alta</strong> <code className="text-[10px] bg-muted px-1 rounded">data_alta_medica</code> <span className="text-[10px] text-muted-foreground italic">[data]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Quando foi a alta?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Demissão em 12m?</strong> <code className="text-[10px] bg-muted px-1 rounded">demissao_dentro_12m_alta</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Foi demitido dentro de 12 meses após a alta?</span><br />
+                    <strong>P153 — Doença ocupacional?</strong> <code className="text-[10px] bg-muted px-1 rounded">doenca_ocupacional</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Desenvolveu alguma doença relacionada ao trabalho?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Tipo</strong> <code className="text-[10px] bg-muted px-1 rounded">tipo_doenca_ocupacional</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual doença?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Tem diagnóstico?</strong> <code className="text-[10px] bg-muted px-1 rounded">tem_diagnostico_doenca</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Tem diagnóstico médico?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Em tratamento?</strong> <code className="text-[10px] bg-muted px-1 rounded">esta_em_tratamento</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Está em tratamento?</span><br />
+                    <strong>P157 — Assédio moral?</strong> <code className="text-[10px] bg-muted px-1 rounded">sofreu_assedio_moral</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Sofreu assédio moral no trabalho?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Frequência</strong> <code className="text-[10px] bg-muted px-1 rounded">frequencia_assedio</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Com que frequência?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Gravidade</strong> <code className="text-[10px] bg-muted px-1 rounded">gravidade_assedio</code> <span className="text-[10px] text-muted-foreground italic">[selecao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ Qual a gravidade? (leve, moderado, grave)</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-[10px] text-muted-foreground ml-4">Opções: Leve | Moderado | Grave</span><br />
+                    <strong>P160 — Revista íntima?</strong> <code className="text-[10px] bg-muted px-1 rounded">sofreu_revista_intima</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Sofreu revista íntima?</span><br />
+                    <strong>P161 — Motivo dispensa suspeito?</strong> <code className="text-[10px] bg-muted px-1 rounded">motivo_real_dispensa_suspeito</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Suspeita que o real motivo da dispensa foi diferente do informado?</span><br />
+                    <strong>P162 — Indícios discriminação?</strong> <code className="text-[10px] bg-muted px-1 rounded">indicios_discriminacao</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Há indícios de discriminação na dispensa?</span><br />
+                    <strong>P163 — Jornada superior 12h?</strong> <code className="text-[10px] bg-muted px-1 rounded">jornada_habitual_superior_12h</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ A jornada habitual era superior a 12 horas?</span><br />
+                    <strong>P164 — Períodos fora de casa</strong> <code className="text-[10px] bg-muted px-1 rounded">periodos_fora_de_casa</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Quanto tempo ficava fora de casa por viagem?</span><br />
+                    <strong>P165 — Impacto familiar</strong> <code className="text-[10px] bg-muted px-1 rounded">impacto_familiar_declarado</code> <span className="text-[10px] text-muted-foreground italic">[texto]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Esse regime de trabalho impactou sua vida familiar? Como?</span><br />
+                    <strong>P166 — Holerites disponíveis?</strong> <code className="text-[10px] bg-muted px-1 rounded">holerites_disponiveis</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Tem holerites disponíveis?</span><br />
+                    <strong>P167 — Veículo tinha tacógrafo?</strong> <code className="text-[10px] bg-muted px-1 rounded">veiculo_tinha_tacografo</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ O veículo tinha tacógrafo?</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<strong>SE SIM: Acesso aos dados?</strong> <code className="text-[10px] bg-muted px-1 rounded">motorista_tem_acesso_dados_tacografo</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    &nbsp;&nbsp;&nbsp;&nbsp;<span className="text-muted-foreground">&nbsp;&nbsp;→ O senhor tem acesso aos dados do tacógrafo?</span><br />
+                    <strong>P169 — Registros digitais?</strong> <code className="text-[10px] bg-muted px-1 rounded">registros_digitais_disponiveis</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Tem registros digitais (fotos, prints, mensagens)?</span><br />
+                    <strong>P170 — Testemunhas?</strong> <code className="text-[10px] bg-muted px-1 rounded">testemunhas_disponiveis</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Tem testemunhas que possam confirmar a situação?</span><br />
+                    <strong>P171 — Empresa atrasa salário?</strong> <code className="text-[10px] bg-muted px-1 rounded">empresa_atrasa_salario</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ A empresa atrasa salário com frequência?</span><br />
+                    <strong>P172 — Não deposita FGTS?</strong> <code className="text-[10px] bg-muted px-1 rounded">empresa_nao_deposita_fgts</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ A empresa não deposita o FGTS?</span><br />
+                    <strong>P173 — Jornada excessiva?</strong> <code className="text-[10px] bg-muted px-1 rounded">empresa_exige_jornada_excessiva</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ A empresa exige jornada excessiva sistematicamente?</span><br />
+                    <strong>P174 — Condições degradantes?</strong> <code className="text-[10px] bg-muted px-1 rounded">condicoes_degradantes</code> <span className="text-[10px] text-muted-foreground italic">[sim_nao]</span><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Existem condições degradantes de trabalho?</span><br />
+        </ScreenDesc>
+
+        <SubTitle>Etapa 3 — Fechamento (6 itens)</SubTitle>
+        <ScreenDesc>
+                    <strong>Transição para fechamento</strong><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ [Nome], com base em tudo que conversamos, identifiquei [X] pontos que merecem atenção jurídica no seu caso.</span><br />
+                    <strong>Resumo dos direitos</strong><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Vou resumir os principais pontos: [listar 3-5 principais direitos identificados]. Esses são direitos previstos na CLT e na Lei do Motorista.</span><br />
+                    <strong>Proposta de valor</strong><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Nosso escritório é especializado exatamente nesse tipo de caso. Trabalhamos com honorários apenas no êxito — ou seja, você não paga nada se não ganhar.</span><br />
+                    <strong>Próximos passos</strong><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ O próximo passo seria agendar uma reunião para apresentar a análise completa e, se fizer sentido, dar entrada na ação. Posso agendar para quando?</span><br />
+                    <strong>Documentação necessária</strong><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Para a próxima etapa, seria ideal ter em mãos: CTPS, holerites, TRCT (rescisão) e qualquer outro documento que tenha. Consegue reunir?</span><br />
+                    <strong>Confirmação</strong><br />
+                    <span className="text-muted-foreground">&nbsp;&nbsp;→ Perfeito! Então fica agendado para [data/hora]. Vou enviar uma mensagem confirmando. Muito obrigado(a) pela confiança, [Nome]!</span><br />
+        </ScreenDesc>
+      </div>
+    ),
+  },
+  {
     id: "coaching-reca-raloca",
     icon: Star,
     title: "Passo 7 — Cards RECA, RALOCA e RADOVECA",
