@@ -1,69 +1,32 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { parse as parseCsvStd } from "https://deno.land/std@0.224.0/csv/parse.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-// Planilha do Radar Previdenciário
 const SPREADSHEET_ID = '1cjBtkZ4HCYKsvmQ7UGcEwQhYb_egmmnBhqP6GMxeVkQ';
 
-// GIDs das abas
 const GIDS = {
-  peticoesIniciais: 1358203598,    // Aba 1 - Petições Iniciais
-  evolucaoIncapacidade: 306675231, // Aba 2 - Evolução Incapacidade
-  tarefas: 1379612642,             // Aba 3 - Tarefas
-  aposentadorias: 0,               // Aba 4 - Aposentadorias
-  pastasCorrecao: 731526977,       // Aba 5 - Pastas para Correção
+  peticoesIniciais: 1358203598,
+  evolucaoIncapacidade: 306675231,
+  tarefas: 1379612642,
+  aposentadorias: 0,
+  pastasCorrecao: 731526977,
 };
 
-function parseCSV(text: string): string[][] {
-  const rows: string[][] = [];
-  let currentRow: string[] = [];
-  let currentCell = '';
-  let insideQuotes = false;
-
-  for (let i = 0; i < text.length; i++) {
-    const char = text[i];
-    const nextChar = text[i + 1];
-
-    if (insideQuotes) {
-      if (char === '"' && nextChar === '"') {
-        currentCell += '"';
-        i++;
-      } else if (char === '"') {
-        insideQuotes = false;
-      } else {
-        currentCell += char;
-      }
-    } else {
-      if (char === '"') {
-        insideQuotes = true;
-      } else if (char === ',') {
-        currentRow.push(currentCell.trim());
-        currentCell = '';
-      } else if (char === '\n' || (char === '\r' && nextChar === '\n')) {
-        currentRow.push(currentCell.trim());
-        if (currentRow.some(cell => cell !== '')) {
-          rows.push(currentRow);
-        }
-        currentRow = [];
-        currentCell = '';
-        if (char === '\r') i++;
-      } else {
-        currentCell += char;
-      }
+function parseCSV(csvText: string): string[][] {
+  if (!csvText) return [];
+  const result = parseCsvStd(csvText) as string[][];
+  const cleaned: string[][] = [];
+  for (const row of result) {
+    const trimmed = row.map((c) => (c ?? '').trim());
+    if (trimmed.some((cell) => cell !== '')) {
+      cleaned.push(trimmed);
     }
   }
-
-  if (currentCell || currentRow.length > 0) {
-    currentRow.push(currentCell.trim());
-    if (currentRow.some(cell => cell !== '')) {
-      rows.push(currentRow);
-    }
-  }
-
-  return rows;
+  return cleaned;
 }
 
 function parseBrazilianCurrency(value: string): number {
@@ -78,33 +41,29 @@ function parseBrazilianCurrency(value: string): number {
 
 async function fetchSheetData(gid: number): Promise<string[][]> {
   const url = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/export?format=csv&gid=${gid}`;
-  console.log(`Fetching data from GID ${gid}...`);
-  
+  console.log(`Fetching gid=${gid}...`);
   const response = await fetch(url);
   if (!response.ok) {
     throw new Error(`Failed to fetch sheet with GID ${gid}: ${response.status}`);
   }
-  
   const text = await response.text();
   return parseCSV(text);
 }
 
 serve(async (req) => {
-  // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Starting to fetch Previdenciário data...');
+    console.log('Fetching Previdenciário data (parallel)...');
 
-    // Fetch all sheets in parallel
     const [
       peticoesData,
       evolucaoData,
       tarefasData,
       aposentadoriasData,
-      pastasData
+      pastasData,
     ] = await Promise.all([
       fetchSheetData(GIDS.peticoesIniciais),
       fetchSheetData(GIDS.evolucaoIncapacidade),
@@ -115,8 +74,7 @@ serve(async (req) => {
 
     console.log(`Fetched: ${peticoesData.length} petições, ${evolucaoData.length} evolução, ${tarefasData.length} tarefas, ${aposentadoriasData.length} aposentadorias, ${pastasData.length} pastas`);
 
-    // Process Petições Iniciais (skip header)
-    const peticoesIniciais = peticoesData.slice(1).map(row => ({
+    const peticoesIniciais = peticoesData.slice(1).map((row) => ({
       responsavel: row[0] || '',
       semana: row[1] || '',
       mes: row[2] || '',
@@ -133,14 +91,12 @@ serve(async (req) => {
       notaCorrecao: row[13] || '',
     }));
 
-    // Process Evolução Incapacidade (skip header)
-    const evolucaoIncapacidade = evolucaoData.slice(1).map(row => ({
+    const evolucaoIncapacidade = evolucaoData.slice(1).map((row) => ({
       semana: row[0] || '',
       quantidadePendentes: parseInt(row[1] || '0', 10) || 0,
     }));
 
-    // Process Tarefas (skip header)
-    const tarefas = tarefasData.slice(1).map(row => ({
+    const tarefas = tarefasData.slice(1).map((row) => ({
       semana: row[0] || '',
       responsavel: row[1] || '',
       tipoTarefa: row[2] || '',
@@ -151,8 +107,7 @@ serve(async (req) => {
       notaRevisao: row[7] || '',
     }));
 
-    // Process Aposentadorias (skip header)
-    const aposentadorias = aposentadoriasData.slice(1).map(row => ({
+    const aposentadorias = aposentadoriasData.slice(1).map((row) => ({
       dataAnalise: row[0] || '',
       responsavel: row[1] || '',
       semana: row[2] || '',
@@ -166,8 +121,7 @@ serve(async (req) => {
       situacao: row[10] || '',
     }));
 
-    // Process Pastas para Correção (skip header)
-    const pastasCorrecao = pastasData.slice(1).map(row => ({
+    const pastasCorrecao = pastasData.slice(1).map((row) => ({
       cliente: row[0] || '',
       parteContraria: row[1] || '',
       tipoAcao: row[2] || '',
@@ -177,7 +131,6 @@ serve(async (req) => {
       situacao: row[6] || '',
     }));
 
-    // Calculate statistics
     const stats = {
       totalPeticoes: peticoesIniciais.length,
       peticoesPorSituacao: {} as Record<string, number>,
@@ -195,46 +148,26 @@ serve(async (req) => {
       valorTotalHonorarios: 0,
     };
 
-    // Calculate petições stats
-    peticoesIniciais.forEach(p => {
-      if (p.situacao) {
-        stats.peticoesPorSituacao[p.situacao] = (stats.peticoesPorSituacao[p.situacao] || 0) + 1;
-      }
-      if (p.tipoBeneficio) {
-        stats.peticoesPorBeneficio[p.tipoBeneficio] = (stats.peticoesPorBeneficio[p.tipoBeneficio] || 0) + 1;
-      }
-      if (p.responsavel) {
-        stats.peticoesPorResponsavel[p.responsavel] = (stats.peticoesPorResponsavel[p.responsavel] || 0) + 1;
-      }
+    peticoesIniciais.forEach((p) => {
+      if (p.situacao) stats.peticoesPorSituacao[p.situacao] = (stats.peticoesPorSituacao[p.situacao] || 0) + 1;
+      if (p.tipoBeneficio) stats.peticoesPorBeneficio[p.tipoBeneficio] = (stats.peticoesPorBeneficio[p.tipoBeneficio] || 0) + 1;
+      if (p.responsavel) stats.peticoesPorResponsavel[p.responsavel] = (stats.peticoesPorResponsavel[p.responsavel] || 0) + 1;
       stats.valorTotalCausas += p.valorCausa;
       stats.valorTotalHonorarios += p.expectativaHonorarios;
     });
 
-    // Calculate tarefas stats
-    tarefas.forEach(t => {
-      if (t.responsavel) {
-        stats.tarefasPorResponsavel[t.responsavel] = (stats.tarefasPorResponsavel[t.responsavel] || 0) + 1;
-      }
-      if (t.tipoTarefa) {
-        stats.tarefasPorTipo[t.tipoTarefa] = (stats.tarefasPorTipo[t.tipoTarefa] || 0) + 1;
-      }
+    tarefas.forEach((t) => {
+      if (t.responsavel) stats.tarefasPorResponsavel[t.responsavel] = (stats.tarefasPorResponsavel[t.responsavel] || 0) + 1;
+      if (t.tipoTarefa) stats.tarefasPorTipo[t.tipoTarefa] = (stats.tarefasPorTipo[t.tipoTarefa] || 0) + 1;
     });
 
-    // Calculate aposentadorias stats
-    aposentadorias.forEach(a => {
-      if (a.situacao) {
-        stats.aposentadoriasPorSituacao[a.situacao] = (stats.aposentadoriasPorSituacao[a.situacao] || 0) + 1;
-      }
-      if (a.tipoAcao) {
-        stats.aposentadoriasPorTipo[a.tipoAcao] = (stats.aposentadoriasPorTipo[a.tipoAcao] || 0) + 1;
-      }
+    aposentadorias.forEach((a) => {
+      if (a.situacao) stats.aposentadoriasPorSituacao[a.situacao] = (stats.aposentadoriasPorSituacao[a.situacao] || 0) + 1;
+      if (a.tipoAcao) stats.aposentadoriasPorTipo[a.tipoAcao] = (stats.aposentadoriasPorTipo[a.tipoAcao] || 0) + 1;
     });
 
-    // Calculate pastas stats
-    pastasCorrecao.forEach(p => {
-      if (p.situacao) {
-        stats.pastasPorSituacao[p.situacao] = (stats.pastasPorSituacao[p.situacao] || 0) + 1;
-      }
+    pastasCorrecao.forEach((p) => {
+      if (p.situacao) stats.pastasPorSituacao[p.situacao] = (stats.pastasPorSituacao[p.situacao] || 0) + 1;
     });
 
     const responseData = {
@@ -246,8 +179,6 @@ serve(async (req) => {
       stats,
     };
 
-    console.log('Successfully processed all Previdenciário data');
-
     return new Response(JSON.stringify(responseData), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
@@ -256,10 +187,7 @@ serve(async (req) => {
     console.error('Error fetching Previdenciário data:', errorMessage);
     return new Response(
       JSON.stringify({ error: errorMessage }),
-      { 
-        status: 500, 
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-      }
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
     );
   }
 });
