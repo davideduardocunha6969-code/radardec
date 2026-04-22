@@ -151,25 +151,50 @@ serve(async (req) => {
 
     const totalTasks = mainSheet.rows.length;
 
-    return new Response(
-      JSON.stringify({
-        success: true,
-        data: {
-          sheets: [mainSheet],
-          sectorMapping,
-          conformityErrors,
-          deadlineErrors,
-          intimacoesPrevidenciario,
-          totalSheets: 1,
-          totalTasks,
-          totalConformityErrors: conformityErrors.length,
-          totalDeadlineErrors: deadlineErrors.length,
-          totalIntimacoesPrevidenciario: intimacoesPrevidenciario.length,
-          lastUpdated: new Date().toISOString(),
-        },
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } },
-    );
+    // Para evitar pico de memória ao serializar 18k+ linhas,
+    // montamos o JSON em partes (streaming). O array `rows` (o maior chunk)
+    // é serializado linha-por-linha em vez de tudo de uma vez.
+    const encoder = new TextEncoder();
+
+    const stream = new ReadableStream({
+      start(controller) {
+        try {
+          const enqueue = (s: string) => controller.enqueue(encoder.encode(s));
+
+          // Início do envelope
+          enqueue('{"success":true,"data":{');
+          enqueue(`"sheets":[{"name":${JSON.stringify(mainSheet.name)},"headers":${JSON.stringify(mainSheet.headers)},"rows":[`);
+
+          // Stream das linhas da aba principal
+          const rows = mainSheet.rows;
+          for (let i = 0; i < rows.length; i++) {
+            enqueue((i > 0 ? ',' : '') + JSON.stringify(rows[i]));
+          }
+          enqueue(']}],');
+
+          // Demais campos (todos pequenos comparados às 18k linhas)
+          enqueue(`"sectorMapping":${JSON.stringify(sectorMapping)},`);
+          enqueue(`"conformityErrors":${JSON.stringify(conformityErrors)},`);
+          enqueue(`"deadlineErrors":${JSON.stringify(deadlineErrors)},`);
+          enqueue(`"intimacoesPrevidenciario":${JSON.stringify(intimacoesPrevidenciario)},`);
+          enqueue(`"totalSheets":1,`);
+          enqueue(`"totalTasks":${totalTasks},`);
+          enqueue(`"totalConformityErrors":${conformityErrors.length},`);
+          enqueue(`"totalDeadlineErrors":${deadlineErrors.length},`);
+          enqueue(`"totalIntimacoesPrevidenciario":${intimacoesPrevidenciario.length},`);
+          enqueue(`"lastUpdated":${JSON.stringify(new Date().toISOString())}`);
+          enqueue('}}');
+
+          controller.close();
+        } catch (err) {
+          controller.error(err);
+        }
+      },
+    });
+
+    return new Response(stream, {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error: unknown) {
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     console.error('Error fetching sheets:', error);
