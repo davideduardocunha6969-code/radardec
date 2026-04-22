@@ -13,16 +13,21 @@ const CONFORMITY_ERRORS_GID = 1590941680;
 const DEADLINE_ERRORS_GID = 1397357779;
 const INTIMACOES_PREVIDENCIARIO_GID = 154449292;
 
-// Parser CSV otimizado usando o módulo padrão do Deno.
-// Mantém a mesma semântica do parser anterior (respeita aspas, escapes ""
-// e quebras de linha dentro de células), mas é nativo e muito mais rápido.
-function parseCSV(csvText: string): string[][] {
-  if (!csvText) return [];
-  const result = parseCsvStd(csvText) as string[][];
-  // Normaliza: trim em cada célula e remove linhas totalmente vazias
-  // (mesmo comportamento do parser antigo).
+// Faz fetch + parse + descarta texto bruto. Reduz pico de memória
+// porque o CSV string sai de escopo logo após o parse.
+async function fetchAndParse(gid: number): Promise<string[][]> {
+  const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
+  const response = await fetch(url);
+  if (!response.ok) {
+    console.log(`Sheet gid=${gid} not accessible: ${response.status}`);
+    return [];
+  }
+  const text = await response.text();
+  if (!text || text.trim().length < 10) return [];
+  const parsed = parseCsvStd(text) as string[][];
+  // Filtra linhas vazias e faz trim
   const cleaned: string[][] = [];
-  for (const row of result) {
+  for (const row of parsed) {
     const trimmed = row.map((c) => (c ?? '').trim());
     if (trimmed.some((cell) => cell !== '')) {
       cleaned.push(trimmed);
@@ -31,104 +36,72 @@ function parseCSV(csvText: string): string[][] {
   return cleaned;
 }
 
-async function fetchCsv(gid: number): Promise<string | null> {
-  try {
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${gid}`;
-    const response = await fetch(url);
-    if (!response.ok) {
-      console.log(`Sheet gid=${gid} not accessible: ${response.status}`);
-      return null;
-    }
-    const text = await response.text();
-    return text && text.trim().length >= 10 ? text : null;
-  } catch (err) {
-    console.error(`Error fetching gid=${gid}:`, err);
-    return null;
-  }
-}
-
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
-    console.log('Fetching all sheets in parallel...');
+    console.log('Processing sheets sequentially to control memory...');
 
-    // Dispara as 5 requisições simultaneamente.
-    const [
-      mainCsv,
-      sectorCsv,
-      conformityCsv,
-      deadlineCsv,
-      intimacoesCsv,
-    ] = await Promise.all([
-      fetchCsv(MAIN_SHEET_GID),
-      fetchCsv(SECTOR_MAPPING_GID),
-      fetchCsv(CONFORMITY_ERRORS_GID),
-      fetchCsv(DEADLINE_ERRORS_GID),
-      fetchCsv(INTIMACOES_PREVIDENCIARIO_GID),
-    ]);
-
-    if (!mainCsv) {
-      throw new Error('Main sheet not found or inaccessible');
-    }
-
-    // Aba principal
-    const mainRows = parseCSV(mainCsv);
-    if (mainRows.length < 2) {
+    // ---------- 1) Aba principal: fetch -> parse -> mapeia para arrays
+    // de saída. Mantemos só `rows` final, não o CSV cru nem arrays intermediários.
+    const mainParsed = await fetchAndParse(MAIN_SHEET_GID);
+    if (mainParsed.length < 2) {
       throw new Error('Main sheet has no data rows');
     }
-    const headers = mainRows[0];
-    const dataRows = mainRows.slice(1);
-    console.log(`Main sheet: ${dataRows.length} rows`);
+    const mainHeaders = mainParsed[0];
+    // splice em vez de slice para liberar a referência do array original
+    mainParsed.shift(); // remove header
+    const mainRows: string[][] = mainParsed; // reusa o array
+    const totalTasks = mainRows.length;
+    console.log(`Main sheet: ${totalTasks} rows`);
 
-    const mainSheet = {
-      name: "TAREFAS",
-      headers,
-      rows: dataRows,
-    };
-
-    // Sector mapping
-    let sectorMapping: { tipoAcao: string; setor: string }[] = [];
-    if (sectorCsv) {
-      const rows = parseCSV(sectorCsv);
-      sectorMapping = rows.slice(1)
-        .filter((row) => row[0] && row[1])
-        .map((row) => ({
+    // ---------- 2) Sector mapping
+    const sectorParsed = await fetchAndParse(SECTOR_MAPPING_GID);
+    const sectorMapping: { tipoAcao: string; setor: string }[] = [];
+    for (let i = 1; i < sectorParsed.length; i++) {
+      const row = sectorParsed[i];
+      if (row[0] && row[1]) {
+        sectorMapping.push({
           tipoAcao: row[0].trim().toUpperCase(),
           setor: row[1].trim(),
-        }));
-      console.log(`Sector mappings: ${sectorMapping.length}`);
+        });
+      }
     }
+    sectorParsed.length = 0; // libera array
+    console.log(`Sector mappings: ${sectorMapping.length}`);
 
-    // Conformity errors
-    let conformityErrors: { date: string; recipient: string; rawRow: string[] }[] = [];
-    if (conformityCsv) {
-      const rows = parseCSV(conformityCsv);
-      conformityErrors = rows.slice(1).map((row) => ({
+    // ---------- 3) Conformity errors
+    const conformityParsed = await fetchAndParse(CONFORMITY_ERRORS_GID);
+    const conformityErrors: { date: string; recipient: string; rawRow: string[] }[] = [];
+    for (let i = 1; i < conformityParsed.length; i++) {
+      const row = conformityParsed[i];
+      conformityErrors.push({
         date: row[1] || '',
         recipient: (row[10] || '').trim(),
         rawRow: row,
-      }));
-      console.log(`Conformity errors: ${conformityErrors.length}`);
+      });
     }
+    console.log(`Conformity errors: ${conformityErrors.length}`);
 
-    // Deadline errors
-    let deadlineErrors: { date: string; controller: string; processNumber: string; rawRow: string[] }[] = [];
-    if (deadlineCsv) {
-      const rows = parseCSV(deadlineCsv);
-      deadlineErrors = rows.slice(1).map((row) => ({
+    // ---------- 4) Deadline errors
+    const deadlineParsed = await fetchAndParse(DEADLINE_ERRORS_GID);
+    const deadlineErrors: { date: string; controller: string; processNumber: string; rawRow: string[] }[] = [];
+    for (let i = 1; i < deadlineParsed.length; i++) {
+      const row = deadlineParsed[i];
+      deadlineErrors.push({
         date: row[1] || '',
         controller: (row[10] || '').trim(),
         processNumber: (row[12] || '').trim(),
         rawRow: row,
-      }));
-      console.log(`Deadline errors: ${deadlineErrors.length}`);
+      });
     }
+    console.log(`Deadline errors: ${deadlineErrors.length}`);
 
-    // Intimações previdenciário
-    let intimacoesPrevidenciario: {
+    // ---------- 5) Intimações previdenciário
+    const intimacoesParsed = await fetchAndParse(INTIMACOES_PREVIDENCIARIO_GID);
+    const intimacoesPrevidenciario: {
       dataCumprimento: string;
       prazoFatal: string;
       tipoCompromisso: string;
@@ -136,54 +109,45 @@ serve(async (req) => {
       numeroProcesso: string;
       rawRow: string[];
     }[] = [];
-    if (intimacoesCsv) {
-      const rows = parseCSV(intimacoesCsv);
-      intimacoesPrevidenciario = rows.slice(1).map((row) => ({
+    for (let i = 1; i < intimacoesParsed.length; i++) {
+      const row = intimacoesParsed[i];
+      intimacoesPrevidenciario.push({
         dataCumprimento: (row[3] || '').trim(),
         prazoFatal: (row[5] || '').trim(),
         tipoCompromisso: (row[7] || '').trim(),
         destinatario: (row[10] || '').trim(),
         numeroProcesso: (row[12] || '').trim(),
         rawRow: row,
-      }));
-      console.log(`Intimações previdenciário: ${intimacoesPrevidenciario.length}`);
+      });
     }
+    console.log(`Intimações previdenciário: ${intimacoesPrevidenciario.length}`);
 
-    const totalTasks = mainSheet.rows.length;
-
-    // Para evitar pico de memória ao serializar 18k+ linhas,
-    // montamos o JSON em partes (streaming). O array `rows` (o maior chunk)
-    // é serializado linha-por-linha em vez de tudo de uma vez.
+    // ---------- Resposta em streaming (evita pico do JSON.stringify monolítico)
     const encoder = new TextEncoder();
+    const lastUpdated = new Date().toISOString();
 
     const stream = new ReadableStream({
       start(controller) {
         try {
-          const enqueue = (s: string) => controller.enqueue(encoder.encode(s));
+          const enq = (s: string) => controller.enqueue(encoder.encode(s));
 
-          // Início do envelope
-          enqueue('{"success":true,"data":{');
-          enqueue(`"sheets":[{"name":${JSON.stringify(mainSheet.name)},"headers":${JSON.stringify(mainSheet.headers)},"rows":[`);
-
-          // Stream das linhas da aba principal
-          const rows = mainSheet.rows;
-          for (let i = 0; i < rows.length; i++) {
-            enqueue((i > 0 ? ',' : '') + JSON.stringify(rows[i]));
+          enq('{"success":true,"data":{');
+          enq(`"sheets":[{"name":"TAREFAS","headers":${JSON.stringify(mainHeaders)},"rows":[`);
+          for (let i = 0; i < mainRows.length; i++) {
+            enq((i > 0 ? ',' : '') + JSON.stringify(mainRows[i]));
           }
-          enqueue(']}],');
-
-          // Demais campos (todos pequenos comparados às 18k linhas)
-          enqueue(`"sectorMapping":${JSON.stringify(sectorMapping)},`);
-          enqueue(`"conformityErrors":${JSON.stringify(conformityErrors)},`);
-          enqueue(`"deadlineErrors":${JSON.stringify(deadlineErrors)},`);
-          enqueue(`"intimacoesPrevidenciario":${JSON.stringify(intimacoesPrevidenciario)},`);
-          enqueue(`"totalSheets":1,`);
-          enqueue(`"totalTasks":${totalTasks},`);
-          enqueue(`"totalConformityErrors":${conformityErrors.length},`);
-          enqueue(`"totalDeadlineErrors":${deadlineErrors.length},`);
-          enqueue(`"totalIntimacoesPrevidenciario":${intimacoesPrevidenciario.length},`);
-          enqueue(`"lastUpdated":${JSON.stringify(new Date().toISOString())}`);
-          enqueue('}}');
+          enq(']}],');
+          enq(`"sectorMapping":${JSON.stringify(sectorMapping)},`);
+          enq(`"conformityErrors":${JSON.stringify(conformityErrors)},`);
+          enq(`"deadlineErrors":${JSON.stringify(deadlineErrors)},`);
+          enq(`"intimacoesPrevidenciario":${JSON.stringify(intimacoesPrevidenciario)},`);
+          enq(`"totalSheets":1,`);
+          enq(`"totalTasks":${totalTasks},`);
+          enq(`"totalConformityErrors":${conformityErrors.length},`);
+          enq(`"totalDeadlineErrors":${deadlineErrors.length},`);
+          enq(`"totalIntimacoesPrevidenciario":${intimacoesPrevidenciario.length},`);
+          enq(`"lastUpdated":${JSON.stringify(lastUpdated)}`);
+          enq('}}');
 
           controller.close();
         } catch (err) {
