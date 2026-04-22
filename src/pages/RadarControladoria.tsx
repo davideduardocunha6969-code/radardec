@@ -45,12 +45,17 @@ const RadarControladoria = () => {
   }
 
   if (error && tasks.length === 0) {
+    const isEdgeError = /non-2xx|edge function|cpu time|timeout/i.test(error);
+    const friendlyMessage = isEdgeError
+      ? "A planilha está demorando mais que o esperado para ser processada. Isso costuma acontecer quando há muitos dados novos. Aguarde alguns instantes e tente novamente."
+      : error;
+
     return (
       <div className="flex-1 flex items-center justify-center">
         <div className="text-center max-w-md mx-auto p-8">
           <FileSpreadsheet className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Erro ao carregar dados</h2>
-          <p className="text-muted-foreground mb-4">{error}</p>
+          <h2 className="text-xl font-semibold mb-2">Não foi possível carregar os dados</h2>
+          <p className="text-muted-foreground mb-4">{friendlyMessage}</p>
           <Button onClick={refetch} className="gap-2">
             <RefreshCw className="h-4 w-4" />
             Tentar novamente
