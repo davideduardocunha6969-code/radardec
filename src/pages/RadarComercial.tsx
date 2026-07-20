@@ -4815,6 +4815,9 @@ const RadarComercial = () => {
                 // Usa todos os dados da aba principal (não filtra por semana para mostrar evolução completa)
                 const filteredDataForChart = data.filter(record => {
                   if (selectedSetor && record.setor !== selectedSetor) return false;
+                  // Excluir no-show do cálculo de qualificação
+                  const res = record.resultado?.toLowerCase() || '';
+                  if (res.includes('no-show') || res.includes('no show') || res.includes('noshow')) return false;
                   return true;
                 });
                 
