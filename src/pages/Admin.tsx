@@ -98,7 +98,10 @@ export default function Admin() {
   // Edit permissions form
   const [editRole, setEditRole] = useState<AppRole>('user');
   const [editPermissions, setEditPermissions] = useState<string[]>([]);
+  const [editEmail, setEditEmail] = useState('');
+  const [editPassword, setEditPassword] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingCreds, setIsSavingCreds] = useState(false);
 
   const fetchUsers = async () => {
     setIsLoadingUsers(true);
@@ -124,6 +127,17 @@ export default function Admin() {
 
       if (permsError) throw permsError;
 
+      // Fetch emails via admin edge function
+      let emailsMap: Record<string, string> = {};
+      try {
+        const { data: emailsRes } = await supabase.functions.invoke('admin-users', {
+          body: { action: 'list-emails' },
+        });
+        emailsMap = emailsRes?.emails || {};
+      } catch (e) {
+        console.warn('Could not fetch emails:', e);
+      }
+
       // Combine data
       const usersData: UserWithDetails[] = profiles?.map(profile => {
         const role = roles?.find(r => r.user_id === profile.user_id);
@@ -132,7 +146,7 @@ export default function Admin() {
         return {
           user_id: profile.user_id,
           display_name: profile.display_name,
-          email: profile.display_name, // We'll use display_name as identifier since we can't access auth.users
+          email: emailsMap[profile.user_id] || '',
           role: (role?.role as AppRole) || 'user',
           permissions: userPerms,
         };
@@ -202,7 +216,35 @@ export default function Admin() {
     setSelectedUser(user);
     setEditRole(user.role);
     setEditPermissions(user.permissions);
+    setEditEmail(user.email);
+    setEditPassword('');
     setEditDialogOpen(true);
+  };
+
+  const handleUpdateCredentials = async () => {
+    if (!selectedUser) return;
+    if (!editEmail && !editPassword) {
+      toast({ title: 'Nada para atualizar', description: 'Informe um novo email ou senha.', variant: 'destructive' });
+      return;
+    }
+    setIsSavingCreds(true);
+    try {
+      const payload: any = { action: 'update-credentials', userId: selectedUser.user_id };
+      if (editEmail && editEmail !== selectedUser.email) payload.email = editEmail;
+      if (editPassword) payload.password = editPassword;
+
+      const { data, error } = await supabase.functions.invoke('admin-users', { body: payload });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      toast({ title: 'Sucesso!', description: 'Credenciais atualizadas.' });
+      setEditPassword('');
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error updating credentials:', error);
+      toast({ title: 'Erro', description: error.message || 'Não foi possível atualizar as credenciais.', variant: 'destructive' });
+    }
+    setIsSavingCreds(false);
   };
 
   const handleSavePermissions = async () => {
@@ -445,6 +487,7 @@ export default function Admin() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
+                  <TableHead>Email</TableHead>
                   <TableHead>Tipo</TableHead>
                   <TableHead>Permissões</TableHead>
                   <TableHead className="text-right">Ações</TableHead>
@@ -454,6 +497,7 @@ export default function Admin() {
                 {users.map(user => (
                   <TableRow key={user.user_id}>
                     <TableCell className="font-medium">{user.display_name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{user.email || '—'}</TableCell>
                     <TableCell>
                       {user.role === 'admin' ? (
                         <Badge className="bg-amber-500">
@@ -516,11 +560,44 @@ export default function Admin() {
 
       {/* Edit Permissions Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Usuário - {selectedUser?.display_name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="space-y-3 border rounded-md p-3 bg-muted/30">
+              <p className="text-sm font-semibold">Credenciais de Acesso</p>
+              <div className="space-y-2">
+                <Label htmlFor="editEmail">Email de Acesso</Label>
+                <Input
+                  id="editEmail"
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  placeholder="usuario@email.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editPassword">Nova Senha</Label>
+                <Input
+                  id="editPassword"
+                  type="text"
+                  value={editPassword}
+                  onChange={(e) => setEditPassword(e.target.value)}
+                  placeholder="Deixe em branco para manter"
+                />
+                <p className="text-xs text-muted-foreground">Mínimo 6 caracteres. Preencha apenas se quiser alterar.</p>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full"
+                onClick={handleUpdateCredentials}
+                disabled={isSavingCreds}
+              >
+                {isSavingCreds ? 'Atualizando...' : 'Atualizar Email/Senha'}
+              </Button>
+            </div>
             <div className="space-y-2">
               <Label>Tipo de Usuário</Label>
               <div className="space-y-2">
