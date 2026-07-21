@@ -127,6 +127,17 @@ export default function Admin() {
 
       if (permsError) throw permsError;
 
+      // Fetch emails via admin edge function
+      let emailsMap: Record<string, string> = {};
+      try {
+        const { data: emailsRes } = await supabase.functions.invoke('admin-users', {
+          body: { action: 'list-emails' },
+        });
+        emailsMap = emailsRes?.emails || {};
+      } catch (e) {
+        console.warn('Could not fetch emails:', e);
+      }
+
       // Combine data
       const usersData: UserWithDetails[] = profiles?.map(profile => {
         const role = roles?.find(r => r.user_id === profile.user_id);
@@ -135,7 +146,7 @@ export default function Admin() {
         return {
           user_id: profile.user_id,
           display_name: profile.display_name,
-          email: profile.display_name, // We'll use display_name as identifier since we can't access auth.users
+          email: emailsMap[profile.user_id] || '',
           role: (role?.role as AppRole) || 'user',
           permissions: userPerms,
         };
