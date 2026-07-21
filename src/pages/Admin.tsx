@@ -98,7 +98,10 @@ export default function Admin() {
   // Edit permissions form
   const [editRole, setEditRole] = useState<AppRole>('user');
   const [editPermissions, setEditPermissions] = useState<string[]>([]);
+  const [editEmail, setEditEmail] = useState('');
+  const [editPassword, setEditPassword] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [isSavingCreds, setIsSavingCreds] = useState(false);
 
   const fetchUsers = async () => {
     setIsLoadingUsers(true);
