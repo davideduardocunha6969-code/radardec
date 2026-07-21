@@ -560,11 +560,44 @@ export default function Admin() {
 
       {/* Edit Permissions Dialog */}
       <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Editar Usuário - {selectedUser?.display_name}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
+            <div className="space-y-3 border rounded-md p-3 bg-muted/30">
+              <p className="text-sm font-semibold">Credenciais de Acesso</p>
+              <div className="space-y-2">
+                <Label htmlFor="editEmail">Email de Acesso</Label>
+                <Input
+                  id="editEmail"
+                  type="email"
+                  value={editEmail}
+                  onChange={(e) => setEditEmail(e.target.value)}
+                  placeholder="usuario@email.com"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="editPassword">Nova Senha</Label>
+                <Input
+                  id="editPassword"
+                  type="text"
+                  value={editPassword}
+                  onChange={(e) => setEditPassword(e.target.value)}
+                  placeholder="Deixe em branco para manter"
+                />
+                <p className="text-xs text-muted-foreground">Mínimo 6 caracteres. Preencha apenas se quiser alterar.</p>
+              </div>
+              <Button
+                type="button"
+                variant="secondary"
+                className="w-full"
+                onClick={handleUpdateCredentials}
+                disabled={isSavingCreds}
+              >
+                {isSavingCreds ? 'Atualizando...' : 'Atualizar Email/Senha'}
+              </Button>
+            </div>
             <div className="space-y-2">
               <Label>Tipo de Usuário</Label>
               <div className="space-y-2">
