@@ -497,6 +497,7 @@ export default function Admin() {
                 {users.map(user => (
                   <TableRow key={user.user_id}>
                     <TableCell className="font-medium">{user.display_name}</TableCell>
+                    <TableCell className="text-sm text-muted-foreground">{user.email || '—'}</TableCell>
                     <TableCell>
                       {user.role === 'admin' ? (
                         <Badge className="bg-amber-500">
