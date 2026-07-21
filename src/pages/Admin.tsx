@@ -216,7 +216,35 @@ export default function Admin() {
     setSelectedUser(user);
     setEditRole(user.role);
     setEditPermissions(user.permissions);
+    setEditEmail(user.email);
+    setEditPassword('');
     setEditDialogOpen(true);
+  };
+
+  const handleUpdateCredentials = async () => {
+    if (!selectedUser) return;
+    if (!editEmail && !editPassword) {
+      toast({ title: 'Nada para atualizar', description: 'Informe um novo email ou senha.', variant: 'destructive' });
+      return;
+    }
+    setIsSavingCreds(true);
+    try {
+      const payload: any = { action: 'update-credentials', userId: selectedUser.user_id };
+      if (editEmail && editEmail !== selectedUser.email) payload.email = editEmail;
+      if (editPassword) payload.password = editPassword;
+
+      const { data, error } = await supabase.functions.invoke('admin-users', { body: payload });
+      if (error) throw error;
+      if ((data as any)?.error) throw new Error((data as any).error);
+
+      toast({ title: 'Sucesso!', description: 'Credenciais atualizadas.' });
+      setEditPassword('');
+      fetchUsers();
+    } catch (error: any) {
+      console.error('Error updating credentials:', error);
+      toast({ title: 'Erro', description: error.message || 'Não foi possível atualizar as credenciais.', variant: 'destructive' });
+    }
+    setIsSavingCreds(false);
   };
 
   const handleSavePermissions = async () => {
