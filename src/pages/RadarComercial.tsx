@@ -1448,6 +1448,17 @@ const RadarComercial = () => {
             </div>
             <CardFilterSelects cardKey="semana" {...cardFilterProps} />
           </div>
+          {(() => {
+            const values = weeklyChartData.map(d => d.atendimentos).filter(v => v > 0);
+            const total = values.reduce((s, v) => s + v, 0);
+            const media = values.length ? total / values.length : 0;
+            return (
+              <div className="flex items-center gap-4 text-sm mt-2">
+                <span className="text-muted-foreground">Total acumulado: <span className="font-semibold text-foreground">{total}</span></span>
+                <span className="text-muted-foreground">Média por semana: <span className="font-semibold text-foreground">{media.toFixed(1)}</span></span>
+              </div>
+            );
+          })()}
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -1852,6 +1863,18 @@ const RadarComercial = () => {
             </div>
             <CardFilterSelects cardKey="noShow" {...cardFilterProps} />
           </div>
+          {(() => {
+            const withData = noShowWeeklyChartData.filter((d: any) => (d.total || 0) > 0);
+            const totalAtend = withData.reduce((s: number, d: any) => s + (d.total || 0), 0);
+            const totalNoShow = withData.reduce((s: number, d: any) => s + (d.noShows || 0), 0);
+            const mediaPct = totalAtend > 0 ? (totalNoShow / totalAtend) * 100 : 0;
+            return (
+              <div className="flex items-center gap-4 text-sm mt-2">
+                <span className="text-muted-foreground">Total no-show acumulado: <span className="font-semibold text-foreground">{totalNoShow}</span></span>
+                <span className="text-muted-foreground">Média por semana: <span className="font-semibold text-foreground">{mediaPct.toFixed(1)}%</span></span>
+              </div>
+            );
+          })()}
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -3903,6 +3926,17 @@ const RadarComercial = () => {
                 <CardTitle className="text-lg">Agendamentos por Semana - Total</CardTitle>
               </div>
               <p className="text-sm text-muted-foreground">Evolução semanal do total de agendamentos realizados pelo time de SDR</p>
+              {(() => {
+                const values = sdrWeeklyChartData.map((d: any) => d.agendamentos).filter((v: number) => v > 0);
+                const total = values.reduce((s: number, v: number) => s + v, 0);
+                const media = values.length ? total / values.length : 0;
+                return (
+                  <div className="flex items-center gap-4 text-sm mt-1">
+                    <span className="text-muted-foreground">Total acumulado: <span className="font-semibold text-foreground">{total}</span></span>
+                    <span className="text-muted-foreground">Média por semana: <span className="font-semibold text-foreground">{media.toFixed(1)}</span></span>
+                  </div>
+                );
+              })()}
             </CardHeader>
             <CardContent>
               <ChartContainer config={chartConfig} className="h-[300px] w-full">
@@ -3943,6 +3977,8 @@ const RadarComercial = () => {
             const chartData = sdrWeeklyBySetorChartData[setor];
             const color = setorColors[index % setorColors.length];
             const totalAgendamentos = chartData.reduce((sum, item) => sum + item.agendamentos, 0);
+            const semanasComDado = chartData.filter(item => item.agendamentos > 0).length;
+            const mediaAgendamentos = semanasComDado ? totalAgendamentos / semanasComDado : 0;
             
             return (
               <Card key={setor}>
@@ -3957,6 +3993,10 @@ const RadarComercial = () => {
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground">Evolução semanal de agendamentos do setor {setor}</p>
+                  <div className="flex items-center gap-4 text-sm mt-1">
+                    <span className="text-muted-foreground">Total acumulado: <span className="font-semibold text-foreground">{totalAgendamentos}</span></span>
+                    <span className="text-muted-foreground">Média por semana: <span className="font-semibold text-foreground">{mediaAgendamentos.toFixed(1)}</span></span>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <ChartContainer config={chartConfig} className="h-[250px] w-full">
