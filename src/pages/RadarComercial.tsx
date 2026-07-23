@@ -3926,6 +3926,17 @@ const RadarComercial = () => {
                 <CardTitle className="text-lg">Agendamentos por Semana - Total</CardTitle>
               </div>
               <p className="text-sm text-muted-foreground">Evolução semanal do total de agendamentos realizados pelo time de SDR</p>
+              {(() => {
+                const values = sdrWeeklyChartData.map((d: any) => d.agendamentos).filter((v: number) => v > 0);
+                const total = values.reduce((s: number, v: number) => s + v, 0);
+                const media = values.length ? total / values.length : 0;
+                return (
+                  <div className="flex items-center gap-4 text-sm mt-1">
+                    <span className="text-muted-foreground">Total acumulado: <span className="font-semibold text-foreground">{total}</span></span>
+                    <span className="text-muted-foreground">Média por semana: <span className="font-semibold text-foreground">{media.toFixed(1)}</span></span>
+                  </div>
+                );
+              })()}
             </CardHeader>
             <CardContent>
               <ChartContainer config={chartConfig} className="h-[300px] w-full">
