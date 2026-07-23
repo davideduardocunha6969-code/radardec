@@ -3977,6 +3977,8 @@ const RadarComercial = () => {
             const chartData = sdrWeeklyBySetorChartData[setor];
             const color = setorColors[index % setorColors.length];
             const totalAgendamentos = chartData.reduce((sum, item) => sum + item.agendamentos, 0);
+            const semanasComDado = chartData.filter(item => item.agendamentos > 0).length;
+            const mediaAgendamentos = semanasComDado ? totalAgendamentos / semanasComDado : 0;
             
             return (
               <Card key={setor}>
@@ -3991,6 +3993,10 @@ const RadarComercial = () => {
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground">Evolução semanal de agendamentos do setor {setor}</p>
+                  <div className="flex items-center gap-4 text-sm mt-1">
+                    <span className="text-muted-foreground">Total acumulado: <span className="font-semibold text-foreground">{totalAgendamentos}</span></span>
+                    <span className="text-muted-foreground">Média por semana: <span className="font-semibold text-foreground">{mediaAgendamentos.toFixed(1)}</span></span>
+                  </div>
                 </CardHeader>
                 <CardContent>
                   <ChartContainer config={chartConfig} className="h-[250px] w-full">
