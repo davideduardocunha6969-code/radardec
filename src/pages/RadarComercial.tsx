@@ -1863,6 +1863,18 @@ const RadarComercial = () => {
             </div>
             <CardFilterSelects cardKey="noShow" {...cardFilterProps} />
           </div>
+          {(() => {
+            const withData = noShowWeeklyChartData.filter((d: any) => (d.total || 0) > 0);
+            const totalAtend = withData.reduce((s: number, d: any) => s + (d.total || 0), 0);
+            const totalNoShow = withData.reduce((s: number, d: any) => s + (d.noShows || 0), 0);
+            const mediaPct = totalAtend > 0 ? (totalNoShow / totalAtend) * 100 : 0;
+            return (
+              <div className="flex items-center gap-4 text-sm mt-2">
+                <span className="text-muted-foreground">Total no-show acumulado: <span className="font-semibold text-foreground">{totalNoShow}</span></span>
+                <span className="text-muted-foreground">Média por semana: <span className="font-semibold text-foreground">{mediaPct.toFixed(1)}%</span></span>
+              </div>
+            );
+          })()}
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[300px] w-full">
