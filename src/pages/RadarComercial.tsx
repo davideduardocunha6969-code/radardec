@@ -1448,6 +1448,17 @@ const RadarComercial = () => {
             </div>
             <CardFilterSelects cardKey="semana" {...cardFilterProps} />
           </div>
+          {(() => {
+            const values = weeklyChartData.map(d => d.atendimentos).filter(v => v > 0);
+            const total = values.reduce((s, v) => s + v, 0);
+            const media = values.length ? total / values.length : 0;
+            return (
+              <div className="flex items-center gap-4 text-sm mt-2">
+                <span className="text-muted-foreground">Total acumulado: <span className="font-semibold text-foreground">{total}</span></span>
+                <span className="text-muted-foreground">Média por semana: <span className="font-semibold text-foreground">{media.toFixed(1)}</span></span>
+              </div>
+            );
+          })()}
         </CardHeader>
         <CardContent>
           <ChartContainer config={chartConfig} className="h-[300px] w-full">
