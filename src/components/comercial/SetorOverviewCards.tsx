@@ -1,0 +1,337 @@
+import { useMemo, useState } from "react";
+import { Calendar, Users, Target, TrendingUp, DollarSign, BarChart3 } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { WeekFilter } from "@/components/WeekFilter";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  LabelList,
+} from "recharts";
+import type { CommercialRecord } from "@/hooks/useCommercialData";
+
+interface SetorOverviewCardsProps {
+  data: CommercialRecord[];
+  weeks: number[];
+  isLoading?: boolean;
+  setores: string[];
+  produtosBySetor: Record<string, string[]>;
+  allProdutos: string[];
+  onAposentadoriasClick?: () => void;
+}
+
+const normalize = (v: string) =>
+  (v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
+
+const isNoShow = (r: CommercialRecord) => {
+  const res = normalize(r.resultado);
+  return res.includes("no-show") || res.includes("no show") || res.includes("noshow");
+};
+
+const isContrato = (r: CommercialRecord) => normalize(r.resultado).includes("contrato fechado");
+
+const isQualificado = (r: CommercialRecord) => {
+  const pd = normalize(r.possuiDireito).trim();
+  return pd === "sim" || pd === "com direito";
+};
+
+const SETORES = [
+  { key: "previdenciario", label: "Previdenciário", match: "previden", accent: "text-blue-500" },
+  { key: "trabalhista", label: "Trabalhista", match: "trabalh", accent: "text-emerald-500" },
+  { key: "bancario", label: "Bancário", match: "banc", accent: "text-purple-500" },
+];
+
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat("pt-BR", {
+    style: "currency",
+    currency: "BRL",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
+  }).format(value);
+
+export function SetorOverviewCards({
+  data,
+  weeks,
+  isLoading = false,
+  setores,
+  produtosBySetor,
+  allProdutos,
+  onAposentadoriasClick,
+}: SetorOverviewCardsProps) {
+  const [week, setWeek] = useState<number | null>(null);
+  const [chartSetor, setChartSetor] = useState<string | null>(null);
+  const [chartProduto, setChartProduto] = useState<string | null>(null);
+
+  const weekData = useMemo(
+    () => (week ? data.filter((r) => r.semana === week) : data),
+    [data, week]
+  );
+
+  const setorStats = useMemo(() => {
+    return SETORES.map((s) => {
+      const records = weekData.filter((r) => normalize(r.setor).includes(s.match));
+      const contratos = records.filter(isContrato);
+      const qualificados = records.filter((r) => !isNoShow(r) && isQualificado(r));
+      const honorariosIniciais = contratos.reduce((sum, r) => sum + (r.honorariosIniciais || 0), 0);
+      const honorariosExito = contratos.reduce((sum, r) => sum + (r.honorariosExito || 0), 0);
+
+      return {
+        ...s,
+        totalAtendimentos: records.length,
+        contratos: contratos.length,
+        taxaGeral: records.length > 0 ? (contratos.length / records.length) * 100 : 0,
+        totalQualificados: qualificados.length,
+        taxaQualificada:
+          qualificados.length > 0
+            ? (qualificados.filter(isContrato).length / qualificados.length) * 100
+            : 0,
+        honorariosIniciais,
+        honorariosExito,
+        honorariosTotal: honorariosIniciais + honorariosExito,
+        aposentadoriasFuturas: records.filter((r) =>
+          normalize(r.resultado).includes("aposentadoria futura")
+        ).length,
+      };
+    });
+  }, [weekData]);
+
+  const availableProdutos = chartSetor ? produtosBySetor[chartSetor] || [] : allProdutos;
+
+  const contratosPorSemana = useMemo(() => {
+    const counts: Record<number, number> = {};
+    data
+      .filter((r) => isContrato(r))
+      .filter((r) => (chartSetor ? r.setor === chartSetor : true))
+      .filter((r) => (chartProduto ? r.produto === chartProduto : true))
+      .forEach((r) => {
+        if (r.semana > 0 && r.semana <= 53) counts[r.semana] = (counts[r.semana] || 0) + 1;
+      });
+    return Array.from({ length: 53 }, (_, i) => ({
+      semana: `${i + 1}`,
+      contratos: counts[i + 1] || 0,
+    }));
+  }, [data, chartSetor, chartProduto]);
+
+  const totalContratosChart = contratosPorSemana.reduce((s, d) => s + d.contratos, 0);
+  const semanasComDados = contratosPorSemana.filter((d) => d.contratos > 0).length;
+
+  return (
+    <div className="space-y-6 mb-8">
+      <WeekFilter
+        weeks={weeks}
+        selectedWeek={week}
+        onWeekChange={setWeek}
+        isLoading={isLoading}
+      />
+
+      {setorStats.map((s) => (
+        <div key={s.key} className="space-y-3">
+          <div className="flex items-center gap-2">
+            <BarChart3 className={`h-4 w-4 ${s.accent}`} />
+            <h3 className="text-sm font-semibold text-foreground">{s.label}</h3>
+            <span className="text-xs text-muted-foreground">
+              {week ? `Semana ${week}` : "Todas as semanas"}
+            </span>
+          </div>
+
+          <div
+            className={`grid gap-4 md:grid-cols-2 ${
+              s.key === "previdenciario" ? "lg:grid-cols-5" : "lg:grid-cols-4"
+            }`}
+          >
+            {s.key === "previdenciario" && (
+              <Card
+                className="cursor-pointer hover:bg-muted/50 transition-colors"
+                onClick={onAposentadoriasClick}
+              >
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    Aposentadorias Futuras
+                  </CardTitle>
+                  <Calendar className="h-4 w-4 text-amber-500" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-amber-600">
+                    {isLoading ? "--" : s.aposentadoriasFuturas}
+                  </div>
+                  <p className="text-xs text-muted-foreground mt-1">Clique para detalhes</p>
+                </CardContent>
+              </Card>
+            )}
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Total Atendimentos
+                </CardTitle>
+                <Users className="h-4 w-4 text-primary" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-foreground">
+                  {isLoading ? "--" : s.totalAtendimentos}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {s.totalQualificados} qualificados (sem no-show)
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Contratos Fechados
+                </CardTitle>
+                <Target className="h-4 w-4 text-accent" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-foreground">
+                  {isLoading ? "--" : s.contratos}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {week ? `Semana ${week}` : "Todas as semanas"}
+                </p>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Taxa de Conversão
+                </CardTitle>
+                <TrendingUp className="h-4 w-4 text-success" />
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div>
+                  <div className="text-2xl font-bold text-foreground">
+                    {isLoading ? "--%" : `${s.taxaGeral.toFixed(1)}%`}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Geral • {s.contratos}/{s.totalAtendimentos} atendimentos
+                  </p>
+                </div>
+                <div className="pt-2 border-t border-border">
+                  <div className="text-lg font-semibold text-success">
+                    {isLoading ? "--%" : `${s.taxaQualificada.toFixed(1)}%`}
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Qualificados sem no-show • base {s.totalQualificados}
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between pb-2">
+                <CardTitle className="text-sm font-medium text-muted-foreground">
+                  Honorários Prospectados
+                </CardTitle>
+                <DollarSign className="h-4 w-4 text-emerald-500" />
+              </CardHeader>
+              <CardContent>
+                <div className="text-2xl font-bold text-foreground">
+                  {isLoading ? "--" : formatCurrency(s.honorariosTotal)}
+                </div>
+                <p className="text-xs text-muted-foreground mt-1">
+                  Iniciais {formatCurrency(s.honorariosIniciais)} • Êxito{" "}
+                  {formatCurrency(s.honorariosExito)}
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+        </div>
+      ))}
+
+      <Card>
+        <CardHeader>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <CardTitle className="text-lg">Contratos Fechados por Semana</CardTitle>
+              <p className="text-sm text-muted-foreground">
+                Total acumulado:{" "}
+                <span className="font-semibold text-foreground">{totalContratosChart}</span> • Média
+                por semana com dados:{" "}
+                <span className="font-semibold text-foreground">
+                  {semanasComDados > 0 ? (totalContratosChart / semanasComDados).toFixed(1) : "0"}
+                </span>
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <Select
+                value={chartSetor || "all"}
+                onValueChange={(v) => {
+                  setChartSetor(v === "all" ? null : v);
+                  setChartProduto(null);
+                }}
+              >
+                <SelectTrigger className="w-[160px] h-8 text-xs">
+                  <SelectValue placeholder="Setor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos Setores</SelectItem>
+                  {setores.map((s) => (
+                    <SelectItem key={s} value={s}>
+                      {s}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Select
+                value={chartProduto || "all"}
+                onValueChange={(v) => setChartProduto(v === "all" ? null : v)}
+              >
+                <SelectTrigger className="w-[180px] h-8 text-xs">
+                  <SelectValue placeholder="Produto" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos Produtos</SelectItem>
+                  {availableProdutos.map((p) => (
+                    <SelectItem key={p} value={p}>
+                      {p}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <ResponsiveContainer width="100%" height={300}>
+            <BarChart data={contratosPorSemana} margin={{ top: 20, right: 10, left: 0, bottom: 5 }}>
+              <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
+              <XAxis dataKey="semana" tick={{ fontSize: 10 }} interval={0} />
+              <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+              <Tooltip
+                formatter={(value: number) => [`${value} contratos`, "Contratos"]}
+                labelFormatter={(l) => `Semana ${l}`}
+                contentStyle={{
+                  backgroundColor: "hsl(var(--card))",
+                  border: "1px solid hsl(var(--border))",
+                  borderRadius: "8px",
+                }}
+              />
+              <Bar dataKey="contratos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]}>
+                <LabelList
+                  dataKey="contratos"
+                  position="top"
+                  fontSize={9}
+                  formatter={(v: number) => (v > 0 ? v : "")}
+                />
+              </Bar>
+            </BarChart>
+          </ResponsiveContainer>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
