@@ -296,8 +296,15 @@ export function KanbanBoard({
                           <GripVertical className="h-4 w-4 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" />
                         </div>
 
-                        <p className="text-sm font-medium text-foreground line-clamp-3 mb-4 leading-relaxed">
+                        <p className="text-sm font-medium text-foreground line-clamp-3 mb-2 leading-relaxed">
                           {atividade.atividade}
+                        </p>
+
+                        <p className="text-[10px] text-muted-foreground mb-3">
+                          Criado por{" "}
+                          <span className="font-medium text-foreground">
+                            {profiles.find((p) => p.user_id === atividade.user_id)?.display_name ?? "Usuário"}
+                          </span>
                         </p>
 
                         <div className="flex items-center justify-between pt-3 border-t border-border/50">
