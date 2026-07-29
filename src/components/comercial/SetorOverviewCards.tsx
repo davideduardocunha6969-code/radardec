@@ -306,53 +306,53 @@ export function SetorOverviewCards({
                 </span>
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Select
-                value={chartSetor || "all"}
-                onValueChange={(v) => {
-                  setChartSetor(v === "all" ? null : v);
-                  setChartProduto(null);
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant={showMedia ? "default" : "outline"}
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => setShowMedia((v) => !v)}
+              >
+                Média
+              </Button>
+              <Button
+                variant={showTendencia ? "default" : "outline"}
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => setShowTendencia((v) => !v)}
+              >
+                Tendência
+              </Button>
+              <MultiSelect
+                label="Setores"
+                options={setores}
+                selected={chartSetores}
+                onChange={(next) => {
+                  setChartSetores(next);
+                  setChartProdutos([]);
                 }}
-              >
-                <SelectTrigger className="w-[160px] h-8 text-xs">
-                  <SelectValue placeholder="Setor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos Setores</SelectItem>
-                  {setores.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={chartProduto || "all"}
-                onValueChange={(v) => setChartProduto(v === "all" ? null : v)}
-              >
-                <SelectTrigger className="w-[180px] h-8 text-xs">
-                  <SelectValue placeholder="Produto" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos Produtos</SelectItem>
-                  {availableProdutos.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {p}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                width="w-[170px]"
+              />
+              <MultiSelect
+                label="Produtos"
+                options={availableProdutos}
+                selected={chartProdutos}
+                onChange={setChartProdutos}
+                width="w-[190px]"
+              />
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={contratosPorSemana} margin={{ top: 20, right: 10, left: 0, bottom: 5 }}>
+            <ComposedChart
+              data={contratosPorSemana}
+              margin={{ top: 20, right: 10, left: 0, bottom: 5 }}
+            >
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
               <XAxis dataKey="semana" tick={{ fontSize: 10 }} interval={0} />
               <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
               <Tooltip
-                formatter={(value: number) => [`${value} contratos`, "Contratos"]}
                 labelFormatter={(l) => `Semana ${l}`}
                 contentStyle={{
                   backgroundColor: "hsl(var(--card))",
@@ -360,7 +360,13 @@ export function SetorOverviewCards({
                   borderRadius: "8px",
                 }}
               />
-              <Bar dataKey="contratos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]}>
+              <Legend />
+              <Bar
+                dataKey="contratos"
+                name="Contratos"
+                fill="hsl(var(--primary))"
+                radius={[4, 4, 0, 0]}
+              >
                 <LabelList
                   dataKey="contratos"
                   position="top"
@@ -368,10 +374,34 @@ export function SetorOverviewCards({
                   formatter={(v: number) => (v > 0 ? v : "")}
                 />
               </Bar>
-            </BarChart>
+              {showMedia && (
+                <Line
+                  type="monotone"
+                  dataKey="media"
+                  name="Média"
+                  stroke="hsl(var(--warning))"
+                  strokeWidth={2}
+                  strokeDasharray="6 4"
+                  dot={false}
+                  connectNulls
+                />
+              )}
+              {showTendencia && (
+                <Line
+                  type="linear"
+                  dataKey="tendencia"
+                  name="Tendência"
+                  stroke="hsl(var(--success))"
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                />
+              )}
+            </ComposedChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
+
     </div>
   );
 }
