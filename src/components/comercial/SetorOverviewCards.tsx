@@ -106,25 +106,65 @@ export function SetorOverviewCards({
     });
   }, [weekData]);
 
-  const availableProdutos = chartSetor ? produtosBySetor[chartSetor] || [] : allProdutos;
+  const availableProdutos = useMemo(() => {
+    if (chartSetores.length === 0) return allProdutos;
+    const set = new Set<string>();
+    chartSetores.forEach((s) => (produtosBySetor[s] || []).forEach((p) => set.add(p)));
+    return Array.from(set).sort();
+  }, [chartSetores, produtosBySetor, allProdutos]);
 
   const contratosPorSemana = useMemo(() => {
     const counts: Record<number, number> = {};
     data
       .filter((r) => isContrato(r))
-      .filter((r) => (chartSetor ? r.setor === chartSetor : true))
-      .filter((r) => (chartProduto ? r.produto === chartProduto : true))
+      .filter((r) => (chartSetores.length ? chartSetores.includes(r.setor) : true))
+      .filter((r) => (chartProdutos.length ? chartProdutos.includes(r.produto) : true))
       .forEach((r) => {
         if (r.semana > 0 && r.semana <= 53) counts[r.semana] = (counts[r.semana] || 0) + 1;
       });
-    return Array.from({ length: 53 }, (_, i) => ({
+
+    const base = Array.from({ length: 53 }, (_, i) => ({
       semana: `${i + 1}`,
+      weekNumber: i + 1,
       contratos: counts[i + 1] || 0,
     }));
-  }, [data, chartSetor, chartProduto]);
+
+    // Intervalo com dados (primeira à última semana com contratos)
+    const comDados = base.filter((d) => d.contratos > 0);
+    const first = comDados.length ? comDados[0].weekNumber : 1;
+    const last = comDados.length ? comDados[comDados.length - 1].weekNumber : 53;
+    const range = base.filter((d) => d.weekNumber >= first && d.weekNumber <= last);
+
+    const n = range.length;
+    const media = n > 0 ? range.reduce((s, d) => s + d.contratos, 0) / n : 0;
+
+    // Regressão linear simples sobre o intervalo com dados
+    let slope = 0;
+    let intercept = media;
+    if (n > 1) {
+      const mx = range.reduce((s, d) => s + d.weekNumber, 0) / n;
+      const my = media;
+      const num = range.reduce((s, d) => s + (d.weekNumber - mx) * (d.contratos - my), 0);
+      const den = range.reduce((s, d) => s + (d.weekNumber - mx) ** 2, 0);
+      slope = den !== 0 ? num / den : 0;
+      intercept = my - slope * mx;
+    }
+
+    return base.map((d) => {
+      const inRange = d.weekNumber >= first && d.weekNumber <= last;
+      return {
+        ...d,
+        media: inRange ? parseFloat(media.toFixed(2)) : null,
+        tendencia: inRange
+          ? parseFloat(Math.max(0, slope * d.weekNumber + intercept).toFixed(2))
+          : null,
+      };
+    });
+  }, [data, chartSetores, chartProdutos]);
 
   const totalContratosChart = contratosPorSemana.reduce((s, d) => s + d.contratos, 0);
   const semanasComDados = contratosPorSemana.filter((d) => d.contratos > 0).length;
+
 
   return (
     <div className="space-y-6 mb-8">
