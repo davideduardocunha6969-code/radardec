@@ -95,6 +95,9 @@ export function AtividadeDetailDialog({
 
   const isPastDue = atividade.prazo_fatal && new Date(atividade.prazo_fatal) < new Date();
   const currentColuna = colunas.find((c) => c.id === atividade.coluna_id);
+  const nameByUserId = (uid: string | null | undefined) =>
+    uid ? profiles.find((p) => p.user_id === uid)?.display_name ?? "Usuário" : "—";
+  const criadorNome = nameByUserId(atividade.user_id);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
