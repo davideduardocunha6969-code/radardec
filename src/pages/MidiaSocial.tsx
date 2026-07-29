@@ -107,10 +107,16 @@ export default function MidiaSocial() {
             Planejamento e controle de conteúdo para redes sociais
           </p>
         </div>
-        <Button onClick={() => setFormDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Conteúdo
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setLixeiraOpen(true)}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            Lixeira {conteudosDeletados.length > 0 && `(${conteudosDeletados.length})`}
+          </Button>
+          <Button onClick={() => setFormDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Conteúdo
+          </Button>
+        </div>
       </div>
 
       {/* Stats Section */}
