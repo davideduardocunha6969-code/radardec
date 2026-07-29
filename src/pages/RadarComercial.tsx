@@ -36,6 +36,7 @@ import { AposentadoriasFuturasDialog } from "@/components/AposentadoriasFuturasD
 import { GoalProgressCard } from "@/components/GoalProgressCard";
 import { ContractProductCard } from "@/components/ContractProductCard";
 import { CardFilterSelects } from "@/components/comercial/CardFilterSelects";
+import { SetorOverviewCards } from "@/components/comercial/SetorOverviewCards";
 import {
   Collapsible,
   CollapsibleContent,
