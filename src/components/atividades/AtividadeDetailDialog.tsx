@@ -197,12 +197,18 @@ export function AtividadeDetailDialog({
                 <>
                   <p className="text-sm whitespace-pre-wrap">{atividade.atividade}</p>
                   <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                    {atividade.responsavel && (
-                      <div className="flex items-center gap-1">
-                        <User className="h-4 w-4" />
-                        {atividade.responsavel.display_name}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1">
+                      <User className="h-4 w-4" />
+                      <span className="text-xs">Criado por:</span>
+                      <span className="font-medium text-foreground">{criadorNome}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <User className="h-4 w-4" />
+                      <span className="text-xs">Responsável:</span>
+                      <span className="font-medium text-foreground">
+                        {atividade.responsavel?.display_name ?? "Sem responsável"}
+                      </span>
+                    </div>
                     {atividade.prazo_fatal && (
                       <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
