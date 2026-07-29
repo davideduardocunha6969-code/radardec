@@ -251,13 +251,3 @@ export function useConteudosMidia() {
     purgeConteudo,
   };
 }
-
-  return {
-    conteudos,
-    isLoading,
-    error,
-    createConteudo,
-    updateConteudo,
-    deleteConteudo,
-  };
-}
