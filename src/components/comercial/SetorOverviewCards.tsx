@@ -1,17 +1,17 @@
 import { useMemo, useState } from "react";
-import { Calendar, Users, Target, TrendingUp, DollarSign, BarChart3 } from "lucide-react";
+import { Calendar, Users, Target, TrendingUp, DollarSign, BarChart3, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeekFilter } from "@/components/WeekFilter";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   BarChart,
   Bar,
+  ComposedChart,
+  Line,
+  Legend,
   XAxis,
   YAxis,
   Tooltip,
@@ -20,6 +20,66 @@ import {
   LabelList,
 } from "recharts";
 import type { CommercialRecord } from "@/hooks/useCommercialData";
+
+interface MultiSelectProps {
+  label: string;
+  options: string[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+  width?: string;
+}
+
+function MultiSelect({ label, options, selected, onChange, width = "w-[180px]" }: MultiSelectProps) {
+  const toggle = (opt: string) => {
+    onChange(selected.includes(opt) ? selected.filter((s) => s !== opt) : [...selected, opt]);
+  };
+
+  const text =
+    selected.length === 0
+      ? `Todos ${label}`
+      : selected.length === 1
+      ? selected[0]
+      : `${selected.length} selecionados`;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className={`${width} h-8 justify-between text-xs`}>
+          <span className="truncate">{text}</span>
+          <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-64 p-2">
+        <div className="flex items-center justify-between px-1 pb-2">
+          <span className="text-xs font-medium text-muted-foreground">{label}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 text-xs"
+            onClick={() => onChange([])}
+            disabled={selected.length === 0}
+          >
+            Limpar
+          </Button>
+        </div>
+        <ScrollArea className="max-h-60">
+          <div className="space-y-1">
+            {options.map((opt) => (
+              <label
+                key={opt}
+                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-muted cursor-pointer"
+              >
+                <Checkbox checked={selected.includes(opt)} onCheckedChange={() => toggle(opt)} />
+                <span className="truncate">{opt}</span>
+              </label>
+            ))}
+          </div>
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 
 interface SetorOverviewCardsProps {
   data: CommercialRecord[];
