@@ -55,6 +55,7 @@ const getColunaColors = (nome: string) => {
 export function KanbanBoard({
   colunas,
   atividades,
+  profiles,
   onMoveAtividade,
   onClickAtividade,
   onAddColuna,
