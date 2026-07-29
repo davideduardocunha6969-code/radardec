@@ -1,17 +1,17 @@
 import { useMemo, useState } from "react";
-import { Calendar, Users, Target, TrendingUp, DollarSign, BarChart3 } from "lucide-react";
+import { Calendar, Users, Target, TrendingUp, DollarSign, BarChart3, ChevronDown } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { WeekFilter } from "@/components/WeekFilter";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   BarChart,
   Bar,
+  ComposedChart,
+  Line,
+  Legend,
   XAxis,
   YAxis,
   Tooltip,
@@ -20,6 +20,66 @@ import {
   LabelList,
 } from "recharts";
 import type { CommercialRecord } from "@/hooks/useCommercialData";
+
+interface MultiSelectProps {
+  label: string;
+  options: string[];
+  selected: string[];
+  onChange: (next: string[]) => void;
+  width?: string;
+}
+
+function MultiSelect({ label, options, selected, onChange, width = "w-[180px]" }: MultiSelectProps) {
+  const toggle = (opt: string) => {
+    onChange(selected.includes(opt) ? selected.filter((s) => s !== opt) : [...selected, opt]);
+  };
+
+  const text =
+    selected.length === 0
+      ? `Todos ${label}`
+      : selected.length === 1
+      ? selected[0]
+      : `${selected.length} selecionados`;
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" size="sm" className={`${width} h-8 justify-between text-xs`}>
+          <span className="truncate">{text}</span>
+          <ChevronDown className="h-3 w-3 shrink-0 opacity-60" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-64 p-2">
+        <div className="flex items-center justify-between px-1 pb-2">
+          <span className="text-xs font-medium text-muted-foreground">{label}</span>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-6 text-xs"
+            onClick={() => onChange([])}
+            disabled={selected.length === 0}
+          >
+            Limpar
+          </Button>
+        </div>
+        <ScrollArea className="max-h-60">
+          <div className="space-y-1">
+            {options.map((opt) => (
+              <label
+                key={opt}
+                className="flex items-center gap-2 rounded-md px-2 py-1.5 text-xs hover:bg-muted cursor-pointer"
+              >
+                <Checkbox checked={selected.includes(opt)} onCheckedChange={() => toggle(opt)} />
+                <span className="truncate">{opt}</span>
+              </label>
+            ))}
+          </div>
+        </ScrollArea>
+      </PopoverContent>
+    </Popover>
+  );
+}
+
 
 interface SetorOverviewCardsProps {
   data: CommercialRecord[];
@@ -70,8 +130,10 @@ export function SetorOverviewCards({
   onAposentadoriasClick,
 }: SetorOverviewCardsProps) {
   const [week, setWeek] = useState<number | null>(null);
-  const [chartSetor, setChartSetor] = useState<string | null>(null);
-  const [chartProduto, setChartProduto] = useState<string | null>(null);
+  const [chartSetores, setChartSetores] = useState<string[]>([]);
+  const [chartProdutos, setChartProdutos] = useState<string[]>([]);
+  const [showMedia, setShowMedia] = useState(true);
+  const [showTendencia, setShowTendencia] = useState(true);
 
   const weekData = useMemo(
     () => (week ? data.filter((r) => r.semana === week) : data),
@@ -106,25 +168,65 @@ export function SetorOverviewCards({
     });
   }, [weekData]);
 
-  const availableProdutos = chartSetor ? produtosBySetor[chartSetor] || [] : allProdutos;
+  const availableProdutos = useMemo(() => {
+    if (chartSetores.length === 0) return allProdutos;
+    const set = new Set<string>();
+    chartSetores.forEach((s) => (produtosBySetor[s] || []).forEach((p) => set.add(p)));
+    return Array.from(set).sort();
+  }, [chartSetores, produtosBySetor, allProdutos]);
 
   const contratosPorSemana = useMemo(() => {
     const counts: Record<number, number> = {};
     data
       .filter((r) => isContrato(r))
-      .filter((r) => (chartSetor ? r.setor === chartSetor : true))
-      .filter((r) => (chartProduto ? r.produto === chartProduto : true))
+      .filter((r) => (chartSetores.length ? chartSetores.includes(r.setor) : true))
+      .filter((r) => (chartProdutos.length ? chartProdutos.includes(r.produto) : true))
       .forEach((r) => {
         if (r.semana > 0 && r.semana <= 53) counts[r.semana] = (counts[r.semana] || 0) + 1;
       });
-    return Array.from({ length: 53 }, (_, i) => ({
+
+    const base = Array.from({ length: 53 }, (_, i) => ({
       semana: `${i + 1}`,
+      weekNumber: i + 1,
       contratos: counts[i + 1] || 0,
     }));
-  }, [data, chartSetor, chartProduto]);
+
+    // Intervalo com dados (primeira à última semana com contratos)
+    const comDados = base.filter((d) => d.contratos > 0);
+    const first = comDados.length ? comDados[0].weekNumber : 1;
+    const last = comDados.length ? comDados[comDados.length - 1].weekNumber : 53;
+    const range = base.filter((d) => d.weekNumber >= first && d.weekNumber <= last);
+
+    const n = range.length;
+    const media = n > 0 ? range.reduce((s, d) => s + d.contratos, 0) / n : 0;
+
+    // Regressão linear simples sobre o intervalo com dados
+    let slope = 0;
+    let intercept = media;
+    if (n > 1) {
+      const mx = range.reduce((s, d) => s + d.weekNumber, 0) / n;
+      const my = media;
+      const num = range.reduce((s, d) => s + (d.weekNumber - mx) * (d.contratos - my), 0);
+      const den = range.reduce((s, d) => s + (d.weekNumber - mx) ** 2, 0);
+      slope = den !== 0 ? num / den : 0;
+      intercept = my - slope * mx;
+    }
+
+    return base.map((d) => {
+      const inRange = d.weekNumber >= first && d.weekNumber <= last;
+      return {
+        ...d,
+        media: inRange ? parseFloat(media.toFixed(2)) : null,
+        tendencia: inRange
+          ? parseFloat(Math.max(0, slope * d.weekNumber + intercept).toFixed(2))
+          : null,
+      };
+    });
+  }, [data, chartSetores, chartProdutos]);
 
   const totalContratosChart = contratosPorSemana.reduce((s, d) => s + d.contratos, 0);
   const semanasComDados = contratosPorSemana.filter((d) => d.contratos > 0).length;
+
 
   return (
     <div className="space-y-6 mb-8">
@@ -266,53 +368,53 @@ export function SetorOverviewCards({
                 </span>
               </p>
             </div>
-            <div className="flex items-center gap-2">
-              <Select
-                value={chartSetor || "all"}
-                onValueChange={(v) => {
-                  setChartSetor(v === "all" ? null : v);
-                  setChartProduto(null);
+            <div className="flex flex-wrap items-center gap-2">
+              <Button
+                variant={showMedia ? "default" : "outline"}
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => setShowMedia((v) => !v)}
+              >
+                Média
+              </Button>
+              <Button
+                variant={showTendencia ? "default" : "outline"}
+                size="sm"
+                className="h-8 text-xs"
+                onClick={() => setShowTendencia((v) => !v)}
+              >
+                Tendência
+              </Button>
+              <MultiSelect
+                label="Setores"
+                options={setores}
+                selected={chartSetores}
+                onChange={(next) => {
+                  setChartSetores(next);
+                  setChartProdutos([]);
                 }}
-              >
-                <SelectTrigger className="w-[160px] h-8 text-xs">
-                  <SelectValue placeholder="Setor" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos Setores</SelectItem>
-                  {setores.map((s) => (
-                    <SelectItem key={s} value={s}>
-                      {s}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Select
-                value={chartProduto || "all"}
-                onValueChange={(v) => setChartProduto(v === "all" ? null : v)}
-              >
-                <SelectTrigger className="w-[180px] h-8 text-xs">
-                  <SelectValue placeholder="Produto" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos Produtos</SelectItem>
-                  {availableProdutos.map((p) => (
-                    <SelectItem key={p} value={p}>
-                      {p}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                width="w-[170px]"
+              />
+              <MultiSelect
+                label="Produtos"
+                options={availableProdutos}
+                selected={chartProdutos}
+                onChange={setChartProdutos}
+                width="w-[190px]"
+              />
             </div>
           </div>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={contratosPorSemana} margin={{ top: 20, right: 10, left: 0, bottom: 5 }}>
+            <ComposedChart
+              data={contratosPorSemana}
+              margin={{ top: 20, right: 10, left: 0, bottom: 5 }}
+            >
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" vertical={false} />
               <XAxis dataKey="semana" tick={{ fontSize: 10 }} interval={0} />
               <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
               <Tooltip
-                formatter={(value: number) => [`${value} contratos`, "Contratos"]}
                 labelFormatter={(l) => `Semana ${l}`}
                 contentStyle={{
                   backgroundColor: "hsl(var(--card))",
@@ -320,7 +422,13 @@ export function SetorOverviewCards({
                   borderRadius: "8px",
                 }}
               />
-              <Bar dataKey="contratos" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]}>
+              <Legend />
+              <Bar
+                dataKey="contratos"
+                name="Contratos"
+                fill="hsl(var(--primary))"
+                radius={[4, 4, 0, 0]}
+              >
                 <LabelList
                   dataKey="contratos"
                   position="top"
@@ -328,10 +436,34 @@ export function SetorOverviewCards({
                   formatter={(v: number) => (v > 0 ? v : "")}
                 />
               </Bar>
-            </BarChart>
+              {showMedia && (
+                <Line
+                  type="monotone"
+                  dataKey="media"
+                  name="Média"
+                  stroke="hsl(var(--warning))"
+                  strokeWidth={2}
+                  strokeDasharray="6 4"
+                  dot={false}
+                  connectNulls
+                />
+              )}
+              {showTendencia && (
+                <Line
+                  type="linear"
+                  dataKey="tendencia"
+                  name="Tendência"
+                  stroke="hsl(var(--success))"
+                  strokeWidth={2}
+                  dot={false}
+                  connectNulls
+                />
+              )}
+            </ComposedChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
+
     </div>
   );
 }
