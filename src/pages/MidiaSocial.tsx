@@ -170,9 +170,25 @@ export default function MidiaSocial() {
           conteudo={selectedConteudo}
           onUpdate={handleUpdateConteudo}
           onDelete={handleDeleteConteudo}
-          isAdmin={isAdmin}
+          isAdmin={true}
         />
       )}
+
+      <LixeiraDialog
+        open={lixeiraOpen}
+        onOpenChange={setLixeiraOpen}
+        title="Lixeira - Calendário de Conteúdo"
+        items={conteudosDeletados.map((c) => ({
+          id: c.id,
+          titulo: c.titulo,
+          setor: SETOR_LABELS[c.setor as Setor] ?? c.setor,
+          formato: FORMATO_LABELS[c.formato as Formato] ?? c.formato,
+          deleted_at: c.deleted_at,
+        }))}
+        isLoading={isLoadingDeletados}
+        onRestore={(id) => restoreConteudo.mutate(id)}
+        onPurge={(id) => purgeConteudo.mutate(id)}
+      />
     </div>
   );
 }
