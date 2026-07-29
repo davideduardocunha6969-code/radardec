@@ -93,10 +93,16 @@ export default function ContentHub() {
             </p>
           </div>
         </div>
-        <Button onClick={() => setIsFormOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Conteúdo
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setLixeiraOpen(true)}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            Lixeira {ideiasDeletadas.length > 0 && `(${ideiasDeletadas.length})`}
+          </Button>
+          <Button onClick={() => setIsFormOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Conteúdo
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
