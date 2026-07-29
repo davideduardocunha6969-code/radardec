@@ -344,6 +344,7 @@ export default function AtividadesMarketing() {
         <KanbanBoard
           colunas={colunas}
           atividades={filteredAtividades}
+          profiles={profiles}
           onMoveAtividade={(id, coluna_id) => moveAtividade.mutate({ id, coluna_id })}
           onClickAtividade={handleClickAtividade}
           onAddColuna={(nome) => addColuna.mutate(nome)}
