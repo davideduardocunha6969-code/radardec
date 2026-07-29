@@ -155,7 +155,23 @@ export default function ContentHub() {
         ideia={selectedIdeia}
         onUpdate={handleUpdate}
         onDelete={handleDelete}
-        isAdmin={isAdmin}
+        isAdmin={true}
+      />
+
+      <LixeiraDialog
+        open={lixeiraOpen}
+        onOpenChange={setLixeiraOpen}
+        title="Lixeira - Ideias de Conteúdo"
+        items={ideiasDeletadas.map((i) => ({
+          id: i.id,
+          titulo: i.titulo,
+          setor: SETOR_LABELS[i.setor as Setor] ?? i.setor,
+          formato: FORMATO_LABELS[i.formato as Formato] ?? i.formato,
+          deleted_at: i.deleted_at,
+        }))}
+        isLoading={isLoadingDeletadas}
+        onRestore={(id) => restoreIdeia.mutate(id)}
+        onPurge={(id) => purgeIdeia.mutate(id)}
       />
     </div>
   );
