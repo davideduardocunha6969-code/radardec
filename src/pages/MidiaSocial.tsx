@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import {
   useConteudosMidia,
   ConteudoMidia,
@@ -8,12 +8,15 @@ import {
   Setor,
   Formato,
   Status,
+  SETOR_LABELS,
+  FORMATO_LABELS,
 } from "@/hooks/useConteudosMidia";
 import { ConteudoFormDialog } from "@/components/midia/ConteudoFormDialog";
 import { ConteudoDetailDialog } from "@/components/midia/ConteudoDetailDialog";
 import { ConteudoStatsSection } from "@/components/midia/ConteudoStatsSection";
 import { ConteudoFilters } from "@/components/midia/ConteudoFilters";
 import { ConteudoList } from "@/components/midia/ConteudoList";
+import { LixeiraDialog } from "@/components/contenthub/LixeiraDialog";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 
