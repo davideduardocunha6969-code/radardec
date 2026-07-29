@@ -311,10 +311,16 @@ export function AtividadeDetailDialog({
                 <div className="space-y-2">
                   {comentarios.map((comentario) => (
                     <div key={comentario.id} className="p-3 bg-muted rounded-md">
+                      <div className="flex items-center gap-2 mb-1">
+                        <User className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs font-medium text-foreground">
+                          {nameByUserId(comentario.user_id)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          · {format(new Date(comentario.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        </span>
+                      </div>
                       <p className="text-sm">{comentario.texto}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {format(new Date(comentario.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                      </p>
                     </div>
                   ))}
                 </div>
