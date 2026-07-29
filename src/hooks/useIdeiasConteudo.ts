@@ -240,11 +240,15 @@ export function useIdeiasConteudo() {
 
   return {
     ideias,
+    ideiasDeletadas,
+    isLoadingDeletadas,
     isLoading,
     error,
     createIdeia,
     updateIdeia,
     deleteIdeia,
+    restoreIdeia,
+    purgeIdeia,
     validarIdeia,
   };
 }
