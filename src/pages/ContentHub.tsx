@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Lightbulb } from "lucide-react";
+import { Plus, Lightbulb, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthContext } from "@/contexts/AuthContext";
 import {
@@ -8,16 +8,28 @@ import {
   IdeiaConteudo,
   SituacaoIdeia,
 } from "@/hooks/useIdeiasConteudo";
-import { Setor, Formato } from "@/hooks/useConteudosMidia";
+import { Setor, Formato, SETOR_LABELS, FORMATO_LABELS } from "@/hooks/useConteudosMidia";
 import { IdeiaFormDialog } from "@/components/contenthub/IdeiaFormDialog";
 import { IdeiaDetailDialog } from "@/components/contenthub/IdeiaDetailDialog";
 import { IdeiaFilters } from "@/components/contenthub/IdeiaFilters";
 import { IdeiaList } from "@/components/contenthub/IdeiaList";
 import { IdeiaStatsSection } from "@/components/contenthub/IdeiaStatsSection";
+import { LixeiraDialog } from "@/components/contenthub/LixeiraDialog";
 
 export default function ContentHub() {
   const { isAdmin, canValidateContent } = useAuthContext();
-  const { ideias, isLoading, createIdeia, updateIdeia, deleteIdeia, validarIdeia } = useIdeiasConteudo();
+  const {
+    ideias,
+    ideiasDeletadas,
+    isLoadingDeletadas,
+    isLoading,
+    createIdeia,
+    updateIdeia,
+    deleteIdeia,
+    restoreIdeia,
+    purgeIdeia,
+    validarIdeia,
+  } = useIdeiasConteudo();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedIdeia, setSelectedIdeia] = useState<IdeiaConteudo | null>(null);
