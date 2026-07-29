@@ -652,6 +652,8 @@ export type Database = {
         Row: {
           copy_completa: string | null
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           formato: string
           gancho: string | null
           id: string
@@ -669,6 +671,8 @@ export type Database = {
         Insert: {
           copy_completa?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           formato: string
           gancho?: string | null
           id?: string
@@ -686,6 +690,8 @@ export type Database = {
         Update: {
           copy_completa?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           formato?: string
           gancho?: string | null
           id?: string
@@ -1633,6 +1639,8 @@ export type Database = {
         Row: {
           copy_completa: string | null
           created_at: string
+          deleted_at: string | null
+          deleted_by: string | null
           formato: string
           gancho: string | null
           id: string
@@ -1652,6 +1660,8 @@ export type Database = {
         Insert: {
           copy_completa?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           formato: string
           gancho?: string | null
           id?: string
@@ -1671,6 +1681,8 @@ export type Database = {
         Update: {
           copy_completa?: string | null
           created_at?: string
+          deleted_at?: string | null
+          deleted_by?: string | null
           formato?: string
           gancho?: string | null
           id?: string
