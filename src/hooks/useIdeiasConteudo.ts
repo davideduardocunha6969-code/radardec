@@ -132,20 +132,55 @@ export function useIdeiasConteudo() {
 
   const deleteIdeia = useMutation({
     mutationFn: async (id: string) => {
+      if (!user) throw new Error("Usuário não autenticado");
       const { error } = await supabase
         .from("ideias_conteudo")
-        .delete()
+        .update({ deleted_at: new Date().toISOString(), deleted_by: user.id })
         .eq("id", id);
-
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["ideias-conteudo"] });
-      toast.success("Ideia excluída!");
+      queryClient.invalidateQueries({ queryKey: ["ideias-conteudo-lixeira"] });
+      toast.success("Ideia movida para a lixeira!");
     },
     onError: (error) => {
       console.error("Erro ao excluir ideia:", error);
       toast.error("Erro ao excluir ideia");
+    },
+  });
+
+  const restoreIdeia = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("ideias_conteudo")
+        .update({ deleted_at: null, deleted_by: null })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ideias-conteudo"] });
+      queryClient.invalidateQueries({ queryKey: ["ideias-conteudo-lixeira"] });
+      toast.success("Ideia restaurada!");
+    },
+    onError: (e) => {
+      console.error(e);
+      toast.error("Erro ao restaurar ideia");
+    },
+  });
+
+  const purgeIdeia = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("ideias_conteudo").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["ideias-conteudo-lixeira"] });
+      toast.success("Ideia excluída permanentemente!");
+    },
+    onError: (e) => {
+      console.error(e);
+      toast.error("Erro ao excluir permanentemente");
     },
   });
 
