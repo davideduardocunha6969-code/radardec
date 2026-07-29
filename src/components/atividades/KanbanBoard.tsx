@@ -13,13 +13,14 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format, isPast, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import type { Atividade, Coluna } from "@/hooks/useAtividadesMarketing";
+import type { Atividade, Coluna, Profile } from "@/hooks/useAtividadesMarketing";
 import { PRIORIDADE_LABELS, PRIORIDADE_COLORS } from "@/hooks/useAtividadesMarketing";
 import { cn } from "@/lib/utils";
 
 interface KanbanBoardProps {
   colunas: Coluna[];
   atividades: Atividade[];
+  profiles: Profile[];
   onMoveAtividade: (id: string, coluna_id: string) => void;
   onClickAtividade: (atividade: Atividade) => void;
   onAddColuna: (nome: string) => void;
@@ -54,6 +55,7 @@ const getColunaColors = (nome: string) => {
 export function KanbanBoard({
   colunas,
   atividades,
+  profiles,
   onMoveAtividade,
   onClickAtividade,
   onAddColuna,
@@ -294,8 +296,15 @@ export function KanbanBoard({
                           <GripVertical className="h-4 w-4 text-muted-foreground/50 opacity-0 group-hover:opacity-100 transition-opacity cursor-grab active:cursor-grabbing" />
                         </div>
 
-                        <p className="text-sm font-medium text-foreground line-clamp-3 mb-4 leading-relaxed">
+                        <p className="text-sm font-medium text-foreground line-clamp-3 mb-2 leading-relaxed">
                           {atividade.atividade}
+                        </p>
+
+                        <p className="text-[10px] text-muted-foreground mb-3">
+                          Criado por{" "}
+                          <span className="font-medium text-foreground">
+                            {profiles.find((p) => p.user_id === atividade.user_id)?.display_name ?? "Usuário"}
+                          </span>
                         </p>
 
                         <div className="flex items-center justify-between pt-3 border-t border-border/50">

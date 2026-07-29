@@ -95,6 +95,9 @@ export function AtividadeDetailDialog({
 
   const isPastDue = atividade.prazo_fatal && new Date(atividade.prazo_fatal) < new Date();
   const currentColuna = colunas.find((c) => c.id === atividade.coluna_id);
+  const nameByUserId = (uid: string | null | undefined) =>
+    uid ? profiles.find((p) => p.user_id === uid)?.display_name ?? "Usuário" : "—";
+  const criadorNome = nameByUserId(atividade.user_id);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -194,12 +197,18 @@ export function AtividadeDetailDialog({
                 <>
                   <p className="text-sm whitespace-pre-wrap">{atividade.atividade}</p>
                   <div className="flex flex-wrap gap-4 text-sm text-muted-foreground">
-                    {atividade.responsavel && (
-                      <div className="flex items-center gap-1">
-                        <User className="h-4 w-4" />
-                        {atividade.responsavel.display_name}
-                      </div>
-                    )}
+                    <div className="flex items-center gap-1">
+                      <User className="h-4 w-4" />
+                      <span className="text-xs">Criado por:</span>
+                      <span className="font-medium text-foreground">{criadorNome}</span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <User className="h-4 w-4" />
+                      <span className="text-xs">Responsável:</span>
+                      <span className="font-medium text-foreground">
+                        {atividade.responsavel?.display_name ?? "Sem responsável"}
+                      </span>
+                    </div>
                     {atividade.prazo_fatal && (
                       <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
@@ -302,10 +311,16 @@ export function AtividadeDetailDialog({
                 <div className="space-y-2">
                   {comentarios.map((comentario) => (
                     <div key={comentario.id} className="p-3 bg-muted rounded-md">
+                      <div className="flex items-center gap-2 mb-1">
+                        <User className="h-3 w-3 text-muted-foreground" />
+                        <span className="text-xs font-medium text-foreground">
+                          {nameByUserId(comentario.user_id)}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          · {format(new Date(comentario.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
+                        </span>
+                      </div>
                       <p className="text-sm">{comentario.texto}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {format(new Date(comentario.created_at), "dd/MM/yyyy HH:mm", { locale: ptBR })}
-                      </p>
                     </div>
                   ))}
                 </div>
