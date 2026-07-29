@@ -24,14 +24,19 @@ export default function MidiaSocial() {
   const { isAdmin } = useAuthContext();
   const {
     conteudos,
+    conteudosDeletados,
+    isLoadingDeletados,
     isLoading,
     createConteudo,
     updateConteudo,
     deleteConteudo,
+    restoreConteudo,
+    purgeConteudo,
   } = useConteudosMidia();
 
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [lixeiraOpen, setLixeiraOpen] = useState(false);
   const [selectedConteudo, setSelectedConteudo] = useState<ConteudoMidia | null>(
     null
   );
