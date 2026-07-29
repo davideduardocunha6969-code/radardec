@@ -20,6 +20,7 @@ import { cn } from "@/lib/utils";
 interface KanbanBoardProps {
   colunas: Coluna[];
   atividades: Atividade[];
+  profiles: Profile[];
   onMoveAtividade: (id: string, coluna_id: string) => void;
   onClickAtividade: (atividade: Atividade) => void;
   onAddColuna: (nome: string) => void;
