@@ -70,8 +70,10 @@ export function SetorOverviewCards({
   onAposentadoriasClick,
 }: SetorOverviewCardsProps) {
   const [week, setWeek] = useState<number | null>(null);
-  const [chartSetor, setChartSetor] = useState<string | null>(null);
-  const [chartProduto, setChartProduto] = useState<string | null>(null);
+  const [chartSetores, setChartSetores] = useState<string[]>([]);
+  const [chartProdutos, setChartProdutos] = useState<string[]>([]);
+  const [showMedia, setShowMedia] = useState(true);
+  const [showTendencia, setShowTendencia] = useState(true);
 
   const weekData = useMemo(
     () => (week ? data.filter((r) => r.semana === week) : data),
