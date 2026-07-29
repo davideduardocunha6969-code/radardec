@@ -1261,83 +1261,17 @@ const RadarComercial = () => {
         </div>
       </div>
 
-      {/* Cards de métricas */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
-        <Card 
-          className="cursor-pointer hover:bg-muted/50 transition-colors"
-          onClick={() => setAposentadoriasFuturasDialogOpen(true)}
-        >
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Aposentadorias Futuras
-            </CardTitle>
-            <Calendar className="h-4 w-4 text-amber-500" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-amber-600">
-              {isLoading ? '--' : totalAposentadoriasFuturas}
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">
-              Total geral • Clique para detalhes
-            </p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Total Atendimentos
-            </CardTitle>
-            <Users className="h-4 w-4 text-primary" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {isLoading ? '--' : metrics.totalAtendimentos}
-            </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-              <span>
-                {selectedWeek ? `Semana ${selectedWeek}` : 'Todas as semanas'}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Cards de métricas por setor */}
+      <SetorOverviewCards
+        data={data}
+        weeks={weeks}
+        isLoading={isLoading}
+        setores={filterOptions.setores}
+        produtosBySetor={filterOptions.produtosBySetor as Record<string, string[]>}
+        allProdutos={filterOptions.produtos}
+        onAposentadoriasClick={() => setAposentadoriasFuturasDialogOpen(true)}
+      />
 
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Contratos Fechados
-            </CardTitle>
-            <Target className="h-4 w-4 text-accent" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {isLoading ? '--' : metrics.novosClientes}
-            </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-              <ArrowUpRight className="h-3 w-3 text-success" />
-              <span>
-                {selectedWeek ? `Semana ${selectedWeek}` : 'Todas as semanas'}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2">
-            <CardTitle className="text-sm font-medium text-muted-foreground">
-              Taxa de Conversão
-            </CardTitle>
-            <TrendingUp className="h-4 w-4 text-success" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold text-foreground">
-              {isLoading ? '--%' : `${metrics.taxaConversao}%`}
-            </div>
-            <div className="flex items-center gap-1 text-xs text-muted-foreground mt-1">
-              <span>Contratos / Atendimentos</span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Seção: Radar Atendimentos */}
       <Collapsible 
