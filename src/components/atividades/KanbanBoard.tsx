@@ -13,7 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { format, isPast, differenceInDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import type { Atividade, Coluna } from "@/hooks/useAtividadesMarketing";
+import type { Atividade, Coluna, Profile } from "@/hooks/useAtividadesMarketing";
 import { PRIORIDADE_LABELS, PRIORIDADE_COLORS } from "@/hooks/useAtividadesMarketing";
 import { cn } from "@/lib/utils";
 
