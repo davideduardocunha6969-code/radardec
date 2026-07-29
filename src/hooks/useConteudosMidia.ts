@@ -186,22 +186,71 @@ export function useConteudosMidia() {
 
   const deleteConteudo = useMutation({
     mutationFn: async (id: string) => {
+      if (!user) throw new Error("Usuário não autenticado");
       const { error } = await supabase
         .from("conteudos_midia")
-        .delete()
+        .update({ deleted_at: new Date().toISOString(), deleted_by: user.id })
         .eq("id", id);
-
       if (error) throw error;
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["conteudos-midia"] });
-      toast.success("Conteúdo excluído!");
+      queryClient.invalidateQueries({ queryKey: ["conteudos-midia-lixeira"] });
+      toast.success("Conteúdo movido para a lixeira!");
     },
     onError: (error) => {
       console.error("Erro ao excluir conteúdo:", error);
       toast.error("Erro ao excluir conteúdo");
     },
   });
+
+  const restoreConteudo = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("conteudos_midia")
+        .update({ deleted_at: null, deleted_by: null })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conteudos-midia"] });
+      queryClient.invalidateQueries({ queryKey: ["conteudos-midia-lixeira"] });
+      toast.success("Conteúdo restaurado!");
+    },
+    onError: (e) => {
+      console.error(e);
+      toast.error("Erro ao restaurar conteúdo");
+    },
+  });
+
+  const purgeConteudo = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("conteudos_midia").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["conteudos-midia-lixeira"] });
+      toast.success("Conteúdo excluído permanentemente!");
+    },
+    onError: (e) => {
+      console.error(e);
+      toast.error("Erro ao excluir permanentemente");
+    },
+  });
+
+  return {
+    conteudos,
+    conteudosDeletados,
+    isLoadingDeletados,
+    isLoading,
+    error,
+    createConteudo,
+    updateConteudo,
+    deleteConteudo,
+    restoreConteudo,
+    purgeConteudo,
+  };
+}
 
   return {
     conteudos,
