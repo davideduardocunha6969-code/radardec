@@ -59,10 +59,25 @@ export function useIdeiasConteudo() {
       const { data, error } = await supabase
         .from("ideias_conteudo")
         .select("*")
+        .is("deleted_at", null)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
       return data as IdeiaConteudo[];
+    },
+    enabled: !!user,
+  });
+
+  const { data: ideiasDeletadas = [], isLoading: isLoadingDeletadas } = useQuery({
+    queryKey: ["ideias-conteudo-lixeira"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("ideias_conteudo")
+        .select("*")
+        .not("deleted_at", "is", null)
+        .order("deleted_at", { ascending: false });
+      if (error) throw error;
+      return data as (IdeiaConteudo & { deleted_at: string; deleted_by: string | null })[];
     },
     enabled: !!user,
   });
