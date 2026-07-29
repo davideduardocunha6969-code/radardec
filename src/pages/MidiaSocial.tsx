@@ -1,6 +1,6 @@
 import { useState, useMemo } from "react";
 import { Button } from "@/components/ui/button";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import {
   useConteudosMidia,
   ConteudoMidia,
@@ -8,12 +8,15 @@ import {
   Setor,
   Formato,
   Status,
+  SETOR_LABELS,
+  FORMATO_LABELS,
 } from "@/hooks/useConteudosMidia";
 import { ConteudoFormDialog } from "@/components/midia/ConteudoFormDialog";
 import { ConteudoDetailDialog } from "@/components/midia/ConteudoDetailDialog";
 import { ConteudoStatsSection } from "@/components/midia/ConteudoStatsSection";
 import { ConteudoFilters } from "@/components/midia/ConteudoFilters";
 import { ConteudoList } from "@/components/midia/ConteudoList";
+import { LixeiraDialog } from "@/components/contenthub/LixeiraDialog";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -21,14 +24,19 @@ export default function MidiaSocial() {
   const { isAdmin } = useAuthContext();
   const {
     conteudos,
+    conteudosDeletados,
+    isLoadingDeletados,
     isLoading,
     createConteudo,
     updateConteudo,
     deleteConteudo,
+    restoreConteudo,
+    purgeConteudo,
   } = useConteudosMidia();
 
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [detailDialogOpen, setDetailDialogOpen] = useState(false);
+  const [lixeiraOpen, setLixeiraOpen] = useState(false);
   const [selectedConteudo, setSelectedConteudo] = useState<ConteudoMidia | null>(
     null
   );
@@ -99,10 +107,16 @@ export default function MidiaSocial() {
             Planejamento e controle de conteúdo para redes sociais
           </p>
         </div>
-        <Button onClick={() => setFormDialogOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Conteúdo
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setLixeiraOpen(true)}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            Lixeira {conteudosDeletados.length > 0 && `(${conteudosDeletados.length})`}
+          </Button>
+          <Button onClick={() => setFormDialogOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Conteúdo
+          </Button>
+        </div>
       </div>
 
       {/* Stats Section */}
@@ -156,9 +170,25 @@ export default function MidiaSocial() {
           conteudo={selectedConteudo}
           onUpdate={handleUpdateConteudo}
           onDelete={handleDeleteConteudo}
-          isAdmin={isAdmin}
+          isAdmin={true}
         />
       )}
+
+      <LixeiraDialog
+        open={lixeiraOpen}
+        onOpenChange={setLixeiraOpen}
+        title="Lixeira - Calendário de Conteúdo"
+        items={conteudosDeletados.map((c) => ({
+          id: c.id,
+          titulo: c.titulo,
+          setor: SETOR_LABELS[c.setor as Setor] ?? c.setor,
+          formato: FORMATO_LABELS[c.formato as Formato] ?? c.formato,
+          deleted_at: c.deleted_at,
+        }))}
+        isLoading={isLoadingDeletados}
+        onRestore={(id) => restoreConteudo.mutate(id)}
+        onPurge={(id) => purgeConteudo.mutate(id)}
+      />
     </div>
   );
 }

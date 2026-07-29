@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, Lightbulb } from "lucide-react";
+import { Plus, Lightbulb, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuthContext } from "@/contexts/AuthContext";
 import {
@@ -8,21 +8,34 @@ import {
   IdeiaConteudo,
   SituacaoIdeia,
 } from "@/hooks/useIdeiasConteudo";
-import { Setor, Formato } from "@/hooks/useConteudosMidia";
+import { Setor, Formato, SETOR_LABELS, FORMATO_LABELS } from "@/hooks/useConteudosMidia";
 import { IdeiaFormDialog } from "@/components/contenthub/IdeiaFormDialog";
 import { IdeiaDetailDialog } from "@/components/contenthub/IdeiaDetailDialog";
 import { IdeiaFilters } from "@/components/contenthub/IdeiaFilters";
 import { IdeiaList } from "@/components/contenthub/IdeiaList";
 import { IdeiaStatsSection } from "@/components/contenthub/IdeiaStatsSection";
+import { LixeiraDialog } from "@/components/contenthub/LixeiraDialog";
 
 export default function ContentHub() {
   const { isAdmin, canValidateContent } = useAuthContext();
-  const { ideias, isLoading, createIdeia, updateIdeia, deleteIdeia, validarIdeia } = useIdeiasConteudo();
+  const {
+    ideias,
+    ideiasDeletadas,
+    isLoadingDeletadas,
+    isLoading,
+    createIdeia,
+    updateIdeia,
+    deleteIdeia,
+    restoreIdeia,
+    purgeIdeia,
+    validarIdeia,
+  } = useIdeiasConteudo();
 
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [selectedIdeia, setSelectedIdeia] = useState<IdeiaConteudo | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
+  const [lixeiraOpen, setLixeiraOpen] = useState(false);
 
   // Filters
   const [setorFilter, setSetorFilter] = useState<Setor | "all">("all");
@@ -81,10 +94,16 @@ export default function ContentHub() {
             </p>
           </div>
         </div>
-        <Button onClick={() => setIsFormOpen(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Novo Conteúdo
-        </Button>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setLixeiraOpen(true)}>
+            <Trash2 className="h-4 w-4 mr-2" />
+            Lixeira {ideiasDeletadas.length > 0 && `(${ideiasDeletadas.length})`}
+          </Button>
+          <Button onClick={() => setIsFormOpen(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Novo Conteúdo
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -136,7 +155,23 @@ export default function ContentHub() {
         ideia={selectedIdeia}
         onUpdate={handleUpdate}
         onDelete={handleDelete}
-        isAdmin={isAdmin}
+        isAdmin={true}
+      />
+
+      <LixeiraDialog
+        open={lixeiraOpen}
+        onOpenChange={setLixeiraOpen}
+        title="Lixeira - Ideias de Conteúdo"
+        items={ideiasDeletadas.map((i) => ({
+          id: i.id,
+          titulo: i.titulo,
+          setor: SETOR_LABELS[i.setor as Setor] ?? i.setor,
+          formato: FORMATO_LABELS[i.formato as Formato] ?? i.formato,
+          deleted_at: i.deleted_at,
+        }))}
+        isLoading={isLoadingDeletadas}
+        onRestore={(id) => restoreIdeia.mutate(id)}
+        onPurge={(id) => purgeIdeia.mutate(id)}
       />
     </div>
   );
