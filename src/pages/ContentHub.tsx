@@ -35,6 +35,7 @@ export default function ContentHub() {
   const [selectedIdeia, setSelectedIdeia] = useState<IdeiaConteudo | null>(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [statsOpen, setStatsOpen] = useState(false);
+  const [lixeiraOpen, setLixeiraOpen] = useState(false);
 
   // Filters
   const [setorFilter, setSetorFilter] = useState<Setor | "all">("all");
