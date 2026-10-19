@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { parse as parseCsvStd } from "https://deno.land/std@0.224.0/csv/parse.ts";
+import { CsvParseStream } from "https://deno.land/std@0.224.0/csv/csv_parse_stream.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -42,18 +43,26 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Processing sheets sequentially to control memory...');
+    console.log('Processing sheets...');
 
-    // ---------- 1) Aba principal: fetch -> parse -> mapeia para arrays
-    // de saída. Mantemos só `rows` final, não o CSV cru nem arrays intermediários.
-    const mainParsed = await fetchAndParse(MAIN_SHEET_GID);
-    if (mainParsed.length < 2) {
+    // Aba principal: a coluna P "Observações" tem ~140MB de texto e estoura
+    // memória/CPU. Usamos a query do Google para baixar só as colunas A..O.
+    const mainUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=1&gid=${MAIN_SHEET_GID}&tq=${encodeURIComponent('select A,B,C,D,E,F,G,H,I,J,K,L,M,N,O')}`;
+    const mainResp = await fetch(mainUrl);
+    if (!mainResp.ok) {
+      throw new Error(`Main sheet not accessible: ${mainResp.status}`);
+    }
+    const mainParsed = parseCsvStd(await mainResp.text()) as string[][];
+    const mainHeaders: string[] = [...(mainParsed[0] || []).map((c) => (c ?? '').trim()), 'Observações', ''];
+    const mainRows: string[][] = [];
+    for (let i = 1; i < mainParsed.length; i++) {
+      const row = mainParsed[i].map((c) => (c ?? '').trim());
+      if (row.some((cell) => cell !== '')) { row.push('', ''); mainRows.push(row); }
+    }
+    mainParsed.length = 0;
+    if (mainRows.length < 1) {
       throw new Error('Main sheet has no data rows');
     }
-    const mainHeaders = mainParsed[0];
-    // splice em vez de slice para liberar a referência do array original
-    mainParsed.shift(); // remove header
-    const mainRows: string[][] = mainParsed; // reusa o array
     const totalTasks = mainRows.length;
     console.log(`Main sheet: ${totalTasks} rows`);
 
