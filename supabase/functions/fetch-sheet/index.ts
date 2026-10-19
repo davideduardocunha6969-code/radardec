@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { parse as parseCsvStd } from "https://deno.land/std@0.224.0/csv/parse.ts";
+import { CsvParseStream } from "https://deno.land/std@0.224.0/csv/csv_parse_stream.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -42,18 +43,30 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Processing sheets sequentially to control memory...');
+    console.log('Processing sheets with streaming parser...');
 
-    // ---------- 1) Aba principal: fetch -> parse -> mapeia para arrays
-    // de saída. Mantemos só `rows` final, não o CSV cru nem arrays intermediários.
-    const mainParsed = await fetchAndParse(MAIN_SHEET_GID);
-    if (mainParsed.length < 2) {
+    // Aba principal: streaming. A coluna P "Observações" tem ~140MB de texto
+    // e estoura a memória; lemos linha a linha e descartamos essa coluna.
+    const mainUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${MAIN_SHEET_GID}`;
+    const mainResp = await fetch(mainUrl);
+    if (!mainResp.ok || !mainResp.body) {
+      throw new Error(`Main sheet not accessible: ${mainResp.status}`);
+    }
+    const OBS_IDX = 15;
+    let mainHeaders: string[] = [];
+    const mainRows: string[][] = [];
+    const csvStream = mainResp.body
+      .pipeThrough(new TextDecoderStream())
+      .pipeThrough(new CsvParseStream());
+    let isFirst = true;
+    for await (const raw of csvStream as AsyncIterable<string[]>) {
+      const row = raw.slice(0, 17).map((c, i) => (i === OBS_IDX ? '' : (c ?? '').trim()));
+      if (isFirst) { mainHeaders = row; isFirst = false; continue; }
+      if (row.some((cell) => cell !== '')) mainRows.push(row);
+    }
+    if (mainRows.length < 1) {
       throw new Error('Main sheet has no data rows');
     }
-    const mainHeaders = mainParsed[0];
-    // splice em vez de slice para liberar a referência do array original
-    mainParsed.shift(); // remove header
-    const mainRows: string[][] = mainParsed; // reusa o array
     const totalTasks = mainRows.length;
     console.log(`Main sheet: ${totalTasks} rows`);
 
