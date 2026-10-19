@@ -43,27 +43,23 @@ serve(async (req) => {
   }
 
   try {
-    console.log('Processing sheets with streaming parser...');
+    console.log('Processing sheets...');
 
-    // Aba principal: streaming. A coluna P "Observações" tem ~140MB de texto
-    // e estoura a memória; lemos linha a linha e descartamos essa coluna.
-    const mainUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/export?format=csv&gid=${MAIN_SHEET_GID}`;
+    // Aba principal: a coluna P "Observações" tem ~140MB de texto e estoura
+    // memória/CPU. Usamos a query do Google para baixar só as colunas A..O.
+    const mainUrl = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:csv&headers=1&gid=${MAIN_SHEET_GID}&tq=${encodeURIComponent('select A,B,C,D,E,F,G,H,I,J,K,L,M,N,O')}`;
     const mainResp = await fetch(mainUrl);
-    if (!mainResp.ok || !mainResp.body) {
+    if (!mainResp.ok) {
       throw new Error(`Main sheet not accessible: ${mainResp.status}`);
     }
-    const OBS_IDX = 15;
-    let mainHeaders: string[] = [];
+    const mainParsed = parseCsvStd(await mainResp.text()) as string[][];
+    const mainHeaders: string[] = [...(mainParsed[0] || []).map((c) => (c ?? '').trim()), 'Observações', ''];
     const mainRows: string[][] = [];
-    const csvStream = mainResp.body
-      .pipeThrough(new TextDecoderStream())
-      .pipeThrough(new CsvParseStream({ fieldsPerRecord: -1 } as never));
-    let isFirst = true;
-    for await (const raw of csvStream as AsyncIterable<string[]>) {
-      const row = raw.slice(0, 17).map((c, i) => (i === OBS_IDX ? '' : (c ?? '').trim()));
-      if (isFirst) { mainHeaders = row; isFirst = false; continue; }
-      if (row.some((cell) => cell !== '')) mainRows.push(row);
+    for (let i = 1; i < mainParsed.length; i++) {
+      const row = mainParsed[i].map((c) => (c ?? '').trim());
+      if (row.some((cell) => cell !== '')) { row.push('', ''); mainRows.push(row); }
     }
+    mainParsed.length = 0;
     if (mainRows.length < 1) {
       throw new Error('Main sheet has no data rows');
     }
