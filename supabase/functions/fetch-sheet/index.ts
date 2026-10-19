@@ -57,7 +57,7 @@ serve(async (req) => {
     const mainRows: string[][] = [];
     const csvStream = mainResp.body
       .pipeThrough(new TextDecoderStream())
-      .pipeThrough(new CsvParseStream());
+      .pipeThrough(new CsvParseStream({ fieldsPerRecord: -1 } as never));
     let isFirst = true;
     for await (const raw of csvStream as AsyncIterable<string[]>) {
       const row = raw.slice(0, 17).map((c, i) => (i === OBS_IDX ? '' : (c ?? '').trim()));
